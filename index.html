@@ -1,37 +1,43 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Finance App</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
   <h1>Finance App</h1>
 
-  <!-- 🔐 LOGIN -->
-  <section id="auth">
-    <h2>Acessar</h2>
+  <!-- 🔐 Tela de Login -->
+  <section id="auth" class="center-box">
+    <h2>Entrar</h2>
 
-    <input id="email" placeholder="Seu email" type="email">
-    <input id="password" placeholder="Sua senha" type="password">
+    <input id="email" type="email" placeholder="Seu email">
+    <input id="password" type="password" placeholder="Sua senha">
 
-    <button id="btn-signin">Entrar</button>
+    <button id="btn-signin" class="primary">Entrar</button>
     <button id="btn-signup">Criar Conta</button>
+
+    <p id="auth-msg" class="msg"></p>
   </section>
 
 
-  <!-- 🟩 APLICAÇÃO -->
+  <!-- 🟩 Tela do Aplicativo -->
   <section id="app" class="hidden">
-    <div id="user-area" class="user-email"></div>
+
+    <div class="top-bar">
+      <span id="user-area" class="user-email"></span>
+      <button id="btn-logout" class="danger">Sair</button>
+    </div>
 
     <section class="contas-box">
       <h2>Contas</h2>
 
       <select id="select-contas"></select>
-      <input id="conta-nome" placeholder="Nova conta" />
-      <input id="conta-saldo" placeholder="Saldo inicial" type="number" />
+      <input id="conta-nome" placeholder="Nova conta">
+      <input id="conta-saldo" type="number" placeholder="Saldo inicial">
       <button id="btn-add-conta">Adicionar Conta</button>
     </section>
 
@@ -43,9 +49,9 @@
         <option value="despesa">Despesa</option>
       </select>
 
-      <input id="valor-lanc" type="number" placeholder="Valor" />
-      <input id="desc-lanc" placeholder="Descrição" />
-      <input id="data-lanc" type="date" />
+      <input id="valor-lanc" type="number" placeholder="Valor">
+      <input id="desc-lanc" placeholder="Descrição">
+      <input id="data-lanc" type="date">
       <button id="btn-add-lanc">Adicionar</button>
 
       <div class="totais">
@@ -66,14 +72,10 @@
         <ul id="list-despesas"></ul>
       </div>
     </section>
-
-    <button id="btn-logout">Sair</button>
   </section>
 
-  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="app.js"></script>
-
 </body>
 </html>
