@@ -1,3 +1,14 @@
+// Verificar sessão ao entrar no app
+supabase.auth.getSession().then(({ data }) => {
+  if (!data.session) {
+    window.location.href = "login.html"; // se não estiver logado → volta pro login
+  } else {
+    currentUser = data.session.user;
+    document.getElementById("user-email").textContent = currentUser.email;
+    initApp();
+  }
+});
+
 // === ELEMENTOS DA TELA ===
 const authSection = document.getElementById('auth');
 const appSection = document.getElementById('app');
@@ -67,11 +78,11 @@ btnSignin.addEventListener("click", async () => {
 });
 
 
-btnLogout.addEventListener("click", async () => {
+btnLogout.onclick = async () => {
   await supabase.auth.signOut();
-  currentUser = null;
-  showAuth();
-});
+  window.location.href = "login.html";
+};
+
 
 
 // Mantém sessão ativa
