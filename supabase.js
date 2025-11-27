@@ -1,4 +1,6 @@
-const SUPABASE_URL = "https://febwinynlbviadasgwlg.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZlYndpbnlubGJ2aWFkYXNnd2xnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjI3MjMsImV4cCI6MjA3OTczODcyM30.WubNRAHhlH6wnjGAWc4B7oHEbrU9fd1xU5uWWqRjE4c";
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_URL = "https://febwinynlbviadasgwlg.supabase.co"
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZlYndpbnlubGJ2aWFkYXNnd2xnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjI3MjMsImV4cCI6MjA3OTczODcyM30.WubNRAHhlH6wnjGAWc4B7oHEbrU9fd1xU5uWWqRjE4c"
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
