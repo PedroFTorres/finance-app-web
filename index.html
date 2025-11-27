@@ -15,10 +15,8 @@
     <h2>Contas</h2>
 
     <select id="select-contas"></select>
-
     <input id="nova-conta-nome" placeholder="Nova conta (nome)" />
     <input id="nova-conta-saldo" placeholder="Saldo inicial" type="number" />
-
     <button id="btn-add-conta">Adicionar Conta</button>
   </section>
 
@@ -33,7 +31,6 @@
     <input id="valor" type="number" placeholder="Valor" />
     <input id="descricao" placeholder="Descrição" />
     <input id="data" type="date" />
-
     <button id="btn-lancar">Adicionar</button>
 
     <div class="totais">
@@ -59,7 +56,9 @@
 
   <footer>Feito com ❤️ — Supabase + JS</footer>
 
-  <script src="https://esm.sh/@supabase/supabase-js@2"></script>
+  <!-- IMPORTAÇÃO CORRETA -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script src="supabase.js"></script>
   <script src="app.js"></script>
 </body>
