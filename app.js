@@ -1,7 +1,16 @@
-// Verificar sessão ao entrar no app
+// =========================
+//  Finance App - app.js
+//  (versão final e corrigida)
+// =========================
+
+// Variáveis globais
+let currentUser = null;
+
+// 🔐 1. Verificar sessão ao abrir o app
 supabase.auth.getSession().then(({ data }) => {
   if (!data.session) {
-    window.location.href = "login.html"; // se não estiver logado → volta pro login
+    // Se não estiver logado, volta para o login
+    window.location.href = "login.html";
   } else {
     currentUser = data.session.user;
     document.getElementById("user-email").textContent = currentUser.email;
@@ -9,17 +18,16 @@ supabase.auth.getSession().then(({ data }) => {
   }
 });
 
-// === ELEMENTOS DA TELA ===
-const authSection = document.getElementById('auth');
-const appSection = document.getElementById('app');
+// 🔐 2. Logout
+document.getElementById("btn-logout").onclick = async () => {
+  await supabase.auth.signOut();
+  window.location.href = "login.html";
+};
 
-const emailInput = document.getElementById('email');
-const passInput = document.getElementById('password');
-const btnSignup = document.getElementById('btn-signup');
-const btnSignin = document.getElementById('btn-signin');
-const btnLogout = document.getElementById('btn-logout');
 
-const userArea = document.getElementById('user-area');
+// =========================
+// ELEMENTOS DO APP
+// =========================
 
 const selectContas = document.getElementById('select-contas');
 const contaNome = document.getElementById('conta-nome');
@@ -39,73 +47,21 @@ const totalDespesasEl = document.getElementById('total-despesas');
 const listReceitas = document.getElementById('list-receitas');
 const listDespesas = document.getElementById('list-despesas');
 
-let currentUser = null;
 
-
-// === AUTENTICAÇÃO ===
-function showAuth() {
-  authSection.classList.remove("hidden");
-  appSection.classList.add("hidden");
-}
-
-function showApp() {
-  authSection.classList.add("hidden");
-  appSection.classList.remove("hidden");
-  userArea.textContent = currentUser.email;
-}
-
-
-btnSignup.addEventListener("click", async () => {
-  const email = emailInput.value.trim();
-  const pass = passInput.value.trim();
-
-  const { error } = await supabase.auth.signUp({ email, password: pass });
-  if (error) return alert(error.message);
-
-  alert("Conta criada! Agora faça login.");
-});
-
-
-btnSignin.addEventListener("click", async () => {
-  const email = emailInput.value.trim();
-  const pass = passInput.value.trim();
-
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-  if (error) return alert(error.message);
-
-  currentUser = data.user;
-  initApp();
-});
-
-
-btnLogout.onclick = async () => {
-  await supabase.auth.signOut();
-  window.location.href = "login.html";
-};
-
-
-
-// Mantém sessão ativa
-supabase.auth.onAuthStateChange((e, session) => {
-  if (session?.user) {
-    currentUser = session.user;
-    initApp();
-  } else {
-    showAuth();
-  }
-});
-
-
-// === APP PRINCIPAL ===
+// =========================
+//  APP PRINCIPAL
+// =========================
 
 async function initApp() {
-  showApp();
   await loadContas();
   subscribeToChanges();
 }
 
 
-// === CONTAS ===
+// =========================
+//  CARREGAR CONTAS
+// =========================
+
 async function loadContas() {
   const { data, error } = await supabase
     .from("contas_bancarias")
@@ -131,7 +87,11 @@ async function loadContas() {
 }
 
 
-btnAddConta.addEventListener("click", async () => {
+// =========================
+//  ADICIONAR CONTA
+// =========================
+
+btnAddConta.onclick = async () => {
   const nome = contaNome.value.trim();
   const saldo = parseFloat(contaSaldo.value || 0);
 
@@ -144,7 +104,7 @@ btnAddConta.addEventListener("click", async () => {
         nome,
         saldo_inicial: saldo,
         saldo_atual: saldo,
-        user_id: currentUser.id
+        user_id: currentUser.id,
       }
     ]);
 
@@ -154,11 +114,14 @@ btnAddConta.addEventListener("click", async () => {
   contaSaldo.value = "";
 
   loadContas();
-});
+};
 
 
-// === LANÇAMENTOS ===
-btnAddLanc.addEventListener("click", async () => {
+// =========================
+//  ADICIONAR LANÇAMENTO
+// =========================
+
+btnAddLanc.onclick = async () => {
   const valor = parseFloat(valorLanc.value);
   const desc = descLanc.value.trim();
   const data = dataLanc.value;
@@ -186,16 +149,24 @@ btnAddLanc.addEventListener("click", async () => {
   dataLanc.value = "";
 
   refreshMovements();
-});
+};
 
 
-// === LISTAR RECEITAS E DESPESAS ===
+// =========================
+//  LISTAR RECEITAS & DESPESAS
+// =========================
+
 async function refreshMovements() {
   const conta_id = selectContas.value;
 
   const [r, d] = await Promise.all([
-    supabase.from("receitas").select("*").eq("conta_id", conta_id).eq("user_id", currentUser.id),
-    supabase.from("despesas").select("*").eq("conta_id", conta_id).eq("user_id", currentUser.id)
+    supabase.from("receitas").select("*")
+      .eq("conta_id", conta_id)
+      .eq("user_id", currentUser.id),
+
+    supabase.from("despesas").select("*")
+      .eq("conta_id", conta_id)
+      .eq("user_id", currentUser.id)
   ]);
 
   const receitas = r.data || [];
@@ -232,7 +203,10 @@ async function refreshMovements() {
 }
 
 
-// === REALTIME ===
+// =========================
+//  REALTIME
+// =========================
+
 function subscribeToChanges() {
   supabase.channel("rt_receitas")
     .on("postgres_changes", { event: "*", schema: "public", table: "receitas" }, refreshMovements)
@@ -242,3 +216,4 @@ function subscribeToChanges() {
     .on("postgres_changes", { event: "*", schema: "public", table: "despesas" }, refreshMovements)
     .subscribe();
 }
+
