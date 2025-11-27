@@ -34,10 +34,7 @@ function formatDate(dateString) {
 // LOGIN CHECK
 async function checkUser() {
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    window.location.href = "index.html"
-    return
-  }
+  if (!user) return
   userEmailDiv.textContent = user.email
 }
 checkUser()
@@ -45,7 +42,7 @@ checkUser()
 
 // CARREGAR CONTAS
 async function loadContas() {
-  const { data } = await supabase.from("contas_bancarias").select("*").order("created_at", { ascending: true })
+  const { data } = await supabase.from("contas_bancarias").select("*")
 
   selectContas.innerHTML = ""
 
@@ -62,8 +59,6 @@ async function loadContas() {
 
 // ADICIONAR CONTA
 btnAddConta.onclick = async () => {
-  if (!nomeConta.value || !saldoConta.value) return alert("Preencha tudo")
-
   await supabase.from("contas_bancarias").insert({
     nome: nomeConta.value,
     saldo_inicial: Number(saldoConta.value)
@@ -160,13 +155,11 @@ btnLancar.onclick = async () => {
 
 // EDITAR / EXCLUIR
 async function excluirReceita(id) {
-  if (!confirm("Excluir receita?")) return
   await supabase.from("receitas").delete().eq("id", id)
   refreshMovements()
 }
 
 async function excluirDespesa(id) {
-  if (!confirm("Excluir despesa?")) return
   await supabase.from("despesas").delete().eq("id", id)
   refreshMovements()
 }
@@ -203,9 +196,9 @@ async function editarDespesa(id) {
 // SAIR
 btnSair.onclick = async () => {
   await supabase.auth.signOut()
-  window.location.reload()
+  location.reload()
 }
 
 
-// INICIAR
+// START
 loadContas()
