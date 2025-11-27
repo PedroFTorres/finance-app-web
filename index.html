@@ -1,83 +1,83 @@
-```html
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Finance App</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
 <main class="container">
+
 <header>
-<h1>Finance App</h1>
-<div id="user-area"></div>
+  <h1>Finance App</h1>
+  <div id="user-area"></div>
 </header>
 
-
 <section id="auth" class="card">
-<h2>Entrar / Criar conta</h2>
-<input id="email" placeholder="Email" />
-<input id="password" type="password" placeholder="Senha" />
-<div class="row">
-<button id="btn-signup">Criar conta</button>
-<button id="btn-signin">Entrar</button>
-</div>
+  <h2>Entrar / Criar conta</h2>
+  <input id="email" placeholder="Email" />
+  <input id="password" type="password" placeholder="Senha" />
+  <div class="row">
+    <button id="btn-signup">Criar conta</button>
+    <button id="btn-signin">Entrar</button>
+  </div>
 </section>
-
 
 <section id="app" class="hidden">
-<div class="top">
-<div>
-<h3>Contas</h3>
-<select id="select-contas"></select>
-<input id="conta-nome" placeholder="Nova conta (nome)" />
-<input id="conta-saldo" placeholder="Saldo inicial" type="number" />
-<button id="btn-add-conta">Adicionar Conta</button>
-</div>
 
+  <div class="top">
+    <div>
+      <h3>Contas</h3>
+      <select id="select-contas"></select>
+      <input id="conta-nome" placeholder="Nova conta (nome)" />
+      <input id="conta-saldo" placeholder="Saldo inicial" type="number" />
+      <button id="btn-add-conta">Adicionar Conta</button>
+    </div>
 
-<div>
-<h3>Lançamento</h3>
-<select id="tipo-lancamento">
-<option value="receita">Receita</option>
-<option value="despesa">Despesa</option>
-</select>
-<input id="valor-lanc" placeholder="Valor" type="number" />
-<input id="desc-lanc" placeholder="Descrição" />
-<input id="data-lanc" type="date" />
-<button id="btn-add-lanc">Adicionar</button>
-</div>
-</div>
+    <div>
+      <h3>Lançamento</h3>
+      <select id="tipo-lancamento">
+        <option value="receita">Receita</option>
+        <option value="despesa">Despesa</option>
+      </select>
+      <input id="valor-lanc" placeholder="Valor" type="number" />
+      <input id="desc-lanc" placeholder="Descrição" />
+      <input id="data-lanc" type="date" />
+      <button id="btn-add-lanc">Adicionar</button>
+    </div>
+  </div>
 
+  <div class="summary">
+    <div>Saldo Atual: <span id="saldo-atual">R$ 0.00</span></div>
+    <div>Total Receitas: <span id="total-receitas">R$ 0.00</span></div>
+    <div>Total Despesas: <span id="total-despesas">R$ 0.00</span></div>
+  </div>
 
-<div class="summary">
-<div>Saldo Atual: <span id="saldo-atual">R$ 0.00</span></div>
-<div>Total Receitas: <span id="total-receitas">R$ 0.00</span></div>
-<div>Total Despesas: <span id="total-despesas">R$ 0.00</span></div>
-</div>
+  <div class="lists">
+    <div class="card">
+      <h4>Receitas</h4>
+      <ul id="list-receitas"></ul>
+    </div>
 
+    <div class="card">
+      <h4>Despesas</h4>
+      <ul id="list-despesas"></ul>
+    </div>
+  </div>
 
-<div class="lists">
-<div class="card">
-<h4>Receitas</h4>
-<ul id="list-receitas"></ul>
-</div>
-<div class="card">
-<h4>Despesas</h4>
-<ul id="list-despesas"></ul>
-</div>
-</div>
-
-
-<button id="btn-logout">Sair</button>
+  <button id="btn-logout">Sair</button>
 </section>
 
-
 <footer>
-<small>Feito com ❤️ — Supabase + JS</small>
+  <small>Feito com ❤️ — Supabase + JS</small>
 </footer>
-</main>
 
+</main>
 
 <script type="module" src="supabase.js"></script>
 <script type="module" src="app.js"></script>
+
 </body>
 </html>
-```
-
-
----
