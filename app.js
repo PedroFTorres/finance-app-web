@@ -46,6 +46,7 @@ async function loadContas() {
 
   selectContas.innerHTML = ""
 
+  if (!data) return;
   data.forEach(c => {
     const opt = document.createElement("option")
     opt.value = c.id
