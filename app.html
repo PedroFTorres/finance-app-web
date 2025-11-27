@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance App</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="top-bar">
+    <span id="user-email"></span>
+    <button id="btn-logout" class="danger">Sair</button>
+  </div>
+
+  <h1>Finance App</h1>
+
+  <section class="contas-box">
+    <h2>Contas</h2>
+
+    <select id="select-contas"></select>
+    <input id="conta-nome" placeholder="Nova conta">
+    <input id="conta-saldo" type="number" placeholder="Saldo inicial">
+    <button id="btn-add-conta">Adicionar Conta</button>
+  </section>
+
+  <section class="lancamento-box">
+    <h2>Lançamento</h2>
+
+    <select id="tipo-lancamento">
+      <option value="receita">Receita</option>
+      <option value="despesa">Despesa</option>
+    </select>
+
+    <input id="valor-lanc" type="number" placeholder="Valor">
+    <input id="desc-lanc" placeholder="Descrição">
+    <input id="data-lanc" type="date">
+    <button id="btn-add-lanc">Adicionar</button>
+
+    <div class="totais">
+      <span id="saldo-atual"></span>
+      <span id="total-receitas"></span>
+      <span id="total-despesas"></span>
+    </div>
+  </section>
+
+  <section class="listas">
+    <div class="box">
+      <h3>Receitas</h3>
+      <ul id="list-receitas"></ul>
+    </div>
+
+    <div class="box">
+      <h3>Despesas</h3>
+      <ul id="list-despesas"></ul>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
