@@ -1,6 +1,6 @@
-// ELEMENTOS
 const userEmailDiv = document.getElementById("user-email");
 const selectContas = document.getElementById("select-contas");
+
 const nomeConta = document.getElementById("nova-conta-nome");
 const saldoConta = document.getElementById("nova-conta-saldo");
 const btnAddConta = document.getElementById("btn-add-conta");
@@ -20,18 +20,7 @@ const spanTotalDespesas = document.getElementById("total-despesas");
 
 const btnSair = document.getElementById("btn-sair");
 
-
-// FORMATAR DATA
-function formatDate(dateString) {
-  const d = new Date(dateString);
-  const dia = String(d.getDate()).padStart(2, '0');
-  const mes = String(d.getMonth() + 1).padStart(2, '0');
-  const ano = d.getFullYear();
-  return `${dia}/${mes}/${ano}`;
-}
-
-
-// LOGIN CHECK
+// USER
 async function checkUser() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
@@ -39,17 +28,13 @@ async function checkUser() {
 }
 checkUser();
 
-
 // CARREGAR CONTAS
 async function loadContas() {
   const { data, error } = await supabase.from("contas_bancarias").select("*");
 
   selectContas.innerHTML = "";
 
-  if (!data || data.length === 0) {
-    selectContas.innerHTML = "<option value=''>Nenhuma conta cadastrada</option>";
-    return; // evita erro
-  }
+  if (!data) return;
 
   data.forEach(c => {
     const opt = document.createElement("option");
@@ -60,7 +45,6 @@ async function loadContas() {
 
   refreshMovements();
 }
-
 
 // ADICIONAR CONTA
 btnAddConta.onclick = async () => {
@@ -80,81 +64,55 @@ btnAddConta.onclick = async () => {
   loadContas();
 };
 
-
-// ATUALIZAR LISTAS
+// ATUALIZAR MOVIMENTOS
 async function refreshMovements() {
   const conta = selectContas.value;
+  if (!conta) return;
 
-  if (!conta) {
-    listaReceitas.innerHTML = "<p>Nenhuma conta selecionada</p>";
-    listaDespesas.innerHTML = "<p>Nenhuma conta selecionada</p>";
-    return;
-  }
+  const { data: receitas } = await supabase
+    .from("receitas")
+    .select("*")
+    .eq("conta_id", conta);
 
-  const { data: receitas } = await supabase.from("receitas").select("*").eq("conta_id", conta);
-  const { data: despesas } = await supabase.from("despesas").select("*").eq("conta_id", conta);
+  const { data: despesas } = await supabase
+    .from("despesas")
+    .select("*")
+    .eq("conta_id", conta);
 
   renderReceitas(receitas || []);
   renderDespesas(despesas || []);
 
-  const totalReceitas = (receitas || []).reduce((s, r) => s + Number(r.valor || 0), 0);
-  const totalDespesas = (despesas || []).reduce((s, d) => s + Number(d.valor || 0), 0);
+  const totalReceitas = (receitas || []).reduce((s, r) => s + Number(r.valor), 0);
+  const totalDespesas = (despesas || []).reduce((s, d) => s + Number(d.valor), 0);
 
   spanTotalReceitas.textContent = `Total Receitas: R$ ${totalReceitas.toFixed(2)}`;
   spanTotalDespesas.textContent = `Total Despesas: R$ ${totalDespesas.toFixed(2)}`;
   spanSaldo.textContent = `Saldo Atual: R$ ${(totalReceitas - totalDespesas).toFixed(2)}`;
 }
 
-
 // RENDER RECEITAS
 function renderReceitas(lista) {
   listaReceitas.innerHTML = "";
 
-  if (!lista || lista.length === 0) {
-    listaReceitas.innerHTML = "<p>Nenhuma receita</p>";
-    return;
-  }
-
   lista.forEach(item => {
     const div = document.createElement("div");
     div.className = "item";
-
-    div.innerHTML = `
-      <span>${formatDate(item.data)} — ${item.descricao} — R$ ${item.valor}</span>
-      <div class="buttons">
-        <button onclick="editarReceita('${item.id}')">✏️</button>
-        <button onclick="excluirReceita('${item.id}')">🗑️</button>
-      </div>
-    `;
+    div.textContent = `${item.data} — ${item.descricao} — R$ ${item.valor}`;
     listaReceitas.appendChild(div);
   });
 }
-
 
 // RENDER DESPESAS
 function renderDespesas(lista) {
   listaDespesas.innerHTML = "";
 
-  if (!lista || lista.length === 0) {
-    listaDespesas.innerHTML = "<p>Nenhuma despesa</p>";
-    return;
-  }
-
   lista.forEach(item => {
     const div = document.createElement("div");
     div.className = "item";
-
-    div.innerHTML = `
-      <span>${formatDate(item.data)} — ${item.descricao} — R$ ${item.valor}</span>
-      <div class="buttons">
-        <button onclick="editarDespesa('${item.id}')">✏️</button>
-        <button onclick="excluirDespesa('${item.id}')">🗑️</button>
-      </div>
-    `;
+    div.textContent = `${item.data} — ${item.descricao} — R$ ${item.valor}`;
     listaDespesas.appendChild(div);
   });
 }
-
 
 // ADICIONAR LANÇAMENTO
 btnLancar.onclick = async () => {
@@ -179,55 +137,10 @@ btnLancar.onclick = async () => {
   refreshMovements();
 };
 
-
-// EXCLUIR
-async function excluirReceita(id) {
-  await supabase.from("receitas").delete().eq("id", id);
-  refreshMovements();
-}
-
-async function excluirDespesa(id) {
-  await supabase.from("despesas").delete().eq("id", id);
-  refreshMovements();
-}
-
-
-// EDITAR
-async function editarReceita(id) {
-  const valorNovo = prompt("Novo valor:");
-  const desc = prompt("Nova descrição:");
-  const dt = prompt("Nova data (yyyy-mm-dd):");
-
-  await supabase.from("receitas").update({
-    valor: valorNovo,
-    descricao: desc,
-    data: dt
-  }).eq("id", id);
-
-  refreshMovements();
-}
-
-async function editarDespesa(id) {
-  const valorNovo = prompt("Novo valor:");
-  const desc = prompt("Nova descrição:");
-  const dt = prompt("Nova data (yyyy-mm-dd):");
-
-  await supabase.from("despesas").update({
-    valor: valorNovo,
-    descricao: desc,
-    data: dt
-  }).eq("id", id);
-
-  refreshMovements();
-}
-
-
 // SAIR
 btnSair.onclick = async () => {
   await supabase.auth.signOut();
   location.reload();
 };
 
-
-// START
 loadContas();
