@@ -1,36 +1,53 @@
 // =========================
-//  Finance App - app.js
-//  (com edição/exclusão de lançamentos)
+//  Finance App - app.js (versão aprimorada)
 // =========================
 
-// Variáveis globais
-let currentUser = null;
-let editing = { type: null, id: null }; // { type: "receita"|"despesa", id: <uuid> }
+// -------------------------
+// Utilidades
+// -------------------------
 
-// Verificar sessão ao abrir o app
+// Formatar data para DD/MM/YYYY
+function formatDate(dateString) {
+  const d = new Date(dateString + "T00:00:00");
+  const dia = String(d.getDate()).padStart(2, "0");
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const ano = d.getFullYear();
+  return `${dia}/${mes}/${ano}`;
+}
+
+// Formatar valores no padrão Real
+function formatReal(valor) {
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+// -------------------------
+// Variáveis e sessão
+// -------------------------
+
+let currentUser = null;
+let editing = { type: null, id: null };
+
+// Verificar sessão ao carregar app.html
 supabase.auth.getSession().then(({ data }) => {
   if (!data.session) {
     window.location.href = "login.html";
   } else {
     currentUser = data.session.user;
-    const userEmailEl = document.getElementById("user-email");
-    if (userEmailEl) userEmailEl.textContent = currentUser.email;
+    document.getElementById("user-email").textContent = currentUser.email;
     initApp();
   }
 });
 
-// Logout (substituir botão existente)
-const logoutBtn = document.getElementById("btn-logout");
-if (logoutBtn) {
-  logoutBtn.onclick = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "login.html";
-  };
-}
+// Logout
+document.getElementById("btn-logout").onclick = async () => {
+  await supabase.auth.signOut();
+  window.location.href = "login.html";
+};
 
-// =========================
-// ELEMENTOS DO APP
-// =========================
+// -------------------------
+// Elementos do DOM
+// -------------------------
+
 const selectContas = document.getElementById('select-contas');
 const contaNome = document.getElementById('conta-nome');
 const contaSaldo = document.getElementById('conta-saldo');
@@ -50,18 +67,19 @@ const totalDespesasEl = document.getElementById('total-despesas');
 const listReceitas = document.getElementById('list-receitas');
 const listDespesas = document.getElementById('list-despesas');
 
+// -------------------------
+// Inicialização
+// -------------------------
 
-// =========================
-//  APP PRINCIPAL
-// =========================
 async function initApp() {
   await loadContas();
   subscribeToChanges();
 }
 
-// =========================
-//  CARREGAR CONTAS
-// =========================
+// -------------------------
+// Contas bancárias
+// -------------------------
+
 async function loadContas() {
   const { data, error } = await supabase
     .from("contas_bancarias")
@@ -69,18 +87,14 @@ async function loadContas() {
     .eq("user_id", currentUser.id)
     .order("created_at");
 
-  if (error) {
-    console.error("Erro ao carregar contas:", error);
-    return;
-  }
+  if (error) return console.error(error);
 
   selectContas.innerHTML = "";
 
   data.forEach(conta => {
     const opt = document.createElement("option");
-    opt.value = conta.id;
-    // garante que saldo_inicial exista
     const saldoInicial = Number(conta.saldo_inicial || 0).toFixed(2);
+    opt.value = conta.id;
     opt.textContent = `${conta.nome} (R$ ${saldoInicial})`;
     selectContas.appendChild(opt);
   });
@@ -88,156 +102,118 @@ async function loadContas() {
   if (data.length > 0) {
     selectContas.value = data[0].id;
     refreshMovements();
-  } else {
-    // se não houver contas, limpar movimentos
-    listReceitas.innerHTML = "";
-    listDespesas.innerHTML = "";
-    saldoAtualEl.textContent = "";
-    totalReceitasEl.textContent = "";
-    totalDespesasEl.textContent = "";
   }
 }
 
+btnAddConta.onclick = async () => {
+  const nome = contaNome.value.trim();
+  const saldo = parseFloat(contaSaldo.value || 0);
 
-// =========================
-//  ADICIONAR CONTA
-// =========================
-if (btnAddConta) {
-  btnAddConta.onclick = async () => {
-    const nome = contaNome.value.trim();
-    const saldo = parseFloat(contaSaldo.value || 0);
+  if (!nome) return alert("Informe o nome da conta!");
 
-    if (!nome) return alert("Informe o nome da conta!");
+  const { error } = await supabase
+    .from("contas_bancarias")
+    .insert([
+      { nome, saldo_inicial: saldo, saldo_atual: saldo, user_id: currentUser.id }
+    ]);
+
+  if (error) return alert(error.message);
+
+  contaNome.value = "";
+  contaSaldo.value = "";
+
+  loadContas();
+};
+
+// -------------------------
+// Criar / Editar lançamentos
+// -------------------------
+
+btnAddLanc.onclick = async () => {
+  const valor = parseFloat(valorLanc.value);
+  const desc = descLanc.value.trim();
+  const data = dataLanc.value;
+  const tipo = tipoLanc.value;
+  const conta_id = selectContas.value;
+
+  if (!valor || !desc || !data) return alert("Preencha todos os campos!");
+
+  // Modo edição
+  if (editing.type && editing.id) {
+    const table = editing.type === "receita" ? "receitas" : "despesas";
 
     const { error } = await supabase
-      .from("contas_bancarias")
-      .insert([{
-        nome,
-        saldo_inicial: saldo,
-        saldo_atual: saldo,
-        user_id: currentUser.id,
-      }]);
+      .from(table)
+      .update({ descricao: desc, valor, data, conta_id })
+      .eq("id", editing.id)
+      .eq("user_id", currentUser.id);
 
     if (error) return alert(error.message);
 
-    contaNome.value = "";
-    contaSaldo.value = "";
-    await loadContas();
-  };
-}
-
-
-// =========================
-//  ADICIONAR / SALVAR LANÇAMENTO
-// =========================
-if (btnAddLanc) {
-  btnAddLanc.onclick = async () => {
-    const valor = parseFloat(valorLanc.value);
-    const desc = descLanc.value.trim();
-    const data = dataLanc.value;
-    const tipo = tipoLanc.value;
-    const conta_id = selectContas.value;
-
-    if (!valor || !desc || !data) return alert("Preencha todos os campos!");
-
-    // Se estamos editando, atualiza a linha correspondente
-    if (editing.type && editing.id) {
-      const table = editing.type === "receita" ? "receitas" : "despesas";
-      const { error } = await supabase
-        .from(table)
-        .update({
-          descricao: desc,
-          valor,
-          data,
-          conta_id
-        })
-        .eq("id", editing.id)
-        .eq("user_id", currentUser.id);
-
-      if (error) return alert(error.message);
-
-      // limpar estado de edição
-      stopEdit();
-      refreshMovements();
-      return;
-    }
-
-    // caso padrão: inserir novo
-    const payload = {
-      descricao: desc,
-      valor,
-      data,
-      conta_id,
-      user_id: currentUser.id
-    };
-
-    if (tipo === "receita") {
-      const { error } = await supabase.from("receitas").insert([payload]);
-      if (error) return alert(error.message);
-    } else {
-      const { error } = await supabase.from("despesas").insert([payload]);
-      if (error) return alert(error.message);
-    }
-
-    // limpar campos
-    valorLanc.value = "";
-    descLanc.value = "";
-    dataLanc.value = "";
-
-    refreshMovements();
-  };
-}
-
-// Cancelar edição
-if (btnCancelEdit) {
-  btnCancelEdit.onclick = () => {
     stopEdit();
+    refreshMovements();
+    return;
+  }
+
+  // Modo adicionar
+  const payload = {
+    descricao: desc,
+    valor,
+    data,
+    conta_id,
+    user_id: currentUser.id
   };
-}
+
+  if (tipo === "receita") {
+    await supabase.from("receitas").insert([payload]);
+  } else {
+    await supabase.from("despesas").insert([payload]);
+  }
+
+  valorLanc.value = "";
+  descLanc.value = "";
+  dataLanc.value = "";
+
+  refreshMovements();
+};
+
+btnCancelEdit.onclick = () => stopEdit();
 
 function startEdit(type, item) {
-  // type = "receita" | "despesa"
-  // item = objeto da linha (tem id, descricao, valor, data, conta_id)
   editing.type = type;
   editing.id = item.id;
 
-  // preencher formulário com dados
-  tipoLanc.value = type; // ajusta o select
-  valorLanc.value = Number(item.valor).toFixed(2);
+  tipoLanc.value = type;
+  valorLanc.value = item.valor;
   descLanc.value = item.descricao;
   dataLanc.value = item.data;
-  // tenta selecionar a conta
-  if (item.conta_id) {
-    selectContas.value = item.conta_id;
-  }
+  selectContas.value = item.conta_id;
 
-  // ajustar botões / UI
-  if (btnAddLanc) btnAddLanc.textContent = "Salvar";
-  if (btnCancelEdit) btnCancelEdit.classList.remove("hidden");
+  btnAddLanc.textContent = "Salvar";
+  btnCancelEdit.classList.remove("hidden");
 }
 
 function stopEdit() {
   editing.type = null;
   editing.id = null;
 
-  // limpar formulário
   valorLanc.value = "";
   descLanc.value = "";
   dataLanc.value = "";
-  if (btnAddLanc) btnAddLanc.textContent = "Adicionar";
 
-  if (btnCancelEdit) btnCancelEdit.classList.add("hidden");
+  btnAddLanc.textContent = "Adicionar";
+  btnCancelEdit.classList.add("hidden");
 }
 
+// -------------------------
+// Excluir lançamento
+// -------------------------
 
-// =========================
-//  EXCLUIR LANÇAMENTO
-// =========================
 async function deleteItem(type, id) {
-  const conf = confirm("Deseja realmente excluir esse lançamento?");
-  if (!conf) return;
+  if (!confirm("Deseja excluir este lançamento?")) return;
 
   const table = type === "receita" ? "receitas" : "despesas";
+
   const { error } = await supabase
     .from(table)
     .delete()
@@ -249,17 +225,23 @@ async function deleteItem(type, id) {
   refreshMovements();
 }
 
+// -------------------------
+// Carregar receitas e despesas
+// -------------------------
 
-// =========================
-//  LISTAR RECEITAS & DESPESAS
-// =========================
 async function refreshMovements() {
   const conta_id = selectContas.value;
-  if (!conta_id) return;
 
   const [r, d] = await Promise.all([
-    supabase.from("receitas").select("*").eq("conta_id", conta_id).eq("user_id", currentUser.id).order('data', { ascending: true }),
-    supabase.from("despesas").select("*").eq("conta_id", conta_id).eq("user_id", currentUser.id).order('data', { ascending: true })
+    supabase.from("receitas").select("*")
+      .eq("conta_id", conta_id)
+      .eq("user_id", currentUser.id)
+      .order("data"),
+
+    supabase.from("despesas").select("*")
+      .eq("conta_id", conta_id)
+      .eq("user_id", currentUser.id)
+      .order("data")
   ]);
 
   const receitas = r.data || [];
@@ -272,90 +254,76 @@ async function refreshMovements() {
   let totalD = 0;
 
   receitas.forEach(item => {
-    totalR += Number(item.valor || 0);
-    const li = document.createElement("li");
-    li.textContent = `${item.data} — ${item.descricao} — R$ ${Number(item.valor).toFixed(2)}`;
-
-    // botões editar / excluir
-    const btns = document.createElement("div");
-    btns.style.display = "inline-block";
-    btns.style.float = "right";
-
-    const editBtn = document.createElement("button");
-    editBtn.textContent = "Editar";
-    editBtn.onclick = () => startEdit("receita", item);
-
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "Excluir";
-    delBtn.onclick = () => deleteItem("receita", item.id);
-
-    btns.appendChild(editBtn);
-    btns.appendChild(delBtn);
-    li.appendChild(btns);
-
+    totalR += item.valor;
+    const li = createLancamentoItem(item, "receita");
     listReceitas.appendChild(li);
   });
 
   despesas.forEach(item => {
-    totalD += Number(item.valor || 0);
-    const li = document.createElement("li");
-    li.textContent = `${item.data} — ${item.descricao} — R$ ${Number(item.valor).toFixed(2)}`;
-
-    // botões editar / excluir
-    const btns = document.createElement("div");
-    btns.style.display = "inline-block";
-    btns.style.float = "right";
-
-    const editBtn = document.createElement("button");
-    editBtn.textContent = "Editar";
-    editBtn.onclick = () => startEdit("despesa", item);
-
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "Excluir";
-    delBtn.onclick = () => deleteItem("despesa", item.id);
-
-    btns.appendChild(editBtn);
-    btns.appendChild(delBtn);
-    li.appendChild(btns);
-
+    totalD += item.valor;
+    const li = createLancamentoItem(item, "despesa");
     listDespesas.appendChild(li);
   });
 
-  totalReceitasEl.textContent = `R$ ${totalR.toFixed(2)}`;
-  totalDespesasEl.textContent = `R$ ${totalD.toFixed(2)}`;
+  totalReceitasEl.textContent = formatReal(totalR);
+  totalDespesasEl.textContent = formatReal(totalD);
 
-  // calcular saldo inicial com segurança (evita crash se text diferente)
   const opt = selectContas.selectedOptions[0];
-  let saldoInicial = 0;
-  if (opt) {
-    const m = opt.textContent.match(/\(R\$ *([0-9.,]+)\)/);
-    if (m) saldoInicial = parseFloat(m[1].replace(",", "."));
-  }
+  const saldoInicial = opt ? parseFloat(opt.textContent.match(/\(R\$ ([0-9.,]+)\)/)[1].replace(",", ".")) : 0;
 
-  const saldoAtual = (saldoInicial + totalR) - totalD;
-  saldoAtualEl.textContent = `R$ ${Number(saldoAtual).toFixed(2)}`;
+  saldoAtualEl.textContent = formatReal((saldoInicial + totalR - totalD));
 }
 
+// Criar li com estilo
+function createLancamentoItem(item, type) {
+  const li = document.createElement("li");
 
-// =========================
-//  REALTIME
-// =========================
+  li.style.fontFamily = `"Courier New", monospace`;
+  li.style.fontWeight = "bold";
+  li.style.marginBottom = "10px";
+
+  li.style.color = type === "receita" ? "green" : "red";
+
+  li.textContent = `${formatDate(item.data)} — ${item.descricao} — ${formatReal(item.valor)}`;
+
+  // Botões de ação
+  const actions = document.createElement("span");
+  actions.style.float = "right";
+
+  const editBtn = document.createElement("button");
+  editBtn.textContent = "Editar";
+  editBtn.style.marginLeft = "5px";
+  editBtn.onclick = () => startEdit(type, item);
+
+  const delBtn = document.createElement("button");
+  delBtn.textContent = "Excluir";
+  delBtn.style.marginLeft = "5px";
+  delBtn.onclick = () => deleteItem(type, item.id);
+
+  actions.appendChild(editBtn);
+  actions.appendChild(delBtn);
+
+  li.appendChild(actions);
+
+  return li;
+}
+
+// -------------------------
+// Realtime
+// -------------------------
+
 function subscribeToChanges() {
-  // escuta mudanças em receitas e despesas (qualquer usuário) e atualiza se for do usuário atual
   supabase.channel("rt_receitas")
-    .on("postgres_changes", { event: "*", schema: "public", table: "receitas" }, payload => {
-      // Só atualizar se a mudança for do currentUser (segurança + performance)
-      if (!payload.record) return;
-      if (payload.record.user_id !== currentUser.id) return;
-      refreshMovements();
-    })
+    .on("postgres_changes", { event: "*", schema: "public", table: "receitas" },
+      payload => {
+        if (payload.record?.user_id === currentUser.id) refreshMovements();
+      })
     .subscribe();
 
   supabase.channel("rt_despesas")
-    .on("postgres_changes", { event: "*", schema: "public", table: "despesas" }, payload => {
-      if (!payload.record) return;
-      if (payload.record.user_id !== currentUser.id) return;
-      refreshMovements();
-    })
+    .on("postgres_changes", { event: "*", schema: "public", table: "despesas" },
+      payload => {
+        if (payload.record?.user_id === currentUser.id) refreshMovements();
+      })
     .subscribe();
 }
