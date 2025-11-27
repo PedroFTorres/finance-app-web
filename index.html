@@ -17,23 +17,23 @@
     <h2>Contas</h2>
 
     <select id="select-contas"></select>
-    <input id="nova-conta-nome" placeholder="Nova conta (nome)" />
-    <input id="nova-conta-saldo" placeholder="Saldo inicial" type="number" />
+    <input id="conta-nome" placeholder="Nova conta (nome)" />
+    <input id="conta-saldo" placeholder="Saldo inicial" type="number" />
     <button id="btn-add-conta">Adicionar Conta</button>
   </section>
 
   <section class="lancamento-box">
     <h2>Lançamento</h2>
 
-    <select id="tipo">
+    <select id="tipo-lancamento">
       <option value="receita">Receita</option>
       <option value="despesa">Despesa</option>
     </select>
 
-    <input id="valor" type="number" placeholder="Valor" />
-    <input id="descricao" placeholder="Descrição" />
-    <input id="data" type="date" />
-    <button id="btn-lancar">Adicionar</button>
+    <input id="valor-lanc" type="number" placeholder="Valor" />
+    <input id="desc-lanc" placeholder="Descrição" />
+    <input id="data-lanc" type="date" />
+    <button id="btn-add-lanc">Adicionar</button>
 
     <div class="totais">
       <span id="saldo-atual"></span>
@@ -45,26 +45,26 @@
   <section class="listas">
     <div class="box">
       <h3>Receitas</h3>
-      <div id="lista-receitas"></div>
+      <ul id="list-receitas"></ul>
     </div>
 
     <div class="box">
       <h3>Despesas</h3>
-      <div id="lista-despesas"></div>
+      <ul id="list-despesas"></ul>
     </div>
   </section>
 
-  <button id="btn-sair">Sair</button>
+  <button id="btn-logout">Sair</button>
 
   <footer>Feito com ❤️ — Supabase + JS</footer>
 
   <!-- 1️⃣ SUPABASE CDN PRIMEIRO -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- 2️⃣ SUA CONFIG (precisa do supabase carregado antes) -->
+  <!-- 2️⃣ SUA CONFIG -->
   <script src="supabase.js"></script>
 
-  <!-- 3️⃣ SEU APP (precisa do cliente criado no passo 2) -->
+  <!-- 3️⃣ LÓGICA DO APP -->
   <script src="app.js"></script>
 
 </body>
