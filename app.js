@@ -1,4 +1,15 @@
-// ELEMENTOS
+// === ELEMENTOS DA TELA ===
+const authSection = document.getElementById('auth');
+const appSection = document.getElementById('app');
+
+const emailInput = document.getElementById('email');
+const passInput = document.getElementById('password');
+const btnSignup = document.getElementById('btn-signup');
+const btnSignin = document.getElementById('btn-signin');
+const btnLogout = document.getElementById('btn-logout');
+
+const userArea = document.getElementById('user-area');
+
 const selectContas = document.getElementById('select-contas');
 const contaNome = document.getElementById('conta-nome');
 const contaSaldo = document.getElementById('conta-saldo');
@@ -17,30 +28,88 @@ const totalDespesasEl = document.getElementById('total-despesas');
 const listReceitas = document.getElementById('list-receitas');
 const listDespesas = document.getElementById('list-despesas');
 
-const btnLogout = document.getElementById('btn-logout');
+let currentUser = null;
 
-// INICIALIZAÇÃO
-loadContas();
-subscribeToChanges();
 
-// CARREGAR CONTAS
+// === AUTENTICAÇÃO ===
+function showAuth() {
+  authSection.classList.remove("hidden");
+  appSection.classList.add("hidden");
+}
+
+function showApp() {
+  authSection.classList.add("hidden");
+  appSection.classList.remove("hidden");
+  userArea.textContent = currentUser.email;
+}
+
+
+btnSignup.addEventListener("click", async () => {
+  const email = emailInput.value.trim();
+  const pass = passInput.value.trim();
+
+  const { error } = await supabase.auth.signUp({ email, password: pass });
+  if (error) return alert(error.message);
+
+  alert("Conta criada! Agora faça login.");
+});
+
+
+btnSignin.addEventListener("click", async () => {
+  const email = emailInput.value.trim();
+  const pass = passInput.value.trim();
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  if (error) return alert(error.message);
+
+  currentUser = data.user;
+  initApp();
+});
+
+
+btnLogout.addEventListener("click", async () => {
+  await supabase.auth.signOut();
+  currentUser = null;
+  showAuth();
+});
+
+
+// Mantém sessão ativa
+supabase.auth.onAuthStateChange((e, session) => {
+  if (session?.user) {
+    currentUser = session.user;
+    initApp();
+  } else {
+    showAuth();
+  }
+});
+
+
+// === APP PRINCIPAL ===
+
+async function initApp() {
+  showApp();
+  await loadContas();
+  subscribeToChanges();
+}
+
+
+// === CONTAS ===
 async function loadContas() {
   const { data, error } = await supabase
-    .from('contas_bancarias')
-    .select('*')
-    .order('created_at', { ascending: true });
+    .from("contas_bancarias")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .order("created_at");
 
-  if (error) {
-    console.error(error);
-    return;
-  }
+  if (error) return console.error(error);
 
   selectContas.innerHTML = "";
 
-  data.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = `${c.nome} (R$ ${Number(c.saldo_inicial || 0).toFixed(2)})`;
+  data.forEach(conta => {
+    const opt = document.createElement("option");
+    opt.value = conta.id;
+    opt.textContent = `${conta.nome} (R$ ${conta.saldo_inicial.toFixed(2)})`;
     selectContas.appendChild(opt);
   });
 
@@ -50,24 +119,25 @@ async function loadContas() {
   }
 }
 
-// ADICIONAR CONTA
-btnAddConta.addEventListener('click', async () => {
+
+btnAddConta.addEventListener("click", async () => {
   const nome = contaNome.value.trim();
   const saldo = parseFloat(contaSaldo.value || 0);
 
-  if (!nome) {
-    alert("Digite o nome da conta");
-    return;
-  }
+  if (!nome) return alert("Informe o nome da conta!");
 
   const { error } = await supabase
-    .from('contas_bancarias')
-    .insert([{ nome, saldo_inicial: saldo, saldo_atual: saldo }]);
+    .from("contas_bancarias")
+    .insert([
+      {
+        nome,
+        saldo_inicial: saldo,
+        saldo_atual: saldo,
+        user_id: currentUser.id
+      }
+    ]);
 
-  if (error) {
-    alert(error.message);
-    return;
-  }
+  if (error) return alert(error.message);
 
   contaNome.value = "";
   contaSaldo.value = "";
@@ -75,23 +145,29 @@ btnAddConta.addEventListener('click', async () => {
   loadContas();
 });
 
-// ADICIONAR LANÇAMENTO
-btnAddLanc.addEventListener('click', async () => {
-  const tipo = tipoLanc.value;
+
+// === LANÇAMENTOS ===
+btnAddLanc.addEventListener("click", async () => {
   const valor = parseFloat(valorLanc.value);
-  const descricao = descLanc.value.trim();
+  const desc = descLanc.value.trim();
   const data = dataLanc.value;
+  const tipo = tipoLanc.value;
   const conta_id = selectContas.value;
 
-  if (!valor || !descricao || !data) {
-    alert("Preencha todos os campos");
-    return;
-  }
+  if (!valor || !desc || !data) return alert("Preencha todos os campos!");
 
-  if (tipo === 'receita') {
-    await supabase.from("receitas").insert([{ descricao, valor, data, conta_id }]);
+  const payload = {
+    descricao: desc,
+    valor,
+    data,
+    conta_id,
+    user_id: currentUser.id
+  };
+
+  if (tipo === "receita") {
+    await supabase.from("receitas").insert([payload]);
   } else {
-    await supabase.from("despesas").insert([{ descricao, valor, data, conta_id }]);
+    await supabase.from("despesas").insert([payload]);
   }
 
   valorLanc.value = "";
@@ -101,13 +177,14 @@ btnAddLanc.addEventListener('click', async () => {
   refreshMovements();
 });
 
-// LISTAR RECEITAS/DESPESAS
+
+// === LISTAR RECEITAS E DESPESAS ===
 async function refreshMovements() {
   const conta_id = selectContas.value;
 
   const [r, d] = await Promise.all([
-    supabase.from("receitas").select("*").eq("conta_id", conta_id),
-    supabase.from("despesas").select("*").eq("conta_id", conta_id)
+    supabase.from("receitas").select("*").eq("conta_id", conta_id).eq("user_id", currentUser.id),
+    supabase.from("despesas").select("*").eq("conta_id", conta_id).eq("user_id", currentUser.id)
   ]);
 
   const receitas = r.data || [];
@@ -120,14 +197,14 @@ async function refreshMovements() {
   let totalD = 0;
 
   receitas.forEach(item => {
-    totalR += Number(item.valor);
+    totalR += item.valor;
     const li = document.createElement("li");
     li.textContent = `${item.data} — ${item.descricao} — R$ ${item.valor.toFixed(2)}`;
     listReceitas.appendChild(li);
   });
 
   despesas.forEach(item => {
-    totalD += Number(item.valor);
+    totalD += item.valor;
     const li = document.createElement("li");
     li.textContent = `${item.data} — ${item.descricao} — R$ ${item.valor.toFixed(2)}`;
     listDespesas.appendChild(li);
@@ -137,20 +214,20 @@ async function refreshMovements() {
   totalDespesasEl.textContent = `R$ ${totalD.toFixed(2)}`;
 
   const saldoInicial = parseFloat(
-    selectContas.selectedOptions[0]?.text.match(/\(R\$\s*([0-9.,]+)\)/)?.[1].replace(",", ".") || 0
+    selectContas.selectedOptions[0].text.match(/\(R\$ ([0-9.]+)\)/)[1]
   );
 
-  const saldoAtual = saldoInicial + totalR - totalD;
-  saldoAtualEl.textContent = `R$ ${saldoAtual.toFixed(2)}`;
+  saldoAtualEl.textContent = `R$ ${(saldoInicial + totalR - totalD).toFixed(2)}`;
 }
 
-// ASSINAR MUDANÇAS
+
+// === REALTIME ===
 function subscribeToChanges() {
-  supabase.channel("public:receitas")
+  supabase.channel("rt_receitas")
     .on("postgres_changes", { event: "*", schema: "public", table: "receitas" }, refreshMovements)
     .subscribe();
 
-  supabase.channel("public:despesas")
+  supabase.channel("rt_despesas")
     .on("postgres_changes", { event: "*", schema: "public", table: "despesas" }, refreshMovements)
     .subscribe();
 }
