@@ -436,7 +436,9 @@ async function loadDashboard() {
   const mes = agora.getMonth() + 1;
 
   const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
-  const fim = `${ano}-${String(mes).padStart(2, "0")}-31`;
+
+  const ultimoDia = new Date(ano, mes, 0).getDate();
+  const fim = `${ano}-${String(mes).padStart(2, "0")}-${ultimoDia}`;
 
   // Carregar receitas
   const receitas = await supabase
@@ -466,6 +468,7 @@ async function loadDashboard() {
 
   generateDashboardChart(totalR, totalD);
 }
+
 
 function generateDashboardChart(receitas, despesas) {
   const ctx = document.getElementById("chart-dashboard");
