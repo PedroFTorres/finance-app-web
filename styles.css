@@ -1,5 +1,6 @@
+/* --- BASE (seu arquivo original) --- */
 body {
-  font-family: Arial, sans-serif;
+  font-family: "Courier New", monospace;
   background: #fafafa;
   margin: 0;
   padding: 20px;
@@ -63,4 +64,78 @@ button:hover {
   color: #444;
   text-align: right;
   margin-right: 20%;
+}
+
+/* --- NOVO: Menu no topo / top menu (Opção A) --- */
+.top-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1100px;
+  margin: 0 auto 20px auto;
+}
+
+.top-menu {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.menu-btn {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-weight: bold;
+}
+
+.menu-btn:hover{
+  background: #efefef;
+}
+
+.menu-btn.active{
+  background: #2b6cb0;
+  color: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
+/* top-bar (usuário e logout) */
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-bar .user-email {
+  margin-right: 8px;
+}
+
+/* estado escondido */
+.hidden {
+  display: none;
+}
+
+/* melhorar aparência das listas (receitas/despesas) */
+ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+li {
+  padding: 8px 6px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* botões de ação dentro do li */
+li button {
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+/* destaque para totais */
+.totais span {
+  display: inline-block;
+  margin-right: 12px;
+  font-weight: bold;
 }
