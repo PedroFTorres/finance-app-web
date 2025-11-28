@@ -1,12 +1,11 @@
 // =========================
-//  Finance App - app.js (menu topo adicionado)
+//  Finance App - app.js (com Dashboard e Chart.js)
 // =========================
 
 // -------------------------
 // Utilidades
 // -------------------------
 
-// Formatar data para DD/MM/YYYY
 function formatDate(dateString) {
   const d = new Date(dateString + "T00:00:00");
   const dia = String(d.getDate()).padStart(2, "0");
@@ -15,17 +14,17 @@ function formatDate(dateString) {
   return `${dia}/${mes}/${ano}`;
 }
 
-// Formatar valores no padrão Real
 function formatReal(valor) {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 // -------------------------
-// Variáveis e sessão
+// Sessão e variáveis
 // -------------------------
 
 let currentUser = null;
 let editing = { type: null, id: null };
+let dashboardChart = null;
 
 // Verificar sessão ao carregar app.html
 supabase.auth.getSession().then(({ data }) => {
@@ -67,9 +66,18 @@ const totalDespesasEl = document.getElementById('total-despesas');
 const listReceitas = document.getElementById('list-receitas');
 const listDespesas = document.getElementById('list-despesas');
 
+// Dashboard DOM
+const dashPeriod = document.getElementById('dash-period');
+const dashReceber = document.getElementById('dash-receber');
+const dashPagar = document.getElementById('dash-pagar');
+const dashSaldoAtual = document.getElementById('dash-saldo-atual');
+const dashSaldoPrevisto = document.getElementById('dash-saldo-previsto');
+
 // MENU elementos
+const menuDashboardBtn = document.getElementById('menu-dashboard');
 const menuContasBtn = document.getElementById('menu-contas');
 const menuLancamentosBtn = document.getElementById('menu-lancamentos');
+const telaDashboard = document.getElementById('tela-dashboard');
 const telaContas = document.getElementById('tela-contas');
 const telaLancamentos = document.getElementById('tela-lancamentos');
 
@@ -78,38 +86,53 @@ const telaLancamentos = document.getElementById('tela-lancamentos');
 // -------------------------
 
 async function initApp() {
-  // carregar contas e movimentos iniciais
   await loadContas();
   subscribeToChanges();
 
   // bind do menu
+  menuDashboardBtn.onclick = () => showDashboard();
   menuContasBtn.onclick = () => showContas();
   menuLancamentosBtn.onclick = () => showLancamentos();
 
-  // mostrar a tela padrão (contas)
-  showContas();
+  // mostrar a tela padrão (dashboard)
+  showDashboard();
 }
 
 // -------------------------
 // Funções de troca de tela
 // -------------------------
 
+function showDashboard() {
+  telaDashboard.classList.remove('hidden');
+  telaContas.classList.add('hidden');
+  telaLancamentos.classList.add('hidden');
+
+  menuDashboardBtn.classList.add('active');
+  menuContasBtn.classList.remove('active');
+  menuLancamentosBtn.classList.remove('active');
+
+  updateDashboard();
+}
+
 function showContas() {
+  telaDashboard.classList.add('hidden');
   telaContas.classList.remove('hidden');
   telaLancamentos.classList.add('hidden');
 
+  menuDashboardBtn.classList.remove('active');
   menuContasBtn.classList.add('active');
   menuLancamentosBtn.classList.remove('active');
 }
 
 function showLancamentos() {
+  telaDashboard.classList.add('hidden');
   telaContas.classList.add('hidden');
   telaLancamentos.classList.remove('hidden');
 
+  menuDashboardBtn.classList.remove('active');
   menuContasBtn.classList.remove('active');
   menuLancamentosBtn.classList.add('active');
 
-  // sempre que abrir lançamentos, atualiza movimentos
   refreshMovements();
 }
 
@@ -346,6 +369,94 @@ function createLancamentoItem(item, type) {
 }
 
 // -------------------------
+// Dashboard: cálculos e gráfico
+// -------------------------
+
+function getMonthRange(date = new Date()) {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0);
+  return { start, end };
+}
+
+function toISODate(d) {
+  return d.toISOString().slice(0,10);
+}
+
+async function updateDashboard() {
+  if (!currentUser) return;
+
+  const today = new Date();
+  const { start, end } = getMonthRange(today);
+
+  const startStr = toISODate(start);
+  const endStr = toISODate(end);
+  const todayStr = toISODate(today);
+
+  dashPeriod.textContent = `${formatDate(startStr)} — ${formatDate(endStr)}`;
+
+  // Query: apenas lançamentos do mês atual com data >= hoje (futuros no mês)
+  const [rReceitas, rDespesas, rContas] = await Promise.all([
+    supabase.from("receitas").select("valor").gte("data", todayStr).lte("data", endStr).eq("user_id", currentUser.id),
+    supabase.from("despesas").select("valor").gte("data", todayStr).lte("data", endStr).eq("user_id", currentUser.id),
+    supabase.from("contas_bancarias").select("saldo_inicial").eq("user_id", currentUser.id)
+  ]);
+
+  const receitas = rReceitas.data || [];
+  const despesas = rDespesas.data || [];
+  const contas = rContas.data || [];
+
+  const totalReceber = receitas.reduce((s, it) => s + (it.valor || 0), 0);
+  const totalPagar = despesas.reduce((s, it) => s + (it.valor || 0), 0);
+  const saldoAtual = contas.reduce((s, it) => s + (parseFloat(it.saldo_inicial || 0)), 0);
+  const saldoPrevisto = saldoAtual + totalReceber - totalPagar;
+
+  dashReceber.textContent = formatReal(totalReceber);
+  dashPagar.textContent = formatReal(totalPagar);
+  dashSaldoAtual.textContent = formatReal(saldoAtual);
+  dashSaldoPrevisto.textContent = formatReal(saldoPrevisto);
+
+  // Atualizar gráfico
+  const ctx = document.getElementById('chart-dashboard').getContext('2d');
+  const data = {
+    labels: ['Mês atual'],
+    datasets: [
+      {
+        label: 'A Receber',
+        data: [totalReceber],
+        backgroundColor: 'rgba(54, 162, 235, 0.8)'
+      },
+      {
+        label: 'A Pagar',
+        data: [totalPagar],
+        backgroundColor: 'rgba(255, 99, 132, 0.8)'
+      }
+    ]
+  };
+
+  const options = {
+    responsive: true,
+    scales: {
+      x: {
+        stacked: false
+      },
+      y: {
+        beginAtZero: true
+      }
+    }
+  };
+
+  if (dashboardChart) {
+    dashboardChart.data = data;
+    dashboardChart.options = options;
+    dashboardChart.update();
+  } else {
+    dashboardChart = new Chart(ctx, { type: 'bar', data, options });
+  }
+}
+
+// -------------------------
 // Realtime
 // -------------------------
 
@@ -353,14 +464,30 @@ function subscribeToChanges() {
   supabase.channel("rt_receitas")
     .on("postgres_changes", { event: "*", schema: "public", table: "receitas" },
       payload => {
-        if (payload.record?.user_id === currentUser.id) refreshMovements();
+        if (payload.record?.user_id === currentUser.id) {
+          refreshMovements();
+          updateDashboard();
+        }
       })
     .subscribe();
 
   supabase.channel("rt_despesas")
     .on("postgres_changes", { event: "*", schema: "public", table: "despesas" },
       payload => {
-        if (payload.record?.user_id === currentUser.id) refreshMovements();
+        if (payload.record?.user_id === currentUser.id) {
+          refreshMovements();
+          updateDashboard();
+        }
+      })
+    .subscribe();
+
+  supabase.channel("rt_contas")
+    .on("postgres_changes", { event: "*", schema: "public", table: "contas_bancarias" },
+      payload => {
+        if (payload.record?.user_id === currentUser.id) {
+          loadContas();
+          updateDashboard();
+        }
       })
     .subscribe();
 }

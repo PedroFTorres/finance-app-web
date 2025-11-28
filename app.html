@@ -11,7 +11,8 @@
   <!-- Top bar com menu -->
   <header class="top-header">
     <nav class="top-menu">
-      <button id="menu-contas" class="menu-btn active">Contas</button>
+      <button id="menu-dashboard" class="menu-btn active">Dashboard</button>
+      <button id="menu-contas" class="menu-btn">Contas</button>
       <button id="menu-lancamentos" class="menu-btn">Lançamentos</button>
     </nav>
 
@@ -24,8 +25,31 @@
   <main>
     <h1>Finance App</h1>
 
+    <!-- TELA: DASHBOARD (padrão) -->
+    <section id="tela-dashboard">
+      <section class="dashboard-box">
+        <h2>Resumo do Mês (Atual)</h2>
+
+        <div class="dashboard-grid">
+          <div class="card">
+            <h3>Gráfico: A Receber x A Pagar</h3>
+            <canvas id="chart-dashboard" width="400" height="200"></canvas>
+          </div>
+
+          <div class="card">
+            <h3>Resumo</h3>
+            <p><strong>Período:</strong> <span id="dash-period"></span></p>
+            <p><strong>Total a receber:</strong> <span id="dash-receber">R$ 0,00</span></p>
+            <p><strong>Total a pagar:</strong> <span id="dash-pagar">R$ 0,00</span></p>
+            <p><strong>Saldo atual:</strong> <span id="dash-saldo-atual">R$ 0,00</span></p>
+            <p><strong>Saldo previsto:</strong> <span id="dash-saldo-previsto">R$ 0,00</span></p>
+          </div>
+        </div>
+      </section>
+    </section>
+
     <!-- TELA: CONTAS -->
-    <section id="tela-contas">
+    <section id="tela-contas" class="hidden">
       <section class="contas-box">
         <h2>Contas</h2>
 
@@ -74,6 +98,7 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="supabase.js"></script>
   <script src="app.js"></script>
 </body>
