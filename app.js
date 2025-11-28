@@ -327,3 +327,101 @@ function subscribeToChanges() {
       })
     .subscribe();
 }
+// ==========================================
+// SISTEMA DE TELAS (MENU SUPERIOR)
+// ==========================================
+
+const telaDashboard = document.getElementById("tela-dashboard");
+const telaContas = document.getElementById("tela-contas");
+const telaLanc = document.getElementById("tela-lancamentos");
+
+const btnDash = document.getElementById("menu-dashboard");
+const btnContas = document.getElementById("menu-contas");
+const btnLanc = document.getElementById("menu-lancamentos");
+
+function showScreen(target) {
+  telaDashboard.classList.add("hidden");
+  telaContas.classList.add("hidden");
+  telaLanc.classList.add("hidden");
+
+  btnDash.classList.remove("active");
+  btnContas.classList.remove("active");
+  btnLanc.classList.remove("active");
+
+  if (target === "dashboard") {
+    telaDashboard.classList.remove("hidden");
+    btnDash.classList.add("active");
+  } else if (target === "contas") {
+    telaContas.classList.remove("hidden");
+    btnContas.classList.add("active");
+  } else if (target === "lanc") {
+    telaLanc.classList.remove("hidden");
+    btnLanc.classList.add("active");
+  }
+}
+
+btnDash.onclick = () => showScreen("dashboard");
+btnContas.onclick = () => showScreen("contas");
+btnLanc.onclick = () => showScreen("lanc");
+
+
+// ==========================================
+// ABAS DENTRO DE CONTAS (Cadastro / Extrato)
+// ==========================================
+
+const tabCadastro = document.getElementById("tab-cadastro");
+const tabExtrato = document.getElementById("tab-extrato");
+
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    const tab = btn.dataset.tab;
+
+    if (tab === "cadastro") {
+      tabCadastro.classList.remove("hidden");
+      tabExtrato.classList.add("hidden");
+    } else {
+      tabCadastro.classList.add("hidden");
+      tabExtrato.classList.remove("hidden");
+    }
+  };
+});
+
+
+// ==========================================
+// POPULAR SELECTS ADICIONAIS (extrato e lançamento)
+// ==========================================
+
+async function loadContasExtra() {
+  const selectExtrato = document.getElementById("select-contas-extrato");
+  const selectLanc = document.getElementById("select-conta-lanc");
+
+  const { data } = await supabase
+    .from("contas_bancarias")
+    .select("*")
+    .eq("user_id", currentUser.id);
+
+  selectExtrato.innerHTML = "";
+  selectLanc.innerHTML = "";
+
+  data.forEach(c => {
+    const opt1 = document.createElement("option");
+    opt1.value = c.id;
+    opt1.textContent = c.nome;
+
+    const opt2 = opt1.cloneNode(true);
+
+    selectExtrato.appendChild(opt1);
+    selectLanc.appendChild(opt2);
+  });
+}
+
+// Chamar sempre quando carregar contas
+const originalLoadContas = loadContas;
+loadContas = async function () {
+  await originalLoadContas(); 
+  await loadContasExtra();
+};
+
