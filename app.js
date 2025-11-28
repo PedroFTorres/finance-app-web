@@ -424,4 +424,83 @@ loadContas = async function () {
   await originalLoadContas(); 
   await loadContasExtra();
 };
+// ==========================================
+// DASHBOARD — GRÁFICO E RESUMO
+// ==========================================
+
+let chartDashboard = null;
+
+async function loadDashboard() {
+  const agora = new Date();
+  const ano = agora.getFullYear();
+  const mes = agora.getMonth() + 1;
+
+  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
+  const fim = `${ano}-${String(mes).padStart(2, "0")}-31`;
+
+  // Carregar receitas
+  const receitas = await supabase
+    .from("receitas")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .gte("data", inicio)
+    .lte("data", fim);
+
+  // Carregar despesas
+  const despesas = await supabase
+    .from("despesas")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .gte("data", inicio)
+    .lte("data", fim);
+
+  const totalR = (receitas.data || []).reduce((s, r) => s + r.valor, 0);
+  const totalD = (despesas.data || []).reduce((s, d) => s + d.valor, 0);
+  const saldoPrevisto = totalR - totalD;
+
+  document.getElementById("dash-period").textContent = `${mes}/${ano}`;
+  document.getElementById("dash-receber").textContent = formatReal(totalR);
+  document.getElementById("dash-pagar").textContent = formatReal(totalD);
+  document.getElementById("dash-saldo-atual").textContent = formatReal(totalR - totalD);
+  document.getElementById("dash-saldo-previsto").textContent = formatReal(saldoPrevisto);
+
+  generateDashboardChart(totalR, totalD);
+}
+
+function generateDashboardChart(receitas, despesas) {
+  const ctx = document.getElementById("chart-dashboard");
+
+  if (!ctx) return;
+
+  // Se o gráfico já existe, destrói antes de criar outro
+  if (chartDashboard) {
+    chartDashboard.destroy();
+  }
+
+  chartDashboard = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Receitas", "Despesas"],
+      datasets: [
+        {
+          label: "Resumo do mês",
+          data: [receitas, despesas],
+          backgroundColor: ["green", "red"]
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+// Executa o dashboard toda vez que abrir a tela
+btnDash.onclick = () => {
+  showScreen("dashboard");
+  loadDashboard();
+};
 
