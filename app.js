@@ -1,5 +1,5 @@
 // =========================
-//  Finance App - app.js (versão aprimorada)
+//  Finance App - app.js (menu topo adicionado)
 // =========================
 
 // -------------------------
@@ -67,13 +67,50 @@ const totalDespesasEl = document.getElementById('total-despesas');
 const listReceitas = document.getElementById('list-receitas');
 const listDespesas = document.getElementById('list-despesas');
 
+// MENU elementos
+const menuContasBtn = document.getElementById('menu-contas');
+const menuLancamentosBtn = document.getElementById('menu-lancamentos');
+const telaContas = document.getElementById('tela-contas');
+const telaLancamentos = document.getElementById('tela-lancamentos');
+
 // -------------------------
 // Inicialização
 // -------------------------
 
 async function initApp() {
+  // carregar contas e movimentos iniciais
   await loadContas();
   subscribeToChanges();
+
+  // bind do menu
+  menuContasBtn.onclick = () => showContas();
+  menuLancamentosBtn.onclick = () => showLancamentos();
+
+  // mostrar a tela padrão (contas)
+  showContas();
+}
+
+// -------------------------
+// Funções de troca de tela
+// -------------------------
+
+function showContas() {
+  telaContas.classList.remove('hidden');
+  telaLancamentos.classList.add('hidden');
+
+  menuContasBtn.classList.add('active');
+  menuLancamentosBtn.classList.remove('active');
+}
+
+function showLancamentos() {
+  telaContas.classList.add('hidden');
+  telaLancamentos.classList.remove('hidden');
+
+  menuContasBtn.classList.remove('active');
+  menuLancamentosBtn.classList.add('active');
+
+  // sempre que abrir lançamentos, atualiza movimentos
+  refreshMovements();
 }
 
 // -------------------------
