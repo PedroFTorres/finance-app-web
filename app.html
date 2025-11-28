@@ -11,8 +11,8 @@
   <!-- Top bar com menu -->
   <header class="top-header">
     <nav class="top-menu">
-      <button id="menu-dashboard" class="menu-btn active">Dashboard</button>
-      <button id="menu-contas" class="menu-btn">Contas</button>
+      <button id="menu-dashboard" class="menu-btn">Dashboard</button>
+      <button id="menu-contas" class="menu-btn active">Contas</button>
       <button id="menu-lancamentos" class="menu-btn">Lançamentos</button>
     </nav>
 
@@ -25,17 +25,15 @@
   <main>
     <h1>Finance App</h1>
 
-    <!-- TELA: DASHBOARD (padrão) -->
-    <section id="tela-dashboard">
+    <!-- TELA: DASHBOARD -->
+    <section id="tela-dashboard" class="hidden">
       <section class="dashboard-box">
         <h2>Resumo do Mês (Atual)</h2>
-
         <div class="dashboard-grid">
           <div class="card">
             <h3>Gráfico: A Receber x A Pagar</h3>
             <canvas id="chart-dashboard" width="400" height="200"></canvas>
           </div>
-
           <div class="card">
             <h3>Resumo</h3>
             <p><strong>Período:</strong> <span id="dash-period"></span></p>
@@ -49,14 +47,75 @@
     </section>
 
     <!-- TELA: CONTAS -->
-    <section id="tela-contas" class="hidden">
+    <section id="tela-contas">
       <section class="contas-box">
         <h2>Contas</h2>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="cadastro">Cadastro</button>
+          <button class="tab-btn" data-tab="extrato">Extrato</button>
+        </div>
 
-        <select id="select-contas"></select>
-        <input id="conta-nome" placeholder="Nova conta" />
-        <input id="conta-saldo" type="number" placeholder="Saldo inicial"/>
-        <button id="btn-add-conta">Adicionar Conta</button>
+        <!-- ABA: Cadastro -->
+        <div id="tab-cadastro" class="tab-content">
+          <label>Nome da conta</label><br/>
+          <input id="conta-nome" placeholder="Nova conta" />
+          <input id="conta-saldo" type="number" placeholder="Saldo inicial"/>
+          <button id="btn-add-conta">Adicionar Conta</button>
+          <hr/>
+          <label>Contas existentes</label><br/>
+          <select id="select-contas"></select>
+        </div>
+
+        <!-- ABA: Extrato -->
+        <div id="tab-extrato" class="tab-content hidden">
+          <h3>Extrato da Conta</h3>
+          <label>Selecionar conta</label><br/>
+          <select id="select-contas-extrato"></select>
+
+          <div class="filtros">
+            <label>Período</label>
+            <select id="periodo-extrato">
+              <option value="mes_atual">Mês atual</option>
+              <option value="mes_anterior">Mês anterior</option>
+              <option value="ultimos_30">Últimos 30 dias</option>
+              <option value="personalizado">Personalizado</option>
+            </select>
+
+            <input type="date" id="data-inicio" class="hidden"/>
+            <input type="date" id="data-fim" class="hidden"/>
+            <button id="btn-filtrar-extrato">Filtrar</button>
+          </div>
+
+          <div class="table-wrap">
+            <table id="table-extrato">
+              <thead>
+                <tr>
+                  <th data-key="data">Data ▾</th>
+                  <th data-key="descricao">Descrição</th>
+                  <th data-key="tipo">Tipo</th>
+                  <th data-key="valor">Valor</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3"><strong>Totais</strong></td>
+                  <td id="total-valor"><strong>R$ 0,00</strong></td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="extrato-totals">
+            <p>Total Receitas: <span id="total-receitas-extrato">R$0,00</span></p>
+            <p>Total Despesas: <span id="total-despesas-extrato">R$0,00</span></p>
+            <p>Saldo do Período: <span id="saldo-periodo-extrato">R$0,00</span></p>
+            <p>Saldo atual da conta: <span id="saldo-atual-conta-extrato">R$0,00</span></p>
+          </div>
+        </div>
+
       </section>
     </section>
 
@@ -73,6 +132,23 @@
         <input id="valor-lanc" type="number" placeholder="Valor" />
         <input id="desc-lanc" placeholder="Descrição" />
         <input id="data-lanc" type="date" />
+        <label>Conta</label>
+        <select id="select-conta-lanc"></select>
+
+        <div class="recorrencia">
+          <label>Recorrência</label>
+          <select id="recorrencia-tipo">
+            <option value="none">Não recorrente</option>
+            <option value="monthly">Mensal</option>
+            <option value="fortnight">Quinzenal</option>
+            <option value="weekly">Semanal</option>
+            <option value="annual">Anual</option>
+          </select>
+
+          <label>Parcelas</label>
+          <input id="recorrencia-parcelas" type="number" min="1" value="1" />
+        </div>
+
         <button id="btn-add-lanc">Adicionar</button>
         <button id="btn-cancel-edit" class="hidden">Cancelar</button>
 
