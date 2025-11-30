@@ -1,14 +1,15 @@
 // =========================
-//  Finance App - app.js FINAL (com BAIXAR corrigido)
+// Finance App - app.js (FINAL, completo)
 // =========================
-// Este arquivo mantém 100% do funcionamento original
-// Apenas adiciona o botão BAIXAR + correção do select da conta de lançamento
+// Mantém tudo do app original + botão BAIXAR (Opção A)
+// Ordem das declarações corrigida para evitar ReferenceError
 // =========================
 
 // -------------------------
-// Utilidades
+// UTILITÁRIOS
 // -------------------------
 function formatDate(dateString) {
+  if (!dateString) return "";
   const d = new Date(dateString + "T00:00:00");
   const dia = String(d.getDate()).padStart(2, "0");
   const mes = String(d.getMonth() + 1).padStart(2, "0");
@@ -17,160 +18,272 @@ function formatDate(dateString) {
 }
 
 function formatReal(valor) {
+  if (typeof valor !== "number") valor = Number(valor || 0);
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 // -------------------------
-// Variáveis e sessão
+// SESSÃO E VARIÁVEIS
 // -------------------------
 let currentUser = null;
 let editing = { type: null, id: null };
 
+// -------------------------
+// ELEMENTOS DO DOM (declaração primeiro)
+// -------------------------
+// Top menu / telas
+const telaDashboard = document.getElementById("tela-dashboard");
+const telaContas = document.getElementById("tela-contas");
+const telaLanc = document.getElementById("tela-lancamentos");
+
+const btnDash = document.getElementById("menu-dashboard");
+const btnContas = document.getElementById("menu-contas");
+const btnLanc = document.getElementById("menu-lancamentos");
+
+// Contas (aba cadastro)
+const selectContas = document.getElementById("select-contas");
+const contaNome = document.getElementById("conta-nome");
+const contaSaldo = document.getElementById("conta-saldo");
+const btnAddConta = document.getElementById("btn-add-conta");
+
+// Lançamentos
+const tipoLanc = document.getElementById("tipo-lancamento");
+const valorLanc = document.getElementById("valor-lanc");
+const descLanc = document.getElementById("desc-lanc");
+const dataLanc = document.getElementById("data-lanc");
+const btnAddLanc = document.getElementById("btn-add-lanc");
+const btnCancelEdit = document.getElementById("btn-cancel-edit");
+const selectContaLanc = document.getElementById("select-conta-lanc");
+
+// Totais / listas
+const saldoAtualEl = document.getElementById("saldo-atual");
+const totalReceitasEl = document.getElementById("total-receitas");
+const totalDespesasEl = document.getElementById("total-despesas");
+
+const listReceitas = document.getElementById("list-receitas");
+const listDespesas = document.getElementById("list-despesas");
+
+// Abas internas Contas
+const tabCadastro = document.getElementById("tab-cadastro");
+const tabExtrato = document.getElementById("tab-extrato");
+
+// Extrato
+const selectExtrato = document.getElementById("select-contas-extrato");
+const periodoExtrato = document.getElementById("periodo-extrato");
+const dataInicio = document.getElementById("data-inicio");
+const dataFim = document.getElementById("data-fim");
+const btnFiltrarExtrato = document.getElementById("btn-filtrar-extrato");
+const tableExtrato = document.getElementById("table-extrato").querySelector("tbody");
+const totalValorExtrato = document.getElementById("total-valor");
+const totalReceitasExtrato = document.getElementById("total-receitas-extrato");
+const totalDespesasExtrato = document.getElementById("total-despesas-extrato");
+const saldoPeriodoExtrato = document.getElementById("saldo-periodo-extrato");
+const saldoAtualContaExtrato = document.getElementById("saldo-atual-conta-extrato");
+
+// Dashboard
+let chartDashboard = null;
+
+// -------------------------
+// AUTH: verificar sessão
+// -------------------------
 supabase.auth.getSession().then(({ data }) => {
   if (!data.session) {
     window.location.href = "login.html";
   } else {
     currentUser = data.session.user;
-    document.getElementById("user-email").textContent = currentUser.email;
+    const userEmailEl = document.getElementById("user-email");
+    if (userEmailEl) userEmailEl.textContent = currentUser.email;
     initApp();
   }
 });
 
-document.getElementById("btn-logout").onclick = async () => {
-  await supabase.auth.signOut();
-  window.location.href = "login.html";
-};
+// Logout
+const btnLogout = document.getElementById("btn-logout");
+if (btnLogout) {
+  btnLogout.onclick = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "login.html";
+  };
+}
 
 // -------------------------
-// ELEMENTOS DO DOM
-// -------------------------
-const selectContas = document.getElementById('select-contas'); // PARA ABA CONTAS
-
-// CORREÇÃO IMPORTANTE → select certo para lançamentos
-const selectContaLanc = document.getElementById('select-conta-lanc'); // PARA LANÇAMENTOS
-
-const contaNome = document.getElementById('conta-nome');
-const contaSaldo = document.getElementById('conta-saldo');
-const btnAddConta = document.getElementById('btn-add-conta');
-
-const tipoLanc = document.getElementById('tipo-lancamento');
-const valorLanc = document.getElementById('valor-lanc');
-const descLanc = document.getElementById('desc-lanc');
-const dataLanc = document.getElementById('data-lanc');
-const btnAddLanc = document.getElementById('btn-add-lanc');
-const btnCancelEdit = document.getElementById('btn-cancel-edit');
-
-const saldoAtualEl = document.getElementById('saldo-atual');
-const totalReceitasEl = document.getElementById('total-receitas');
-const totalDespesasEl = document.getElementById('total-despesas');
-
-const listReceitas = document.getElementById('list-receitas');
-const listDespesas = document.getElementById('list-despesas');
-
-// -------------------------
-// Inicialização
+// INICIALIZAÇÃO
 // -------------------------
 async function initApp() {
-  await loadContas();
-  subscribeToChanges();
+  try {
+    await loadContas();
+    subscribeToChanges();
+  } catch (err) {
+    console.error("Erro initApp:", err);
+  }
 }
 
 // -------------------------
-// CONTAS BANCÁRIAS
+// CONTAS: carregar / adicionar
 // -------------------------
 async function loadContas() {
-  const { data, error } = await supabase
-    .from("contas_bancarias")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .order("created_at");
+  try {
+    const { data, error } = await supabase
+      .from("contas_bancarias")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .order("created_at");
 
-  if (error) return console.error(error);
+    if (error) throw error;
 
-  selectContas.innerHTML = "";
+    // popular select principal (Contas)
+    selectContas.innerHTML = "";
+    data.forEach(conta => {
+      const opt = document.createElement("option");
+      const saldoInicial = Number(conta.saldo_inicial || 0).toFixed(2);
+      opt.value = conta.id;
+      opt.textContent = `${conta.nome} (R$ ${saldoInicial})`;
+      selectContas.appendChild(opt);
+    });
 
-  data.forEach(conta => {
-    const opt = document.createElement("option");
-    const saldoInicial = Number(conta.saldo_inicial || 0).toFixed(2);
-    opt.value = conta.id;
-    opt.textContent = `${conta.nome} (R$ ${saldoInicial})`;
-    selectContas.appendChild(opt);
-  });
-
-  if (data.length > 0) {
-    selectContas.value = data[0].id;
-    refreshMovements();
+    if (data.length > 0) {
+      // definir primeira conta e carregar movimentos
+      if (!selectContas.value) selectContas.value = data[0].id;
+      await refreshMovements();
+    }
+  } catch (err) {
+    console.error("Erro loadContas:", err);
   }
 }
 
-btnAddConta.onclick = async () => {
-  const nome = contaNome.value.trim();
-  const saldo = parseFloat(contaSaldo.value || 0);
-
-  if (!nome) return alert("Informe o nome da conta!");
-
-  const { error } = await supabase
-    .from("contas_bancarias")
-    .insert([
-      { nome, saldo_inicial: saldo, saldo_atual: saldo, user_id: currentUser.id }
-    ]);
-
-  if (error) return alert(error.message);
-
-  contaNome.value = "";
-  contaSaldo.value = "";
-
-  loadContas();
-};
-
-// -------------------------
-// LANÇAMENTOS (CRIA / EDITA / SALVA)
-// -------------------------
-btnAddLanc.onclick = async () => {
-  const valor = parseFloat(valorLanc.value);
-  const desc = descLanc.value.trim();
-  const data = dataLanc.value;
-  const tipo = tipoLanc.value;
-
-  // CORREÇÃO → usar conta da aba de lançamentos
-  const conta_id = selectContaLanc.value;
-
-  if (!valor || !desc || !data) return alert("Preencha todos os campos!");
-
-  if (editing.type && editing.id) {
-    const table = editing.type === "receita" ? "receitas" : "despesas";
-
+if (btnAddConta) {
+  btnAddConta.onclick = async () => {
+    const nome = (contaNome.value || "").trim();
+    const saldo = parseFloat(contaSaldo.value || 0);
+    if (!nome) return alert("Informe o nome da conta!");
     const { error } = await supabase
-      .from(table)
-      .update({ descricao: desc, valor, data, conta_id })
-      .eq("id", editing.id)
-      .eq("user_id", currentUser.id);
-
+      .from("contas_bancarias")
+      .insert([{ nome, saldo_inicial: saldo, saldo_atual: saldo, user_id: currentUser.id }]);
     if (error) return alert(error.message);
-
-    stopEdit();
-    refreshMovements();
-    return;
-  }
-
-  const payload = {
-    descricao: desc,
-    valor,
-    data,
-    conta_id,
-    user_id: currentUser.id,
-    baixado: false
+    contaNome.value = "";
+    contaSaldo.value = "";
+    await loadContas();
   };
+}
 
-  if (tipo === "receita") await supabase.from("receitas").insert([payload]);
-  else await supabase.from("despesas").insert([payload]);
+// -------------------------
+// POPULAR SELECTS EXTRAS (extrato + lançamentos)
+// -------------------------
+async function loadContasExtra() {
+  try {
+    const { data, error } = await supabase
+      .from("contas_bancarias")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .order("created_at");
 
-  valorLanc.value = "";
-  descLanc.value = "";
-  dataLanc.value = "";
+    if (error) throw error;
 
-  refreshMovements();
+    // limpar e popular
+    if (selectExtrato) selectExtrato.innerHTML = "";
+    if (selectContaLanc) selectContaLanc.innerHTML = "";
+
+    data.forEach(c => {
+      const opt1 = document.createElement("option");
+      opt1.value = c.id;
+      opt1.textContent = c.nome;
+
+      const opt2 = opt1.cloneNode(true);
+
+      if (selectExtrato) selectExtrato.appendChild(opt1);
+      if (selectContaLanc) selectContaLanc.appendChild(opt2);
+    });
+
+    // se não houver conta selecionada em lançamentos, define a primeira
+    if (selectContaLanc && !selectContaLanc.value && data.length > 0) selectContaLanc.value = data[0].id;
+    if (selectExtrato && !selectExtrato.value && data.length > 0) selectExtrato.value = data[0].id;
+  } catch (err) {
+    console.error("Erro loadContasExtra:", err);
+  }
+}
+
+// garantir que loadContasExtra execute sempre após loadContas
+const originalLoadContas = loadContas;
+loadContas = async function () {
+  await originalLoadContas();
+  await loadContasExtra();
 };
+
+// -------------------------
+// LANÇAMENTOS: adicionar / editar / excluir
+// -------------------------
+if (btnAddLanc) {
+  btnAddLanc.onclick = async () => {
+    try {
+      const valor = parseFloat(valorLanc.value);
+      const desc = (descLanc.value || "").trim();
+      const data = dataLanc.value;
+      const tipo = tipoLanc.value;
+      const conta_id = selectContaLanc.value;
+
+      if (!valor || !desc || !data) return alert("Preencha todos os campos!");
+
+      // editar
+      if (editing.type && editing.id) {
+        const table = editing.type === "receita" ? "receitas" : "despesas";
+        const { error } = await supabase
+          .from(table)
+          .update({ descricao: desc, valor, data, conta_id })
+          .eq("id", editing.id)
+          .eq("user_id", currentUser.id);
+        if (error) return alert(error.message);
+        stopEdit();
+        refreshMovements();
+        return;
+      }
+
+      // adicionar
+      const payload = {
+        descricao: desc,
+        valor,
+        data,
+        conta_id,
+        user_id: currentUser.id,
+        baixado: false
+      };
+
+      if (tipo === "receita") {
+        await supabase.from("receitas").insert([payload]);
+      } else {
+        await supabase.from("despesas").insert([payload]);
+      }
+
+      valorLanc.value = "";
+      descLanc.value = "";
+      dataLanc.value = "";
+
+      refreshMovements();
+    } catch (err) {
+      console.error("Erro btnAddLanc:", err);
+      alert("Erro ao adicionar lançamento.");
+    }
+  };
+}
+
+if (btnCancelEdit) {
+  btnCancelEdit.onclick = () => {
+    stopEdit();
+  };
+}
+
+function startEdit(type, item) {
+  editing.type = type;
+  editing.id = item.id;
+
+  tipoLanc.value = type;
+  valorLanc.value = item.valor;
+  descLanc.value = item.descricao;
+  dataLanc.value = item.data;
+  if (selectContaLanc) selectContaLanc.value = item.conta_id;
+
+  btnAddLanc.textContent = "Salvar";
+  btnCancelEdit.classList.remove("hidden");
+}
 
 function stopEdit() {
   editing.type = null;
@@ -180,158 +293,262 @@ function stopEdit() {
   descLanc.value = "";
   dataLanc.value = "";
 
-  btnAddLanc.textContent = "Adicionar";
-  btnCancelEdit.classList.add("hidden");
+  if (btnAddLanc) btnAddLanc.textContent = "Adicionar";
+  if (btnCancelEdit) btnCancelEdit.classList.add("hidden");
 }
 
-// -------------------------
-// EXCLUIR LANÇAMENTO
-// -------------------------
 async function deleteItem(type, id) {
-  if (!confirm("Deseja excluir este lançamento?")) return;
-
-  const table = type === "receita" ? "receitas" : "despesas";
-
-  await supabase.from(table).delete().eq("id", id);
-  refreshMovements();
+  try {
+    if (!confirm("Deseja excluir este lançamento?")) return;
+    const table = type === "receita" ? "receitas" : "despesas";
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .eq("id", id)
+      .eq("user_id", currentUser.id);
+    if (error) return alert(error.message);
+    refreshMovements();
+  } catch (err) {
+    console.error("Erro deleteItem:", err);
+  }
 }
 
 // -------------------------
-// LISTAGEM DE LANÇAMENTOS + BOTÃO BAIXAR
+// LISTAGEM DE LANÇAMENTOS + criação de itens com ações (Editar / Excluir / Baixar)
 // -------------------------
 async function refreshMovements() {
-  const conta_id = selectContas.value;
+  try {
+    const conta_id = selectContas.value;
 
-  const [r, d] = await Promise.all([
-    supabase.from("receitas").select("*").eq("conta_id", conta_id).eq("user_id", currentUser.id).order("data"),
-    supabase.from("despesas").select("*").eq("conta_id", conta_id).eq("user_id", currentUser.id).order("data")
-  ]);
+    const [r, d] = await Promise.all([
+      supabase.from("receitas").select("*")
+        .eq("conta_id", conta_id)
+        .eq("user_id", currentUser.id)
+        .order("data"),
+      supabase.from("despesas").select("*")
+        .eq("conta_id", conta_id)
+        .eq("user_id", currentUser.id)
+        .order("data")
+    ]);
 
-  const receitas = r.data || [];
-  const despesas = d.data || [];
+    const receitas = r.data || [];
+    const despesas = d.data || [];
 
-  listReceitas.innerHTML = "";
-  listDespesas.innerHTML = "";
+    listReceitas.innerHTML = "";
+    listDespesas.innerHTML = "";
 
-  receitas.forEach(item => listReceitas.appendChild(createLancamentoItem(item, "receita")));
-  despesas.forEach(item => listDespesas.appendChild(createLancamentoItem(item, "despesa")));
+    let totalR = 0;
+    let totalD = 0;
+
+    receitas.forEach(item => {
+      totalR += item.valor;
+      const li = createLancamentoItem(item, "receita");
+      listReceitas.appendChild(li);
+    });
+
+    despesas.forEach(item => {
+      totalD += item.valor;
+      const li = createLancamentoItem(item, "despesa");
+      listDespesas.appendChild(li);
+    });
+
+    totalReceitasEl.textContent = formatReal(totalR);
+    totalDespesasEl.textContent = formatReal(totalD);
+
+    // calcular saldo inicial da conta (a partir do option text)
+    const opt = selectContas.selectedOptions[0];
+    const saldoInicial = opt ? parseFloat(opt.textContent.match(/\(R\$ ([0-9.,]+)\)/)[1].replace(",", ".")) : 0;
+    saldoAtualEl.textContent = formatReal((saldoInicial + totalR - totalD));
+  } catch (err) {
+    console.error("Erro refreshMovements:", err);
+  }
 }
 
 function createLancamentoItem(item, type) {
   const li = document.createElement("li");
+
   li.style.fontFamily = `"Courier New", monospace`;
   li.style.fontWeight = "bold";
   li.style.marginBottom = "10px";
   li.style.color = type === "receita" ? "green" : "red";
 
-  li.innerHTML = `${formatDate(item.data)} — ${item.descricao} — ${formatReal(item.valor)}`;
+  const textSpan = document.createElement("span");
+  textSpan.textContent = `${formatDate(item.data)} — ${item.descricao} — ${formatReal(item.valor)}`;
 
+  if (item.baixado) {
+    li.style.opacity = "0.6";
+    const baixadoTag = document.createElement("small");
+    baixadoTag.textContent = " (baixado)";
+    textSpan.appendChild(baixadoTag);
+  }
+
+  li.appendChild(textSpan);
+
+  // ações
   const actions = document.createElement("span");
   actions.style.float = "right";
 
-  // botão editar
-  const btnEdit = document.createElement("button");
-  btnEdit.textContent = "Editar";
-  btnEdit.style.marginLeft = "5px";
-  btnEdit.onclick = () => startEdit(type, item);
+  // editar
+  const editBtn = document.createElement("button");
+  editBtn.textContent = "Editar";
+  editBtn.style.marginLeft = "5px";
+  editBtn.onclick = () => startEdit(type, item);
 
-  // botão excluir
-  const btnDelete = document.createElement("button");
-  btnDelete.textContent = "Excluir";
-  btnDelete.style.marginLeft = "5px";
-  btnDelete.onclick = () => deleteItem(type, item.id);
+  // excluir
+  const delBtn = document.createElement("button");
+  delBtn.textContent = "Excluir";
+  delBtn.style.marginLeft = "5px";
+  delBtn.onclick = () => deleteItem(type, item.id);
 
-  // botão BAIXAR somente se não baixado
+  // baixar - apenas se não estiver baixado
   if (!item.baixado) {
-    const btnBaixar = document.createElement("button");
-    btnBaixar.textContent = "Baixar";
-    btnBaixar.style.marginLeft = "5px";
-    btnBaixar.onclick = () => baixarLancamento(type, item);
-    actions.appendChild(btnBaixar);
+    const baixarBtn = document.createElement("button");
+    baixarBtn.textContent = "Baixar";
+    baixarBtn.style.marginLeft = "5px";
+    baixarBtn.onclick = () => baixarLancamento(type, item);
+    actions.appendChild(baixarBtn);
   }
 
-  actions.appendChild(btnEdit);
-  actions.appendChild(btnDelete);
-
+  actions.appendChild(editBtn);
+  actions.appendChild(delBtn);
   li.appendChild(actions);
 
   return li;
 }
 
 // -------------------------
-// FUNÇÃO BAIXAR LANÇAMENTO
+// FUNÇÃO BAIXAR (Opção A: perguntar qual conta usar)
 // -------------------------
 async function baixarLancamento(type, item) {
   try {
-    const { data: contas } = await supabase
+    const { data: contas, error: errContas } = await supabase
       .from("contas_bancarias")
-      .select("*")
-      .eq("user_id", currentUser.id);
+      .select("id, nome, saldo_atual")
+      .eq("user_id", currentUser.id)
+      .order("created_at");
 
-    let msg = "Escolha a conta:\n";
-    contas.forEach((c, i) => {
-      msg += `${i + 1}) ${c.nome} (ID:${c.id})\n`;
+    if (errContas) throw errContas;
+    if (!contas || contas.length === 0) return alert("Nenhuma conta encontrada.");
+
+    let msg = "Escolha a conta para baixar:\n";
+    contas.forEach((c, idx) => {
+      const saldoText = Number(c.saldo_atual || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      msg += `${idx + 1}) ${c.nome} — ${saldoText} — id:${c.id}\n`;
     });
+    msg += "\nDigite o número da conta (ex: 1) ou deixe vazio para usar a conta do lançamento:";
 
-    msg += "\nDigite o número da conta ou deixe vazio para usar a conta original:";
+    const resposta = prompt(msg, "");
+    let contaEscolhidaId = null;
 
-    const escolha = prompt(msg);
-    let contaId = item.conta_id;
-
-    if (escolha && !isNaN(parseInt(escolha))) {
-      contaId = contas[parseInt(escolha) - 1].id;
+    if (!resposta || resposta.trim() === "") {
+      contaEscolhidaId = item.conta_id; // usar conta do lançamento
+    } else {
+      const num = parseInt(resposta, 10);
+      if (!isNaN(num) && num >= 1 && num <= contas.length) {
+        contaEscolhidaId = contas[num - 1].id;
+      } else {
+        // tentar encontrar por id digitado
+        const byId = contas.find(c => String(c.id) === resposta.trim());
+        if (byId) contaEscolhidaId = byId.id;
+        else return alert('Entrada inválida. Operação cancelada.');
+      }
     }
 
-    const conta = contas.find(c => c.id === contaId);
-    let novoSaldo = conta.saldo_atual;
+    // buscar conta escolhida atual
+    const { data: conta, error: errConta } = await supabase
+      .from("contas_bancarias")
+      .select("*")
+      .eq("id", contaEscolhidaId)
+      .single();
 
-    if (type === "receita") novoSaldo += item.valor;
-    else novoSaldo -= item.valor;
+    if (errConta) throw errConta;
 
-    await supabase.from("contas_bancarias").update({ saldo_atual: novoSaldo }).eq("id", contaId);
+    let novoSaldo = parseFloat(conta.saldo_atual || 0);
+    if (type === "receita") novoSaldo += parseFloat(item.valor);
+    else novoSaldo -= parseFloat(item.valor);
 
+    // atualizar saldo
+    const { error: errUpdateConta } = await supabase
+      .from("contas_bancarias")
+      .update({ saldo_atual: novoSaldo })
+      .eq("id", contaEscolhidaId);
+
+    if (errUpdateConta) throw errUpdateConta;
+
+    // marcar lançamento como baixado
     const table = type === "receita" ? "receitas" : "despesas";
-
-    await supabase
+    const { error: errUpdateLanc } = await supabase
       .from(table)
-      .update({ baixado: true, data_baixa: new Date().toISOString().slice(0,10) })
+      .update({ baixado: true, data_baixa: new Date().toISOString().slice(0, 10) })
       .eq("id", item.id);
+
+    if (errUpdateLanc) throw errUpdateLanc;
 
     alert("Lançamento baixado com sucesso!");
     refreshMovements();
-
-  } catch (e) {
-    alert("Erro ao baixar: " + e.message);
+  } catch (err) {
+    console.error("Erro baixarLancamento:", err);
+    alert("Erro ao baixar lançamento: " + (err.message || JSON.stringify(err)));
   }
 }
 
 // -------------------------
-// REALTIME (SEM ALTERAÇÃO)
+// REALTIME (subscriptions)
 // -------------------------
 function subscribeToChanges() {
-  supabase.channel("rt_receitas")
-    .on("postgres_changes", { event: "*", schema: "public", table: "receitas" },
-      payload => { if (payload.record?.user_id === currentUser.id) refreshMovements(); })
-    .subscribe();
+  try {
+    supabase.channel("rt_receitas")
+      .on("postgres_changes", { event: "*", schema: "public", table: "receitas" },
+        payload => {
+          if (payload.record?.user_id === currentUser.id) refreshMovements();
+        })
+      .subscribe();
 
-  supabase.channel("rt_despesas")
-    .on("postgres_changes", { event: "*", schema: "public", table: "despesas" },
-      payload => { if (payload.record?.user_id === currentUser.id) refreshMovements(); })
-    .subscribe();
+    supabase.channel("rt_despesas")
+      .on("postgres_changes", { event: "*", schema: "public", table: "despesas" },
+        payload => {
+          if (payload.record?.user_id === currentUser.id) refreshMovements();
+        })
+      .subscribe();
+  } catch (err) {
+    console.error("Erro subscribeToChanges:", err);
+  }
 }
 
 // -------------------------
-// (RESTANTE DO SEU ARQUIVO ORIGINAL — DASHBOARD, EXTRATO, ETC)
+// SISTEMA DE TELAS (MENU SUPERIOR)
 // -------------------------
-// Mantido exatamente como você enviou (sem alterar nada)
+function showScreen(target) {
+  telaDashboard.classList.add("hidden");
+  telaContas.classList.add("hidden");
+  telaLanc.classList.add("hidden");
 
-// ==========================================
+  btnDash.classList.remove("active");
+  btnContas.classList.remove("active");
+  btnLanc.classList.remove("active");
+
+  if (target === "dashboard") {
+    telaDashboard.classList.remove("hidden");
+    btnDash.classList.add("active");
+  } else if (target === "contas") {
+    telaContas.classList.remove("hidden");
+    btnContas.classList.add("active");
+  } else if (target === "lanc") {
+    telaLanc.classList.remove("hidden");
+    btnLanc.classList.add("active");
+  }
+}
+
+btnDash.onclick = () => {
+  showScreen("dashboard");
+  loadDashboard();
+};
+btnContas.onclick = () => showScreen("contas");
+btnLanc.onclick = () => showScreen("lanc");
+
+// -------------------------
 // ABAS DENTRO DE CONTAS (Cadastro / Extrato)
-// ==========================================
-
-const tabCadastro = document.getElementById("tab-cadastro");
-const tabExtrato = document.getElementById("tab-extrato");
-
+// -------------------------
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.onclick = () => {
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -349,106 +566,194 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   };
 });
 
-// ==========================================
-// POPULAR SELECTS ADICIONAIS (extrato e lançamento)
-// ==========================================
-
-async function loadContasExtra() {
-  const selectExtrato = document.getElementById("select-contas-extrato");
-
-  const { data } = await supabase
-    .from("contas_bancarias")
-    .select("*")
-    .eq("user_id", currentUser.id);
-
-  selectExtrato.innerHTML = "";
-  selectContaLanc.innerHTML = "";
-
-  data.forEach(c => {
-    const opt1 = document.createElement("option");
-    opt1.value = c.id;
-    opt1.textContent = c.nome;
-
-    const opt2 = opt1.cloneNode(true);
-
-    selectExtrato.appendChild(opt1);
-    selectContaLanc.appendChild(opt2);
-  });
+// -------------------------
+// EXTRATO: filtros e tabela
+// -------------------------
+if (btnFiltrarExtrato) {
+  btnFiltrarExtrato.onclick = () => {
+    // Implementação básica: recarrega extrato com período selecionado
+    renderExtrato();
+  };
 }
 
-const originalLoadContas = loadContas;
-loadContas = async function () {
-  await originalLoadContas();
-  await loadContasExtra();
-};
+async function renderExtrato() {
+  try {
+    const conta_id = selectExtrato.value;
+    let inicio = null;
+    let fim = null;
+    const periodo = periodoExtrato.value;
 
-// ==========================================
-// DASHBOARD — GRÁFICO E RESUMO
-// ==========================================
+    if (periodo === "mes_atual") {
+      const now = new Date();
+      inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      fim = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    } else if (periodo === "ultimos_30") {
+      const now = new Date();
+      const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      inicio = `${past.getFullYear()}-${String(past.getMonth() + 1).padStart(2, "0")}-${String(past.getDate()).padStart(2, "0")}`;
+      fim = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    } else if (periodo === "personalizado") {
+      inicio = dataInicio.value;
+      fim = dataFim.value;
+    } else if (periodo === "mes_anterior") {
+      const now = new Date();
+      const ano = now.getFullYear();
+      const mes = now.getMonth(); // mês anterior
+      inicio = `${ano}-${String(mes).padStart(2,"0")}-01`;
+      const lastDay = new Date(ano, mes, 0).getDate();
+      fim = `${ano}-${String(mes).padStart(2,"0")}-${String(lastDay).padStart(2,"0")}`;
+    }
 
-let chartDashboard = null;
+    // buscar receitas e despesas no período
+    const [recRes, despRes] = await Promise.all([
+      supabase.from("receitas").select("*").eq("conta_id", conta_id).gte("data", inicio).lte("data", fim).order("data"),
+      supabase.from("despesas").select("*").eq("conta_id", conta_id).gte("data", inicio).lte("data", fim).order("data")
+    ]);
 
+    const rec = recRes.data || [];
+    const desp = despRes.data || [];
+
+    // preencher tabela do extrato
+    tableExtrato.innerHTML = "";
+    let total = 0;
+    rec.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${formatDate(r.data)}</td><td>${r.descricao}</td><td class="tipo-receita">Receita</td><td>${formatReal(r.valor)}</td><td class="actions"></td>`;
+      tableExtrato.appendChild(tr);
+      total += r.valor;
+    });
+    desp.forEach(d => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${formatDate(d.data)}</td><td>${d.descricao}</td><td class="tipo-despesa">Despesa</td><td>${formatReal(d.valor)}</td><td class="actions"></td>`;
+      tableExtrato.appendChild(tr);
+      total -= d.valor;
+    });
+
+    totalValorExtrato.textContent = formatReal(rec.reduce((s, r) => s + r.valor, 0) - desp.reduce((s, d) => s + d.valor, 0));
+    totalReceitasExtrato.textContent = formatReal(rec.reduce((s, r) => s + r.valor, 0));
+    totalDespesasExtrato.textContent = formatReal(desp.reduce((s, d) => s + d.valor, 0));
+    saldoPeriodoExtrato.textContent = formatReal(rec.reduce((s, r) => s + r.valor, 0) - desp.reduce((s, d) => s + d.valor, 0));
+
+    // saldo atual da conta
+    const { data: conta } = await supabase.from("contas_bancarias").select("*").eq("id", conta_id).single();
+    if (conta) saldoAtualContaExtrato.textContent = formatReal(conta.saldo_atual || 0);
+
+  } catch (err) {
+    console.error("Erro renderExtrato:", err);
+  }
+}
+
+// -------------------------
+// DASHBOARD
+// -------------------------
 async function loadDashboard() {
-  const agora = new Date();
-  const ano = agora.getFullYear();
-  const mes = agora.getMonth() + 1;
+  try {
+    const agora = new Date();
+    const ano = agora.getFullYear();
+    const mes = agora.getMonth() + 1;
 
-  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
-  const ultimoDia = new Date(ano, mes, 0).getDate();
-  const fim = `${ano}-${String(mes).padStart(2, "0")}-${ultimoDia}`;
+    const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
+    const ultimoDia = new Date(ano, mes, 0).getDate();
+    const fim = `${ano}-${String(mes).padStart(2, "0")}-${ultimoDia}`;
 
-  const receitas = await supabase
-    .from("receitas")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .gte("data", inicio)
-    .lte("data", fim);
+    const receitas = await supabase
+      .from("receitas")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .gte("data", inicio)
+      .lte("data", fim);
 
-  const despesas = await supabase
-    .from("despesas")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .gte("data", inicio)
-    .lte("data", fim);
+    const despesas = await supabase
+      .from("despesas")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .gte("data", inicio)
+      .lte("data", fim);
 
-  const totalR = (receitas.data || []).reduce((s, r) => s + r.valor, 0);
-  const totalD = (despesas.data || []).reduce((s, d) => s + d.valor, 0);
+    const totalR = (receitas.data || []).reduce((s, r) => s + r.valor, 0);
+    const totalD = (despesas.data || []).reduce((s, d) => s + d.valor, 0);
+    const saldoPrevisto = totalR - totalD;
 
-  document.getElementById("dash-period").textContent = `${mes}/${ano}`;
-  document.getElementById("dash-receber").textContent = formatReal(totalR);
-  document.getElementById("dash-pagar").textContent = formatReal(totalD);
-  document.getElementById("dash-saldo-atual").textContent = formatReal(totalR - totalD);
-  document.getElementById("dash-saldo-previsto").textContent = formatReal(totalR - totalD);
+    document.getElementById("dash-period").textContent = `${mes}/${ano}`;
+    document.getElementById("dash-receber").textContent = formatReal(totalR);
+    document.getElementById("dash-pagar").textContent = formatReal(totalD);
+    document.getElementById("dash-saldo-atual").textContent = formatReal(totalR - totalD);
+    document.getElementById("dash-saldo-previsto").textContent = formatReal(saldoPrevisto);
 
-  generateDashboardChart(totalR, totalD);
+    generateDashboardChart(totalR, totalD);
+  } catch (err) {
+    console.error("Erro loadDashboard:", err);
+  }
 }
 
 function generateDashboardChart(receitas, despesas) {
-  const ctx = document.getElementById("chart-dashboard");
-  if (!ctx) return;
-
-  if (chartDashboard) chartDashboard.destroy();
-
-  chartDashboard = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: ["Receitas", "Despesas"],
-      datasets: [
-        {
-          label: "Resumo do mês",
-          data: [receitas, despesas],
-          backgroundColor: ["green", "red"]
+  try {
+    const ctx = document.getElementById("chart-dashboard");
+    if (!ctx) return;
+    if (chartDashboard) chartDashboard.destroy();
+    chartDashboard = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: ["Receitas", "Despesas"],
+        datasets: [
+          {
+            label: "Resumo do mês",
+            data: [receitas, despesas],
+            backgroundColor: ["green", "red"]
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true }
         }
-      ]
-    },
-    options: {
-      responsive: true,
-      scales: { y: { beginAtZero: true } }
-    }
-  });
+      }
+    });
+  } catch (err) {
+    console.error("Erro generateDashboardChart:", err);
+  }
 }
 
-btnDash.onclick = () => {
-  showScreen("dashboard");
-  loadDashboard();
+// -------------------------
+// SUBSCRIBE REALTIME (mantém atualizado)
+// -------------------------
+function subscribeToChanges() {
+  try {
+    supabase.channel("rt_receitas")
+      .on("postgres_changes", { event: "*", schema: "public", table: "receitas" },
+        payload => { if (payload.record?.user_id === currentUser.id) refreshMovements(); })
+      .subscribe();
+
+    supabase.channel("rt_despesas")
+      .on("postgres_changes", { event: "*", schema: "public", table: "despesas" },
+        payload => { if (payload.record?.user_id === currentUser.id) refreshMovements(); })
+      .subscribe();
+  } catch (err) {
+    console.error("Erro subscribeToChanges:", err);
+  }
+}
+
+// -------------------------
+// INICIALIZAÇÃO DO ESTADO VISUAL (mostra contas por padrão)
+// -------------------------
+showScreen("contas");
+
+// -------------------------
+// Observadores simples para selects (atualizar quando trocar conta)
+// -------------------------
+selectContas.onchange = () => refreshMovements();
+selectContaLanc.onchange = () => { /* somente muda conta selecionada no formulário */ };
+selectExtrato.onchange = () => renderExtrato();
+periodoExtrato.onchange = () => {
+  if (periodoExtrato.value === "personalizado") {
+    dataInicio.classList.remove("hidden");
+    dataFim.classList.remove("hidden");
+  } else {
+    dataInicio.classList.add("hidden");
+    dataFim.classList.add("hidden");
+  }
 };
+
+// Fim do arquivo
