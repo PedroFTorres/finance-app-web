@@ -1,15 +1,8 @@
-function formatDate(d){
-  if(!d) return "";
-  const D=new Date(d+"T00:00:00");
-  const dia=String(D.getDate()).padStart(2,"0");
-  const mes=String(D.getMonth()+1).padStart(2,"0");
-  const ano=D.getFullYear();
-  return `${dia}/${mes}/${ano}`;
-}
-function formatReal(v){ if(typeof v!=="number") v=Number(v||0); return v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+function formatDate(d){if(!d)return"";const D=new Date(d+"T00:00:00");const dia=String(D.getDate()).padStart(2,"0");const mes=String(D.getMonth()+1).padStart(2,"0");const ano=D.getFullYear();return `${dia}/${mes}/${ano}`;}
+function formatReal(v){if(typeof v!=="number")v=Number(v||0);return v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
 
-let currentUser=null;
-let editing={type:null,id:null};
+let currentUser=null;let editing={type:null,id:null};
+
 const telaDashboard=document.getElementById("tela-dashboard");
 const telaContas=document.getElementById("tela-contas");
 const telaLanc=document.getElementById("tela-lancamentos");
@@ -39,16 +32,13 @@ const periodoExtrato=document.getElementById("periodo-extrato");
 const dataInicio=document.getElementById("data-inicio");
 const dataFim=document.getElementById("data-fim");
 const btnFiltrarExtrato=document.getElementById("btn-filtrar-extrato");
-let tableExtrato=null;
-document.addEventListener("DOMContentLoaded",()=>{ const t=document.getElementById("table-extrato"); if(t) tableExtrato=t.querySelector("tbody"); });
+let tableExtrato=null;document.addEventListener("DOMContentLoaded",()=>{const t=document.getElementById("table-extrato");if(t) tableExtrato=t.querySelector("tbody");});
 let chartDashboard=null;
-supabase.auth.getSession().then(({data})=>{ if(!data.session) window.location.href="login.html"; else{ currentUser=data.session.user; const ue=document.getElementById("user-email"); if(ue) ue.textContent=currentUser.email; initApp(); }});
+
+supabase.auth.getSession().then(({data})=>{if(!data.session) window.location.href="login.html"; else { currentUser=data.session.user; const ue=document.getElementById("user-email"); if(ue) ue.textContent=currentUser.email; initApp(); }});
 const btnLogout=document.getElementById("btn-logout"); if(btnLogout) btnLogout.onclick=async()=>{ await supabase.auth.signOut(); window.location.href="login.html"; };
 
-async function initApp(){
-  await loadContas();
-  subscribeToChanges();
-}
+async function initApp(){ await loadContas(); subscribeToChanges(); }
 
 async function loadContas(){
   try{
@@ -81,7 +71,10 @@ async function loadContasExtra(){
     if(error) throw error;
     if(selectExtrato) selectExtrato.innerHTML="";
     if(selectContaLanc) selectContaLanc.innerHTML="";
-    (data||[]).forEach(c=>{ if(selectExtrato){ const o1=document.createElement("option"); o1.value=c.id; o1.textContent=c.nome; selectExtrato.appendChild(o1); } if(selectContaLanc){ const o2=document.createElement("option"); o2.value=c.id; o2.textContent=c.nome; selectContaLanc.appendChild(o2); } });
+    (data||[]).forEach(c=>{
+      if(selectExtrato){ const o1=document.createElement("option"); o1.value=c.id; o1.textContent=c.nome; selectExtrato.appendChild(o1); }
+      if(selectContaLanc){ const o2=document.createElement("option"); o2.value=c.id; o2.textContent=c.nome; selectContaLanc.appendChild(o2); }
+    });
     if(selectContaLanc && !selectContaLanc.value && (data||[]).length>0) selectContaLanc.value=data[0].id;
     if(selectExtrato && !selectExtrato.value && (data||[]).length>0) selectExtrato.value=data[0].id;
   }catch(e){ console.error("loadContasExtra",e); }
@@ -194,9 +187,12 @@ async function baixarLancamento(type,item){
     const table = type==="receita"?"receitas":"despesas";
     const { error:errLanc } = await supabase.from(table).update({ baixado:true, data_baixa:new Date().toISOString().slice(0,10) }).eq("id", item.id);
     if(errLanc) throw errLanc;
-    const mov = { user_id: currentUser.id, conta_id: contaEscolhidaId, tipo: type==="receita"?"credito":"debito", valor: item.valor, descricao: `Baixa de "${item.descricao}"`, data: new Date().toISOString().slice(0,10), lancamento_id: item.id };
-    const { error:errMov } = await supabase.from("movimentacoes").insert([mov]);
-    if(errMov) throw errMov;
+    const { data:existing } = await supabase.from("movimentacoes").select("id").eq("lancamento_id", item.id).maybeSingle();
+    if(!existing){
+      const mov = { user_id: currentUser.id, conta_id: contaEscolhidaId, tipo: type==="receita"?"credito":"debito", valor: item.valor, descricao: item.descricao, data: new Date().toISOString().slice(0,10), lancamento_id: item.id };
+      const { error:errMov } = await supabase.from("movimentacoes").insert([mov]);
+      if(errMov) throw errMov;
+    }
     alert("Lançamento baixado!");
     refreshMovements(); renderExtrato();
   }catch(e){ console.error("baixarLancamento",e); alert("Erro ao baixar: "+(e.message||JSON.stringify(e))); }
@@ -213,8 +209,10 @@ async function cancelarBaixaMovimentacao(mov){
     if(errSaldo) throw errSaldo;
     const { error:errDel } = await supabase.from("movimentacoes").delete().eq("id", mov.id);
     if(errDel) throw errDel;
-    await supabase.from("receitas").update({ baixado:false, data_baixa:null }).eq("id", mov.lancamento_id);
-    await supabase.from("despesas").update({ baixado:false, data_baixa:null }).eq("id", mov.lancamento_id);
+    if(mov.lancamento_id){
+      await supabase.from("receitas").update({ baixado:false, data_baixa:null }).eq("id", mov.lancamento_id);
+      await supabase.from("despesas").update({ baixado:false, data_baixa:null }).eq("id", mov.lancamento_id);
+    }
     alert("Baixa cancelada!");
     refreshMovements(); renderExtrato();
   }catch(e){ console.error("cancelarBaixa",e); alert("Erro ao cancelar baixa: "+(e.message||JSON.stringify(e))); }
@@ -263,16 +261,15 @@ async function renderExtrato(){
     const [{ data: contaData }] = await Promise.all([ supabase.from("contas_bancarias").select("id,nome,saldo_inicial,created_at,saldo_atual").eq("id",conta_id) ]);
     const conta = (contaData||[])[0] || null;
     let saldoInicial = 0; let dataCriacao = null;
-    if(conta){ saldoInicial = Number(conta.saldo_inicial||0); dataCriacao = conta.created_at ? conta.created_at.toString().slice(0,10) : null; }
+    if(conta){ saldoInicial = Number(conta.saldo_inicial||0); dataCriacao = conta.created_at ? (new Date(conta.created_at)).toISOString().slice(0,10) : null; }
 
     const movRes = await supabase.from("movimentacoes").select("*").eq("conta_id",conta_id).gte("data",inicio).lte("data",fim).order("data");
     const movs = movRes.data || [];
 
     const lines=[];
-    if(saldoInicial !== 0 && dataCriacao){
-      lines.push({ tipo:"saldo_inicial", data: dataCriacao, descricao: "SALDO INICIAL", valor: saldoInicial });
-    } else if(saldoInicial !== 0){
-      lines.push({ tipo:"saldo_inicial", data: inicio || new Date().toISOString().slice(0,10), descricao: "SALDO INICIAL", valor: saldoInicial });
+    if(saldoInicial !== 0){
+      const dateForDisplay = dataCriacao || inicio || new Date().toISOString().slice(0,10);
+      lines.push({ tipo:"saldo_inicial", data: dateForDisplay, descricao: "SALDO INICIAL", valor: saldoInicial });
     }
 
     movs.forEach(m=>{
