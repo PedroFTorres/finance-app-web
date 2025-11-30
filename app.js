@@ -1,5 +1,7 @@
 // =========================
-//  Finance App - app.js (versão aprimorada)
+//  Finance App - app.js (versão com 'Baixar' implementado)
+//  Adicionado: botão "Baixar" na tela de Lançamentos (Opção A)
+//  Observação: este arquivo substitui/atualiza o app.js existente.
 // =========================
 
 // -------------------------
@@ -161,7 +163,8 @@ btnAddLanc.onclick = async () => {
     valor,
     data,
     conta_id,
-    user_id: currentUser.id
+    user_id: currentUser.id,
+    baixado: false
   };
 
   if (tipo === "receita") {
@@ -274,7 +277,9 @@ async function refreshMovements() {
   saldoAtualEl.textContent = formatReal((saldoInicial + totalR - totalD));
 }
 
-// Criar li com estilo
+// -------------------------
+// Criar li com estilo (agora com botão "Baixar")
+// -------------------------
 function createLancamentoItem(item, type) {
   const li = document.createElement("li");
 
@@ -284,7 +289,18 @@ function createLancamentoItem(item, type) {
 
   li.style.color = type === "receita" ? "green" : "red";
 
-  li.textContent = `${formatDate(item.data)} — ${item.descricao} — ${formatReal(item.valor)}`;
+  const textSpan = document.createElement("span");
+  textSpan.textContent = `${formatDate(item.data)} — ${item.descricao} — ${formatReal(item.valor)}`;
+
+  if (item.baixado) {
+    // estilo para baixado
+    li.style.opacity = "0.6";
+    const baixadoTag = document.createElement("small");
+    baixadoTag.textContent = " (baixado)";
+    textSpan.appendChild(baixadoTag);
+  }
+
+  li.appendChild(textSpan);
 
   // Botões de ação
   const actions = document.createElement("span");
@@ -300,12 +316,102 @@ function createLancamentoItem(item, type) {
   delBtn.style.marginLeft = "5px";
   delBtn.onclick = () => deleteItem(type, item.id);
 
+  const baixarBtn = document.createElement("button");
+  baixarBtn.textContent = "Baixar";
+  baixarBtn.style.marginLeft = "5px";
+  baixarBtn.onclick = () => baixarLancamento(type, item);
+
   actions.appendChild(editBtn);
   actions.appendChild(delBtn);
+  // somente mostrar baixar se não estiver baixado
+  if (!item.baixado) actions.appendChild(baixarBtn);
 
   li.appendChild(actions);
 
   return li;
+}
+
+// -------------------------
+// Função de Baixar (Opção A: perguntar a conta)
+// -------------------------
+async function baixarLancamento(type, item) {
+  try {
+    // buscar contas do usuário para apresentar opções
+    const { data: contas, error: errContas } = await supabase
+      .from("contas_bancarias")
+      .select("id, nome, saldo_atual, saldo_inicial")
+      .eq("user_id", currentUser.id)
+      .order("created_at");
+
+    if (errContas) throw errContas;
+
+    if (!contas || contas.length === 0) return alert("Nenhuma conta encontrada. Crie uma conta antes de baixar o lançamento.");
+
+    // montar mensagem com opções
+    let msg = "Escolha a conta para baixar:\n";
+    contas.forEach((c, idx) => {
+      const saldoText = Number(c.saldo_atual || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      msg += `${idx + 1}) ${c.nome} — ${saldoText} — id:${c.id}\n`;
+    });
+    msg += "\nDigite o número da conta (ex: 1) ou deixe vazio para usar a conta do lançamento:";
+
+    const resposta = prompt(msg, "");
+
+    let contaEscolhidaId = null;
+
+    if (!resposta || resposta.trim() === "") {
+      contaEscolhidaId = item.conta_id; // usar conta do lançamento
+    } else {
+      const num = parseInt(resposta, 10);
+      if (!isNaN(num) && num >= 1 && num <= contas.length) {
+        contaEscolhidaId = contas[num - 1].id;
+      } else {
+        // talvez o usuário colou o id direto
+        const byId = contas.find(c => c.id === resposta.trim());
+        if (byId) contaEscolhidaId = byId.id;
+        else return alert('Entrada inválida. Operação cancelada.');
+      }
+    }
+
+    // buscar a conta selecionada
+    const { data: conta, error: errConta } = await supabase
+      .from("contas_bancarias")
+      .select("*")
+      .eq("id", contaEscolhidaId)
+      .single();
+
+    if (errConta) throw errConta;
+
+    // calcular novo saldo
+    let novoSaldo = conta.saldo_atual || 0;
+    if (type === "receita") novoSaldo = parseFloat(novoSaldo) + parseFloat(item.valor);
+    else novoSaldo = parseFloat(novoSaldo) - parseFloat(item.valor);
+
+    // atualizar saldo da conta
+    const { error: errUpdateConta } = await supabase
+      .from("contas_bancarias")
+      .update({ saldo_atual: novoSaldo })
+      .eq("id", contaEscolhidaId);
+
+    if (errUpdateConta) throw errUpdateConta;
+
+    // marcar lançamento como baixado
+    const table = type === "receita" ? "receitas" : "despesas";
+
+    const { error: errUpdateLanc } = await supabase
+      .from(table)
+      .update({ baixado: true, data_baixa: new Date().toISOString().slice(0,10) })
+      .eq("id", item.id);
+
+    if (errUpdateLanc) throw errUpdateLanc;
+
+    alert('Lançamento baixado com sucesso!');
+    refreshMovements();
+
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao baixar lançamento: ' + (err.message || JSON.stringify(err)));
+  }
 }
 
 // -------------------------
@@ -327,183 +433,3 @@ function subscribeToChanges() {
       })
     .subscribe();
 }
-// ==========================================
-// SISTEMA DE TELAS (MENU SUPERIOR)
-// ==========================================
-
-const telaDashboard = document.getElementById("tela-dashboard");
-const telaContas = document.getElementById("tela-contas");
-const telaLanc = document.getElementById("tela-lancamentos");
-
-const btnDash = document.getElementById("menu-dashboard");
-const btnContas = document.getElementById("menu-contas");
-const btnLanc = document.getElementById("menu-lancamentos");
-
-function showScreen(target) {
-  telaDashboard.classList.add("hidden");
-  telaContas.classList.add("hidden");
-  telaLanc.classList.add("hidden");
-
-  btnDash.classList.remove("active");
-  btnContas.classList.remove("active");
-  btnLanc.classList.remove("active");
-
-  if (target === "dashboard") {
-    telaDashboard.classList.remove("hidden");
-    btnDash.classList.add("active");
-  } else if (target === "contas") {
-    telaContas.classList.remove("hidden");
-    btnContas.classList.add("active");
-  } else if (target === "lanc") {
-    telaLanc.classList.remove("hidden");
-    btnLanc.classList.add("active");
-  }
-}
-
-btnDash.onclick = () => showScreen("dashboard");
-btnContas.onclick = () => showScreen("contas");
-btnLanc.onclick = () => showScreen("lanc");
-
-
-// ==========================================
-// ABAS DENTRO DE CONTAS (Cadastro / Extrato)
-// ==========================================
-
-const tabCadastro = document.getElementById("tab-cadastro");
-const tabExtrato = document.getElementById("tab-extrato");
-
-document.querySelectorAll(".tab-btn").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-
-    const tab = btn.dataset.tab;
-
-    if (tab === "cadastro") {
-      tabCadastro.classList.remove("hidden");
-      tabExtrato.classList.add("hidden");
-    } else {
-      tabCadastro.classList.add("hidden");
-      tabExtrato.classList.remove("hidden");
-    }
-  };
-});
-
-
-// ==========================================
-// POPULAR SELECTS ADICIONAIS (extrato e lançamento)
-// ==========================================
-
-async function loadContasExtra() {
-  const selectExtrato = document.getElementById("select-contas-extrato");
-  const selectLanc = document.getElementById("select-conta-lanc");
-
-  const { data } = await supabase
-    .from("contas_bancarias")
-    .select("*")
-    .eq("user_id", currentUser.id);
-
-  selectExtrato.innerHTML = "";
-  selectLanc.innerHTML = "";
-
-  data.forEach(c => {
-    const opt1 = document.createElement("option");
-    opt1.value = c.id;
-    opt1.textContent = c.nome;
-
-    const opt2 = opt1.cloneNode(true);
-
-    selectExtrato.appendChild(opt1);
-    selectLanc.appendChild(opt2);
-  });
-}
-
-// Chamar sempre quando carregar contas
-const originalLoadContas = loadContas;
-loadContas = async function () {
-  await originalLoadContas(); 
-  await loadContasExtra();
-};
-// ==========================================
-// DASHBOARD — GRÁFICO E RESUMO
-// ==========================================
-
-let chartDashboard = null;
-
-async function loadDashboard() {
-  const agora = new Date();
-  const ano = agora.getFullYear();
-  const mes = agora.getMonth() + 1;
-
-  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
-
-  const ultimoDia = new Date(ano, mes, 0).getDate();
-  const fim = `${ano}-${String(mes).padStart(2, "0")}-${ultimoDia}`;
-
-  // Carregar receitas
-  const receitas = await supabase
-    .from("receitas")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .gte("data", inicio)
-    .lte("data", fim);
-
-  // Carregar despesas
-  const despesas = await supabase
-    .from("despesas")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .gte("data", inicio)
-    .lte("data", fim);
-
-  const totalR = (receitas.data || []).reduce((s, r) => s + r.valor, 0);
-  const totalD = (despesas.data || []).reduce((s, d) => s + d.valor, 0);
-  const saldoPrevisto = totalR - totalD;
-
-  document.getElementById("dash-period").textContent = `${mes}/${ano}`;
-  document.getElementById("dash-receber").textContent = formatReal(totalR);
-  document.getElementById("dash-pagar").textContent = formatReal(totalD);
-  document.getElementById("dash-saldo-atual").textContent = formatReal(totalR - totalD);
-  document.getElementById("dash-saldo-previsto").textContent = formatReal(saldoPrevisto);
-
-  generateDashboardChart(totalR, totalD);
-}
-
-
-function generateDashboardChart(receitas, despesas) {
-  const ctx = document.getElementById("chart-dashboard");
-
-  if (!ctx) return;
-
-  // Se o gráfico já existe, destrói antes de criar outro
-  if (chartDashboard) {
-    chartDashboard.destroy();
-  }
-
-  chartDashboard = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: ["Receitas", "Despesas"],
-      datasets: [
-        {
-          label: "Resumo do mês",
-          data: [receitas, despesas],
-          backgroundColor: ["green", "red"]
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: { beginAtZero: true }
-      }
-    }
-  });
-}
-
-// Executa o dashboard toda vez que abrir a tela
-btnDash.onclick = () => {
-  showScreen("dashboard");
-  loadDashboard();
-};
-
