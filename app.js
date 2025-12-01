@@ -15,6 +15,7 @@ const btnLanc=document.getElementById("menu-lancamentos");
 const selectContas=document.getElementById("select-contas");
 const contaNome=document.getElementById("conta-nome");
 const contaSaldo=document.getElementById("conta-saldo");
+const contaDataSaldo=document.getElementById("conta-data-saldo");
 const btnAddConta=document.getElementById("btn-add-conta");
 
 const tipoLanc=document.getElementById("tipo-lancamento");
@@ -49,7 +50,7 @@ let tableExtrato=null;
 document.addEventListener("DOMContentLoaded",()=>{const t=document.getElementById("table-extrato");if(t)tableExtrato=t.querySelector("tbody");});
 
 supabase.auth.getSession().then(({data})=>{
- if(!data.session)return(window.location.href="login.html");
+ if(!data.session)return window.location.href="login.html";
  currentUser=data.session.user;
  document.getElementById("user-email").textContent=currentUser.email;
  initApp();
@@ -114,10 +115,23 @@ async function loadContasLancExtrato(){
 
 btnAddConta.onclick=async()=>{
  const nome=contaNome.value.trim();
- if(!nome)return alert("Informe o nome.");
  const saldo=Number(contaSaldo.value||0);
- await supabase.from("contas_bancarias").insert([{nome,saldo_inicial:saldo,saldo_atual:saldo,user_id:currentUser.id}]);
- contaNome.value="";contaSaldo.value="";
+ const data_saldo=contaDataSaldo.value;
+ if(!nome)return alert("Informe o nome.");
+ if(!data_saldo)return alert("Informe a data do saldo.");
+
+ await supabase.from("contas_bancarias").insert([{
+  nome,
+  saldo_inicial:saldo,
+  saldo_atual:saldo,
+  data_saldo,
+  user_id:currentUser.id
+ }]);
+
+ contaNome.value="";
+ contaSaldo.value="";
+ contaDataSaldo.value="";
+
  await loadContas();
 };
 
@@ -142,7 +156,10 @@ btnAddLanc.onclick=async()=>{
  const tabela=tipo==="receita"?"receitas":"despesas";
  await supabase.from(tabela).insert([{descricao:desc,valor,data,conta_id,user_id:currentUser.id,baixado:false}]);
 
- descLanc.value="";valorLanc.value="";dataLanc.value="";
+ descLanc.value="";
+ valorLanc.value="";
+ dataLanc.value="";
+
  await refreshLancamentos();
  await renderExtrato();
 };
@@ -244,8 +261,8 @@ function buildLancItem(item,type){
  right.appendChild(b1);
  right.appendChild(b2);
 
+ const b3=document.createElement("button");
  if(!item.baixado){
-  const b3=document.createElement("button");
   b3.textContent="Baixar";
   b3.onclick=()=>baixarLancamento(type,item);
   right.appendChild(b3);
@@ -324,9 +341,9 @@ async function cancelarBaixaMovimentacao(mov){
 btnFiltrarExtrato.onclick=()=>renderExtrato();
 
 async function renderExtrato(){
- if(!tableExtrato)return;
-
  const conta_id=selectExtrato.value;
+ if(!conta_id||!tableExtrato)return;
+
  await recalcularSaldo(conta_id);
 
  const now=new Date();
@@ -352,21 +369,19 @@ async function renderExtrato(){
  }
 
  const {data:conta}=await supabase.from("contas_bancarias")
-   .select("saldo_inicial,created_at,saldo_atual")
+   .select("saldo_inicial,data_saldo,saldo_atual")
    .eq("id",conta_id).single();
 
  const si=Number(conta.saldo_inicial||0);
- const dataCriacao=conta.created_at.slice(0,10);
+ const dataCRI=conta.data_saldo;
 
  const {data:movs}=await supabase.from("movimentacoes")
-   .select("*")
-   .eq("conta_id",conta_id)
-   .gte("data",inicio)
-   .lte("data",fim)
+   .select("*").eq("conta_id",conta_id)
+   .gte("data",inicio).lte("data",fim)
    .order("data");
 
  const linhas=[];
- if(si!==0)linhas.push({tipo:"inicial",data:dataCriacao,descricao:"SALDO INICIAL",valor:si});
+ if(si!==0 && dataCRI)linhas.push({tipo:"inicial",data:dataCRI,descricao:"SALDO INICIAL",valor:si});
  (movs||[]).forEach(m=>linhas.push({tipo:"mov",data:m.data,descricao:m.descricao,valor:m.valor,mov:m}));
 
  linhas.sort((a,b)=>new Date(a.data)-new Date(b.data));
@@ -384,6 +399,7 @@ async function renderExtrato(){
   }else{
    tr.innerHTML=`<td>${formatDate(l.data)}</td><td>${l.descricao}</td><td>${l.mov.tipo==="credito"?"Crédito":"Débito"}</td><td>${formatReal(l.valor)}</td>`;
    if(l.mov.tipo==="credito")cred+=l.valor;else deb+=l.valor;
+
    const btn=document.createElement("button");
    btn.textContent="Cancelar Baixa";
    btn.onclick=()=>cancelarBaixaMovimentacao(l.mov);
