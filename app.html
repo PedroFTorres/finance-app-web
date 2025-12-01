@@ -8,7 +8,7 @@
 </head>
 <body>
 
-  <!-- Top bar com menu -->
+  <!-- Top bar -->
   <header class="top-header">
     <nav class="top-menu">
       <button id="menu-dashboard" class="menu-btn">Dashboard</button>
@@ -25,7 +25,8 @@
   <main>
     <h1>Finance App</h1>
 
-    <!-- TELA: DASHBOARD -->
+
+    <!-- DASHBOARD -->
     <section id="tela-dashboard" class="hidden">
       <section class="dashboard-box">
         <h2>Resumo do Mês (Atual)</h2>
@@ -34,6 +35,7 @@
             <h3>Gráfico: A Receber x A Pagar</h3>
             <canvas id="chart-dashboard" width="400" height="200"></canvas>
           </div>
+
           <div class="card">
             <h3>Resumo</h3>
             <p><strong>Período:</strong> <span id="dash-period"></span></p>
@@ -46,29 +48,34 @@
       </section>
     </section>
 
-    <!-- TELA: CONTAS -->
+
+    <!-- CONTAS -->
     <section id="tela-contas">
       <section class="contas-box">
         <h2>Contas</h2>
+
         <div class="tabs">
           <button class="tab-btn active" data-tab="cadastro">Cadastro</button>
           <button class="tab-btn" data-tab="extrato">Extrato</button>
         </div>
 
-        <!-- ABA: Cadastro -->
+        <!-- TAB CADASTRO -->
         <div id="tab-cadastro" class="tab-content">
           <label>Nome da conta</label><br/>
           <input id="conta-nome" placeholder="Nova conta" />
           <input id="conta-saldo" type="number" placeholder="Saldo inicial"/>
           <button id="btn-add-conta">Adicionar Conta</button>
+
           <hr/>
+
           <label>Contas existentes</label><br/>
           <select id="select-contas"></select>
         </div>
 
-        <!-- ABA: Extrato -->
+        <!-- TAB EXTRATO -->
         <div id="tab-extrato" class="tab-content hidden">
           <h3>Extrato da Conta</h3>
+
           <label>Selecionar conta</label><br/>
           <select id="select-contas-extrato"></select>
 
@@ -119,10 +126,29 @@
       </section>
     </section>
 
-    <!-- TELA: LANÇAMENTOS -->
+
+    <!-- LANÇAMENTOS -->
     <section id="tela-lancamentos" class="hidden">
       <section class="lancamento-box">
         <h2>Lançamento</h2>
+
+        <!-- 🔥 NOVO BLOCO DE FILTROS DOS LANÇAMENTOS -->
+        <div class="filtros-lanc">
+          <label>Período</label>
+          <select id="periodo-lanc">
+            <option value="mes_atual">Mês atual</option>
+            <option value="mes_anterior">Mês anterior</option>
+            <option value="ultimos_30">Últimos 30 dias</option>
+            <option value="personalizado">Personalizado</option>
+          </select>
+
+          <input type="date" id="data-inicio-lanc" class="hidden"/>
+          <input type="date" id="data-fim-lanc" class="hidden"/>
+
+          <button id="btn-filtrar-lanc">Filtrar</button>
+        </div>
+        <!-- 🔥 FIM DO BLOCO NOVO -->
+
 
         <select id="tipo-lancamento">
           <option value="receita">Receita</option>
@@ -132,6 +158,7 @@
         <input id="valor-lanc" type="number" placeholder="Valor" />
         <input id="desc-lanc" placeholder="Descrição" />
         <input id="data-lanc" type="date" />
+
         <label>Conta</label>
         <select id="select-conta-lanc"></select>
 
@@ -171,6 +198,7 @@
         </div>
       </section>
     </section>
+
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
