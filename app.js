@@ -49,7 +49,7 @@ let tableExtrato=null;
 document.addEventListener("DOMContentLoaded",()=>{const t=document.getElementById("table-extrato");if(t)tableExtrato=t.querySelector("tbody");});
 
 supabase.auth.getSession().then(({data})=>{
- if(!data.session) return window.location.href="login.html";
+ if(!data.session)return(window.location.href="login.html");
  currentUser=data.session.user;
  document.getElementById("user-email").textContent=currentUser.email;
  initApp();
@@ -78,7 +78,7 @@ async function recalcularSaldo(conta_id){
 }
 
 async function loadContas(){
- const {data}=await supabase.from("contas_bancarias").select("*").eq("user_id",currentUser.id).order("created_at");
+ const {data}=await supabase.from("contas_bancarias").select("*").eq("user_id",currentUser.id);
  selectContas.innerHTML="";
  (data||[]).forEach(c=>{
   const o=document.createElement("option");
@@ -99,8 +99,12 @@ async function loadContasLancExtrato(){
  selectContaLanc.innerHTML="";
  selectExtrato.innerHTML="";
  (data||[]).forEach(c=>{
-  const a=document.createElement("option");a.value=c.id;a.textContent=c.nome;selectContaLanc.appendChild(a);
-  const b=document.createElement("option");b.value=c.id;b.textContent=c.nome;selectExtrato.appendChild(b);
+  const a=document.createElement("option");
+  a.value=c.id;a.textContent=c.nome;
+  selectContaLanc.appendChild(a);
+  const b=document.createElement("option");
+  b.value=c.id;b.textContent=c.nome;
+  selectExtrato.appendChild(b);
  });
  if(data?.length){
   selectContaLanc.value=data[0].id;
@@ -123,7 +127,9 @@ btnAddLanc.onclick=async()=>{
  const data=dataLanc.value;
  const tipo=tipoLanc.value;
  const conta_id=selectContaLanc.value;
+
  if(!desc||!valor||!data)return alert("Preencha tudo.");
+
  if(editing.type){
   const t=editing.type==="receita"?"receitas":"despesas";
   await supabase.from(t).update({descricao:desc,valor,data,conta_id}).eq("id",editing.id);
@@ -132,23 +138,40 @@ btnAddLanc.onclick=async()=>{
   await renderExtrato();
   return;
  }
+
  const tabela=tipo==="receita"?"receitas":"despesas";
  await supabase.from(tabela).insert([{descricao:desc,valor,data,conta_id,user_id:currentUser.id,baixado:false}]);
+
  descLanc.value="";valorLanc.value="";dataLanc.value="";
  await refreshLancamentos();
  await renderExtrato();
 };
 
-btnCancelEdit.onclick=()=>stopEdit();
 function stopEdit(){editing={type:null,id:null};descLanc.value="";valorLanc.value="";dataLanc.value="";btnAddLanc.textContent="Adicionar";btnCancelEdit.classList.add("hidden");}
-function startEdit(type,it){editing={type,id:it.id};tipoLanc.value=type;valorLanc.value=it.valor;descLanc.value=it.descricao;dataLanc.value=it.data;selectContaLanc.value=it.conta_id;btnAddLanc.textContent="Salvar";btnCancelEdit.classList.remove("hidden");}
+btnCancelEdit.onclick=()=>stopEdit();
+
+function startEdit(type,it){
+ editing={type,id:it.id};
+ tipoLanc.value=type;
+ valorLanc.value=it.valor;
+ descLanc.value=it.descricao;
+ dataLanc.value=it.data;
+ selectContaLanc.value=it.conta_id;
+ btnAddLanc.textContent="Salvar";
+ btnCancelEdit.classList.remove("hidden");
+}
 
 async function deleteItem(type,id){
  if(!confirm("Excluir?"))return;
- const t=type==="receita"?"receitas":"despesas";
- await supabase.from(t).delete().eq("id",id);
+ const tabela=type==="receita"?"receitas":"despesas";
+ await supabase.from(tabela).delete().eq("id",id);
+
  const {data:mv}=await supabase.from("movimentacoes").select("id,conta_id").eq("lancamento_id",id).maybeSingle();
- if(mv){await supabase.from("movimentacoes").delete().eq("id",mv.id);await recalcularSaldo(mv.conta_id);}
+ if(mv){
+  await supabase.from("movimentacoes").delete().eq("id",mv.id);
+  await recalcularSaldo(mv.conta_id);
+ }
+
  await refreshLancamentos();
  await renderExtrato();
 }
@@ -208,15 +231,22 @@ function buildLancItem(item,type){
  const right=document.createElement("div");
 
  left.textContent=`${formatDate(item.data)} — ${item.descricao} — ${formatReal(item.valor)}`;
- if(item.baixado) left.textContent+=" — (BAIXADO)";
+ if(item.baixado)left.textContent+=" — (BAIXADO)";
 
- const b1=document.createElement("button");b1.textContent="Editar";b1.onclick=()=>startEdit(type,item);
- const b2=document.createElement("button");b2.textContent="Excluir";b2.onclick=()=>deleteItem(type,item.id);
+ const b1=document.createElement("button");
+ b1.textContent="Editar";
+ b1.onclick=()=>startEdit(type,item);
 
- right.appendChild(b1);right.appendChild(b2);
+ const b2=document.createElement("button");
+ b2.textContent="Excluir";
+ b2.onclick=()=>deleteItem(type,item.id);
+
+ right.appendChild(b1);
+ right.appendChild(b2);
 
  if(!item.baixado){
-  const b3=document.createElement("button");b3.textContent="Baixar";
+  const b3=document.createElement("button");
+  b3.textContent="Baixar";
   b3.onclick=()=>baixarLancamento(type,item);
   right.appendChild(b3);
  }
@@ -229,16 +259,21 @@ function buildLancItem(item,type){
 async function baixarLancamento(type,item){
  const {data:contas}=await supabase.from("contas_bancarias").select("*").eq("user_id",currentUser.id);
  let contaDest=item.conta_id;
+
  let msg="Escolha conta:\n";
  contas.forEach((c,i)=>msg+=`${i+1}) ${c.nome}\n`);
+
  const r=prompt(msg,"");
  if(r){
   const n=parseInt(r);
-  if(!isNaN(n)&&n>=1&&n<=contas.length) contaDest=contas[n-1].id;
+  if(!isNaN(n)&&n>=1&&n<=contas.length)contaDest=contas[n-1].id;
  }
+
  const {data:conta}=await supabase.from("contas_bancarias").select("*").eq("id",contaDest).single();
  let ns=Number(conta.saldo_atual||0);
- if(type==="receita")ns+=Number(item.valor);else ns-=Number(item.valor);
+
+ if(type==="receita")ns+=Number(item.valor);
+ else ns-=Number(item.valor);
 
  await supabase.from("contas_bancarias").update({saldo_atual:ns}).eq("id",contaDest);
 
@@ -250,8 +285,13 @@ async function baixarLancamento(type,item){
  const {data:ex}=await supabase.from("movimentacoes").select("id").eq("lancamento_id",item.id).maybeSingle();
  if(!ex){
   await supabase.from("movimentacoes").insert([{
-   user_id:currentUser.id,conta_id:contaDest,tipo:type==="receita"?"credito":"debito",
-   valor:item.valor,descricao:item.descricao,data:hoje,lancamento_id:item.id
+   user_id:currentUser.id,
+   conta_id:contaDest,
+   tipo:type==="receita"?"credito":"debito",
+   valor:item.valor,
+   descricao:item.descricao,
+   data:hoje,
+   lancamento_id:item.id
   }]);
  }
 
@@ -260,10 +300,32 @@ async function baixarLancamento(type,item){
  await renderExtrato();
 }
 
+async function cancelarBaixaMovimentacao(mov){
+ if(!confirm("Cancelar baixa?"))return;
+
+ const {data:conta}=await supabase.from("contas_bancarias").select("*").eq("id",mov.conta_id).single();
+ let ns=Number(conta.saldo_atual||0);
+
+ if(mov.tipo==="credito")ns-=Number(mov.valor);
+ else ns+=Number(mov.valor);
+
+ await supabase.from("contas_bancarias").update({saldo_atual:ns}).eq("id",mov.conta_id);
+
+ await supabase.from("movimentacoes").delete().eq("id",mov.id);
+
+ await supabase.from("receitas").update({baixado:false,data_baixa:null}).eq("id",mov.lancamento_id);
+ await supabase.from("despesas").update({baixado:false,data_baixa:null}).eq("id",mov.lancamento_id);
+
+ await recalcularSaldo(mov.conta_id);
+ await refreshLancamentos();
+ await renderExtrato();
+}
+
 btnFiltrarExtrato.onclick=()=>renderExtrato();
 
 async function renderExtrato(){
  if(!tableExtrato)return;
+
  const conta_id=selectExtrato.value;
  await recalcularSaldo(conta_id);
 
@@ -282,23 +344,29 @@ async function renderExtrato(){
   fim=`${ano}-${String(mes).padStart(2,"0")}-${last}`;
  }else if(p==="ultimos_30"){
   const past=new Date(now.getTime()-30*86400000);
-  inicio=past.toISOString().slice(0,10);fim=now.toISOString().slice(0,10);
+  inicio=past.toISOString().slice(0,10);
+  fim=now.toISOString().slice(0,10);
  }else{
   inicio=dataInicio.value;
   fim=dataFim.value;
  }
 
  const {data:conta}=await supabase.from("contas_bancarias")
-   .select("saldo_inicial,created_at,saldo_atual").eq("id",conta_id).single();
+   .select("saldo_inicial,created_at,saldo_atual")
+   .eq("id",conta_id).single();
 
  const si=Number(conta.saldo_inicial||0);
  const dataCriacao=conta.created_at.slice(0,10);
 
  const {data:movs}=await supabase.from("movimentacoes")
-   .select("*").eq("conta_id",conta_id).gte("data",inicio).lte("data",fim).order("data");
+   .select("*")
+   .eq("conta_id",conta_id)
+   .gte("data",inicio)
+   .lte("data",fim)
+   .order("data");
 
  const linhas=[];
- if(si!==0) linhas.push({tipo:"inicial",data:dataCriacao,descricao:"SALDO INICIAL",valor:si});
+ if(si!==0)linhas.push({tipo:"inicial",data:dataCriacao,descricao:"SALDO INICIAL",valor:si});
  (movs||[]).forEach(m=>linhas.push({tipo:"mov",data:m.data,descricao:m.descricao,valor:m.valor,mov:m}));
 
  linhas.sort((a,b)=>new Date(a.data)-new Date(b.data));
@@ -308,20 +376,21 @@ async function renderExtrato(){
 
  linhas.forEach(l=>{
   const tr=document.createElement("tr");
-  const a=document.createElement("td");
+  const tdA=document.createElement("td");
+
   if(l.tipo==="inicial"){
    tr.innerHTML=`<td>${formatDate(l.data)}</td><td>${l.descricao}</td><td>Crédito</td><td>${formatReal(l.valor)}</td>`;
    cred+=l.valor;
   }else{
    tr.innerHTML=`<td>${formatDate(l.data)}</td><td>${l.descricao}</td><td>${l.mov.tipo==="credito"?"Crédito":"Débito"}</td><td>${formatReal(l.valor)}</td>`;
    if(l.mov.tipo==="credito")cred+=l.valor;else deb+=l.valor;
-
    const btn=document.createElement("button");
    btn.textContent="Cancelar Baixa";
    btn.onclick=()=>cancelarBaixaMovimentacao(l.mov);
-   a.appendChild(btn);
+   tdA.appendChild(btn);
   }
-  tr.appendChild(a);
+
+  tr.appendChild(tdA);
   tableExtrato.appendChild(tr);
  });
 
@@ -336,6 +405,7 @@ async function loadDashboard(){
  const now=new Date();
  const ano=now.getFullYear();
  const mes=now.getMonth()+1;
+
  const inicio=`${ano}-${String(mes).padStart(2,"0")}-01`;
  const last=new Date(ano,mes,0).getDate();
  const fim=`${ano}-${String(mes).padStart(2,"0")}-${last}`;
@@ -353,7 +423,7 @@ async function loadDashboard(){
  document.getElementById("dash-saldo-previsto").textContent=formatReal(tr-td);
 
  const ctx=document.getElementById("chart-dashboard");
- if(chartDashboard) chartDashboard.destroy();
+ if(chartDashboard)chartDashboard.destroy();
  chartDashboard=new Chart(ctx,{
   type:"bar",
   data:{labels:["Receitas","Despesas"],datasets:[{label:"Resumo",data:[tr,td],backgroundColor:["green","red"]}]},
@@ -392,12 +462,12 @@ btnDash.onclick=()=>showScreen("dashboard");
 btnContas.onclick=()=>showScreen("contas");
 btnLanc.onclick=()=>showScreen("lanc");
 
-document.querySelectorAll(".tab-btn").forEach(btn=>{
- btn.onclick=()=>{
+document.querySelectorAll(".tab-btn").forEach(b=>{
+ b.onclick=()=>{
   document.querySelectorAll(".tab-btn").forEach(x=>x.classList.remove("active"));
-  btn.classList.add("active");
-  const tab=btn.dataset.tab;
-  if(tab==="cadastro"){
+  b.classList.add("active");
+
+  if(b.dataset.tab==="cadastro"){
    tabCadastro.classList.remove("hidden");
    tabExtrato.classList.add("hidden");
   }else{
