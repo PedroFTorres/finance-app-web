@@ -28,21 +28,30 @@
     <!-- DASHBOARD -->
     <section id="tela-dashboard" class="hidden">
       <section class="dashboard-box">
-        <h2>Resumo do Mês (Atual)</h2>
+        <h2>Resumo do Mês</h2>
+
         <div class="dashboard-grid">
+
           <div class="card">
-            <h3>Gráfico: A Receber x A Pagar</h3>
-            <canvas id="chart-dashboard" width="400" height="200"></canvas>
+            <h3>Receitas por Categoria</h3>
+            <canvas id="chart-receitas-categorias"></canvas>
           </div>
 
           <div class="card">
-            <h3>Resumo</h3>
+            <h3>Despesas por Categoria</h3>
+            <canvas id="chart-despesas-categorias"></canvas>
+          </div>
+
+          <div class="card">
+            <h3>Resumo Geral</h3>
+            <canvas id="chart-dashboard"></canvas>
             <p><strong>Período:</strong> <span id="dash-period"></span></p>
             <p><strong>Total a receber:</strong> <span id="dash-receber">R$ 0,00</span></p>
             <p><strong>Total a pagar:</strong> <span id="dash-pagar">R$ 0,00</span></p>
             <p><strong>Saldo atual:</strong> <span id="dash-saldo-atual">R$ 0,00</span></p>
             <p><strong>Saldo previsto:</strong> <span id="dash-saldo-previsto">R$ 0,00</span></p>
           </div>
+
         </div>
       </section>
     </section>
@@ -135,7 +144,7 @@
       <section class="lancamento-box">
         <h2>Lançamento</h2>
 
-        <!-- FILTROS DOS LANÇAMENTOS -->
+        <!-- FILTROS -->
         <div class="filtros-lanc">
           <label>Período</label>
           <select id="periodo-lanc">
@@ -162,6 +171,9 @@
 
         <label>Conta</label>
         <select id="select-conta-lanc"></select>
+
+        <label>Categoria</label>
+        <select id="categoria-lanc"></select>
 
         <div class="recorrencia">
           <label>Recorrência</label>
