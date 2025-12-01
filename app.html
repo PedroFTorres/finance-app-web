@@ -6,9 +6,10 @@
   <title>Finance App</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
 
-  <!-- Top bar -->
+  <!-- TOPO -->
   <header class="top-header">
     <nav class="top-menu">
       <button id="menu-dashboard" class="menu-btn">Dashboard</button>
@@ -27,6 +28,7 @@
 
     <!-- DASHBOARD -->
     <section id="tela-dashboard" class="hidden">
+
       <section class="dashboard-box">
         <h2>Resumo do Mês</h2>
 
@@ -58,6 +60,7 @@
 
     <!-- CONTAS -->
     <section id="tela-contas">
+
       <section class="contas-box">
         <h2>Contas</h2>
 
@@ -104,6 +107,7 @@
 
             <input type="date" id="data-inicio" class="hidden"/>
             <input type="date" id="data-fim" class="hidden"/>
+
             <button id="btn-filtrar-extrato">Filtrar</button>
           </div>
 
@@ -135,6 +139,7 @@
             <p>Saldo do Período: <span id="saldo-periodo-extrato">R$0,00</span></p>
             <p>Saldo atual da conta: <span id="saldo-atual-conta-extrato">R$0,00</span></p>
           </div>
+
         </div>
 
         <!-- TAB CATEGORIAS -->
@@ -142,13 +147,13 @@
           <h3>Categorias</h3>
 
           <label>Nova categoria</label><br/>
-          <input id="categoria-nome" placeholder="Ex: Mercado, Salário, Combustível"/>
+          <input id="categoria-nome" placeholder="Ex: Mercado, Salário, Transporte"/>
 
           <button id="btn-add-categoria">Adicionar Categoria</button>
 
           <hr/>
 
-          <h4>Lista de Categorias</h4>
+          <h4>Categorias cadastradas</h4>
           <ul id="lista-categorias"></ul>
         </div>
 
@@ -157,6 +162,7 @@
 
     <!-- LANÇAMENTOS -->
     <section id="tela-lancamentos" class="hidden">
+
       <section class="lancamento-box">
         <h2>Lançamento</h2>
 
@@ -190,6 +196,21 @@
         <label>Categoria</label>
         <select id="categoria-lanc"></select>
 
+        <!-- 🎯 AQUI ESTÁ A RECORRÊNCIA (fixo e obrigatório para funcionar com o app.js atual) -->
+        <div class="recorrencia">
+          <label>Recorrência</label>
+          <select id="recorrencia-tipo">
+            <option value="none">Não recorrente</option>
+            <option value="monthly">Mensal</option>
+            <option value="fortnight">Quinzenal</option>
+            <option value="weekly">Semanal</option>
+            <option value="annual">Anual</option>
+          </select>
+
+          <label>Parcelas</label>
+          <input id="recorrencia-parcelas" type="number" min="1" value="1" />
+        </div>
+
         <button id="btn-add-lanc">Adicionar</button>
         <button id="btn-cancel-edit" class="hidden">Cancelar</button>
 
@@ -198,6 +219,7 @@
           <span id="total-receitas"></span>
           <span id="total-despesas"></span>
         </div>
+
       </section>
 
       <section class="listas">
@@ -211,10 +233,12 @@
           <ul id="list-despesas"></ul>
         </div>
       </section>
+
     </section>
 
   </main>
 
+  <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="supabase.js"></script>
