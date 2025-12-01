@@ -4,11 +4,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Cartões — Finance App</title>
+
   <link rel="stylesheet" href="cartao.css" />
+
 </head>
 <body>
+
+  <!-- ========================= TOPO ========================= -->
   <header class="top">
     <div class="brand">Finance App</div>
+
     <nav class="nav">
       <button id="btn-back">← Voltar</button>
       <span id="user-email" class="user-email"></span>
@@ -16,8 +21,14 @@
     </nav>
   </header>
 
+
+  <!-- ========================= CONTEÚDO ========================= -->
   <main class="container">
+
+    <!-- ======== COLUNA ESQUERDA ======== -->
     <section class="left-column">
+
+      <!-- LISTA DE CARTÕES -->
       <div class="panel card-overview">
         <div class="panel-header">
           <h2>Meus Cartões</h2>
@@ -25,25 +36,36 @@
         </div>
 
         <div id="cards-list" class="cards-list">
-          <!-- cartões renderizados aqui -->
+          <!-- cartões renderizados pelo JS -->
         </div>
       </div>
 
+      <!-- ATALHOS -->
       <div class="panel recent-activity">
         <h3>Atalhos</h3>
         <div class="actions-grid">
           <button id="nav-fatura" class="action">Ver Faturas</button>
           <button id="nav-lancamento" class="action">Lançar Compra</button>
           <button id="nav-historico" class="action">Histórico</button>
+          <button id="btn-pagamento-antecipado" class="action">Pagamento Antecipado</button>
         </div>
       </div>
+
     </section>
 
+
+    <!-- ======== COLUNA DIREITA ======== -->
     <section class="right-column">
-      <!-- TELA: Lista de Faturas / Fatura selecionada -->
+
+
+      <!-- ============================================================= -->
+      <!-- VIEW: FATURAS -->
+      <!-- ============================================================= -->
       <div id="view-faturas" class="panel view hidden">
+
         <div class="panel-header">
           <h2>Faturas</h2>
+
           <div class="controls">
             <select id="select-cartao-faturas"></select>
             <select id="select-mes-faturas"></select>
@@ -52,7 +74,7 @@
         </div>
 
         <div class="fatura-summary" id="fatura-summary">
-          <!-- resumo fatura -->
+          <!-- resumo da fatura -->
         </div>
 
         <div class="fatura-transactions">
@@ -72,10 +94,16 @@
         </div>
       </div>
 
-      <!-- TELA: Lançar Compra -->
+
+
+      <!-- ============================================================= -->
+      <!-- VIEW: LANÇAR COMPRA -->
+      <!-- ============================================================= -->
       <div id="view-lancamento" class="panel view hidden">
+
         <div class="panel-header">
           <h2>Lançar Compra</h2>
+
           <div class="controls">
             <select id="select-cartao-lanc"></select>
             <select id="select-categoria-lanc-cartao"></select>
@@ -108,8 +136,13 @@
         </div>
       </div>
 
-      <!-- TELA: Cadastro / Edit cartão -->
+
+
+      <!-- ============================================================= -->
+      <!-- VIEW: NOVO CARTÃO -->
+      <!-- ============================================================= -->
       <div id="view-new-card" class="panel view hidden">
+
         <div class="panel-header">
           <h2>Novo Cartão</h2>
         </div>
@@ -121,40 +154,86 @@
 
         <div class="form-row">
           <label>Limite</label>
-          <input id="card-limite" type="number" step="0.01" value="0" />
+          <input id="card-limite" type="number" step="0.01" />
         </div>
 
         <div class="form-row">
-          <label>Dia de fechamento (1-28)</label>
-          <input id="card-dia-fechamento" type="number" min="1" max="28" value="5" />
+          <label>Dia de fechamento (1–28)</label>
+          <input id="card-dia-fechamento" type="number" min="1" max="28" />
         </div>
 
         <div class="form-row">
-          <label>Dia de vencimento (1-31)</label>
-          <input id="card-dia-vencimento" type="number" min="1" max="31" value="25" />
+          <label>Dia de vencimento (1–31)</label>
+          <input id="card-dia-vencimento" type="number" min="1" max="31" />
         </div>
 
         <div class="form-row actions">
           <button id="btn-save-card" class="primary">Salvar Cartão</button>
           <button id="btn-cancel-card" class="secondary">Cancelar</button>
         </div>
+
       </div>
 
-      <!-- TELA: Histórico de Faturas (simples) -->
+
+
+      <!-- ============================================================= -->
+      <!-- VIEW: HISTÓRICO DE FATURAS -->
+      <!-- ============================================================= -->
       <div id="view-historico" class="panel view hidden">
-        <div class="panel-header"><h2>Histórico de Faturas</h2></div>
+        <div class="panel-header">
+          <h2>Histórico de Faturas</h2>
+        </div>
+
         <ul id="lista-faturas-historico" class="faturas-list"></ul>
+      </div>
+
+
+
+      <!-- ============================================================= -->
+      <!-- VIEW: PAGAMENTO ANTECIPADO ***
+      ============================================================= -->
+      <div id="box-pag-antecipado" class="panel view hidden">
+
+        <div class="panel-header">
+          <h2>Pagamento Antecipado</h2>
+        </div>
+
+        <div class="form-row">
+          <label>Conta para pagamento</label>
+          <select id="conta-pag-antecipado"></select>
+        </div>
+
+        <div class="form-row">
+          <label>Valor</label>
+          <input id="valor-pag-antecipado" type="number" step="0.01" />
+        </div>
+
+        <div class="form-row">
+          <label>Data</label>
+          <input id="data-pag-antecipado" type="date" />
+        </div>
+
+        <div class="form-row actions">
+          <button id="btn-confirmar-pag-antecipado" class="primary">Confirmar</button>
+          <button id="btn-cancelar-pag-antecipado" class="secondary"
+                  onclick="hideAllViews()">Cancelar</button>
+        </div>
+
       </div>
 
     </section>
   </main>
 
+
   <footer class="footer">
     <small>Modulo de Cartões — Finance App</small>
   </footer>
 
+
+  <!-- ========================= SCRIPTS ========================= -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="cartao.js"></script>
+
 </body>
 </html>
