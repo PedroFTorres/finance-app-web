@@ -64,6 +64,7 @@
         <div class="tabs">
           <button class="tab-btn active" data-tab="cadastro">Cadastro</button>
           <button class="tab-btn" data-tab="extrato">Extrato</button>
+          <button class="tab-btn" data-tab="categorias">Categorias</button>
         </div>
 
         <!-- TAB CADASTRO -->
@@ -136,6 +137,21 @@
           </div>
         </div>
 
+        <!-- TAB CATEGORIAS -->
+        <div id="tab-categorias" class="tab-content hidden">
+          <h3>Categorias</h3>
+
+          <label>Nova categoria</label><br/>
+          <input id="categoria-nome" placeholder="Ex: Mercado, Salário, Combustível"/>
+
+          <button id="btn-add-categoria">Adicionar Categoria</button>
+
+          <hr/>
+
+          <h4>Lista de Categorias</h4>
+          <ul id="lista-categorias"></ul>
+        </div>
+
       </section>
     </section>
 
@@ -144,7 +160,6 @@
       <section class="lancamento-box">
         <h2>Lançamento</h2>
 
-        <!-- FILTROS -->
         <div class="filtros-lanc">
           <label>Período</label>
           <select id="periodo-lanc">
@@ -175,20 +190,6 @@
         <label>Categoria</label>
         <select id="categoria-lanc"></select>
 
-        <div class="recorrencia">
-          <label>Recorrência</label>
-          <select id="recorrencia-tipo">
-            <option value="none">Não recorrente</option>
-            <option value="monthly">Mensal</option>
-            <option value="fortnight">Quinzenal</option>
-            <option value="weekly">Semanal</option>
-            <option value="annual">Anual</option>
-          </select>
-
-          <label>Parcelas</label>
-          <input id="recorrencia-parcelas" type="number" min="1" value="1" />
-        </div>
-
         <button id="btn-add-lanc">Adicionar</button>
         <button id="btn-cancel-edit" class="hidden">Cancelar</button>
 
@@ -218,5 +219,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="supabase.js"></script>
   <script src="app.js"></script>
+
 </body>
 </html>
