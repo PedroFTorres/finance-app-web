@@ -25,7 +25,6 @@
   <main>
     <h1>Finance App</h1>
 
-
     <!-- DASHBOARD -->
     <section id="tela-dashboard" class="hidden">
       <section class="dashboard-box">
@@ -48,7 +47,6 @@
       </section>
     </section>
 
-
     <!-- CONTAS -->
     <section id="tela-contas">
       <section class="contas-box">
@@ -63,7 +61,13 @@
         <div id="tab-cadastro" class="tab-content">
           <label>Nome da conta</label><br/>
           <input id="conta-nome" placeholder="Nova conta" />
+
+          <label>Saldo inicial</label><br/>
           <input id="conta-saldo" type="number" placeholder="Saldo inicial"/>
+
+          <label>Data do saldo</label><br/>
+          <input id="conta-data-saldo" type="date" />
+
           <button id="btn-add-conta">Adicionar Conta</button>
 
           <hr/>
@@ -97,10 +101,10 @@
             <table id="table-extrato">
               <thead>
                 <tr>
-                  <th data-key="data">Data ▾</th>
-                  <th data-key="descricao">Descrição</th>
-                  <th data-key="tipo">Tipo</th>
-                  <th data-key="valor">Valor</th>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Tipo</th>
+                  <th>Valor</th>
                   <th>Ações</th>
                 </tr>
               </thead>
@@ -126,13 +130,12 @@
       </section>
     </section>
 
-
     <!-- LANÇAMENTOS -->
     <section id="tela-lancamentos" class="hidden">
       <section class="lancamento-box">
         <h2>Lançamento</h2>
 
-        <!-- 🔥 NOVO BLOCO DE FILTROS DOS LANÇAMENTOS -->
+        <!-- FILTROS DOS LANÇAMENTOS -->
         <div class="filtros-lanc">
           <label>Período</label>
           <select id="periodo-lanc">
@@ -147,8 +150,6 @@
 
           <button id="btn-filtrar-lanc">Filtrar</button>
         </div>
-        <!-- 🔥 FIM DO BLOCO NOVO -->
-
 
         <select id="tipo-lancamento">
           <option value="receita">Receita</option>
