@@ -214,7 +214,6 @@ btnAddConta.onclick=async()=>{
 
  await loadContas();
 };
-
 /* ----------------- LANÇAMENTOS ----------------- */
 
 btnAddLanc.onclick=async()=>{
@@ -227,10 +226,16 @@ btnAddLanc.onclick=async()=>{
 
  if(!desc||!valor||!data)return alert("Preencha tudo.");
 
+ /* ----------------- EDIÇÃO ----------------- */
  if(editing.type){
   const tabela=editing.type==="receita"?"receitas":"despesas";
+
   await supabase.from(tabela).update({
-   descricao:desc,valor,data,conta_id,categoria_id
+   descricao:desc,
+   valor,
+   data,
+   conta_id,
+   categoria_id
   }).eq("id",editing.id);
 
   stopEdit();
@@ -240,6 +245,54 @@ btnAddLanc.onclick=async()=>{
  }
 
  const tabela=tipo==="receita"?"receitas":"despesas";
+
+ /* ----------------- RECORRÊNCIA ----------------- */
+
+ const tipoRec=document.getElementById("recorrencia-tipo").value;
+ const parcelas=Number(document.getElementById("recorrencia-parcelas").value||1);
+
+ if(tipoRec!=="none" && parcelas>1){
+
+  let dataAtual=new Date(data+"T00:00:00");
+
+  for(let i=0;i<parcelas;i++){
+
+   const dataFormatada=
+    dataAtual.getFullYear()+"-"+
+    String(dataAtual.getMonth()+1).padStart(2,"0")+"-"+
+    String(dataAtual.getDate()).padStart(2,"0");
+
+   await supabase.from(tabela).insert([{
+    descricao:`${desc} (${i+1}/${parcelas})`,
+    valor,
+    data:dataFormatada,
+    conta_id,
+    categoria_id,
+    user_id:currentUser.id,
+    baixado:false
+   }]);
+
+   if(tipoRec==="monthly"){
+    dataAtual.setMonth(dataAtual.getMonth()+1);
+   } else if(tipoRec==="fortnight"){
+    dataAtual.setDate(dataAtual.getDate()+15);
+   } else if(tipoRec==="weekly"){
+    dataAtual.setDate(dataAtual.getDate()+7);
+   } else if(tipoRec==="annual"){
+    dataAtual.setFullYear(dataAtual.getFullYear()+1);
+   }
+  }
+
+  descLanc.value="";
+  valorLanc.value="";
+  dataLanc.value="";
+
+  await refreshLancamentos();
+  await renderExtrato();
+  return;
+ }
+
+ /* ----------------- LANÇAMENTO NORMAL ----------------- */
 
  await supabase.from(tabela).insert([{
   descricao:desc,
@@ -267,6 +320,7 @@ function stopEdit(){
  btnAddLanc.textContent="Adicionar";
  btnCancelEdit.classList.add("hidden");
 }
+
 btnCancelEdit.onclick=()=>stopEdit();
 
 function startEdit(type,item){
@@ -277,20 +331,24 @@ function startEdit(type,item){
  dataLanc.value=item.data;
  selectContaLanc.value=item.conta_id;
  categoriaLanc.value=item.categoria_id||"";
+
  btnAddLanc.textContent="Salvar";
  btnCancelEdit.classList.remove("hidden");
 }
 
-/* ----------------- EXCLUIR LANÇAMENTO ----------------- */
+/* ----------------- EXCLUIR ----------------- */
 
 async function deleteItem(type,id){
  if(!confirm("Excluir?"))return;
 
  const tabela=type==="receita"?"receitas":"despesas";
+
  await supabase.from(tabela).delete().eq("id",id);
 
  const {data:mv}=await supabase.from("movimentacoes")
-   .select("id,conta_id").eq("lancamento_id",id).maybeSingle();
+   .select("id,conta_id")
+   .eq("lancamento_id",id)
+   .maybeSingle();
 
  if(mv){
   await supabase.from("movimentacoes").delete().eq("id",mv.id);
@@ -301,7 +359,7 @@ async function deleteItem(type,id){
  await renderExtrato();
 }
 
-/* ----------------- FILTROS DE LANÇAMENTOS ----------------- */
+/* ----------------- FILTRAR LANÇAMENTOS ----------------- */
 
 btnFiltrarLanc.onclick=()=>refreshLancamentos();
 
@@ -337,13 +395,15 @@ async function refreshLancamentos(){
   supabase.from("receitas").select("*")
     .eq("user_id",currentUser.id)
     .eq("conta_id",conta_id)
-    .gte("data",inicio).lte("data",fim)
+    .gte("data",inicio)
+    .lte("data",fim)
     .order("data"),
 
   supabase.from("despesas").select("*")
     .eq("user_id",currentUser.id)
     .eq("conta_id",conta_id)
-    .gte("data",inicio).lte("data",fim)
+    .gte("data",inicio)
+    .lte("data",fim)
     .order("data")
  ]);
 
@@ -366,19 +426,21 @@ async function refreshLancamentos(){
  totalDespesasEl.textContent=formatReal(td);
 
  const {data:conta}=await supabase.from("contas_bancarias")
-   .select("saldo_atual").eq("id",conta_id).maybeSingle();
+   .select("saldo_atual")
+   .eq("id",conta_id)
+   .maybeSingle();
 
  saldoAtualEl.textContent=formatReal(conta?.saldo_atual||0);
 
  await recalcularSaldo(conta_id);
 }
 
-/* ----------------- ITEM LISTA ----------------- */
+/* ----------------- BUILD ITEM ----------------- */
 
 function buildLancItem(item,type){
  const li=document.createElement("li");
  li.style.display="flex";
- li.stylejustifyContent="space-between";
+ li.style.justifyContent="space-between";
 
  const left=document.createElement("div");
  const right=document.createElement("div");
@@ -412,11 +474,12 @@ function buildLancItem(item,type){
  return li;
 }
 
-/* ----------------- BAIXAR LANÇAMENTO ----------------- */
+/* ----------------- BAIXAR ----------------- */
 
 async function baixarLancamento(type,item){
  const {data:contas}=await supabase.from("contas_bancarias")
-   .select("*").eq("user_id",currentUser.id);
+   .select("*")
+   .eq("user_id",currentUser.id);
 
  let contaDest=item.conta_id;
 
@@ -434,14 +497,18 @@ async function baixarLancamento(type,item){
  }
 
  const {data:conta}=await supabase.from("contas_bancarias")
-   .select("*").eq("id",contaDest).single();
+   .select("*")
+   .eq("id",contaDest)
+   .single();
 
  let ns=Number(conta.saldo_atual||0);
+
  if(type==="receita")ns+=Number(item.valor);
  else ns-=Number(item.valor);
 
  await supabase.from("contas_bancarias")
-   .update({saldo_atual:ns}).eq("id",contaDest);
+   .update({saldo_atual:ns})
+   .eq("id",contaDest);
 
  const tabela=type==="receita"?"receitas":"despesas";
  const hoje=new Date().toISOString().slice(0,10);
@@ -451,7 +518,9 @@ async function baixarLancamento(type,item){
    .eq("id",item.id);
 
  const {data:ex}=await supabase.from("movimentacoes")
-   .select("id").eq("lancamento_id",item.id).maybeSingle();
+   .select("id")
+   .eq("lancamento_id",item.id)
+   .maybeSingle();
 
  if(!ex){
   await supabase.from("movimentacoes").insert([{
@@ -476,7 +545,9 @@ async function cancelarBaixaMovimentacao(mov){
  if(!confirm("Cancelar baixa?"))return;
 
  const {data:conta}=await supabase.from("contas_bancarias")
-   .select("*").eq("id",mov.conta_id).single();
+   .select("*")
+   .eq("id",mov.conta_id)
+   .single();
 
  let ns=Number(conta.saldo_atual||0);
 
@@ -484,10 +555,12 @@ async function cancelarBaixaMovimentacao(mov){
  else ns+=Number(mov.valor);
 
  await supabase.from("contas_bancarias")
-   .update({saldo_atual:ns}).eq("id",mov.conta_id);
+   .update({saldo_atual:ns})
+   .eq("id",mov.conta_id);
 
  await supabase.from("movimentacoes")
-   .delete().eq("id",mov.id);
+   .delete()
+   .eq("id",mov.id);
 
  await supabase.from("receitas")
    .update({baixado:false,data_baixa:null})
@@ -500,8 +573,7 @@ async function cancelarBaixaMovimentacao(mov){
  await recalcularSaldo(mov.conta_id);
  await refreshLancamentos();
  await renderExtrato();
-}
-
+};
 /* ----------------- EXTRATO ----------------- */
 
 btnFiltrarExtrato.onclick=()=>renderExtrato();
@@ -539,7 +611,8 @@ async function renderExtrato(){
 
  const {data:conta}=await supabase.from("contas_bancarias")
    .select("saldo_inicial,data_saldo,saldo_atual")
-   .eq("id",conta_id).single();
+   .eq("id",conta_id)
+   .single();
 
  const si=Number(conta.saldo_inicial||0);
  const dataInicial=conta.data_saldo;
@@ -730,7 +803,7 @@ async function renderGraficoDespesasPorCategoria(inicio,fim){
  });
 }
 
-/* ----------------- LISTENERS ----------------- */
+/* ----------------- SUBSCRIBE E TELAS ----------------- */
 
 function subscribeToChanges(){
  supabase.channel("rec")
@@ -749,8 +822,6 @@ function subscribeToChanges(){
    .on("postgres_changes",{event:"*",schema:"public",table:"categorias"},()=>loadCategorias())
    .subscribe();
 }
-
-/* ----------------- TELAS ----------------- */
 
 function showScreen(s){
  telaDashboard.classList.add("hidden");
