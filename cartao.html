@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cartões — Finance App</title>
+  <link rel="stylesheet" href="cartao.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">Finance App</div>
+    <nav class="nav">
+      <button id="btn-back">← Voltar</button>
+      <span id="user-email" class="user-email"></span>
+      <button id="btn-logout">Sair</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="left-column">
+      <div class="panel card-overview">
+        <div class="panel-header">
+          <h2>Meus Cartões</h2>
+          <button id="btn-new-card" class="primary">Novo Cartão</button>
+        </div>
+
+        <div id="cards-list" class="cards-list">
+          <!-- cartões renderizados aqui -->
+        </div>
+      </div>
+
+      <div class="panel recent-activity">
+        <h3>Atalhos</h3>
+        <div class="actions-grid">
+          <button id="nav-fatura" class="action">Ver Faturas</button>
+          <button id="nav-lancamento" class="action">Lançar Compra</button>
+          <button id="nav-historico" class="action">Histórico</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="right-column">
+      <!-- TELA: Lista de Faturas / Fatura selecionada -->
+      <div id="view-faturas" class="panel view hidden">
+        <div class="panel-header">
+          <h2>Faturas</h2>
+          <div class="controls">
+            <select id="select-cartao-faturas"></select>
+            <select id="select-mes-faturas"></select>
+            <button id="btn-refresh-faturas">Atualizar</button>
+          </div>
+        </div>
+
+        <div class="fatura-summary" id="fatura-summary">
+          <!-- resumo fatura -->
+        </div>
+
+        <div class="fatura-transactions">
+          <h4>Compras na fatura</h4>
+          <ul id="lista-compras-fatura"></ul>
+        </div>
+
+        <div class="fatura-actions">
+          <label>Conta para pagamento</label>
+          <select id="select-conta-pagamento"></select>
+
+          <label>Data de vencimento</label>
+          <input type="date" id="data-vencimento-fatura" />
+
+          <button id="btn-fechar-fatura" class="danger">Fechar Fatura</button>
+          <button id="btn-pagar-fatura" class="primary">Gerar Despesa (Pagar)</button>
+        </div>
+      </div>
+
+      <!-- TELA: Lançar Compra -->
+      <div id="view-lancamento" class="panel view hidden">
+        <div class="panel-header">
+          <h2>Lançar Compra</h2>
+          <div class="controls">
+            <select id="select-cartao-lanc"></select>
+            <select id="select-categoria-lanc-cartao"></select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label>Descrição</label>
+          <input id="cart-desc" placeholder="Ex: Mercado, Restaurante" />
+        </div>
+
+        <div class="form-row">
+          <label>Valor</label>
+          <input id="cart-valor" type="number" step="0.01" />
+        </div>
+
+        <div class="form-row">
+          <label>Data da compra</label>
+          <input id="cart-data" type="date" />
+        </div>
+
+        <div class="form-row">
+          <label>Parcelas</label>
+          <input id="cart-parcelas" type="number" min="1" value="1" />
+        </div>
+
+        <div class="form-row actions">
+          <button id="btn-add-purchase" class="primary">Adicionar Compra</button>
+          <button id="btn-cancel-purchase" class="secondary">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- TELA: Cadastro / Edit cartão -->
+      <div id="view-new-card" class="panel view hidden">
+        <div class="panel-header">
+          <h2>Novo Cartão</h2>
+        </div>
+
+        <div class="form-row">
+          <label>Nome do cartão</label>
+          <input id="card-nome" placeholder="Ex: Nubank - Visa" />
+        </div>
+
+        <div class="form-row">
+          <label>Limite</label>
+          <input id="card-limite" type="number" step="0.01" value="0" />
+        </div>
+
+        <div class="form-row">
+          <label>Dia de fechamento (1-28)</label>
+          <input id="card-dia-fechamento" type="number" min="1" max="28" value="5" />
+        </div>
+
+        <div class="form-row">
+          <label>Dia de vencimento (1-31)</label>
+          <input id="card-dia-vencimento" type="number" min="1" max="31" value="25" />
+        </div>
+
+        <div class="form-row actions">
+          <button id="btn-save-card" class="primary">Salvar Cartão</button>
+          <button id="btn-cancel-card" class="secondary">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- TELA: Histórico de Faturas (simples) -->
+      <div id="view-historico" class="panel view hidden">
+        <div class="panel-header"><h2>Histórico de Faturas</h2></div>
+        <ul id="lista-faturas-historico" class="faturas-list"></ul>
+      </div>
+
+    </section>
+  </main>
+
+  <footer class="footer">
+    <small>Modulo de Cartões — Finance App</small>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="cartao.js"></script>
+</body>
+</html>
