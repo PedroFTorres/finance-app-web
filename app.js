@@ -44,14 +44,22 @@ const btnFiltrarLanc=document.getElementById("btn-filtrar-lanc");
 
 const tabCadastro=document.getElementById("tab-cadastro");
 const tabExtrato=document.getElementById("tab-extrato");
+const tabCategorias=document.getElementById("tab-categorias");
 const selectExtrato=document.getElementById("select-contas-extrato");
 const periodoExtrato=document.getElementById("periodo-extrato");
 const dataInicio=document.getElementById("data-inicio");
 const dataFim=document.getElementById("data-fim");
 const btnFiltrarExtrato=document.getElementById("btn-filtrar-extrato");
 
+const categoriaNome=document.getElementById("categoria-nome");
+const btnAddCategoria=document.getElementById("btn-add-categoria");
+const listaCategorias=document.getElementById("lista-categorias");
+
 let tableExtrato=null;
-document.addEventListener("DOMContentLoaded",()=>{const t=document.getElementById("table-extrato");if(t)tableExtrato=t.querySelector("tbody");});
+document.addEventListener("DOMContentLoaded",()=>{
+ const t=document.getElementById("table-extrato");
+ if(t)tableExtrato=t.querySelector("tbody");
+});
 
 supabase.auth.getSession().then(({data})=>{
  if(!data.session)return window.location.href="login.html";
@@ -72,25 +80,59 @@ async function initApp(){
  showScreen("contas");
 }
 
-/* ------------------------------------------
-   CARREGAR CATEGORIAS
-------------------------------------------- */
+/* ----------------- CATEGORIAS ----------------- */
 
 async function loadCategorias(){
  const {data}=await supabase.from("categorias").select("*").order("nome");
  categoriaLanc.innerHTML="";
+ listaCategorias.innerHTML="";
 
  (data||[]).forEach(cat=>{
   const opt=document.createElement("option");
   opt.value=cat.id;
   opt.textContent=cat.nome;
   categoriaLanc.appendChild(opt);
+
+  const li=document.createElement("li");
+  li.style.display="flex";
+  li.style.justifyContent="space-between";
+
+  const span=document.createElement("span");
+  span.textContent=cat.nome;
+
+  const btn=document.createElement("button");
+  btn.textContent="Excluir";
+  btn.onclick=()=>deleteCategoria(cat.id);
+
+  li.appendChild(span);
+  li.appendChild(btn);
+  listaCategorias.appendChild(li);
  });
 }
 
-/* ------------------------------------------
-   RECALCULAR SALDO
-------------------------------------------- */
+btnAddCategoria.onclick=async()=>{
+ const nome=categoriaNome.value.trim();
+ if(!nome)return alert("Informe o nome da categoria.");
+
+ await supabase.from("categorias").insert([{id:crypto.randomUUID(),nome}]);
+
+ categoriaNome.value="";
+ await loadCategorias();
+};
+
+async function deleteCategoria(id){
+ if(!confirm("Excluir categoria?"))return;
+
+ await supabase.from("categorias").delete().eq("id",id);
+
+ await supabase.from("receitas").update({categoria_id:null}).eq("categoria_id",id);
+ await supabase.from("despesas").update({categoria_id:null}).eq("categoria_id",id);
+
+ await loadCategorias();
+}
+
+/* ----------------- SALDO ----------------- */
+
 async function recalcularSaldo(conta_id){
  const {data:conta}=await supabase.from("contas_bancarias")
    .select("saldo_inicial").eq("id",conta_id).maybeSingle();
@@ -114,57 +156,41 @@ async function recalcularSaldo(conta_id){
  return sf;
 }
 
-/* ------------------------------------------
-   CARREGAR CONTAS
-------------------------------------------- */
+/* ----------------- CONTAS ----------------- */
 
 async function loadContas(){
  const {data}=await supabase.from("contas_bancarias")
    .select("*").eq("user_id",currentUser.id);
 
  selectContas.innerHTML="";
+ selectExtrato.innerHTML="";
+ selectContaLanc.innerHTML="";
+
  (data||[]).forEach(c=>{
   const o=document.createElement("option");
   o.value=c.id;
   o.textContent=`${c.nome} (${formatReal(c.saldo_inicial)})`;
   selectContas.appendChild(o);
+
+  const e=document.createElement("option");
+  e.value=c.id; e.textContent=c.nome;
+  selectExtrato.appendChild(e);
+
+  const l=document.createElement("option");
+  l.value=c.id; l.textContent=c.nome;
+  selectContaLanc.appendChild(l);
  });
 
  if(data?.length){
   selectContas.value=data[0].id;
+  selectExtrato.value=data[0].id;
+  selectContaLanc.value=data[0].id;
   await recalcularSaldo(selectContas.value);
   await refreshLancamentos();
  }
-
- await loadContasLancExtrato();
 }
 
-async function loadContasLancExtrato(){
- const {data}=await supabase.from("contas_bancarias")
-   .select("*").eq("user_id",currentUser.id);
-
- selectContaLanc.innerHTML="";
- selectExtrato.innerHTML="";
-
- (data||[]).forEach(c=>{
-  const a=document.createElement("option");
-  a.value=c.id; a.textContent=c.nome;
-  selectContaLanc.appendChild(a);
-
-  const b=document.createElement("option");
-  b.value=c.id; b.textContent=c.nome;
-  selectExtrato.appendChild(b);
- });
-
- if(data?.length){
-  selectContaLanc.value=data[0].id;
-  selectExtrato.value=data[0].id;
- }
-}
-
-/* ------------------------------------------
-   ADICIONAR CONTA
-------------------------------------------- */
+/* ----------------- ADICIONAR CONTA ----------------- */
 
 btnAddConta.onclick=async()=>{
  const nome=contaNome.value.trim();
@@ -189,9 +215,7 @@ btnAddConta.onclick=async()=>{
  await loadContas();
 };
 
-/* ------------------------------------------
-   ADICIONAR / EDITAR LANÇAMENTO
-------------------------------------------- */
+/* ----------------- LANÇAMENTOS ----------------- */
 
 btnAddLanc.onclick=async()=>{
  const desc=descLanc.value.trim();
@@ -206,11 +230,7 @@ btnAddLanc.onclick=async()=>{
  if(editing.type){
   const tabela=editing.type==="receita"?"receitas":"despesas";
   await supabase.from(tabela).update({
-   descricao:desc,
-   valor,
-   data,
-   conta_id,
-   categoria_id
+   descricao:desc,valor,data,conta_id,categoria_id
   }).eq("id",editing.id);
 
   stopEdit();
@@ -261,15 +281,12 @@ function startEdit(type,item){
  btnCancelEdit.classList.remove("hidden");
 }
 
-/* ------------------------------------------
-   EXCLUIR LANÇAMENTO
-------------------------------------------- */
+/* ----------------- EXCLUIR LANÇAMENTO ----------------- */
 
 async function deleteItem(type,id){
  if(!confirm("Excluir?"))return;
 
  const tabela=type==="receita"?"receitas":"despesas";
-
  await supabase.from(tabela).delete().eq("id",id);
 
  const {data:mv}=await supabase.from("movimentacoes")
@@ -284,9 +301,7 @@ async function deleteItem(type,id){
  await renderExtrato();
 }
 
-/* ------------------------------------------
-   FILTRO DE LANÇAMENTOS
-------------------------------------------- */
+/* ----------------- FILTROS DE LANÇAMENTOS ----------------- */
 
 btnFiltrarLanc.onclick=()=>refreshLancamentos();
 
@@ -319,11 +334,17 @@ async function refreshLancamentos(){
  }
 
  const [R,D]=await Promise.all([
-  supabase.from("receitas").select("*").eq("user_id",currentUser.id)
-    .eq("conta_id",conta_id).gte("data",inicio).lte("data",fim).order("data"),
+  supabase.from("receitas").select("*")
+    .eq("user_id",currentUser.id)
+    .eq("conta_id",conta_id)
+    .gte("data",inicio).lte("data",fim)
+    .order("data"),
 
-  supabase.from("despesas").select("*").eq("user_id",currentUser.id)
-    .eq("conta_id",conta_id).gte("data",inicio).lte("data",fim).order("data")
+  supabase.from("despesas").select("*")
+    .eq("user_id",currentUser.id)
+    .eq("conta_id",conta_id)
+    .gte("data",inicio).lte("data",fim)
+    .order("data")
  ]);
 
  listReceitas.innerHTML="";
@@ -352,14 +373,12 @@ async function refreshLancamentos(){
  await recalcularSaldo(conta_id);
 }
 
-/* ------------------------------------------
-   ITEM DA LISTA
-------------------------------------------- */
+/* ----------------- ITEM LISTA ----------------- */
 
 function buildLancItem(item,type){
  const li=document.createElement("li");
  li.style.display="flex";
- li.style.justifyContent="space-between";
+ li.stylejustifyContent="space-between";
 
  const left=document.createElement("div");
  const right=document.createElement("div");
@@ -367,9 +386,7 @@ function buildLancItem(item,type){
  left.textContent=
   `${formatDate(item.data)} — ${item.descricao} — ${formatReal(item.valor)}`;
 
- if(item.baixado){
-  left.textContent+=" — (BAIXADO)";
- }
+ if(item.baixado)left.textContent+=" — (BAIXADO)";
 
  const b1=document.createElement("button");
  b1.textContent="Editar";
@@ -395,9 +412,7 @@ function buildLancItem(item,type){
  return li;
 }
 
-/* ------------------------------------------
-   BAIXAR LANÇAMENTO
-------------------------------------------- */
+/* ----------------- BAIXAR LANÇAMENTO ----------------- */
 
 async function baixarLancamento(type,item){
  const {data:contas}=await supabase.from("contas_bancarias")
@@ -405,7 +420,7 @@ async function baixarLancamento(type,item){
 
  let contaDest=item.conta_id;
 
- let msg="Escolha conta:\n";
+ let msg="Escolha a conta:\n";
  contas.forEach((c,i)=>{
   msg+=`${i+1}) ${c.nome}\n`;
  });
@@ -436,9 +451,7 @@ async function baixarLancamento(type,item){
    .eq("id",item.id);
 
  const {data:ex}=await supabase.from("movimentacoes")
-   .select("id")
-   .eq("lancamento_id",item.id)
-   .maybeSingle();
+   .select("id").eq("lancamento_id",item.id).maybeSingle();
 
  if(!ex){
   await supabase.from("movimentacoes").insert([{
@@ -457,9 +470,7 @@ async function baixarLancamento(type,item){
  await renderExtrato();
 }
 
-/* ------------------------------------------
-   CANCELAR BAIXA
-------------------------------------------- */
+/* ----------------- CANCELAR BAIXA ----------------- */
 
 async function cancelarBaixaMovimentacao(mov){
  if(!confirm("Cancelar baixa?"))return;
@@ -491,9 +502,7 @@ async function cancelarBaixaMovimentacao(mov){
  await renderExtrato();
 }
 
-/* ------------------------------------------
-   EXTRATO
-------------------------------------------- */
+/* ----------------- EXTRATO ----------------- */
 
 btnFiltrarExtrato.onclick=()=>renderExtrato();
 
@@ -530,8 +539,7 @@ async function renderExtrato(){
 
  const {data:conta}=await supabase.from("contas_bancarias")
    .select("saldo_inicial,data_saldo,saldo_atual")
-   .eq("id",conta_id)
-   .single();
+   .eq("id",conta_id).single();
 
  const si=Number(conta.saldo_inicial||0);
  const dataInicial=conta.data_saldo;
@@ -598,9 +606,7 @@ async function renderExtrato(){
  document.getElementById("total-valor").textContent=formatReal(cred-deb);
 }
 
-/* ------------------------------------------
-   DASHBOARD
-------------------------------------------- */
+/* ----------------- DASHBOARD ----------------- */
 
 async function loadDashboard(){
  const now=new Date();
@@ -611,14 +617,17 @@ async function loadDashboard(){
  const last=new Date(ano,mes,0).getDate();
  const fim=`${ano}-${String(mes).padStart(2,"0")}-${last}`;
 
- /* GRÁFICO PRINCIPAL */
  const rec=await supabase.from("receitas")
-   .select("*").eq("user_id",currentUser.id)
-   .gte("data",inicio).lte("data",fim);
+   .select("*")
+   .eq("user_id",currentUser.id)
+   .gte("data",inicio)
+   .lte("data",fim);
 
  const des=await supabase.from("despesas")
-   .select("*").eq("user_id",currentUser.id)
-   .gte("data",inicio).lte("data",fim);
+   .select("*")
+   .eq("user_id",currentUser.id)
+   .gte("data",inicio)
+   .lte("data",fim);
 
  const totalR=(rec.data||[]).reduce((s,x)=>s+Number(x.valor||0),0);
  const totalD=(des.data||[]).reduce((s,x)=>s+Number(x.valor||0),0);
@@ -645,16 +654,11 @@ async function loadDashboard(){
   options:{responsive:true,scales:{y:{beginAtZero:true}}}
  });
 
- /* GRÁFICO RECEITAS POR CATEGORIA */
  await renderGraficoReceitasPorCategoria(inicio,fim);
-
- /* GRÁFICO DESPESAS POR CATEGORIA */
  await renderGraficoDespesasPorCategoria(inicio,fim);
 }
 
-/* ------------------------------------------
-   GRÁFICO DE RECEITAS POR CATEGORIA
-------------------------------------------- */
+/* ----------------- GRÁFICOS POR CATEGORIA ----------------- */
 
 async function renderGraficoReceitasPorCategoria(inicio,fim){
  const {data}=await supabase.from("receitas")
@@ -691,10 +695,6 @@ async function renderGraficoReceitasPorCategoria(inicio,fim){
  });
 }
 
-/* ------------------------------------------
-   GRÁFICO DE DESPESAS POR CATEGORIA
-------------------------------------------- */
-
 async function renderGraficoDespesasPorCategoria(inicio,fim){
  const {data}=await supabase.from("despesas")
    .select("valor,categoria_id,categorias(nome)")
@@ -730,9 +730,7 @@ async function renderGraficoDespesasPorCategoria(inicio,fim){
  });
 }
 
-/* ------------------------------------------
-   LISTENERS E TROCA DE TELA
-------------------------------------------- */
+/* ----------------- LISTENERS ----------------- */
 
 function subscribeToChanges(){
  supabase.channel("rec")
@@ -746,7 +744,13 @@ function subscribeToChanges(){
  supabase.channel("mov")
    .on("postgres_changes",{event:"*",schema:"public",table:"movimentacoes"},()=>renderExtrato())
    .subscribe();
+
+ supabase.channel("cats")
+   .on("postgres_changes",{event:"*",schema:"public",table:"categorias"},()=>loadCategorias())
+   .subscribe();
 }
+
+/* ----------------- TELAS ----------------- */
 
 function showScreen(s){
  telaDashboard.classList.add("hidden");
@@ -778,17 +782,18 @@ btnLanc.onclick=()=>showScreen("lanc");
 
 document.querySelectorAll(".tab-btn").forEach(b=>{
  b.onclick=()=>{
-  document.querySelectorAll(".tab-btn").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".tab-btn")
+    .forEach(x=>x.classList.remove("active"));
+
   b.classList.add("active");
 
-  if(b.dataset.tab==="cadastro"){
-   tabCadastro.classList.remove("hidden");
-   tabExtrato.classList.add("hidden");
-  } else {
-   tabCadastro.classList.add("hidden");
-   tabExtrato.classList.remove("hidden");
-   renderExtrato();
-  }
+  tabCadastro.classList.add("hidden");
+  tabExtrato.classList.add("hidden");
+  tabCategorias.classList.add("hidden");
+
+  if(b.dataset.tab==="cadastro")tabCadastro.classList.remove("hidden");
+  if(b.dataset.tab==="extrato"){tabExtrato.classList.remove("hidden");renderExtrato();}
+  if(b.dataset.tab==="categorias")tabCategorias.classList.remove("hidden");
  };
 });
 
