@@ -30,6 +30,11 @@ let chartRecCat = null;
 let chartDesCat = null;
 
 // ========================= ELEMENTOS DO DOM =========================
+// --- elementos faltantes relacionados a lançamentos (filtrar / período personalizado)
+const periodoLanc = document.getElementById("periodo-lanc");
+const dataInicioLanc = document.getElementById("data-inicio-lanc");
+const dataFimLanc = document.getElementById("data-fim-lanc");
+const btnFiltrarLanc = document.getElementById("btn-filtrar-lanc");
 
 // Telas
 const telaDashboard = document.getElementById("tela-dashboard");
