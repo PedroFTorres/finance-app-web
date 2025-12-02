@@ -1,192 +1,248 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cartões — Finance App</title>
-  <link rel="stylesheet" href="cartao.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Finance App</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
 
-<header class="top">
-  <div class="brand">Cartões</div>
-  <nav class="nav">
-    <button id="btn-back" class="nav-btn">← Voltar</button>
-    <span id="user-email"></span>
-    <button id="btn-logout" class="nav-btn">Sair</button>
-  </nav>
-</header>
+  <!-- TOPO -->
+  <header class="top-header">
+    <nav class="top-menu">
+      <button id="menu-dashboard" class="menu-btn">Dashboard</button>
+      <button id="menu-contas" class="menu-btn active">Contas</button>
+      <button id="menu-lancamentos" class="menu-btn">Lançamentos</button>
+      <button id="menu-cartao" class="menu-btn" onclick="window.location.href='cartao.html'">Cartão</button>
+    </nav>
 
-<main class="container">
-
-  <!-- ----------------------------------- LADO ESQUERDO ----------------------------------- -->
-  <section class="left-column">
-
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Meus Cartões</h2>
-        <button id="btn-new-card" class="btn-primary">Novo</button>
-      </div>
-      <div id="cards-list" class="cards-list"></div>
+    <div class="top-bar">
+      <span id="user-email" class="user-email"></span>
+      <button id="btn-logout" class="danger">Sair</button>
     </div>
+  </header>
 
-    <div class="panel">
-      <h3>Atalhos</h3>
-      <div class="actions-grid">
-        <button id="nav-fatura" class="action-btn">Faturas</button>
-        <button id="nav-lancamento" class="action-btn">Lançar Compra</button>
-        <button id="nav-historico" class="action-btn">Histórico</button>
-        <button id="btn-pagamento-antecipado" class="action-btn">Pag. Antecipado</button>
-      </div>
-    </div>
+  <main>
+    <h1>Finance App</h1>
 
-  </section>
+    <!-- DASHBOARD -->
+    <section id="tela-dashboard" class="hidden">
 
+      <section class="dashboard-box">
+        <h2>Resumo do Mês</h2>
 
-  <!-- ----------------------------------- LADO DIREITO ----------------------------------- -->
-  <section class="right-column">
+        <div class="dashboard-grid">
 
-    <!-- ------------------- FATURAS ------------------- -->
-    <div id="view-faturas" class="panel view hidden">
-      <div class="panel-header">
-        <h2>Fatura</h2>
-
-        <div class="top-controls">
-          <select id="select-cartao-faturas"></select>
-
-          <div class="mes-navegacao">
-            <button id="mes-prev" class="mes-btn">◀</button>
-            <span id="mes-display"></span>
-            <button id="mes-next" class="mes-btn">▶</button>
-            <input id="select-mes-faturas" type="hidden">
+          <div class="card">
+            <h3>Receitas por Categoria</h3>
+            <canvas id="chart-receitas-categorias"></canvas>
           </div>
+
+          <div class="card">
+            <h3>Despesas por Categoria</h3>
+            <canvas id="chart-despesas-categorias"></canvas>
+          </div>
+
+          <div class="card">
+            <h3>Resumo Geral</h3>
+            <canvas id="chart-dashboard"></canvas>
+            <p><strong>Período:</strong> <span id="dash-period"></span></p>
+            <p><strong>Total a receber:</strong> <span id="dash-receber">R$ 0,00</span></p>
+            <p><strong>Total a pagar:</strong> <span id="dash-pagar">R$ 0,00</span></p>
+            <p><strong>Saldo atual:</strong> <span id="dash-saldo-atual">R$ 0,00</span></p>
+            <p><strong>Saldo previsto:</strong> <span id="dash-saldo-previsto">R$ 0,00</span></p>
+          </div>
+
         </div>
-      </div>
+      </section>
+    </section>
 
-      <div id="fatura-summary" class="fatura-summary"></div>
+    <!-- CONTAS -->
+    <section id="tela-contas">
 
-      <div class="fatura-transactions">
-        <ul id="lista-compras-fatura"></ul>
-      </div>
+      <section class="contas-box">
+        <h2>Contas</h2>
 
-      <div class="form">
-        <label>Conta para pagamento</label>
-        <select id="select-conta-pagamento"></select>
-
-        <label>Vencimento</label>
-        <input type="date" id="data-vencimento-fatura" />
-
-        <div class="actions-row">
-          <button id="btn-fechar-fatura" class="btn-danger">Fechar Fatura</button>
-          <button id="btn-pagar-fatura" class="btn-primary">Gerar Despesa</button>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="cadastro">Cadastro</button>
+          <button class="tab-btn" data-tab="extrato">Extrato</button>
+          <button class="tab-btn" data-tab="categorias">Categorias</button>
         </div>
-      </div>
-    </div>
 
+        <!-- TAB CADASTRO -->
+        <div id="tab-cadastro" class="tab-content">
+          <label>Nome da conta</label><br/>
+          <input id="conta-nome" placeholder="Nova conta" />
 
-    <!-- ------------------- LANÇAR COMPRA ------------------- -->
-    <div id="view-lancamento" class="panel view hidden">
-      <div class="panel-header">
-        <h2>Lançar Compra</h2>
-        <div class="top-controls">
-          <select id="select-cartao-lanc"></select>
-          <select id="select-categoria-lanc-cartao"></select>
+          <label>Saldo inicial</label><br/>
+          <input id="conta-saldo" type="number" placeholder="Saldo inicial"/>
+
+          <label>Data do saldo</label><br/>
+          <input id="conta-data-saldo" type="date" />
+
+          <button id="btn-add-conta">Adicionar Conta</button>
+
+          <hr/>
+
+          <label>Contas existentes</label><br/>
+          <select id="select-contas"></select>
         </div>
-      </div>
 
-      <div class="form">
-        <label>Descrição</label>
-        <input id="cart-desc">
+        <!-- TAB EXTRATO -->
+        <div id="tab-extrato" class="tab-content hidden">
+          <h3>Extrato da Conta</h3>
 
-        <label>Valor</label>
-        <input id="cart-valor" type="number" step="0.01">
+          <label>Selecionar conta</label><br/>
+          <select id="select-contas-extrato"></select>
 
-        <label>Data da compra</label>
-        <input id="cart-data" type="date">
+          <div class="filtros">
+            <label>Período</label>
+            <select id="periodo-extrato">
+              <option value="mes_atual">Mês atual</option>
+              <option value="mes_anterior">Mês anterior</option>
+              <option value="ultimos_30">Últimos 30 dias</option>
+              <option value="personalizado">Personalizado</option>
+            </select>
 
-        <label>Total de Parcelas</label>
-        <input id="cart-parcelas" type="number" min="1" value="1">
+            <input type="date" id="data-inicio" class="hidden"/>
+            <input type="date" id="data-fim" class="hidden"/>
 
-        <label>Fatura Inicial</label>
-        <div class="mes-navegacao">
-          <button id="fat-prev" class="mes-btn">◀</button>
-          <span id="fat-display"></span>
-          <button id="fat-next" class="mes-btn">▶</button>
+            <button id="btn-filtrar-extrato">Filtrar</button>
+          </div>
+
+          <div class="table-wrap">
+            <table id="table-extrato">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Tipo</th>
+                  <th>Valor</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3"><strong>Totais</strong></td>
+                  <td id="total-valor"><strong>R$ 0,00</strong></td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="extrato-totals">
+            <p>Total Receitas: <span id="total-receitas-extrato">R$0,00</span></p>
+            <p>Total Despesas: <span id="total-despesas-extrato">R$0,00</span></p>
+            <p>Saldo do Período: <span id="saldo-periodo-extrato">R$0,00</span></p>
+            <p>Saldo atual da conta: <span id="saldo-atual-conta-extrato">R$0,00</span></p>
+          </div>
+
         </div>
-        <input id="select-fatura-inicial" type="hidden">
 
-        <label>Parcela Atual (para compras antigas)</label>
-        <input id="parcela-inicial" type="number" min="1" value="1">
+        <!-- TAB CATEGORIAS -->
+        <div id="tab-categorias" class="tab-content hidden">
+          <h3>Categorias</h3>
 
-        <div class="actions-row">
-          <button id="btn-add-purchase" class="btn-primary">Adicionar</button>
-          <button id="btn-cancel-purchase" class="btn-secondary">Cancelar</button>
+          <label>Nova categoria</label><br/>
+          <input id="categoria-nome" placeholder="Ex: Mercado, Salário, Transporte"/>
+
+          <button id="btn-add-categoria">Adicionar Categoria</button>
+
+          <hr/>
+
+          <h4>Categorias cadastradas</h4>
+          <ul id="lista-categorias"></ul>
         </div>
-      </div>
-    </div>
 
+      </section>
+    </section>
 
-    <!-- ------------------- NOVO CARTÃO ------------------- -->
-    <div id="view-new-card" class="panel view hidden">
-      <h2>Novo Cartão</h2>
+    <!-- LANÇAMENTOS -->
+    <section id="tela-lancamentos" class="hidden">
 
-      <div class="form">
-        <label>Nome</label>
-        <input id="card-nome">
+      <section class="lancamento-box">
+        <h2>Lançamento</h2>
 
-        <label>Limite</label>
-        <input id="card-limite" type="number" step="0.01">
+        <div class="filtros-lanc">
+          <label>Período</label>
+          <select id="periodo-lanc">
+            <option value="mes_atual">Mês atual</option>
+            <option value="mes_anterior">Mês anterior</option>
+            <option value="ultimos_30">Últimos 30 dias</option>
+            <option value="personalizado">Personalizado</option>
+          </select>
 
-        <label>Dia Fechamento</label>
-        <input id="card-dia-fechamento" type="number" min="1" max="28">
+          <input type="date" id="data-inicio-lanc" class="hidden"/>
+          <input type="date" id="data-fim-lanc" class="hidden"/>
 
-        <label>Dia Vencimento</label>
-        <input id="card-dia-vencimento" type="number" min="1" max="31">
-
-        <div class="actions-row">
-          <button id="btn-save-card" class="btn-primary">Salvar</button>
-          <button id="btn-cancel-card" class="btn-secondary">Cancelar</button>
+          <button id="btn-filtrar-lanc">Filtrar</button>
         </div>
-      </div>
-    </div>
 
+        <select id="tipo-lancamento">
+          <option value="receita">Receita</option>
+          <option value="despesa">Despesa</option>
+        </select>
 
-    <!-- ------------------- HISTÓRICO ------------------- -->
-    <div id="view-historico" class="panel view hidden">
-      <h2>Histórico</h2>
-      <ul id="lista-faturas-historico" class="faturas-list"></ul>
-    </div>
+        <input id="valor-lanc" type="number" placeholder="Valor" />
+        <input id="desc-lanc" placeholder="Descrição" />
+        <input id="data-lanc" type="date" />
 
-
-    <!-- ------------------- PAGAMENTO ANTECIPADO ------------------- -->
-    <div id="box-pag-antecipado" class="panel view hidden">
-      <h2>Pagamento Antecipado</h2>
-
-      <div class="form">
         <label>Conta</label>
-        <select id="conta-pag-antecipado"></select>
+        <select id="select-conta-lanc"></select>
 
-        <label>Valor</label>
-        <input id="valor-pag-antecipado" type="number" step="0.01">
+        <label>Categoria</label>
+        <select id="categoria-lanc"></select>
 
-        <label>Data</label>
-        <input id="data-pag-antecipado" type="date">
+        <div class="recorrencia">
+          <label>Recorrência</label>
+          <select id="recorrencia-tipo">
+            <option value="none">Não recorrente</option>
+            <option value="monthly">Mensal</option>
+            <option value="fortnight">Quinzenal</option>
+            <option value="weekly">Semanal</option>
+            <option value="annual">Anual</option>
+          </select>
 
-        <div class="actions-row">
-          <button id="btn-confirmar-pag-antecipado" class="btn-primary">Confirmar</button>
-          <button class="btn-secondary" onclick="hideAllViews()">Cancelar</button>
+          <label>Parcelas</label>
+          <input id="recorrencia-parcelas" type="number" min="1" value="1" />
         </div>
-      </div>
-    </div>
 
-  </section>
+        <button id="btn-add-lanc">Adicionar</button>
+        <button id="btn-cancel-edit" class="hidden">Cancelar</button>
 
-</main>
+        <div class="totais">
+          <span id="saldo-atual"></span>
+          <span id="total-receitas"></span>
+          <span id="total-despesas"></span>
+        </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase.js"></script>
-<script src="cartao.js"></script>
+      </section>
+
+      <section class="listas">
+        <div class="box">
+          <h3>Receitas</h3>
+          <ul id="list-receitas"></ul>
+        </div>
+
+        <div class="box">
+          <h3>Despesas</h3>
+          <ul id="list-despesas"></ul>
+        </div>
+      </section>
+
+    </section>
+
+  </main>
+
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="supabase.js"></script>
+  <script src="app.js"></script>
 
 </body>
 </html>
