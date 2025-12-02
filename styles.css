@@ -87,6 +87,28 @@ h1, h2, h3 {
 
 
 /* =========================
+   PÁGINAS (CORREÇÃO IMPORTANTE)
+========================= */
+
+/* todas as telas são "páginas" */
+.page {
+  display: none;
+  margin-top: 25px;
+}
+
+/* quando o JS remove .hidden → a página aparece */
+.page:not(.hidden) {
+  display: block;
+}
+
+/* compatibilidade com partes internas */
+.hidden { 
+  display: none !important;
+}
+
+
+
+/* =========================
    PAINÉIS (CARD STYLE)
 ========================= */
 
