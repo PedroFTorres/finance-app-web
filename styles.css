@@ -1,108 +1,372 @@
-/* --- BASE (personalizado) --- */
+/* =========================
+   TEMA GLOBAL
+========================= */
+:root {
+  --roxo: #7a4dff;
+  --roxo-claro: #efe9ff;
+  --text: #333;
+  --muted: #7b7f86;
+  --bg: #f7f7fb;
+  --panel: #ffffff;
+  --radius: 14px;
+  --shadow: 0 6px 18px rgba(0,0,0,0.06);
+  font-family: "Inter", sans-serif;
+}
+
 body {
-  font-family: "Courier New", monospace;
-  background: #fafafa;
   margin: 0;
-  padding: 20px;
-  text-align: center;
-  color: #111;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", sans-serif;
 }
 
-h1 {
-  margin-bottom: 20px;
-}
 
-.contas-box,
-.lancamento-box,
-.box,
-.dashboard-box {
-  background: white;
-  padding: 20px;
-  margin: 15px auto;
-  width: 90%;
-  max-width: 1100px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-  text-align: left;
-}
 
-/* tabs internas */
-.tabs {
+/* =========================
+   TOPO / MENU
+========================= */
+
+.top-header {
+  background: var(--roxo);
+  padding: 14px 20px;
   display: flex;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+}
+
+.top-menu {
+  display: flex;
+  gap: 10px;
+}
+
+.menu-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.menu-btn.active {
+  background: #fff;
+  color: var(--roxo);
+  font-weight: 600;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-email {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+
+
+/* =========================
+   CONTAINER GLOBAL
+========================= */
+
+main {
+  max-width: 1250px;
+  margin: auto;
+  padding: 22px;
+}
+
+h1, h2, h3 {
+  color: var(--roxo);
   margin-bottom: 12px;
 }
 
+
+
+/* =========================
+   PAINÉIS (CARD STYLE)
+========================= */
+
+.card-panel {
+  background: var(--panel);
+  padding: 20px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 22px;
+}
+
+.box {
+  background: var(--panel);
+  padding: 20px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 22px;
+}
+
+
+
+/* =========================
+   INPUTS / SELECTS
+========================= */
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  font-size: 15px;
+  outline: none;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+input:focus, select:focus {
+  border-color: var(--roxo);
+}
+
+
+
+/* =========================
+   BOTÕES
+========================= */
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background: var(--roxo);
+  color: #fff;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.07);
+}
+
+.btn-secondary {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+
+.btn-danger,
+.danger {
+  background: #e83f5b !important;
+  color: #fff !important;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+
+
+/* =========================
+   TABS (Cadastro / Extrato / Categorias)
+========================= */
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
 .tab-btn {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: transparent;
-  border: 1px solid transparent;
-  font-weight: bold;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  background: #fff;
 }
 
 .tab-btn.active {
-  background: #2b6cb0;
-  color: white;
+  background: var(--roxo);
+  color: #fff;
+  border-color: var(--roxo);
 }
 
-/* filtros extrato */
-.filtros {
+
+
+/* =========================
+   LISTAS DE LANÇAMENTOS
+========================= */
+
+.listas {
   display: flex;
-  gap: 8px;
+  gap: 20px;
+}
+
+.listas .box ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.listas li {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.listas li:last-child {
+  border-bottom: none;
+}
+
+.listas button {
+  margin-left: 8px;
+}
+
+
+
+/* =========================
+   EXTRATO
+========================= */
+
+.table-wrap {
+  margin-top: 20px;
+  overflow-x: auto;
+}
+
+#table-extrato {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+#table-extrato th {
+  background: var(--roxo-claro);
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+}
+
+#table-extrato td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+#table-extrato tr:last-child td {
+  border-bottom: none;
+}
+
+
+
+/* =========================
+   FILTROS DO EXTRATO / LANÇAMENTO
+========================= */
+
+.filtros, .filtros-lanc {
+  display: flex;
+  gap: 12px;
   align-items: center;
   margin: 12px 0;
 }
 
-.filtros input[type="date"] {
-  padding: 8px;
+.filtros-lanc input, .filtros input {
+  max-width: 200px;
 }
 
-/* tabela extrato */
-.table-wrap {
-  overflow-x: auto;
+.filtros button, .filtros-lanc button {
+  margin-left: auto;
 }
 
-table {
+
+
+/* =========================
+   DASHBOARD
+========================= */
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 22px;
+}
+
+.dashboard-grid .card {
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.dashboard-grid canvas {
   width: 100%;
-  border-collapse: collapse;
-  font-family: "Courier New", monospace;
 }
 
-table thead th {
-  text-align: left;
-  background: #f3f3f3;
-  padding: 8px;
-  cursor: pointer;
+
+
+/* =========================
+   MODAL DE BAIXA
+========================= */
+
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
 }
 
-table tbody td {
-  padding: 8px;
-  border-bottom: 1px solid #eee;
+.modal.hidden {
+  display: none;
 }
 
-.tipo-receita {
-  color: green;
-  font-weight: bold;
+.modal-content {
+  background: var(--panel);
+  padding: 22px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  width: 90%;
+  max-width: 420px;
 }
 
-.tipo-despesa {
-  color: red;
-  font-weight: bold;
+.modal-content h3 {
+  margin-top: 0;
+  color: var(--roxo);
 }
 
-/* actions */
-.actions button {
-  margin-left: 6px;
-  padding: 6px 8px;
-  font-size: 13px;
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
 }
 
-/* totals */
-.extrato-totals p {
-  margin: 6px 0;
-  font-weight: bold;
-}
 
-/* hidden */
-.hidden { display: none; }
+
+/* =========================
+   RESPONSIVIDADE
+========================= */
+
+@media (max-width: 900px) {
+  .listas {
+    flex-direction: column;
+  }
+
+  .filtros, .filtros-lanc {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filtros button, .filtros-lanc button {
+    margin-left: 0;
+  }
+}
