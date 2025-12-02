@@ -1254,25 +1254,3 @@ periodoExtrato.onchange = () => {
     dataFim.classList.add("hidden");
   }
 };
-// ========================= INICIALIZAÇÃO FINAL =========================
-
-(async function finalInit() {
-  // Se por algum motivo o usuário ainda não estiver carregado
-  if (!currentUser) {
-    const sess = await supabase.auth.getSession();
-    if (!sess?.data?.session) return (window.location.href = "login.html");
-    currentUser = sess.data.session.user;
-    document.getElementById("user-email").textContent = currentUser.email;
-  }
-
-  // Garantir listas carregadas (fallback)
-  await loadCategorias();
-  await loadContas();
-
-  // Garantir que handlers do modal estejam ativos
-  confirmarBaixaBtn.onclick = confirmarBaixaBtn.onclick;
-  cancelarBaixaBtn.onclick = cancelarBaixaBtn.onclick;
-
-  // Mostrar a tela inicial (contas)
-  showScreen("contas");
-})();
