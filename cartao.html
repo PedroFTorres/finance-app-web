@@ -6,8 +6,8 @@
   <title>Cartões — Finance App</title>
 
   <link rel="stylesheet" href="cartao.css" />
-
 </head>
+
 <body>
 
   <!-- ========================= TOPO ========================= -->
@@ -20,7 +20,6 @@
       <button id="btn-logout">Sair</button>
     </nav>
   </header>
-
 
   <!-- ========================= CONTEÚDO ========================= -->
   <main class="container">
@@ -50,13 +49,10 @@
           <button id="btn-pagamento-antecipado" class="action">Pagamento Antecipado</button>
         </div>
       </div>
-
     </section>
-
 
     <!-- ======== COLUNA DIREITA ======== -->
     <section class="right-column">
-
 
       <!-- ============================================================= -->
       <!-- VIEW: FATURAS -->
@@ -73,12 +69,10 @@
           </div>
         </div>
 
-        <div class="fatura-summary" id="fatura-summary">
-          <!-- resumo da fatura -->
-        </div>
+        <div class="fatura-summary" id="fatura-summary"></div>
 
         <div class="fatura-transactions">
-          <h4>Compras na fatura</h4>
+          <h4>Compras</h4>
           <ul id="lista-compras-fatura"></ul>
         </div>
 
@@ -93,8 +87,6 @@
           <button id="btn-pagar-fatura" class="primary">Gerar Despesa (Pagar)</button>
         </div>
       </div>
-
-
 
       <!-- ============================================================= -->
       <!-- VIEW: LANÇAR COMPRA -->
@@ -126,8 +118,19 @@
         </div>
 
         <div class="form-row">
-          <label>Parcelas</label>
+          <label>Total de parcelas</label>
           <input id="cart-parcelas" type="number" min="1" value="1" />
+        </div>
+
+        <!-- Novidades necessárias para o parcelamento REAL -->
+        <div class="form-row">
+          <label>Fatura inicial</label>
+          <select id="select-fatura-inicial"></select>
+        </div>
+
+        <div class="form-row">
+          <label>Parcela atual (para compras antigas)</label>
+          <input id="parcela-inicial" type="number" min="1" value="1" />
         </div>
 
         <div class="form-row actions">
@@ -136,13 +139,10 @@
         </div>
       </div>
 
-
-
       <!-- ============================================================= -->
       <!-- VIEW: NOVO CARTÃO -->
       <!-- ============================================================= -->
       <div id="view-new-card" class="panel view hidden">
-
         <div class="panel-header">
           <h2>Novo Cartão</h2>
         </div>
@@ -168,30 +168,22 @@
         </div>
 
         <div class="form-row actions">
-          <button id="btn-save-card" class="primary">Salvar Cartão</button>
+          <button id="btn-save-card" class="primary">Salvar</button>
           <button id="btn-cancel-card" class="secondary">Cancelar</button>
         </div>
-
       </div>
-
-
 
       <!-- ============================================================= -->
       <!-- VIEW: HISTÓRICO DE FATURAS -->
       <!-- ============================================================= -->
       <div id="view-historico" class="panel view hidden">
-        <div class="panel-header">
-          <h2>Histórico de Faturas</h2>
-        </div>
-
+        <div class="panel-header"><h2>Histórico de Faturas</h2></div>
         <ul id="lista-faturas-historico" class="faturas-list"></ul>
       </div>
 
-
-
       <!-- ============================================================= -->
-      <!-- VIEW: PAGAMENTO ANTECIPADO ***
-      ============================================================= -->
+      <!-- VIEW: PAGAMENTO ANTECIPADO -->
+      <!-- ============================================================= -->
       <div id="box-pag-antecipado" class="panel view hidden">
 
         <div class="panel-header">
@@ -215,22 +207,17 @@
 
         <div class="form-row actions">
           <button id="btn-confirmar-pag-antecipado" class="primary">Confirmar</button>
-          <button id="btn-cancelar-pag-antecipado" class="secondary"
-                  onclick="hideAllViews()">Cancelar</button>
+          <button onclick="hideAllViews()" class="secondary">Cancelar</button>
         </div>
-
       </div>
 
     </section>
   </main>
 
-
   <footer class="footer">
     <small>Modulo de Cartões — Finance App</small>
   </footer>
 
-
-  <!-- ========================= SCRIPTS ========================= -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="cartao.js"></script>
