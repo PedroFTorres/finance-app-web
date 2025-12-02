@@ -18,56 +18,6 @@ function formatReal(v) {
     currency: "BRL",
   });
 }
-// ========================= MENU / NAVEGAÇÃO =========================
-
-// Botões do menu
-const btnDash = document.getElementById("menu-dashboard");
-const btnContas = document.getElementById("menu-contas");
-const btnLanc = document.getElementById("menu-lancamentos");
-
-// Telas do app
-const telaDashboard = document.getElementById("tela-dashboard");
-const telaContas = document.getElementById("tela-contas");
-const telaLanc = document.getElementById("tela-lancamentos");
-
-// Função para trocar de tela
-function showScreen(screen) {
-
-  // esconde todas
-  telaDashboard.classList.add("hidden");
-  telaContas.classList.add("hidden");
-  telaLanc.classList.add("hidden");
-
-  btnDash.classList.remove("active");
-  btnContas.classList.remove("active");
-  btnLanc.classList.remove("active");
-
-  // mostra a tela correta
-  if (screen === "dashboard") {
-    telaDashboard.classList.remove("hidden");
-    btnDash.classList.add("active");
-    loadDashboard();
-  }
-
-  if (screen === "contas") {
-    telaContas.classList.remove("hidden");
-    btnContas.classList.add("active");
-  }
-
-  if (screen === "lanc") {
-    telaLanc.classList.remove("hidden");
-    btnLanc.classList.add("active");
-  }
-}
-
-// Liga os botões ao menu
-btnDash.onclick = () => showScreen("dashboard");
-btnContas.onclick = () => showScreen("contas");
-btnLanc.onclick = () => showScreen("lanc");
-
-// Tela inicial
-showScreen("dashboard");
-
 // ========================= VARIÁVEIS GLOBAIS =========================
 
 let currentUser = null;
