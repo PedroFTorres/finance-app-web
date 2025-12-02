@@ -88,7 +88,19 @@ const dataInicio = document.getElementById("data-inicio");
 const dataFim = document.getElementById("data-fim");
 const btnFiltrarExtrato = document.getElementById("btn-filtrar-extrato");
 
+// ========================= EXTRATO TABLE (CORREÇÃO) =========================
+
+const extratoTableElement = document.getElementById("table-extrato");
+
+// tbody do extrato:
 let tableExtrato = null;
+
+if (extratoTableElement) {
+    tableExtrato = extratoTableElement.querySelector("tbody");
+} else {
+    console.warn("⚠️ table-extrato NÃO encontrado no DOM. Verifique o app.html.");
+}
+
 
 // Modal baixa
 const modalBaixa = document.getElementById("modal-baixa");
