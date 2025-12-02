@@ -126,23 +126,26 @@ document.getElementById("btn-logout").onclick = async () => {
 };
 
 // ========================= INICIALIZAÇÃO =========================
+async function initApp() {
 
-async function initApp() { 
+  // Garante que todas as telas começam invisíveis
   telaDashboard.classList.add("hidden");
   telaContas.classList.add("hidden");
   telaLanc.classList.add("hidden");
 
+  // Carrega dados necessários
   await loadCategorias();
   await loadContas();
   subscribeToChanges();
 
-  // Carrega a tabela do extrato imediatamente
+  // Carrega a tabela do extrato
   const t = document.getElementById("table-extrato");
   if (t) tableExtrato = t.querySelector("tbody");
 
-  // Tela inicial
-  showScreen("contas");
+  // 👇 AGORA SIM — TELA INICIAL = DASHBOARD
+  showScreen("dashboard");
 }
+
 // ========================= CATEGORIAS =========================
 
 async function loadCategorias() {
