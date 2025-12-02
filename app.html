@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Finance App</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- ========================= TOPO / MENU ========================= -->
+  <header class="top-header">
+    <nav class="top-menu">
+      <button id="menu-dashboard" class="menu-btn">Dashboard</button>
+      <button id="menu-contas" class="menu-btn">Contas</button>
+      <button id="menu-lancamentos" class="menu-btn">Lançamentos</button>
+      <button class="menu-btn" onclick="window.location.href='cartao.html'">Cartão</button>
+    </nav>
+
+    <div class="top-bar">
+      <span id="user-email" class="user-email"></span>
+      <button id="btn-logout" class="danger">Sair</button>
+    </div>
+  </header>
+
+
+  <!-- ========================= CONTEÚDO ========================= -->
+  <main>
+
+    <h1>Finance App</h1>
+
+
+    <!-- ========================= TELA DASHBOARD ========================= -->
+    <section id="tela-dashboard" class="hidden page">
+
+      <section class="card-panel">
+        <h2>Resumo do Mês</h2>
+
+        <div class="dashboard-grid">
+
+          <div class="card">
+            <h3>Receitas por Categoria</h3>
+            <canvas id="chart-receitas-categorias"></canvas>
+          </div>
+
+          <div class="card">
+            <h3>Despesas por Categoria</h3>
+            <canvas id="chart-despesas-categorias"></canvas>
+          </div>
+
+          <div class="card">
+            <h3>Resumo Geral</h3>
+            <canvas id="chart-dashboard"></canvas>
+            <p><strong>Período:</strong> <span id="dash-period"></span></p>
+            <p><strong>Total a receber:</strong> <span id="dash-receber">R$ 0,00</span></p>
+            <p><strong>Total a pagar:</strong> <span id="dash-pagar">R$ 0,00</span></p>
+            <p><strong>Saldo atual:</strong> <span id="dash-saldo-atual">R$ 0,00</span></p>
+            <p><strong>Saldo previsto:</strong> <span id="dash-saldo-previsto">R$ 0,00</span></p>
+          </div>
+
+        </div>
+      </section>
+
+    </section>
+
+
+
+    <!-- ========================= TELA CONTAS ========================= -->
+    <section id="tela-contas" class="page hidden">
+
+      <div class="card-panel">
+        <h2>Contas</h2>
+
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="cadastro">Cadastro</button>
+          <button class="tab-btn" data-tab="extrato">Extrato</button>
+          <button class="tab-btn" data-tab="categorias">Categorias</button>
+        </div>
+
+
+        <!-- TAB CADASTRO -->
+        <div id="tab-cadastro">
+
+          <label>Nome da conta</label>
+          <input id="conta-nome" placeholder="Conta Ex: Nubank, Caixa..."/>
+
+          <label>Saldo inicial</label>
+          <input id="conta-saldo" type="number" placeholder="0.00"/>
+
+          <label>Data do saldo</label>
+          <input id="conta-data-saldo" type="date"/>
+
+          <button id="btn-add-conta" class="btn-primary" style="margin-top:10px;">Adicionar Conta</button>
+
+          <hr style="margin:25px 0"/>
+
+          <label>Contas existentes</label>
+          <select id="select-contas"></select>
+
+        </div>
+
+
+        <!-- TAB EXTRATO -->
+        <div id="tab-extrato" class="hidden">
+
+          <h3>Extrato da Conta</h3>
+
+          <label>Selecionar conta</label>
+          <select id="select-contas-extrato"></select>
+
+          <div class="filtros">
+            <label>Período</label>
+            <select id="periodo-extrato">
+              <option value="mes_atual">Mês atual</option>
+              <option value="mes_anterior">Mês anterior</option>
+              <option value="ultimos_30">Últimos 30 dias</option>
+              <option value="personalizado">Personalizado</option>
+            </select>
+
+            <input type="date" id="data-inicio" class="hidden"/>
+            <input type="date" id="data-fim" class="hidden"/>
+
+            <button id="btn-filtrar-extrato" class="btn-primary">Filtrar</button>
+          </div>
+
+          <div class="table-wrap">
+            <table id="table-extrato">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Tipo</th>
+                  <th>Valor</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3"><strong>Totais</strong></td>
+                  <td id="total-valor"><strong>R$ 0,00</strong></td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="extrato-totals">
+            <p>Total Receitas: <span id="total-receitas-extrato">R$0,00</span></p>
+            <p>Total Despesas: <span id="total-despesas-extrato">R$0,00</span></p>
+            <p>Saldo do Período: <span id="saldo-periodo-extrato">R$0,00</span></p>
+            <p>Saldo atual da conta: <span id="saldo-atual-conta-extrato">R$0,00</span></p>
+          </div>
+
+        </div>
+
+
+        <!-- TAB CATEGORIAS -->
+        <div id="tab-categorias" class="hidden">
+
+          <h3>Categorias</h3>
+
+          <label>Nova categoria</label>
+          <input id="categoria-nome" placeholder="Ex: Mercado, Transporte..."/>
+
+          <button id="btn-add-categoria" class="btn-primary" style="margin-top:10px;">Adicionar Categoria</button>
+
+          <hr style="margin:20px 0"/>
+
+          <h4>Cadastradas</h4>
+          <ul id="lista-categorias"></ul>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ========================= TELA LANÇAMENTOS ========================= -->
+    <section id="tela-lancamentos" class="hidden page">
+
+      <div class="card-panel">
+        <h2>Lançamentos</h2>
+
+        <div class="filtros-lanc">
+          <label>Período</label>
+          <select id="periodo-lanc">
+            <option value="mes_atual">Mês atual</option>
+            <option value="mes_anterior">Mês anterior</option>
+            <option value="ultimos_30">Últimos 30 dias</option>
+            <option value="personalizado">Personalizado</option>
+          </select>
+
+          <input type="date" id="data-inicio-lanc" class="hidden"/>
+          <input type="date" id="data-fim-lanc" class="hidden"/>
+
+          <button id="btn-filtrar-lanc" class="btn-secondary">Filtrar</button>
+        </div>
+
+        <select id="tipo-lancamento">
+          <option value="receita">Receita</option>
+          <option value="despesa">Despesa</option>
+        </select>
+
+        <input id="valor-lanc" type="number" placeholder="Valor"/>
+        <input id="desc-lanc" placeholder="Descrição"/>
+        <input id="data-lanc" type="date"/>
+
+        <label>Conta</label>
+        <select id="select-conta-lanc"></select>
+
+        <label>Categoria</label>
+        <select id="categoria-lanc"></select>
+
+        <div class="recorrencia">
+          <label>Recorrência</label>
+          <select id="recorrencia-tipo">
+            <option value="none">Não recorrente</option>
+            <option value="monthly">Mensal</option>
+            <option value="fortnight">Quinzenal</option>
+            <option value="weekly">Semanal</option>
+            <option value="annual">Anual</option>
+          </select>
+
+          <label>Parcelas</label>
+          <input id="recorrencia-parcelas" type="number" min="1" value="1"/>
+        </div>
+
+        <button id="btn-add-lanc" class="btn-primary">Adicionar</button>
+        <button id="btn-cancel-edit" class="btn-secondary hidden">Cancelar</button>
+
+        <div class="totais" style="margin-top:20px;">
+          <span id="saldo-atual"></span><br>
+          <span id="total-receitas"></span><br>
+          <span id="total-despesas"></span>
+        </div>
+
+      </div>
+
+      <div class="listas">
+        <div class="box">
+          <h3>Receitas</h3>
+          <ul id="list-receitas"></ul>
+        </div>
+
+        <div class="box">
+          <h3>Despesas</h3>
+          <ul id="list-despesas"></ul>
+        </div>
+      </div>
+
+    </section>
+
+
+  </main>
+
+
+
+  <!-- ========================= MODAL DE BAIXA ========================= -->
+
+  <div id="modal-baixa" class="modal hidden">
+    <div class="modal-content">
+      <h3>Baixar Lançamento</h3>
+
+      <label>Data da baixa</label>
+      <input type="date" id="data-baixa">
+
+      <label>Juros / Multa (opcional)</label>
+      <input type="number" id="juros-baixa" step="0.01">
+
+      <label>Desconto / Abatimento (opcional)</label>
+      <input type="number" id="desconto-baixa" step="0.01">
+
+      <label>Conta para baixar</label>
+      <select id="conta-baixa-select"></select>
+
+      <div class="modal-actions">
+        <button id="confirmar-baixa" class="btn-primary">Confirmar</button>
+        <button id="cancelar-baixa" class="btn-danger">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- ========================= SCRIPTS ========================= -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="supabase.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
