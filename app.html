@@ -5,53 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Finance App</title>
   <link rel="stylesheet" href="styles.css" />
-
-  <!-- ESTILO DO MODAL DE BAIXA -->
-  <style>
-    .modal {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-    }
-    .modal.hidden { display: none; }
-    .modal-content {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 420px;
-    }
-    .modal-content h3 { margin-top: 0; }
-    .modal-content input,
-    .modal-content select {
-      width: 100%;
-      padding: 8px;
-      margin-top: 4px;
-      margin-bottom: 10px;
-    }
-    .modal-actions {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-    }
-    .modal-actions button {
-      flex: 1;
-      padding: 10px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-  </style>
-
 </head>
 
 <body>
 
-  <!-- TOPO -->
+  <!-- ========================= TOPO / MENU ========================= -->
   <header class="top-header">
     <nav class="top-menu">
       <button id="menu-dashboard" class="menu-btn">Dashboard</button>
@@ -66,13 +24,17 @@
     </div>
   </header>
 
+
+  <!-- ========================= CONTEÚDO ========================= -->
   <main>
+
     <h1>Finance App</h1>
 
-    <!-- DASHBOARD -->
+
+    <!-- ========================= TELA DASHBOARD ========================= -->
     <section id="tela-dashboard" class="hidden">
 
-      <section class="dashboard-box">
+      <section class="card-panel">
         <h2>Resumo do Mês</h2>
 
         <div class="dashboard-grid">
@@ -99,12 +61,15 @@
 
         </div>
       </section>
+
     </section>
 
-    <!-- CONTAS -->
+
+
+    <!-- ========================= TELA CONTAS ========================= -->
     <section id="tela-contas">
 
-      <section class="contas-box">
+      <div class="card-panel">
         <h2>Contas</h2>
 
         <div class="tabs">
@@ -113,31 +78,35 @@
           <button class="tab-btn" data-tab="categorias">Categorias</button>
         </div>
 
+
         <!-- TAB CADASTRO -->
         <div id="tab-cadastro" class="tab-content">
-          <label>Nome da conta</label><br/>
-          <input id="conta-nome" placeholder="Nova conta" />
 
-          <label>Saldo inicial</label><br/>
-          <input id="conta-saldo" type="number" placeholder="Saldo inicial"/>
+          <label>Nome da conta</label>
+          <input id="conta-nome" placeholder="Conta Ex: Nubank, Caixa..."/>
 
-          <label>Data do saldo</label><br/>
-          <input id="conta-data-saldo" type="date" />
+          <label>Saldo inicial</label>
+          <input id="conta-saldo" type="number" placeholder="0.00"/>
 
-          <button id="btn-add-conta">Adicionar Conta</button>
+          <label>Data do saldo</label>
+          <input id="conta-data-saldo" type="date"/>
 
-          <hr/>
+          <button id="btn-add-conta" class="btn-primary" style="margin-top:10px;">Adicionar Conta</button>
 
-          <label>Contas existentes</label><br/>
+          <hr style="margin:25px 0"/>
+
+          <label>Contas existentes</label>
           <select id="select-contas"></select>
+
         </div>
+
 
         <!-- TAB EXTRATO -->
         <div id="tab-extrato" class="tab-content hidden">
 
           <h3>Extrato da Conta</h3>
 
-          <label>Selecionar conta</label><br/>
+          <label>Selecionar conta</label>
           <select id="select-contas-extrato"></select>
 
           <div class="filtros">
@@ -152,7 +121,7 @@
             <input type="date" id="data-inicio" class="hidden"/>
             <input type="date" id="data-fim" class="hidden"/>
 
-            <button id="btn-filtrar-extrato">Filtrar</button>
+            <button id="btn-filtrar-extrato" class="btn-primary">Filtrar</button>
           </div>
 
           <div class="table-wrap">
@@ -186,29 +155,35 @@
 
         </div>
 
+
         <!-- TAB CATEGORIAS -->
         <div id="tab-categorias" class="tab-content hidden">
+
           <h3>Categorias</h3>
 
-          <label>Nova categoria</label><br/>
-          <input id="categoria-nome" placeholder="Ex: Mercado, Salário, Transporte"/>
+          <label>Nova categoria</label>
+          <input id="categoria-nome" placeholder="Ex: Mercado, Transporte..."/>
 
-          <button id="btn-add-categoria">Adicionar Categoria</button>
+          <button id="btn-add-categoria" class="btn-primary" style="margin-top:10px;">Adicionar Categoria</button>
 
-          <hr/>
+          <hr style="margin:20px 0"/>
 
-          <h4>Categorias cadastradas</h4>
+          <h4>Cadastradas</h4>
           <ul id="lista-categorias"></ul>
+
         </div>
 
-      </section>
+      </div>
+
     </section>
 
-    <!-- LANÇAMENTOS -->
+
+
+    <!-- ========================= TELA LANÇAMENTOS ========================= -->
     <section id="tela-lancamentos" class="hidden">
 
-      <section class="lancamento-box">
-        <h2>Lançamento</h2>
+      <div class="card-panel">
+        <h2>Lançamentos</h2>
 
         <div class="filtros-lanc">
           <label>Período</label>
@@ -222,7 +197,7 @@
           <input type="date" id="data-inicio-lanc" class="hidden"/>
           <input type="date" id="data-fim-lanc" class="hidden"/>
 
-          <button id="btn-filtrar-lanc">Filtrar</button>
+          <button id="btn-filtrar-lanc" class="btn-secondary">Filtrar</button>
         </div>
 
         <select id="tipo-lancamento">
@@ -230,9 +205,9 @@
           <option value="despesa">Despesa</option>
         </select>
 
-        <input id="valor-lanc" type="number" placeholder="Valor" />
-        <input id="desc-lanc" placeholder="Descrição" />
-        <input id="data-lanc" type="date" />
+        <input id="valor-lanc" type="number" placeholder="Valor"/>
+        <input id="desc-lanc" placeholder="Descrição"/>
+        <input id="data-lanc" type="date"/>
 
         <label>Conta</label>
         <select id="select-conta-lanc"></select>
@@ -251,21 +226,21 @@
           </select>
 
           <label>Parcelas</label>
-          <input id="recorrencia-parcelas" type="number" min="1" value="1" />
+          <input id="recorrencia-parcelas" type="number" min="1" value="1"/>
         </div>
 
-        <button id="btn-add-lanc">Adicionar</button>
-        <button id="btn-cancel-edit" class="hidden">Cancelar</button>
+        <button id="btn-add-lanc" class="btn-primary">Adicionar</button>
+        <button id="btn-cancel-edit" class="btn-secondary hidden">Cancelar</button>
 
-        <div class="totais">
-          <span id="saldo-atual"></span>
-          <span id="total-receitas"></span>
+        <div class="totais" style="margin-top:20px;">
+          <span id="saldo-atual"></span><br>
+          <span id="total-receitas"></span><br>
           <span id="total-despesas"></span>
         </div>
 
-      </section>
+      </div>
 
-      <section class="listas">
+      <div class="listas">
         <div class="box">
           <h3>Receitas</h3>
           <ul id="list-receitas"></ul>
@@ -275,14 +250,16 @@
           <h3>Despesas</h3>
           <ul id="list-despesas"></ul>
         </div>
-      </section>
+      </div>
 
     </section>
+
 
   </main>
 
 
-  <!-- ======================= MODAL DE BAIXA ======================= -->
+
+  <!-- ========================= MODAL DE BAIXA ========================= -->
 
   <div id="modal-baixa" class="modal hidden">
     <div class="modal-content">
@@ -292,24 +269,24 @@
       <input type="date" id="data-baixa">
 
       <label>Juros / Multa (opcional)</label>
-      <input type="number" step="0.01" id="juros-baixa">
+      <input type="number" id="juros-baixa" step="0.01">
 
       <label>Desconto / Abatimento (opcional)</label>
-      <input type="number" step="0.01" id="desconto-baixa">
+      <input type="number" id="desconto-baixa" step="0.01">
 
       <label>Conta para baixar</label>
       <select id="conta-baixa-select"></select>
 
       <div class="modal-actions">
-        <button id="confirmar-baixa" class="primary">Confirmar</button>
-        <button id="cancelar-baixa" class="danger">Cancelar</button>
+        <button id="confirmar-baixa" class="btn-primary">Confirmar</button>
+        <button id="cancelar-baixa" class="btn-danger">Cancelar</button>
       </div>
     </div>
   </div>
 
 
 
-  <!-- SCRIPTS -->
+  <!-- ========================= SCRIPTS ========================= -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="supabase.js"></script>
