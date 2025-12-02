@@ -5,6 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Finance App</title>
   <link rel="stylesheet" href="styles.css" />
+
+  <!-- ESTILO DO MODAL DE BAIXA -->
+  <style>
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .modal.hidden { display: none; }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 420px;
+    }
+    .modal-content h3 { margin-top: 0; }
+    .modal-content input,
+    .modal-content select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      margin-bottom: 10px;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .modal-actions button {
+      flex: 1;
+      padding: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+
 </head>
 
 <body>
@@ -92,6 +134,7 @@
 
         <!-- TAB EXTRATO -->
         <div id="tab-extrato" class="tab-content hidden">
+
           <h3>Extrato da Conta</h3>
 
           <label>Selecionar conta</label><br/>
@@ -237,6 +280,34 @@
     </section>
 
   </main>
+
+
+  <!-- ======================= MODAL DE BAIXA ======================= -->
+
+  <div id="modal-baixa" class="modal hidden">
+    <div class="modal-content">
+      <h3>Baixar Lançamento</h3>
+
+      <label>Data da baixa</label>
+      <input type="date" id="data-baixa">
+
+      <label>Juros / Multa (opcional)</label>
+      <input type="number" step="0.01" id="juros-baixa">
+
+      <label>Desconto / Abatimento (opcional)</label>
+      <input type="number" step="0.01" id="desconto-baixa">
+
+      <label>Conta para baixar</label>
+      <select id="conta-baixa-select"></select>
+
+      <div class="modal-actions">
+        <button id="confirmar-baixa" class="primary">Confirmar</button>
+        <button id="cancelar-baixa" class="danger">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+
 
   <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
