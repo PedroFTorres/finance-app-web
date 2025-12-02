@@ -13,9 +13,9 @@
   <header class="top-header">
     <nav class="top-menu">
       <button id="menu-dashboard" class="menu-btn">Dashboard</button>
-      <button id="menu-contas" class="menu-btn active">Contas</button>
+      <button id="menu-contas" class="menu-btn">Contas</button>
       <button id="menu-lancamentos" class="menu-btn">Lançamentos</button>
-      <button id="menu-cartao" class="menu-btn" onclick="window.location.href='cartao.html'">Cartão</button>
+      <button class="menu-btn" onclick="window.location.href='cartao.html'">Cartão</button>
     </nav>
 
     <div class="top-bar">
@@ -32,7 +32,7 @@
 
 
     <!-- ========================= TELA DASHBOARD ========================= -->
-    <section id="tela-dashboard" class="hidden">
+    <section id="tela-dashboard" class="hidden page">
 
       <section class="card-panel">
         <h2>Resumo do Mês</h2>
@@ -67,7 +67,7 @@
 
 
     <!-- ========================= TELA CONTAS ========================= -->
-    <section id="tela-contas">
+    <section id="tela-contas" class="page hidden">
 
       <div class="card-panel">
         <h2>Contas</h2>
@@ -80,7 +80,7 @@
 
 
         <!-- TAB CADASTRO -->
-        <div id="tab-cadastro" class="tab-content">
+        <div id="tab-cadastro">
 
           <label>Nome da conta</label>
           <input id="conta-nome" placeholder="Conta Ex: Nubank, Caixa..."/>
@@ -102,7 +102,7 @@
 
 
         <!-- TAB EXTRATO -->
-        <div id="tab-extrato" class="tab-content hidden">
+        <div id="tab-extrato" class="hidden">
 
           <h3>Extrato da Conta</h3>
 
@@ -157,7 +157,7 @@
 
 
         <!-- TAB CATEGORIAS -->
-        <div id="tab-categorias" class="tab-content hidden">
+        <div id="tab-categorias" class="hidden">
 
           <h3>Categorias</h3>
 
@@ -180,7 +180,7 @@
 
 
     <!-- ========================= TELA LANÇAMENTOS ========================= -->
-    <section id="tela-lancamentos" class="hidden">
+    <section id="tela-lancamentos" class="hidden page">
 
       <div class="card-panel">
         <h2>Lançamentos</h2>
