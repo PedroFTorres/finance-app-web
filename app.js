@@ -127,16 +127,20 @@ document.getElementById("btn-logout").onclick = async () => {
 
 // ========================= INICIALIZAÇÃO =========================
 
-async function initApp() {
+async function initApp() { 
+  telaDashboard.classList.add("hidden");
+  telaContas.classList.add("hidden");
+  telaLanc.classList.add("hidden");
+
   await loadCategorias();
   await loadContas();
   subscribeToChanges();
 
-  document.addEventListener("DOMContentLoaded", () => {
-    const t = document.getElementById("table-extrato");
-    if (t) tableExtrato = t.querySelector("tbody");
-  });
+  // Carrega a tabela do extrato imediatamente
+  const t = document.getElementById("table-extrato");
+  if (t) tableExtrato = t.querySelector("tbody");
 
+  // Tela inicial
   showScreen("contas");
 }
 // ========================= CATEGORIAS =========================
