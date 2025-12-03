@@ -8,16 +8,21 @@
 </head>
 <body>
 
-  <div class="center-box">
-    <h2>Entrar no Finance App</h2>
+  <div class="login-wrapper">
+    <div class="login-box">
 
-    <input id="email" type="email" placeholder="Seu email">
-    <input id="password" type="password" placeholder="Sua senha">
+      <h1 class="login-title">Finance App</h1>
+      <h2 class="login-subtitle">Entrar</h2>
 
-    <button id="btn-signin" class="primary">Entrar</button>
-    <button id="btn-signup">Criar Conta</button>
+      <input id="email" type="email" placeholder="Seu email">
+      <input id="password" type="password" placeholder="Sua senha">
 
-    <p id="msg"></p>
+      <button id="btn-signin" class="btn-primary full">Entrar</button>
+      <button id="btn-signup" class="btn-secondary full">Criar Conta</button>
+
+      <p id="msg" class="msg"></p>
+
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
