@@ -385,3 +385,24 @@ button:hover { opacity: .9; }
     align-items: flex-start;
   }
 }
+/* impedir que BAIXADO quebre linha */
+.listas li > div:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;                     /* ocupa todo espaço possível */
+  margin-right: 12px;          /* espaço antes dos botões */
+}
+
+/* força os botões sempre ficarem na mesma linha */
+.listas li > div:last-child {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  align-items: center;
+}
+
+/* impedir quebra de texto dentro dos botões */
+.listas button {
+  white-space: nowrap;
+}
