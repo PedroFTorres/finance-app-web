@@ -18,6 +18,7 @@ function formatReal(v) {
     currency: "BRL",
   });
 }
+
 // ========================= VARIÁVEIS GLOBAIS =========================
 
 let currentUser = null;
@@ -28,8 +29,9 @@ let chartDashboard = null;
 let chartRecCat = null;
 let chartDesCat = null;
 
-// ========================= ELEMENTOS DO DOM =========================
-// --- elementos faltantes relacionados a lançamentos (filtrar / período personalizado)
+// ========================= ELEMENTOS DOM =========================
+
+// Filtros lançamentos
 const periodoLanc = document.getElementById("periodo-lanc");
 const dataInicioLanc = document.getElementById("data-inicio-lanc");
 const dataFimLanc = document.getElementById("data-fim-lanc");
@@ -77,29 +79,17 @@ const listReceitas = document.getElementById("list-receitas");
 const listDespesas = document.getElementById("list-despesas");
 
 // Extrato
-const tabCadastro = document.getElementById("tab-cadastro");
-const tabExtrato = document.getElementById("tab-extrato");
-const tabCategorias = document.getElementById("tab-categorias");
-
 const selectExtrato = document.getElementById("select-contas-extrato");
 const periodoExtrato = document.getElementById("periodo-extrato");
 const dataInicio = document.getElementById("data-inicio");
 const dataFim = document.getElementById("data-fim");
 const btnFiltrarExtrato = document.getElementById("btn-filtrar-extrato");
 
-// ========================= EXTRATO TABLE (CORREÇÃO) =========================
-
+// Extrato tabela
 const extratoTableElement = document.getElementById("table-extrato");
-
-// tbody do extrato:
-let tableExtrato = null;
-
-if (extratoTableElement) {
-    tableExtrato = extratoTableElement.querySelector("tbody");
-} else {
-    console.warn("⚠️ table-extrato NÃO encontrado no DOM. Verifique o app.html.");
-}
-
+let tableExtrato = extratoTableElement
+  ? extratoTableElement.querySelector("tbody")
+  : null;
 
 // Modal baixa
 const modalBaixa = document.getElementById("modal-baixa");
@@ -126,8 +116,6 @@ document.getElementById("btn-logout").onclick = async () => {
 
 // ========================= INICIALIZAÇÃO =========================
 async function initApp() {
-
-  // esconde todas as telas
   telaDashboard.classList.add("hidden");
   telaContas.classList.add("hidden");
   telaLanc.classList.add("hidden");
@@ -136,11 +124,9 @@ async function initApp() {
   await loadContas();
   subscribeToChanges();
 
-  // tabela do extrato
   const t = document.getElementById("table-extrato");
   if (t) tableExtrato = t.querySelector("tbody");
 
-  // tela inicial correta
   showScreen("dashboard");
 }
 
@@ -182,9 +168,9 @@ btnAddCategoria.onclick = async () => {
   const nome = categoriaNome.value.trim();
   if (!nome) return alert("Informe o nome da categoria.");
 
-  await supabase
-    .from("categorias")
-    .insert([{ id: crypto.randomUUID(), nome }]);
+  await supabase.from("categorias").insert([
+    { id: crypto.randomUUID(), nome },
+  ]);
 
   categoriaNome.value = "";
   await loadCategorias();
@@ -200,7 +186,6 @@ async function deleteCategoria(id) {
 
   await loadCategorias();
 }
-
 
 // ========================= CONTAS =========================
 
@@ -258,7 +243,6 @@ btnAddConta.onclick = async () => {
   await loadContas();
 };
 
-
 // ========================= RECALCULAR SALDO =========================
 
 async function recalcularSaldo(conta_id) {
@@ -293,6 +277,7 @@ async function recalcularSaldo(conta_id) {
 
   return sf;
 }
+
 // ========================= LANÇAMENTOS — ADICIONAR =========================
 
 btnAddLanc.onclick = async () => {
@@ -306,7 +291,6 @@ btnAddLanc.onclick = async () => {
   if (!desc || !valor || !data)
     return alert("Preencha todos os campos do lançamento.");
 
-  // ========================= EDIÇÃO =========================
   if (editing.type) {
     const tabela = editing.type === "receita" ? "receitas" : "despesas";
 
@@ -327,10 +311,9 @@ btnAddLanc.onclick = async () => {
     return;
   }
 
-  // tabela correspondente
   const tabela = tipo === "receita" ? "receitas" : "despesas";
 
-  // ========================= RECORRÊNCIA =========================
+  // Recorrência
   const tipoRec = document.getElementById("recorrencia-tipo").value;
   const parcelas = Number(
     document.getElementById("recorrencia-parcelas").value || 1
@@ -360,17 +343,12 @@ btnAddLanc.onclick = async () => {
         },
       ]);
 
-      // avançar a data
       if (tipoRec === "monthly") dataAtual.setMonth(dataAtual.getMonth() + 1);
-      else if (tipoRec === "fortnight")
-        dataAtual.setDate(dataAtual.getDate() + 15);
-      else if (tipoRec === "weekly")
-        dataAtual.setDate(dataAtual.getDate() + 7);
-      else if (tipoRec === "annual")
-        dataAtual.setFullYear(dataAtual.getFullYear() + 1);
+      else if (tipoRec === "fortnight") dataAtual.setDate(dataAtual.getDate() + 15);
+      else if (tipoRec === "weekly") dataAtual.setDate(dataAtual.getDate() + 7);
+      else if (tipoRec === "annual") dataAtual.setFullYear(dataAtual.getFullYear() + 1);
     }
 
-    // limpar campos
     descLanc.value = "";
     valorLanc.value = "";
     dataLanc.value = "";
@@ -379,8 +357,6 @@ btnAddLanc.onclick = async () => {
     await renderExtrato();
     return;
   }
-
-  // ========================= LANÇAMENTO NORMAL =========================
 
   await supabase.from(tabela).insert([
     {
@@ -402,7 +378,6 @@ btnAddLanc.onclick = async () => {
   await refreshLancamentos();
   await renderExtrato();
 };
-
 
 // ========================= EDIÇÃO =========================
 
@@ -431,7 +406,6 @@ function stopEdit() {
 
 btnCancelEdit.onclick = () => stopEdit();
 
-
 // ========================= EXCLUIR LANÇAMENTO =========================
 
 async function deleteItem(type, id) {
@@ -441,7 +415,6 @@ async function deleteItem(type, id) {
 
   await supabase.from(tabela).delete().eq("id", id);
 
-  // remover movimentação vinculada
   const { data: mv } = await supabase
     .from("movimentacoes")
     .select("id,conta_id")
@@ -456,7 +429,6 @@ async function deleteItem(type, id) {
   await refreshLancamentos();
   await renderExtrato();
 }
-
 
 // ========================= REFRESH LANÇAMENTOS =========================
 
@@ -547,7 +519,6 @@ async function refreshLancamentos() {
   await recalcularSaldo(conta_id);
 }
 
-
 // ========================= CRIAR ITEM NA LISTA =========================
 
 function buildLancItem(item, type) {
@@ -558,17 +529,21 @@ function buildLancItem(item, type) {
   const left = document.createElement("div");
   const right = document.createElement("div");
 
+  // TEXTO EM 1 LINHA (CSS faz o resto)
   left.textContent = `${formatDate(item.data)} — ${item.descricao} — ${formatReal(
     item.valor
   )}`;
   if (item.baixado) left.textContent += " — (BAIXADO)";
 
+  // BOTÕES COM CLASSES (ícones SVG)
   const b1 = document.createElement("button");
   b1.textContent = "Editar";
+  b1.classList.add("edit");
   b1.onclick = () => startEdit(type, item);
 
   const b2 = document.createElement("button");
   b2.textContent = "Excluir";
+  b2.classList.add("delete");
   b2.onclick = () => deleteItem(type, item.id);
 
   right.appendChild(b1);
@@ -577,6 +552,7 @@ function buildLancItem(item, type) {
   if (!item.baixado) {
     const b3 = document.createElement("button");
     b3.textContent = "Baixar";
+    b3.classList.add("download");
     b3.onclick = () => baixarLancamento(type, item);
     right.appendChild(b3);
   }
@@ -617,7 +593,7 @@ async function baixarLancamento(type, item) {
 }
 
 
-// ========================= CONFIRMAR BAIXA — MODAL =========================
+// ========================= CONFIRMAR BAIXA =========================
 
 confirmarBaixaBtn.onclick = async () => {
   if (!lancamentoParaBaixa)
@@ -671,12 +647,11 @@ confirmarBaixaBtn.onclick = async () => {
     },
   ]);
 
-  // ========================= JUROS (DESPESA) =========================
+  // ========================= JUROS =========================
   if (juros > 0) {
     const catId = await getOrCreateCategoria("Juros/Multa");
     const despId = crypto.randomUUID();
 
-    // cria despesa juros
     await supabase.from("despesas").insert([
       {
         id: despId,
@@ -691,7 +666,6 @@ confirmarBaixaBtn.onclick = async () => {
       },
     ]);
 
-    // movimentação débito
     await supabase.from("movimentacoes").insert([
       {
         id: crypto.randomUUID(),
@@ -712,7 +686,7 @@ confirmarBaixaBtn.onclick = async () => {
       .eq("id", conta_id);
   }
 
-  // ========================= DESCONTO (RECEITA) =========================
+  // ========================= DESCONTO =========================
   if (desconto > 0) {
     const catId = await getOrCreateCategoria("Desconto");
     const recId = crypto.randomUUID();
@@ -731,7 +705,6 @@ confirmarBaixaBtn.onclick = async () => {
       },
     ]);
 
-    // movimentação crédito
     await supabase.from("movimentacoes").insert([
       {
         id: crypto.randomUUID(),
@@ -770,7 +743,7 @@ cancelarBaixaBtn.onclick = () => {
 };
 
 
-// ========================= GET OR CREATE CATEGORIA =========================
+// ========================= CATEGORIA AUTOMÁTICA =========================
 
 async function getOrCreateCategoria(nome) {
   const { data } = await supabase
@@ -789,7 +762,9 @@ async function getOrCreateCategoria(nome) {
 
   return created?.data?.id || created?.id;
 }
-// ========================= EXTRATO — FILTRAR =========================
+
+
+// ========================= EXTRATO =========================
 
 btnFiltrarExtrato.onclick = () => renderExtrato();
 
@@ -808,11 +783,7 @@ async function renderExtrato() {
       2,
       "0"
     )}-01`;
-    const last = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      0
-    ).getDate();
+    const last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     fim = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
       2,
       "0"
@@ -841,7 +812,6 @@ async function renderExtrato() {
   const si = Number(conta.saldo_inicial || 0);
   const dataInicial = conta.data_saldo;
 
-  // puxar movimentações
   const { data: movs } = await supabase
     .from("movimentacoes")
     .select("*")
@@ -852,7 +822,6 @@ async function renderExtrato() {
 
   const linhas = [];
 
-  // saldo inicial
   if (si !== 0 && dataInicial)
     linhas.push({
       tipo: "inicial",
@@ -871,7 +840,6 @@ async function renderExtrato() {
     });
   });
 
-  // ordenar
   linhas.sort((a, b) => new Date(a.data) - new Date(b.data));
 
   tableExtrato.innerHTML = "";
@@ -883,7 +851,6 @@ async function renderExtrato() {
     const tr = document.createElement("tr");
     const tdAcoes = document.createElement("td");
 
-    // linha de saldo inicial
     if (l.tipo === "inicial") {
       tr.innerHTML = `
         <td>${formatDate(l.data)}</td>
@@ -939,7 +906,6 @@ async function cancelarBaixaMovimentacao(mov) {
 
   let novoSaldo = Number(conta.saldo_atual || 0);
 
-  // desfazer crédito/débito
   if (mov.tipo === "credito") novoSaldo -= Number(mov.valor);
   else novoSaldo += Number(mov.valor);
 
@@ -948,10 +914,8 @@ async function cancelarBaixaMovimentacao(mov) {
     .update({ saldo_atual: novoSaldo })
     .eq("id", mov.conta_id);
 
-  // apagar a movimentação
   await supabase.from("movimentacoes").delete().eq("id", mov.id);
 
-  // desfazer marcação de baixa no lançamento original
   await supabase
     .from("receitas")
     .update({ baixado: false, data_baixa: null })
@@ -966,6 +930,8 @@ async function cancelarBaixaMovimentacao(mov) {
   await refreshLancamentos();
   await renderExtrato();
 }
+
+
 // ========================= DASHBOARD =========================
 
 async function loadDashboard() {
@@ -977,7 +943,6 @@ async function loadDashboard() {
   const last = new Date(ano, mes, 0).getDate();
   const fim = `${ano}-${String(mes).padStart(2, "0")}-${last}`;
 
-  // Receitas e despesas do mês
   const rec = await supabase
     .from("receitas")
     .select("*")
@@ -992,26 +957,15 @@ async function loadDashboard() {
     .gte("data", inicio)
     .lte("data", fim);
 
-  const totalR = (rec.data || []).reduce(
-    (s, x) => s + Number(x.valor || 0),
-    0
-  );
-  const totalD = (des.data || []).reduce(
-    (s, x) => s + Number(x.valor || 0),
-    0
-  );
+  const totalR = (rec.data || []).reduce((s, x) => s + Number(x.valor || 0), 0);
+  const totalD = (des.data || []).reduce((s, x) => s + Number(x.valor || 0), 0);
 
   document.getElementById("dash-period").textContent = `${mes}/${ano}`;
   document.getElementById("dash-receber").textContent = formatReal(totalR);
   document.getElementById("dash-pagar").textContent = formatReal(totalD);
-  document.getElementById("dash-saldo-atual").textContent = formatReal(
-    totalR - totalD
-  );
-  document.getElementById("dash-saldo-previsto").textContent = formatReal(
-    totalR - totalD
-  );
+  document.getElementById("dash-saldo-atual").textContent = formatReal(totalR - totalD);
+  document.getElementById("dash-saldo-previsto").textContent = formatReal(totalR - totalD);
 
-  // ========================= GRÁFICO GERAL =========================
   const ctx = document.getElementById("chart-dashboard");
 
   if (chartDashboard) chartDashboard.destroy();
@@ -1020,18 +974,11 @@ async function loadDashboard() {
     type: "bar",
     data: {
       labels: ["Receitas", "Despesas"],
-      datasets: [
-        {
-          label: "Resumo do mês",
-          data: [totalR, totalD],
-        },
-      ],
+      datasets: [{ label: "Resumo do mês", data: [totalR, totalD] }],
     },
     options: {
       responsive: true,
-      scales: {
-        y: { beginAtZero: true },
-      },
+      scales: { y: { beginAtZero: true } },
     },
   });
 
@@ -1040,7 +987,7 @@ async function loadDashboard() {
 }
 
 
-// ========================= GRÁFICO RECEITAS POR CATEGORIA =========================
+// ========================= GRÁFICOS =========================
 
 async function renderGraficoReceitasPorCategoria(inicio, fim) {
   const { data } = await supabase
@@ -1066,23 +1013,10 @@ async function renderGraficoReceitasPorCategoria(inicio, fim) {
 
   chartRecCat = new Chart(ctx, {
     type: "bar",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Receitas por Categoria",
-          data: valores,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-    },
+    data: { labels, datasets: [{ label: "Receitas por Categoria", data: valores }] },
+    options: { responsive: true },
   });
 }
-
-
-// ========================= GRÁFICO DESPESAS POR CATEGORIA =========================
 
 async function renderGraficoDespesasPorCategoria(inicio, fim) {
   const { data } = await supabase
@@ -1108,79 +1042,56 @@ async function renderGraficoDespesasPorCategoria(inicio, fim) {
 
   chartDesCat = new Chart(ctx, {
     type: "bar",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Despesas por Categoria",
-          data: valores,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-    },
+    data: { labels, datasets: [{ label: "Despesas por Categoria", data: valores }] },
+    options: { responsive: true },
   });
 }
-// ========================= SUBSCRIBE SUPABASE =========================
+
+
+// ========================= SUBSCRIPTION =========================
 
 function subscribeToChanges() {
-  // Receitas → atualiza lançamentos
   supabase
     .channel("rec")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "receitas" },
-      () => refreshLancamentos()
+    .on("postgres_changes", { event: "*", schema: "public", table: "receitas" }, () =>
+      refreshLancamentos()
     )
     .subscribe();
 
-  // Despesas → atualiza lançamentos
   supabase
     .channel("des")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "despesas" },
-      () => refreshLancamentos()
+    .on("postgres_changes", { event: "*", schema: "public", table: "despesas" }, () =>
+      refreshLancamentos()
     )
     .subscribe();
 
-  // Movimentações → atualiza extrato
   supabase
     .channel("mov")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "movimentacoes" },
-      () => renderExtrato()
+    .on("postgres_changes", { event: "*", schema: "public", table: "movimentacoes" }, () =>
+      renderExtrato()
     )
     .subscribe();
 
-  // Categorias → recarrega lista
   supabase
     .channel("cats")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "categorias" },
-      () => loadCategorias()
+    .on("postgres_changes", { event: "*", schema: "public", table: "categorias" }, () =>
+      loadCategorias()
     )
     .subscribe();
 }
 
 
-// ========================= TROCA DE TELAS PRINCIPAIS =========================
+// ========================= TROCA DE TELAS =========================
 
 function showScreen(s) {
-  // Oculta todas
   telaDashboard.classList.add("hidden");
   telaContas.classList.add("hidden");
   telaLanc.classList.add("hidden");
 
-  // Reseta ativações
   btnDash.classList.remove("active");
   btnContas.classList.remove("active");
   btnLanc.classList.remove("active");
 
-  // Ativa a tela escolhida
   if (s === "dashboard") {
     telaDashboard.classList.remove("hidden");
     btnDash.classList.add("active");
@@ -1194,39 +1105,31 @@ function showScreen(s) {
   }
 }
 
-// botões de menu
 btnDash.onclick = () => showScreen("dashboard");
 btnContas.onclick = () => showScreen("contas");
 btnLanc.onclick = () => showScreen("lanc");
 
 
-// ========================= TABS (Cadastro / Extrato / Categorias) =========================
+// ========================= TABS =========================
 
 document.querySelectorAll(".tab-btn").forEach((b) => {
   b.onclick = () => {
-    // remove ativo de todas
-    document.querySelectorAll(".tab-btn").forEach((x) => x.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach((x) =>
+      x.classList.remove("active")
+    );
 
     b.classList.add("active");
 
-    // esconde todas as tabs
     tabCadastro.classList.add("hidden");
     tabExtrato.classList.add("hidden");
     tabCategorias.classList.add("hidden");
 
-    // mostra a tab correta
-    if (b.dataset.tab === "cadastro") {
-      tabCadastro.classList.remove("hidden");
-    }
-
+    if (b.dataset.tab === "cadastro") tabCadastro.classList.remove("hidden");
     if (b.dataset.tab === "extrato") {
       tabExtrato.classList.remove("hidden");
       renderExtrato();
     }
-
-    if (b.dataset.tab === "categorias") {
-      tabCategorias.classList.remove("hidden");
-    }
+    if (b.dataset.tab === "categorias") tabCategorias.classList.remove("hidden");
   };
 });
 
