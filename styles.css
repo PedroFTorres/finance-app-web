@@ -447,3 +447,21 @@ button:hover {
   font-size: 14px;
   color: red;
 }
+/* =========================
+   LINHAS ALTERNADAS — LANÇAMENTOS
+========================= */
+
+.listas li:nth-child(odd) {
+  background: #fff; /* linha normal */
+}
+
+.listas li:nth-child(even) {
+  background: var(--roxo-claro); /* linha roxo claro */
+}
+
+.listas li {
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+
