@@ -464,4 +464,62 @@ button:hover {
   border-radius: 10px;
   margin-bottom: 6px;
 }
+/* =====================================================
+   ÍCONES PROFISSIONAIS PARA EDITAR / EXCLUIR / BAIXAR
+===================================================== */
+
+.listas button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid #dcdcdc;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* ÍCONE — EDITAR */
+.listas button:first-of-type::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+
+  background-image: url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%237a4dff' viewBox='0 0 24 24'>\
+  <path d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm18.71-11.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.99-1.66z'/>\
+  </svg>");
+  background-size: cover;
+}
+
+/* ÍCONE — EXCLUIR */
+.listas button:nth-of-type(2)::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+
+  background-image: url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%23e83f5b' viewBox='0 0 24 24'>\
+  <path d='M6 7h12v14H6zm3 3v8h2v-8zm4 0v8h2v-8z'/>\
+  <path d='M15.5 4l-1-1h-5l-1 1H5v2h14V4z'/>\
+  </svg>");
+  background-size: cover;
+}
+
+/* ÍCONE — BAIXAR */
+.listas button:nth-of-type(3)::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+
+  background-image: url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%231da83a' viewBox='0 0 24 24'>\
+  <path d='M5 20h14v-2H5v2zm7-18l-5 5h3v6h4v-6h3l-5-5z'/>\
+  </svg>");
+  background-size: cover;
+}
 
