@@ -87,29 +87,26 @@ h1, h2, h3 {
 
 
 /* =========================
-   PÁGINAS (CORREÇÃO IMPORTANTE)
+   PÁGINAS
 ========================= */
 
-/* todas as telas são "páginas" */
 .page {
   display: none;
   margin-top: 25px;
 }
 
-/* quando o JS remove .hidden → a página aparece */
 .page:not(.hidden) {
   display: block;
 }
 
-/* compatibilidade com partes internas */
-.hidden { 
+.hidden {
   display: none !important;
 }
 
 
 
 /* =========================
-   PAINÉIS (CARD STYLE)
+   PAINÉIS
 ========================= */
 
 .card-panel {
@@ -141,8 +138,8 @@ input, select {
   border: 1px solid #ddd;
   font-size: 15px;
   outline: none;
-  box-sizing: border-box;
   background: #fff;
+  box-sizing: border-box;
 }
 
 input:focus, select:focus {
@@ -197,7 +194,7 @@ button:hover {
 
 
 /* =========================
-   TABS (Cadastro / Extrato / Categorias)
+   TABS
 ========================= */
 
 .tabs {
@@ -222,7 +219,7 @@ button:hover {
 
 
 /* =========================
-   LISTAS DE LANÇAMENTOS
+   LANÇAMENTOS — LISTAS
 ========================= */
 
 .listas {
@@ -239,16 +236,74 @@ button:hover {
 .listas li {
   display: flex;
   justify-content: space-between;
-  padding: 12px 0;
-  border-bottom: 1px solid #eee;
+  align-items: center;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 6px;
 }
 
-.listas li:last-child {
-  border-bottom: none;
+.listas li:nth-child(odd) {
+  background: #fff;
+}
+
+.listas li:nth-child(even) {
+  background: var(--roxo-claro);
 }
 
 .listas button {
   margin-left: 8px;
+}
+
+
+
+/* =========================
+   ÍCONES PROFISSIONAIS (FINAL — VERSÃO CORRETA)
+========================= */
+
+.listas button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: #fff;
+}
+
+/* remove qualquer pseudo-conteúdo anterior */
+.listas button::before {
+  content: none !important;
+}
+
+/* EDITAR */
+.listas button.edit::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='%237a4dff' viewBox='0 0 24 24'><path d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM21.41 6.34c.38-.38.38-1.02 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z'/></svg>");
+}
+
+/* EXCLUIR */
+.listas button.delete::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='%23d93025' viewBox='0 0 24 24'><path d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/></svg>");
+}
+
+/* BAIXAR */
+.listas button.download::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='%231da83a' viewBox='0 0 24 24'><path d='M5 20h14v-2H5v2zm7-18L5.33 9h3.67v4h6V9h3.67L12 2z'/></svg>");
 }
 
 
@@ -274,8 +329,8 @@ button:hover {
 #table-extrato th {
   background: var(--roxo-claro);
   padding: 12px;
-  text-align: left;
   font-weight: 600;
+  text-align: left;
 }
 
 #table-extrato td {
@@ -283,93 +338,58 @@ button:hover {
   border-bottom: 1px solid #eee;
 }
 
-#table-extrato tr:last-child td {
-  border-bottom: none;
-}
-
 
 
 /* =========================
-   FILTROS DO EXTRATO / LANÇAMENTO
+   LOGIN
 ========================= */
 
-.filtros, .filtros-lanc {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin: 12px 0;
-}
-
-.filtros-lanc input, .filtros input {
-  max-width: 200px;
-}
-
-.filtros button, .filtros-lanc button {
-  margin-left: auto;
-}
-
-
-
-/* =========================
-   DASHBOARD
-========================= */
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 22px;
-}
-
-.dashboard-grid .card {
-  background: var(--panel);
-  border-radius: var(--radius);
-  padding: 20px;
-  box-shadow: var(--shadow);
-}
-
-.dashboard-grid canvas {
+.login-wrapper {
   width: 100%;
-}
-
-
-
-/* =========================
-   MODAL DE BAIXA
-========================= */
-
-.modal {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.45);
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 99999;
+  background: var(--bg);
 }
 
-.modal.hidden {
-  display: none;
-}
-
-.modal-content {
+.login-box {
+  max-width: 380px;
+  width: 100%;
   background: var(--panel);
-  padding: 22px;
+  padding: 32px;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  width: 90%;
-  max-width: 420px;
+  text-align: center;
 }
 
-.modal-content h3 {
-  margin-top: 0;
+.login-title {
+  margin: 0;
+  font-size: 26px;
   color: var(--roxo);
+  font-weight: 700;
 }
 
-.modal-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 18px;
+.login-subtitle {
+  margin-top: 4px;
+  margin-bottom: 24px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.login-box input {
+  margin-bottom: 12px;
+}
+
+.full {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.msg {
+  margin-top: 10px;
+  font-size: 14px;
+  color: red;
 }
 
 
@@ -392,193 +412,3 @@ button:hover {
     margin-left: 0;
   }
 }
-
-/* ========================= LOGIN PAGE  ========================= */
-
-.login-wrapper {
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: var(--bg);
-}
-
-.login-box {
-  background: var(--panel);
-  width: 100%;
-  max-width: 380px;
-  padding: 32px;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  text-align: center;
-}
-
-.login-title {
-  margin: 0;
-  font-size: 26px;
-  color: var(--roxo);
-  font-weight: 700;
-}
-
-.login-subtitle {
-  margin-top: 4px;
-  margin-bottom: 24px;
-  color: var(--muted);
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.login-box input {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 12px;
-  border-radius: 12px;
-  border: 1px solid #ddd;
-}
-
-.full {
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-.msg {
-  margin-top: 10px;
-  font-size: 14px;
-  color: red;
-}
-/* =========================
-   LINHAS ALTERNADAS — LANÇAMENTOS
-========================= */
-
-.listas li:nth-child(odd) {
-  background: #fff; /* linha normal */
-}
-
-.listas li:nth-child(even) {
-  background: var(--roxo-claro); /* linha roxo claro */
-}
-
-.listas li {
-  padding: 12px;
-  border-radius: 10px;
-  margin-bottom: 6px;
-}
-/* =====================================================
-   ÍCONES PROFISSIONAIS PARA EDITAR / EXCLUIR / BAIXAR
-===================================================== */
-
-.listas button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 10px;
-  border: 1px solid #dcdcdc;
-  background: #fff;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-/* ÍCONE — EDITAR */
-.listas button:first-of-type::before {
-  content: "";
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-
-  background-image: url("data:image/svg+xml;utf8,\
-  <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%237a4dff' viewBox='0 0 24 24'>\
-  <path d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm18.71-11.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.99-1.66z'/>\
-  </svg>");
-  background-size: cover;
-}
-
-/* ÍCONE — EXCLUIR */
-.listas button:nth-of-type(2)::before {
-  content: "";
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-
-  background-image: url("data:image/svg+xml;utf8,\
-  <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%23e83f5b' viewBox='0 0 24 24'>\
-  <path d='M6 7h12v14H6zm3 3v8h2v-8zm4 0v8h2v-8z'/>\
-  <path d='M15.5 4l-1-1h-5l-1 1H5v2h14V4z'/>\
-  </svg>");
-  background-size: cover;
-}
-
-/* ÍCONE — BAIXAR */
-.listas button:nth-of-type(3)::before {
-  content: "";
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-
-  background-image: url("data:image/svg+xml;utf8,\
-  <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%231da83a' viewBox='0 0 24 24'>\
-  <path d='M5 20h14v-2H5v2zm7-18l-5 5h3v6h4v-6h3l-5-5z'/>\
-  </svg>");
-  background-size: cover;
-}
-/* ============================================================
-   BOTÕES DE AÇÃO COM ÍCONES SVG PROFISSIONAIS
-============================================================ */
-
-.listas button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  background: #fff;
-  cursor: pointer;
-  font-size: 14px;
-  height: 32px;
-}
-
-.listas button svg {
-  width: 14px;
-  height: 14px;
-}
-
-.listas button::before {
-  content: none !important;
-}
-
-/* ÍCONE EDITAR */
-.listas button.edit::before {
-  content: "";
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%237a4dff" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM21.41 6.34c.38-.38.38-1.02 0-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>');
-}
-
-/* ÍCONE EXCLUIR */
-.listas button.delete::before {
-  content: "";
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%23d93025" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>');
-}
-
-/* ÍCONE BAIXAR */
-.listas button.download::before {
-  content: "";
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%231da83a" viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.67v4h6V9h3.67L12 2z"/></svg>');
-}
-
-
