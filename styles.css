@@ -1,6 +1,6 @@
-/* =========================
+/* =============================================================
    TEMA GLOBAL
-========================= */
+============================================================= */
 :root {
   --roxo: #7a4dff;
   --roxo-claro: #efe9ff;
@@ -20,11 +20,9 @@ body {
   font-family: "Inter", sans-serif;
 }
 
-
-
-/* =========================
-   TOPO / MENU
-========================= */
+/* =============================================================
+   HEADER / MENU
+============================================================= */
 
 .top-header {
   background: var(--roxo);
@@ -62,16 +60,9 @@ body {
   gap: 16px;
 }
 
-.user-email {
-  font-size: 14px;
-  opacity: 0.9;
-}
-
-
-
-/* =========================
+/* =============================================================
    CONTAINER GLOBAL
-========================= */
+============================================================= */
 
 main {
   max-width: 1250px;
@@ -84,12 +75,9 @@ h1, h2, h3 {
   margin-bottom: 12px;
 }
 
-
-
-/* =========================
+/* =============================================================
    PÁGINAS
-========================= */
-
+============================================================= */
 .page {
   display: none;
   margin-top: 25px;
@@ -99,17 +87,13 @@ h1, h2, h3 {
   display: block;
 }
 
-.hidden {
-  display: none !important;
-}
+.hidden { display: none !important; }
 
+/* =============================================================
+   PAINÉIS / BOXES
+============================================================= */
 
-
-/* =========================
-   PAINÉIS
-========================= */
-
-.card-panel {
+.card-panel, .box {
   background: var(--panel);
   padding: 20px;
   border-radius: var(--radius);
@@ -117,40 +101,37 @@ h1, h2, h3 {
   margin-bottom: 22px;
 }
 
-.box {
-  background: var(--panel);
-  padding: 20px;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  margin-bottom: 22px;
-}
-
-
-
-/* =========================
-   INPUTS / SELECTS
-========================= */
+/* =============================================================
+   INPUTS / SELECT
+============================================================= */
 
 input, select {
   width: 100%;
-  padding: 12px;
-  border-radius: 12px;
+  padding: 10px;
+  border-radius: 10px;
   border: 1px solid #ddd;
-  font-size: 15px;
+  font-size: 14px;
   outline: none;
-  background: #fff;
   box-sizing: border-box;
+  background: #fff;
 }
 
-input:focus, select:focus {
+input:focus,
+select:focus {
   border-color: var(--roxo);
 }
 
+/* Campos da tela de lançamentos compactos */
+#tela-lancamentos input,
+#tela-lancamentos select {
+  padding: 8px 10px;
+  height: 38px;
+  font-size: 14px;
+}
 
-
-/* =========================
+/* =============================================================
    BOTÕES
-========================= */
+============================================================= */
 
 button {
   cursor: pointer;
@@ -162,19 +143,15 @@ button {
   background: var(--roxo);
   color: #fff;
   border: none;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-radius: 12px;
   font-weight: 600;
-}
-
-.btn-primary:hover {
-  filter: brightness(1.07);
 }
 
 .btn-secondary {
   background: #fff;
   border: 1px solid #ddd;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-radius: 12px;
 }
 
@@ -187,15 +164,11 @@ button {
   border-radius: 12px;
 }
 
-button:hover {
-  opacity: 0.9;
-}
+button:hover { opacity: .9; }
 
-
-
-/* =========================
+/* =============================================================
    TABS
-========================= */
+============================================================= */
 
 .tabs {
   display: flex;
@@ -216,18 +189,16 @@ button:hover {
   border-color: var(--roxo);
 }
 
-
-
-/* =========================
+/* =============================================================
    LANÇAMENTOS — LISTAS
-========================= */
+============================================================= */
 
 .listas {
   display: flex;
   gap: 20px;
 }
 
-.listas .box ul {
+.listas ul {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -242,75 +213,88 @@ button:hover {
   margin-bottom: 6px;
 }
 
-.listas li:nth-child(odd) {
-  background: #fff;
+.listas li:nth-child(odd) { background: #fff; }
+.listas li:nth-child(even) { background: var(--roxo-claro); }
+
+/* Área dos botões da direita */
+.listas li > div:last-child {
+  display: flex;
+  gap: 6px;
+  min-width: 200px;
+  justify-content: flex-end;
 }
 
-.listas li:nth-child(even) {
-  background: var(--roxo-claro);
-}
-
-.listas button {
-  margin-left: 8px;
-}
-
-
-
-/* =========================
-   ÍCONES PROFISSIONAIS (FINAL — VERSÃO CORRETA)
-========================= */
+/* =============================================================
+   ÍCONES PROFISSIONAIS DOS BOTÕES
+============================================================= */
 
 .listas button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  height: 32px;
+  gap: 4px;
+  padding: 4px 10px;
+  height: 28px;
+  font-size: 13px;
   border-radius: 8px;
   border: 1px solid #ccc;
-  background: #fff;
 }
 
-/* remove qualquer pseudo-conteúdo anterior */
-.listas button::before {
-  content: none !important;
-}
+.listas button::before { content: none !important; }
 
 /* EDITAR */
 .listas button.edit::before {
   content: "";
-  width: 14px;
-  height: 14px;
+  width: 14px; height: 14px;
   background-size: contain;
   background-repeat: no-repeat;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='%237a4dff' viewBox='0 0 24 24'><path d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM21.41 6.34c.38-.38.38-1.02 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' fill='%237a4dff' viewBox='0 0 24 24'><path d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM21.41 6.34c.38-.38.38-1.02 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z'/></svg>");
 }
 
 /* EXCLUIR */
 .listas button.delete::before {
   content: "";
-  width: 14px;
-  height: 14px;
+  width: 14px; height: 14px;
   background-size: contain;
   background-repeat: no-repeat;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='%23d93025' viewBox='0 0 24 24'><path d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' fill='%23d93025' viewBox='0 0 24 24'><path d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/></svg>");
 }
 
 /* BAIXAR */
 .listas button.download::before {
   content: "";
-  width: 14px;
-  height: 14px;
+  width: 14px; height: 14px;
   background-size: contain;
   background-repeat: no-repeat;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='%231da83a' viewBox='0 0 24 24'><path d='M5 20h14v-2H5v2zm7-18L5.33 9h3.67v4h6V9h3.67L12 2z'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' fill='%231da83a' viewBox='0 0 24 24'><path d='M5 20h14v-2H5v2zm7-18L5.33 9h3.67v4h6V9h3.67L12 2z'/></svg>");
 }
 
+/* =============================================================
+   FILTRO ALINHADO (Período + botão filtrar)
+============================================================= */
 
+.filtros-lanc {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
 
-/* =========================
+.filtros-lanc input,
+.filtros-lanc select {
+  max-width: 220px;
+}
+
+#btn-filtrar-lanc {
+  margin-left: 0 !important;
+  height: 40px;
+}
+
+/* =============================================================
    EXTRATO
-========================= */
+============================================================= */
 
 .table-wrap {
   margin-top: 20px;
@@ -338,11 +322,9 @@ button:hover {
   border-bottom: 1px solid #eee;
 }
 
-
-
-/* =========================
-   LOGIN
-========================= */
+/* =============================================================
+   LOGIN PAGE
+============================================================= */
 
 .login-wrapper {
   width: 100%;
@@ -392,23 +374,14 @@ button:hover {
   color: red;
 }
 
-
-
-/* =========================
+/* =============================================================
    RESPONSIVIDADE
-========================= */
+============================================================= */
 
 @media (max-width: 900px) {
-  .listas {
-    flex-direction: column;
-  }
-
+  .listas { flex-direction: column; }
   .filtros, .filtros-lanc {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .filtros button, .filtros-lanc button {
-    margin-left: 0;
   }
 }
