@@ -43,6 +43,7 @@
     </div>
 
   </section>
+
   <!-- ====================== DIREITA ====================== -->
   <section class="right-column">
 
@@ -55,7 +56,6 @@
         <div class="top-controls">
           <select id="select-cartao-faturas"></select>
 
-          <!-- Navegador Mês-a-Mês -->
           <div class="mes-navegacao">
             <button id="mes-prev" class="mes-btn">◀</button>
             <span id="mes-display"></span>
@@ -85,7 +85,6 @@
         </div>
       </div>
     </div>
-
 
     <!-- ====================== LANÇAR COMPRA ====================== -->
     <div id="view-lancamento" class="panel view hidden">
@@ -131,7 +130,6 @@
       </div>
     </div>
 
-
     <!-- ====================== NOVO CARTÃO ====================== -->
     <div id="view-new-card" class="panel view hidden">
       <h2>Novo Cartão</h2>
@@ -155,13 +153,11 @@
       </div>
     </div>
 
-
     <!-- ====================== HISTÓRICO ====================== -->
     <div id="view-historico" class="panel view hidden">
       <h2>Histórico</h2>
       <ul id="lista-faturas-historico" class="faturas-list"></ul>
     </div>
-
 
     <!-- ====================== PAGAMENTO ANTECIPADO ====================== -->
     <div id="box-pag-antecipado" class="panel view hidden">
@@ -183,7 +179,8 @@
         </div>
       </div>
     </div>
-    <!-- ====================== EDITAR COMPRA (NOVA TELA) ====================== -->
+
+    <!-- ====================== EDITAR COMPRA (PARCELADA) ====================== -->
     <div id="view-editar-compra" class="panel view hidden">
 
       <div class="panel-header">
@@ -193,7 +190,6 @@
 
       <div class="form">
 
-        <!-- INFORMAÇÕES PRINCIPAIS DA COMPRA -->
         <label>Descrição</label>
         <input id="edit-desc">
 
@@ -214,13 +210,11 @@
 
         <hr>
 
-        <!-- LISTA DE PARCELAS -->
         <h3>Parcelas</h3>
         <ul id="lista-parcelas-editar" class="fatura-transactions"></ul>
 
         <hr>
 
-        <!-- AÇÕES PRINCIPAIS -->
         <div class="actions-row">
           <button id="btn-salvar-edicao" class="btn-primary">Salvar alterações</button>
           <button id="btn-excluir-compra" class="btn-danger">Excluir compra</button>
@@ -228,3 +222,15 @@
 
       </div>
     </div>
+
+  </section>
+</main>
+
+<!-- ====================== SCRIPTS — ESSENCIAL! ====================== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="cartao.js"></script>
+
+</body>
+</html>
+
