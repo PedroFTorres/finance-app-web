@@ -1,9 +1,8 @@
-// cartao.js — Versão completa (edição à vista + parcelada, oculta (1/1) em compras à vista)
-// Garante compatibilidade com o cartao.html que você enviou.
-// Usa `window.supabase` como antes.
+// cartao.js — versão final corrigida
+// Suporte total a edição à vista, parcelada, lançamento correto e categorias.
 
 (async () => {
-  // ---------- dependência supabase ----------
+
   if (typeof supabase === "undefined") {
     alert("Erro: supabase.js não carregado.");
     return;
@@ -14,12 +13,11 @@
     user: null,
     cards: [],
     categories: [],
-    // parcelada
     editingPurchaseFull: null,
     editingPurchaseParcels: [],
   };
 
-  // ---------- refs DOM principais (existentes no seu HTML) ----------
+  // ---------- refs ----------
   const btnBack = document.getElementById("btn-back");
   const btnLogout = document.getElementById("btn-logout");
   const userEmail = document.getElementById("user-email");
@@ -34,10 +32,8 @@
   const boxPagAntecipado = document.getElementById("box-pag-antecipado");
   const viewEditarCompra = document.getElementById("view-editar-compra");
 
-  // EXISTE view-editar-avista? (se não, vamos criar dinamicamente)
   let viewEditarAvista = document.getElementById("view-editar-avista");
 
-  // ---------- elementos (originais) ----------
   const btnSaveCard = document.getElementById("btn-save-card");
   const btnCancelCard = document.getElementById("btn-cancel-card");
   const cardNome = document.getElementById("card-nome");
@@ -71,12 +67,12 @@
   const cartValor = document.getElementById("cart-valor");
   const cartData = document.getElementById("cart-data");
   const cartParcelas = document.getElementById("cart-parcelas");
+  const parcelaInicialInput = document.getElementById("parcela-inicial");
 
   const fatDisplay = document.getElementById("fat-display");
   const btnFatPrev = document.getElementById("fat-prev");
   const btnFatNext = document.getElementById("fat-next");
   const selectFaturaInicial = document.getElementById("select-fatura-inicial");
-  const parcelaInicialInput = document.getElementById("parcela-inicial");
 
   const btnAddPurchase = document.getElementById("btn-add-purchase");
   const btnCancelPurchase = document.getElementById("btn-cancel-purchase");
@@ -93,7 +89,7 @@
     viewLancamento.classList.add("hidden");
     viewHistorico.classList.add("hidden");
     boxPagAntecipado.classList.add("hidden");
-    if (viewEditarCompra) viewEditarCompra.classList.add("hidden");
+    viewEditarCompra.classList.add("hidden");
     if (viewEditarAvista) viewEditarAvista.classList.add("hidden");
   }
 
@@ -118,22 +114,13 @@
     return new Date(d).toISOString().slice(0, 10);
   }
 
-  function formatYM(dt) {
-    return dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0");
-  }
-
-  function displayMes(dt) {
-    return dt.toLocaleString("pt-BR", { month: "long" }) + " " + dt.getFullYear();
-  }
-
-  // formata a descrição exibida: remove "(1/1)" se for compra à vista
+  // remove (1/1) em compras à vista
   function formatDescricaoExibicao(lanc) {
-    // campos esperados: parcelas (número) e descricao (string possivelmente com " (1/1)")
     if (!lanc) return "";
     if (Number(lanc.parcelas || 0) === 1) {
-      return (lanc.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
+      return lanc.descricao.replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
     }
-    return lanc.descricao || "";
+    return lanc.descricao;
   }
 
   // ---------- login ----------
@@ -146,7 +133,7 @@
   state.user = sessionResp.data.session.user;
   userEmail.textContent = state.user.email;
 
-  // ---------- NAV ----------
+  // ---------- nav ----------
   btnBack.onclick = () => (window.location.href = "app.html");
   btnLogout.onclick = async () => {
     await supabase.auth.signOut();
@@ -168,7 +155,6 @@
     showView(viewHistorico);
     loadHistoricoFaturas();
   };
-
   // ---------- CARTÕES (novo / listar) ----------
   btnNewCard.onclick = () => {
     showView(viewNewCard);
@@ -332,13 +318,19 @@
     const last = new Date(ano, mes, 0).getDate();
     const fim = `${ano}-${String(mes).padStart(2,"0")}-${String(last).padStart(2,"0")}`;
 
-    const { data: compras } = await supabase
+    const { data: compras, error } = await supabase
       .from("cartao_lancamentos")
       .select("*")
       .eq("cartao_id", cartao_id)
       .gte("data_compra", inicio)
       .lte("data_compra", fim)
       .order("data_compra");
+
+    if (error) {
+      console.error("loadFaturaForSelected error:", error);
+      listaComprasFatura.innerHTML = "<li>Erro ao carregar fatura.</li>";
+      return;
+    }
 
     const total = (compras || []).reduce((s, c) => s + Number(c.valor || 0), 0);
     const card = state.cards.find((x) => x.id === cartao_id);
@@ -354,7 +346,6 @@
     (compras || []).forEach((c) => {
       const li = document.createElement("li");
 
-      // Exibição da descrição (oculta (1/1) se for à vista)
       const descr = formatDescricaoExibicao(c);
 
       li.innerHTML = `
@@ -364,7 +355,6 @@
 
       li.style.cursor = "pointer";
 
-      // clique: se parcelas === 1 -> edição à vista; caso contrário -> abrir parcelada
       li.onclick = () => {
         if (Number(c.parcelas || 0) === 1) {
           abrirEdicaoAvista(c);
@@ -382,13 +372,11 @@
     }
   }
 
-  // ---------- PARTE: abrir edição parcelada (já existente/expandida) ----------
+  // ---------- PARTE: abrir edição parcelada ----------
   async function abrirEdicaoCompraParcelada(compra) {
     try {
-      // Deriva a descrição base (remove " (1/5)" ou " (2/12)" se houver)
       const descricaoBase = (compra.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
 
-      // Buscar todas as parcelas com a mesma base no mesmo cartão
       const q = await supabase
         .from("cartao_lancamentos")
         .select("*")
@@ -401,25 +389,20 @@
         return;
       }
 
-      // Atualiza state
       state.editingPurchaseParcels = q.data;
-      state.editingPurchaseFull = q.data[0]; // primeira parcela como "mestre"
+      state.editingPurchaseFull = q.data[0];
 
-      // Preenche campos principais da nova tela de edição
       const somaTotal = state.editingPurchaseParcels.reduce((s, p) => s + Number(p.valor || 0), 0);
       document.getElementById("edit-desc").value = descricaoBase;
       document.getElementById("edit-valor-total").value = Number(somaTotal.toFixed(2));
       document.getElementById("edit-data-inicial").value = state.editingPurchaseParcels[0].data_compra;
       document.getElementById("edit-total-parcelas").value = state.editingPurchaseParcels.length;
 
-      // Popular selects (categoria / cartão)
       await popularSelectCategoriaEdicao(state.editingPurchaseFull.categoria_id);
       await popularSelectCartaoEdicao(state.editingPurchaseFull.cartao_id);
 
-      // Renderizar lista de parcelas
       renderParcelasEdicao();
 
-      // Mostrar view de edição parcelada
       showView(viewEditarCompra);
     } catch (err) {
       console.error("abrirEdicaoCompraParcelada:", err);
@@ -543,7 +526,16 @@
     salvarAlteracoesCompra();
   };
 
-  // ---------- funções parceladas (editarParcela / excluirParcela / antecipar / salvarAlteracoes) ----------
+  // garantir que o botão cancelar em lançamento funcione
+  btnCancelPurchase.onclick = () => {
+    cartDesc.value = "";
+    cartValor.value = "";
+    cartParcelas.value = 1;
+    cartData.value = "";
+    parcelaInicialInput.value = 1;
+    showView(viewFaturas);
+  };
+  // ---------- funções parceladas ----------
   async function editarParcela(id) {
     const p = state.editingPurchaseParcels.find(x => x.id === id);
     if (!p) return alert("Parcela não encontrada.");
@@ -567,7 +559,6 @@
       return alert("Erro ao editar parcela.");
     }
 
-    // Recarrega parcelas
     await abrirEdicaoCompraParcelada(p);
     await loadFaturaForSelected();
     alert("Parcela editada com sucesso.");
@@ -590,7 +581,6 @@
       return;
     }
 
-    // Reabrir a compra com parcelas atualizadas (tenta abrir pela mesma descrição base)
     await tryReabrirCompraPorParcela(p);
 
     await loadFaturaForSelected();
@@ -635,7 +625,6 @@
     if (!confirmar) return;
 
     try {
-      // 1) Inserir lançamento NEGATIVO no cartão
       await supabase.from("cartao_lancamentos").insert([{
         user_id: state.user.id,
         cartao_id: p.cartao_id,
@@ -648,7 +637,6 @@
         billed: false
       }]);
 
-      // 2) Registrar despesa bancária
       const { data: contas } = await supabase
         .from("contas_bancarias")
         .select("*")
@@ -687,7 +675,6 @@
       if (!parcelasOriginais || parcelasOriginais.length === 0)
         return alert("Nenhuma compra carregada.");
 
-      // Coleta dados novos
       const novaDesc = document.getElementById("edit-desc").value.trim();
       const novoValorTotal = Number(document.getElementById("edit-valor-total").value || 0);
       const novaDataInicial = document.getElementById("edit-data-inicial").value;
@@ -699,7 +686,6 @@
         return alert("Preencha todos os campos principais da compra.");
       }
 
-      // EXCLUI TODAS AS PARCELAS ATUAIS
       const ids = parcelasOriginais.map(p => p.id);
 
       let { error } = await supabase
@@ -712,9 +698,7 @@
         return alert("Erro ao excluir parcelas antigas.");
       }
 
-      // RECRIA AS NOVAS PARCELAS
       const valorParcela = Number((novoValorTotal / novoTotalParcelas).toFixed(2));
-
       const [anoIni, mesIni, diaIni] = novaDataInicial.split("-").map(Number);
 
       for (let p = 1; p <= novoTotalParcelas; p++) {
@@ -737,7 +721,6 @@
 
       alert("Compra atualizada com sucesso.");
 
-      // Recarrega fatura e volta para tela de faturas
       await loadFaturaForSelected();
       showView(viewFaturas);
 
@@ -747,7 +730,6 @@
     }
   }
 
-  // ---------- utilitários ----------
   async function refreshAfterChange() {
     try {
       await loadCards();
@@ -780,12 +762,10 @@
       console.error("tryReabrirCompraPorParcela:", err);
     }
   }
-
   // ---------- Parte NOVA: Tela de edição À VISTA (criada dinamicamente, se não existir) ----------
   function ensureAvistaViewExists() {
-    if (viewEditarAvista) return; // já existe
+    if (viewEditarAvista) return;
 
-    // criar estrutura HTML simples e injetar no right-column
     const rightColumn = document.querySelector(".right-column");
     const div = document.createElement("div");
     div.id = "view-editar-avista";
@@ -820,7 +800,6 @@
     rightColumn.appendChild(div);
     viewEditarAvista = div;
 
-    // attach handlers
     document.getElementById("btn-avista-voltar").onclick = () => {
       showView(viewFaturas);
     };
@@ -828,20 +807,16 @@
     document.getElementById("btn-avista-excluir").onclick = excluirCompraAvista;
   }
 
-  // abrir edição à vista
   async function abrirEdicaoAvista(lanc) {
     ensureAvistaViewExists();
 
-    // preenche campos
     document.getElementById("avista-desc").value = (lanc.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
     document.getElementById("avista-valor").value = Number(lanc.valor || 0);
     document.getElementById("avista-data").value = lanc.data_compra || lanc.data || formatISO(new Date());
 
-    // popula categorias e cartões e seleciona os corretos
     await popularSelectCategoriaAvista(lanc.categoria_id);
     await popularSelectCartaoAvista(lanc.cartao_id);
 
-    // armazena temporariamente no DOM o id da parcela mestre (usaremos para salvar)
     viewEditarAvista.dataset.lancId = lanc.id;
     viewEditarAvista.dataset.cartaoId = lanc.cartao_id;
 
@@ -875,7 +850,6 @@
     });
   }
 
-  // salvar edição à vista
   async function salvarEdicaoAvista() {
     const id = viewEditarAvista.dataset.lancId;
     if (!id) return alert("ID da compra não encontrado.");
@@ -888,7 +862,6 @@
 
     if (!novaDesc || !novoValor || !novaData) return alert("Preencha os campos.");
 
-    // Atualiza apenas esse lançamento (como é à vista, parcelas = 1)
     const { error } = await supabase
       .from("cartao_lancamentos")
       .update({
@@ -910,7 +883,6 @@
     showView(viewFaturas);
   }
 
-  // excluir compra à vista (apaga o registro único)
   async function excluirCompraAvista() {
     const id = viewEditarAvista.dataset.lancId;
     if (!id) return alert("ID da compra não encontrado.");
@@ -931,7 +903,7 @@
     showView(viewFaturas);
   }
 
-  // ---------- LANÇAMENTO DE COMPRA ----------
+  // ---------- LANÇAMENTO DE COMPRA (corrigido com data) ----------
   btnAddPurchase.onclick = async () => {
     if (state.editingPurchaseFull) return;
 
@@ -940,13 +912,16 @@
     const valor = Number(cartValor.value || 0);
     const parcelas = Number(cartParcelas.value || 1);
     const parcelaInicial = Number(parcelaInicialInput.value || 1);
+    const dataCompra = cartData.value;
+    const categoriaSelecionada = selectCategoriaLancCartao.value;
 
-    if (!cartao_id || !descricao || !valor) return alert("Preencha tudo.");
+    if (!cartao_id || !descricao || !valor || !dataCompra)
+      return alert("Preencha tudo, incluindo a data da compra.");
 
-    const [anoIni, mesIni] = selectFaturaInicial.value.split("-").map(Number);
+    const [anoCompra, mesCompra, diaCompra] = dataCompra.split("-").map(Number);
 
     for (let p = parcelaInicial; p <= parcelas; p++) {
-      const dt = new Date(anoIni, mesIni - 1 + (p - parcelaInicial), 1);
+      const dt = new Date(anoCompra, mesCompra - 1 + (p - parcelaInicial), diaCompra);
       const dataISO = formatISO(dt);
 
       const descricaoCom = parcelas === 1 ? descricao : `${descricao} (${p}/${parcelas})`;
@@ -960,6 +935,7 @@
         data_compra: dataISO,
         parcelas,
         parcela_atual: p,
+        categoria_id: categoriaSelecionada || null,
         tipo: "compra",
         billed: false
       }]);
@@ -968,6 +944,7 @@
     cartDesc.value = "";
     cartValor.value = "";
     cartParcelas.value = 1;
+    cartData.value = "";
     parcelaInicialInput.value = 1;
 
     await loadFaturaForSelected();
@@ -1062,19 +1039,20 @@
     popularMesFatura();
     popularFaturasLancamento();
 
-    // mostra a view de faturas por padrão
     showView(viewFaturas);
   } catch (err) {
     console.error("Erro na inicialização do cartao.js:", err);
   }
 
   // ---------- expor funções globais (caso precise) ----------
-  window.abrirEdicaoCompra = abrirEdicaoCompraParcelada;
-  window.abrirEdicaoAvista = abrirEdicaoAvista;
-  window.editarParcela = editarParcela;
-  window.excluirParcela = excluirParcela;
-  window.anteciparParcela = anteciparParcela;
-  window.excluirCompraCompleta = excluirCompraCompleta;
-  window.salvarAlteracoesCompra = salvarAlteracoesCompra;
+  // registra somente se existirem (evita ReferenceError)
+  if (typeof abrirEdicaoCompraParcelada === "function") window.abrirEdicaoCompra = abrirEdicaoCompraParcelada;
+  if (typeof abrirEdicaoAvista === "function") window.abrirEdicaoAvista = abrirEdicaoAvista;
+  if (typeof editarParcela === "function") window.editarParcela = editarParcela;
+  if (typeof excluirParcela === "function") window.excluirParcela = excluirParcela;
+  if (typeof anteciparParcela === "function") window.anteciparParcela = anteciparParcela;
+  if (typeof excluirCompraCompleta === "function") window.excluirCompraCompleta = excluirCompraCompleta;
+  if (typeof salvarAlteracoesCompra === "function") window.salvarAlteracoesCompra = salvarAlteracoesCompra;
 
 })(); // fim do IIFE
+
