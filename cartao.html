@@ -43,8 +43,6 @@
     </div>
 
   </section>
-
-
   <!-- ====================== DIREITA ====================== -->
   <section class="right-column">
 
@@ -185,13 +183,48 @@
         </div>
       </div>
     </div>
+    <!-- ====================== EDITAR COMPRA (NOVA TELA) ====================== -->
+    <div id="view-editar-compra" class="panel view hidden">
 
-  </section>
-</main>
+      <div class="panel-header">
+        <h2>Editar Compra</h2>
+        <button id="btn-voltar-edicao" class="btn-secondary">Voltar</button>
+      </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase.js"></script>
-<script src="cartao.js"></script>
+      <div class="form">
 
-</body>
-</html>
+        <!-- INFORMAÇÕES PRINCIPAIS DA COMPRA -->
+        <label>Descrição</label>
+        <input id="edit-desc">
+
+        <label>Valor total da compra</label>
+        <input id="edit-valor-total" type="number" step="0.01">
+
+        <label>Categoria</label>
+        <select id="edit-categoria"></select>
+
+        <label>Cartão</label>
+        <select id="edit-cartao"></select>
+
+        <label>Data da primeira parcela</label>
+        <input id="edit-data-inicial" type="date">
+
+        <label>Total de parcelas</label>
+        <input id="edit-total-parcelas" type="number" min="1">
+
+        <hr>
+
+        <!-- LISTA DE PARCELAS -->
+        <h3>Parcelas</h3>
+        <ul id="lista-parcelas-editar" class="fatura-transactions"></ul>
+
+        <hr>
+
+        <!-- AÇÕES PRINCIPAIS -->
+        <div class="actions-row">
+          <button id="btn-salvar-edicao" class="btn-primary">Salvar alterações</button>
+          <button id="btn-excluir-compra" class="btn-danger">Excluir compra</button>
+        </div>
+
+      </div>
+    </div>
