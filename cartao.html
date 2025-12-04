@@ -230,6 +230,23 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
 <script src="cartao.js"></script>
+<!-- Modal de edição de parcela -->
+<div id="modal-editar-parcela" class="modal hidden">
+  <div class="modal-content">
+    <h3>Editar Parcela</h3>
+
+    <label>Novo Valor</label>
+    <input id="modal-parcela-valor" type="number" step="0.01">
+
+    <label>Nova Data</label>
+    <input id="modal-parcela-data" type="date">
+
+    <div class="actions-row">
+      <button id="modal-parcela-salvar" class="btn-primary">Salvar</button>
+      <button id="modal-parcela-cancelar" class="btn-secondary">Cancelar</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
