@@ -414,5 +414,12 @@ button:hover { opacity: .9; }
   margin-left: auto;
   margin-right: auto;
 }
+/* Logo no centro do conteúdo (substitui o título) */
+.app-logo-center {
+  width: 190px;        /* ajuste conforme preferir */
+  display: block;
+  margin: 0 auto 25px; /* centraliza e dá espaçamento inferior */
+  opacity: 0.95;
+}
 
 
