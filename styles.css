@@ -416,7 +416,7 @@ button:hover { opacity: .9; }
 }
 /* Logo dentro do menu */
 .logo-menu {
-  height: 32px;       /* altura ideal para combinar com os botões */
+  height: 42px;       /* altura ideal para combinar com os botões */
   margin-right: 16px; /* espaço antes dos botões */
 }
 
