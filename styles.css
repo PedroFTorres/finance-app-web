@@ -406,3 +406,11 @@ button:hover { opacity: .9; }
 .listas button {
   white-space: nowrap;
 }
+/* LOGO NA TELA DE LOGIN */
+.login-logo {
+  width: 140px;          /* tamanho ideal */
+  margin-bottom: 20px;   /* espaço entre logo e formulário */
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
