@@ -408,7 +408,7 @@ button:hover { opacity: .9; }
 }
 /* LOGO NA TELA DE LOGIN */
 .login-logo {
-  width: 180px;     /* AUMENTADO */
+  width: 220px;     /* AUMENTADO */
   margin-bottom: 25px;
   display: block;
   margin-left: auto;
