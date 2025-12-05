@@ -1102,8 +1102,7 @@ async function renderGraficoDespesasPorCategoria(inicio, fim) {
   const ctx = document.getElementById("chart-despesas-categorias");
 
   if (chartDesCat) chartDesCat.destroy();
-
- chartDesCat = new Chart(ctx, {
+chartDesCat = new Chart(ctx, {
   type: "bar",
   data: {
     labels,
@@ -1115,6 +1114,7 @@ async function renderGraficoDespesasPorCategoria(inicio, fim) {
       },
     ],
   },
+
 
 // ========================= SUBSCRIBE SUPABASE =========================
 
