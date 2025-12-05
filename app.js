@@ -1067,22 +1067,17 @@ async function renderGraficoReceitasPorCategoria(inicio, fim) {
   if (chartRecCat) chartRecCat.destroy();
 
   chartRecCat = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Receitas por Categoria",
-          data: valores,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-    },
-  });
-}
-
+  type: "bar",
+  data: {
+    labels,
+    datasets: [
+      {
+        label: "Receitas por Categoria",
+        data: valores,
+        backgroundColor: "#18c55f", // verde
+      },
+    ],
+  },
 
 // ========================= GRÁFICO DESPESAS POR CATEGORIA =========================
 
@@ -1108,22 +1103,19 @@ async function renderGraficoDespesasPorCategoria(inicio, fim) {
 
   if (chartDesCat) chartDesCat.destroy();
 
-  chartDesCat = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Despesas por Categoria",
-          data: valores,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-    },
-  });
-}
+ chartDesCat = new Chart(ctx, {
+  type: "bar",
+  data: {
+    labels,
+    datasets: [
+      {
+        label: "Despesas por Categoria",
+        data: valores,
+        backgroundColor: "#e63946", // vermelho
+      },
+    ],
+  },
+
 // ========================= SUBSCRIBE SUPABASE =========================
 
 function subscribeToChanges() {
