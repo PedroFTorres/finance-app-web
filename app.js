@@ -1064,9 +1064,7 @@ async function renderGraficoReceitasPorCategoria(inicio, fim) {
 
   const ctx = document.getElementById("chart-receitas-categorias");
 
-  if (chartRecCat) chartRecCat.destroy();
-
- chartRecCat = new Chart(ctx, {
+chartRecCat = new Chart(ctx, {
   type: "bar",
   data: {
     labels,
@@ -1074,14 +1072,15 @@ async function renderGraficoReceitasPorCategoria(inicio, fim) {
       {
         label: "Receitas por Categoria",
         data: valores,
-        backgroundColor: "#18c55f", // verde
+        backgroundColor: "#18c55f",
       },
     ],
   },
   options: {
     responsive: true,
   },
-});  
+});
+}  
 
 // ========================= GRÁFICO DESPESAS POR CATEGORIA =========================
 
@@ -1122,6 +1121,7 @@ chartDesCat = new Chart(ctx, {
     responsive: true,
   },
 });  
+  }
 
 // ========================= SUBSCRIBE SUPABASE =========================
 
