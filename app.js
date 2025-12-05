@@ -1066,7 +1066,7 @@ async function renderGraficoReceitasPorCategoria(inicio, fim) {
 
   if (chartRecCat) chartRecCat.destroy();
 
-  chartRecCat = new Chart(ctx, {
+ chartRecCat = new Chart(ctx, {
   type: "bar",
   data: {
     labels,
@@ -1078,6 +1078,10 @@ async function renderGraficoReceitasPorCategoria(inicio, fim) {
       },
     ],
   },
+  options: {
+    responsive: true,
+  },
+});  
 
 // ========================= GRÁFICO DESPESAS POR CATEGORIA =========================
 
