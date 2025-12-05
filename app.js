@@ -1016,17 +1016,19 @@ async function loadDashboard() {
 
   if (chartDashboard) chartDashboard.destroy();
 
-  chartDashboard = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: ["Receitas", "Despesas"],
-      datasets: [
-        {
-          label: "Resumo do mês",
-          data: [totalR, totalD],
-        },
-      ],
-    },
+ chartDashboard = new Chart(ctx, {
+  type: "bar",
+  data: {
+    labels: ["Receitas", "Despesas"],
+    datasets: [
+      {
+        label: "Resumo do mês",
+        data: [totalR, totalD],
+        backgroundColor: ["#18c55f", "#e63946"], // verde / vermelho
+      },
+    ],
+  },
+
     options: {
       responsive: true,
       scales: {
