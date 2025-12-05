@@ -8,20 +8,22 @@
 </head>
 <body>
 
-  <div class="center-box">
+  <div class="login-wrapper">
+    <div class="login-box">
 
-    <!-- 🔥 LOGO CENTRALIZADA | ADICIONE ESTA LINHA -->
-    <img src="logo-arolix.png" class="login-logo" alt="Logo Arolix">
+      <!-- LOGO -->
+      <img src="logo-arolix.png" class="login-logo" alt="Logo Arolix">
 
-    <h2>Entrar no Finance App</h2>
+      <h2 class="login-title">Entrar no Finance App</h2>
 
-    <input id="email" type="email" placeholder="Seu email">
-    <input id="password" type="password" placeholder="Sua senha">
+      <input id="email" type="email" placeholder="Seu email" class="full">
+      <input id="password" type="password" placeholder="Sua senha" class="full">
 
-    <button id="btn-signin" class="primary">Entrar</button>
-    <button id="btn-signup">Criar Conta</button>
+      <button id="btn-signin" class="btn-primary full">Entrar</button>
+      <button id="btn-signup" class="btn-secondary full">Criar Conta</button>
 
-    <p id="msg"></p>
+      <p id="msg" class="msg"></p>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
