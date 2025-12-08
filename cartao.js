@@ -1,4 +1,3 @@
-
 document.addEventListener("DOMContentLoaded", () => {
 
   (async () => {
@@ -6,6 +5,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (typeof supabase === "undefined") {
       alert("Erro: supabase.js não carregado.");
       return;
+    }
+
+    // ----------------- Toast helper -----------------
+    function showToast(message, type = "success") {
+      const container = document.getElementById("toast-container");
+      if (!container) {
+        // fallback to alert if container not present
+        alert(message);
+        return;
+      }
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      if (type === "error") toast.classList.add("error");
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3500);
     }
 
     // ----------------- Estado -----------------
@@ -137,63 +154,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnSaveCard) btnSaveCard.onclick = async () => {
       const nome = cardNome.value.trim(); const limite = Number(cardLimite.value||0);
       const diaFech = Number(cardDiaFechamento.value); const diaVenc = Number(cardDiaVencimento.value);
-      if(!nome) return alert("Informe o nome do cartão.");
+      if(!nome) return showToast("Informe o nome do cartão.", "error");
       await supabase.from("cartoes_credito").insert([{ user_id: state.user.id, nome, limite, dia_fechamento: diaFech, dia_vencimento: diaVenc }]);
       await loadCards();
       showView(viewFaturas);
+      showToast("Cartão criado com sucesso.");
     };
-
-    // Mês de exibição fatura
-    function popularMesFatura(){ if(mesDisplay) mesDisplay.textContent = displayMes(mesFatura); if(selectMesFaturas) selectMesFaturas.value = formatYM(mesFatura); }
-    if(btnMesPrev) btnMesPrev.onclick = () => { mesFatura.setMonth(mesFatura.getMonth()-1); popularMesFatura(); loadFaturaForSelected(); };
-    if(btnMesNext) btnMesNext.onclick = () => { mesFatura.setMonth(mesFatura.getMonth()+1); popularMesFatura(); loadFaturaForSelected(); };
-
-    // Mês para lançamento inicial
-    function popularFaturasLancamento(){ if(fatDisplay) fatDisplay.textContent = displayMes(mesLanc); if(selectFaturaInicial) selectFaturaInicial.value = formatYM(mesLanc); }
-    if(btnFatPrev) btnFatPrev.onclick = () => { mesLanc.setMonth(mesLanc.getMonth()-1); popularFaturasLancamento(); }
-    if(btnFatNext) btnFatNext.onclick = () => { mesLanc.setMonth(mesLanc.getMonth()+1); popularFaturasLancamento(); }
-
-    // ----------------- Carregar Dados Principais -----------------
-    async function loadCards(){
-      const { data } = await supabase.from("cartoes_credito").select("*").eq("user_id", state.user.id).order("created_at", { ascending: false });
-      state.cards = data || [];
-      renderCards();
-      populateCardSelects();
-    }
-
-    function renderCards(){
-      if(!cardsList) return;
-      cardsList.innerHTML = "";
-      (state.cards||[]).forEach((c) => {
-        const el = document.createElement("div");
-        el.className = "card-item";
-        el.innerHTML = `<div class="card-meta">
-                          <div class="card-name">${c.nome}</div>
-                          <div class="card-balance">Limite: ${formatReal(c.limite)}</div>
-                          <div class="card-balance">Fecha dia: ${c.dia_fechamento} • Venc: ${c.dia_vencimento}</div>
-                        </div>
-                        <div class="card-actions">
-                          <button class="btn-view-faturas" data-id="${c.id}">Faturas</button>
-                          <button class="btn-lancar" data-id="${c.id}">Lançar</button>
-                          <button class="btn-delete" data-id="${c.id}">Excluir</button>
-                        </div>`;
-        cardsList.appendChild(el);
-      });
-
-      document.querySelectorAll(".btn-view-faturas").forEach((btn) => {
-        btn.onclick = () => { selectCartaoFaturas.value = btn.dataset.id; loadFaturasSelect(); showView(viewFaturas); };
-      });
-      document.querySelectorAll(".btn-lancar").forEach((btn) => {
-        btn.onclick = () => { selectCartaoLanc.value = btn.dataset.id; loadSelectsForLanc(); popularFaturasLancamento(); showView(viewLancamento); };
-      });
-      document.querySelectorAll(".btn-delete").forEach((btn) => {
-        btn.onclick = async () => {
-          if (!confirm("Excluir este cartão?")) return;
-          await supabase.from("cartoes_credito").delete().eq("id", btn.dataset.id);
-          await loadCards();
-        };
-      });
-    }
         function populateCardSelects(){
       if(!selectCartaoFaturas || !selectCartaoLanc) return;
       selectCartaoFaturas.innerHTML = "";
@@ -257,6 +223,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (errCompras) {
         console.error("Erro ao carregar fatura:", errCompras);
         if (listaComprasFatura) listaComprasFatura.innerHTML = "<li>Erro ao carregar fatura.</li>";
+        showToast("Erro ao carregar fatura.", "error");
         return;
       }
 
@@ -320,7 +287,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        // fatura fechada mas NÃO paga -> allow reabrir
+        // fatura fechada but NOT paid -> allow reabrir
         if (btnPagarFatura) { btnPagarFatura.disabled = false; btnPagarFatura.textContent = "Pagar Fatura"; }
         if (statusEl) statusEl.textContent = "FATURA FECHADA";
 
@@ -348,9 +315,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const cartaoId = selectCartaoFaturas.value;
         const venc = dataVencimentoFatura.value;
         const ym = selectMesFaturas.value;
-        if (!cartaoId) return alert("Selecione um cartão.");
-        if (!venc) return alert("Informe o vencimento.");
-        if (state.faturaAtual) return alert("Esta fatura já está fechada.");
+        if (!cartaoId) return showToast("Selecione um cartão.", "error");
+        if (!venc) return showToast("Informe o vencimento.", "error");
+        if (state.faturaAtual) return showToast("Esta fatura já está fechada.", "error");
 
         const [ano, mes] = ym.split("-").map(Number);
         const inicio = `${ano}-${String(mes).padStart(2,"0")}-01`;
@@ -379,30 +346,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (error) {
           console.error("Erro ao fechar fatura:", error);
-          return alert("Erro ao fechar fatura. Veja console.");
+          return showToast("Erro ao fechar fatura. Veja o console.", "error");
         }
 
         // recarregar para atualizar UI e bloquear edições
         await loadFaturaForSelected();
-        alert("Fatura fechada com sucesso.");
+        showToast("Fatura fechada com sucesso.");
       } catch (err) {
         console.error("Erro btnFecharFatura:", err);
-        alert("Erro ao fechar fatura. Veja console.");
+        showToast("Erro ao fechar fatura. Veja o console.", "error");
       }
     };
 
     // GERAR DESPESA / PAGAR FATURA — cria despesa + movimentação e marca fatura paga
     if (btnPagarFatura) btnPagarFatura.onclick = async () => {
       try {
-        if (!state.faturaAtual) return alert("Feche a fatura antes de pagar.");
-        if (state.faturaAtual.pago) return alert("Esta fatura já foi paga.");
-        if (!selectContaPagamento) return alert("Selecione a conta para pagamento.");
+        if (!state.faturaAtual) return showToast("Feche a fatura antes de pagar.", "error");
+        if (state.faturaAtual.pago) return showToast("Esta fatura já foi paga.", "error");
+        if (!selectContaPagamento) return showToast("Selecione a conta para pagamento.", "error");
         const cartaoId = selectCartaoFaturas?.value;
         const contaId = selectContaPagamento?.value;
         const venc = dataVencimentoFatura?.value;
-        if (!contaId) return alert("Selecione a conta para pagamento.");
+        if (!contaId) return showToast("Selecione a conta para pagamento.", "error");
         const total = Number(state.faturaAtual.valor_total || 0);
-        if (total <= 0) return alert("Fatura sem valor.");
+        if (total <= 0) return showToast("Fatura sem valor.", "error");
 
         // 1) criar despesa marcada como baixada
         const despId = crypto.randomUUID();
@@ -420,7 +387,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (errDesp) {
           console.error("Erro ao criar despesa:", errDesp);
-          return alert("Erro ao gerar despesa. Veja console.");
+          return showToast("Erro ao gerar despesa. Veja console.", "error");
         }
 
         // 2) movimentação e atualiza saldo
@@ -442,11 +409,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // 3) marcar fatura como paga
         await supabase.from("cartao_faturas").update({ pago: true, status: "paga", data_vencimento: venc }).eq("id", state.faturaAtual.id);
 
-        alert("Fatura paga com sucesso!");
+        showToast("Fatura paga com sucesso!");
         await loadFaturaForSelected();
       } catch (err) {
         console.error("Erro btnPagarFatura:", err);
-        alert("Erro ao pagar fatura. Veja console.");
+        showToast("Erro ao pagar fatura. Veja console.", "error");
       }
     };
 
@@ -461,7 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const dataCompra = cartData?.value;
         const categoriaSelecionada = selectCategoriaLancCartao?.value;
 
-        if (!cartao_id || !descricao || !valor || !dataCompra) return alert("Preencha todos os campos, inclusive data.");
+        if (!cartao_id || !descricao || !valor || !dataCompra) return showToast("Preencha todos os campos, inclusive data.", "error");
 
         // verificar se existe fatura fechada para o mês inicial da compra
         const [ano0, mes0] = dataCompra.split("-").map(Number);
@@ -474,7 +441,7 @@ document.addEventListener("DOMContentLoaded", () => {
           .maybeSingle();
 
         // only block if status === 'fechada'
-        if (f && f.status === "fechada") return alert("Não é possível lançar compra: fatura já está fechada para o mês da compra.");
+        if (f && f.status === "fechada") return showToast("Não é possível lançar compra: fatura já está fechada para o mês da compra.", "error");
 
         // cria parcelas
         const [ano, mes, dia] = dataCompra.split("-").map(Number);
@@ -500,15 +467,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         cartDesc.value = ""; cartValor.value = ""; cartParcelas.value = 1; cartData.value = ""; parcelaInicialInput.value = 1;
         await loadFaturaForSelected();
-        alert("Compra lançada!");
+        showToast("Compra lançada!");
       } catch (err) {
         console.error("Erro btnAddPurchase:", err);
-        alert("Erro ao lançar compra. Veja console.");
+        showToast("Erro ao lançar compra. Veja console.", "error");
       }
     };
 
     if (btnCancelPurchase) btnCancelPurchase.onclick = () => { if(cartDesc) cartDesc.value=""; if(cartValor) cartValor.value=""; if(cartParcelas) cartParcelas.value=1; if(cartData) cartData.value=""; if(parcelaInicialInput) parcelaInicialInput.value=1; showView(viewFaturas); };
-
     // ----------------- PAGAMENTO ANTECIPADO -----------------
     if (btnPagamentoAntecipado) btnPagamentoAntecipado.onclick = async () => {
       await loadSelectsForLanc();
@@ -522,7 +488,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const valor = Number(valorPagAntecipado?.value || 0);
       const data = dataPagAntecipado?.value;
       const cartaoId = selectCartaoFaturas?.value;
-      if (!conta || !valor || !data) return alert("Preencha tudo.");
+      if (!conta || !valor || !data) return showToast("Preencha tudo.", "error");
       await supabase.from("cartao_lancamentos").insert([{
         user_id: state.user.id,
         cartao_id: cartaoId,
@@ -534,7 +500,7 @@ document.addEventListener("DOMContentLoaded", () => {
         parcela_atual: 1,
         billed: false
       }]);
-      alert("Pagamento antecipado registrado.");
+      showToast("Pagamento antecipado registrado.");
       showView(viewFaturas);
       await loadFaturaForSelected();
     };
@@ -559,6 +525,7 @@ document.addEventListener("DOMContentLoaded", () => {
       selectContaPagamento.innerHTML = "";
       (contas || []).forEach((c) => selectContaPagamento.appendChild(new Option(`${c.nome} (${formatReal(c.saldo_atual||c.saldo_inicial)})`, c.id)));
     }
+
     // ----------------- EDIÇÃO DE COMPRAS (À VISTA / PARCELADAS) -----------------
     function ensureAvistaViewExists(){
       if (viewEditarAvista) return;
@@ -622,10 +589,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = document.getElementById("avista-data").value;
       const cat = document.getElementById("avista-categoria").value;
       const cartao = document.getElementById("avista-cartao").value;
-      if (!desc || !valor || !data) return alert("Preencha tudo!");
+      if (!desc || !valor || !data) return showToast("Preencha tudo!", "error");
       const { error } = await supabase.from("cartao_lancamentos").update({ descricao: desc, valor, data_compra: data, categoria_id: cat, cartao_id: cartao }).eq("id", id);
-      if (error) { console.error(error); return alert("Erro ao salvar."); }
-      alert("Compra salva!");
+      if (error) { console.error(error); return showToast("Erro ao salvar.", "error"); }
+      showToast("Compra salva!");
       await loadFaturaForSelected();
       showView(viewFaturas);
     }
@@ -634,7 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const id = viewEditarAvista.dataset.lancId;
       if (!confirm("Excluir compra?")) return;
       await supabase.from("cartao_lancamentos").delete().eq("id", id);
-      alert("Compra excluída.");
+      showToast("Compra excluída.");
       await loadFaturaForSelected();
       showView(viewFaturas);
     }
@@ -644,7 +611,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const descricaoBase = (compra.descricao||"").replace(/\s*\(\d+\/\d+\)\s*$/,"").trim();
         const q = await supabase.from("cartao_lancamentos").select("*").eq("cartao_id", compra.cartao_id).ilike("descricao", `${descricaoBase}%`).order("parcela_atual", { ascending: true });
-        if (!q.data || q.data.length === 0) { alert("Não foi possível carregar as parcelas dessa compra."); return; }
+        if (!q.data || q.data.length === 0) { showToast("Não foi possível carregar as parcelas dessa compra.", "error"); return; }
         state.editingPurchaseParcels = q.data;
         state.editingPurchaseFull = q.data[0];
         // preencher campos de edição (existentes no DOM)
@@ -659,7 +626,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showView(viewEditarCompra);
       } catch (err) {
         console.error("abrirEdicaoCompraParcelada:", err);
-        alert("Erro ao abrir edição da compra. Veja console.");
+        showToast("Erro ao abrir edição da compra. Veja console.", "error");
       }
     }
 
@@ -700,9 +667,9 @@ document.addEventListener("DOMContentLoaded", () => {
     function fecharModalEditarParcela(){ parcelaEditandoId = null; if (modalEditarParcela) modalEditarParcela.classList.add("hidden"); }
     if (modalParcelaSalvar) modalParcelaSalvar.onclick = async () => {
       const novoValor = Number(modalParcelaValor?.value); const novaData = modalParcelaData?.value;
-      if (!novaData || !novoValor) return alert("Preencha os campos.");
+      if (!novaData || !novoValor) return showToast("Preencha os campos.", "error");
       const { error } = await supabase.from("cartao_lancamentos").update({ valor: novoValor, data_compra: novaData }).eq("id", parcelaEditandoId);
-      if (error) { console.error(error); alert("Erro ao salvar a parcela."); return; }
+      if (error) { console.error(error); showToast("Erro ao salvar a parcela.", "error"); return; }
       fecharModalEditarParcela();
       await loadFaturaForSelected();
       await abrirEdicaoCompraParcelada({ id: parcelaEditandoId }); // reabre para sincronizar
@@ -712,16 +679,16 @@ document.addEventListener("DOMContentLoaded", () => {
     async function excluirParcela(id){
       if (!confirm("Deseja excluir somente esta parcela?")) return;
       const p = state.editingPurchaseParcels.find(x => x.id === id);
-      if (!p) return alert("Parcela não encontrada.");
+      if (!p) return showToast("Parcela não encontrada.", "error");
       const { error } = await supabase.from("cartao_lancamentos").delete().eq("id", id);
-      if (error) { console.error(error); alert("Erro ao excluir parcela."); return; }
+      if (error) { console.error(error); showToast("Erro ao excluir parcela.", "error"); return; }
       await loadFaturaForSelected();
-      alert("Parcela excluída.");
+      showToast("Parcela excluída.");
     }
 
     async function anteciparParcela(id){
       const p = state.editingPurchaseParcels.find(x => x.id === id);
-      if (!p) return alert("Parcela não encontrada.");
+      if (!p) return showToast("Parcela não encontrada.", "error");
       const valor = Number(p.valor);
       const hoje = formatISO(new Date());
       if (!confirm(`Antecipar parcela de ${formatReal(valor)} ?`)) return;
@@ -736,146 +703,8 @@ document.addEventListener("DOMContentLoaded", () => {
         tipo: "pagamento",
         billed: false
       }]);
-      alert("Parcela antecipada.");
+      showToast("Parcela antecipada.");
       await abrirEdicaoCompraParcelada(p);
       await loadFaturaForSelected();
     }
-
-    // salvar alterações compra parcelada
-    if (document.getElementById("btn-salvar-edicao")) document.getElementById("btn-salvar-edicao").onclick = async () => {
-      try {
-        const parcelasOriginais = state.editingPurchaseParcels;
-        if (!parcelasOriginais || parcelasOriginais.length === 0) return alert("Nada carregado.");
-        const novaDesc = document.getElementById("edit-desc")?.value.trim();
-        const novoValorTotal = Number(document.getElementById("edit-valor-total")?.value || 0);
-        const novaDataInicial = document.getElementById("edit-data-inicial")?.value;
-        const novoTotalParcelas = Number(document.getElementById("edit-total-parcelas")?.value || 1);
-        const novoCartaoId = document.getElementById("edit-cartao")?.value;
-        const novaCategoria = document.getElementById("edit-categoria")?.value;
-        if(!novaDesc||!novoValorTotal||!novaDataInicial) return alert("Preencha todos os campos.");
-        const ids = parcelasOriginais.map(p=>p.id);
-        let { error } = await supabase.from("cartao_lancamentos").delete().in("id", ids);
-        if (error) { console.error(error); return alert("Erro ao excluir antigas."); }
-        const valorParcela = Number((novoValorTotal/novoTotalParcelas).toFixed(2));
-        const [anoIni, mesIni, diaIni] = novaDataInicial.split("-").map(Number);
-        for (let p=1; p<=novoTotalParcelas; p++){
-          const dt = new Date(anoIni, mesIni-1+(p-1), diaIni);
-          const dataISO = formatISO(dt);
-          await supabase.from("cartao_lancamentos").insert([{
-            user_id: state.user.id,
-            cartao_id: novoCartaoId,
-            descricao: `${novaDesc} (${p}/${novoTotalParcelas})`,
-            valor: valorParcela,
-            data_compra: dataISO,
-            parcelas: novoTotalParcelas,
-            parcela_atual: p,
-            categoria_id: novaCategoria,
-            tipo: "compra",
-            billed: false
-          }]);
-        }
-        alert("Compra atualizada.");
-        await loadFaturaForSelected();
-        showView(viewFaturas);
-      } catch (err) { console.error(err); alert("Erro ao salvar edição."); }
-    };
-
-    if (document.getElementById("btn-excluir-compra")) document.getElementById("btn-excluir-compra").onclick = async () => {
-      if (!state.editingPurchaseFull) return alert("Nenhuma compra selecionada.");
-      if (!confirm("Deseja excluir toda a compra (todas as parcelas)?")) return;
-      const parcelas = state.editingPurchaseParcels;
-      if (!parcelas || parcelas.length === 0) return;
-      const ids = parcelas.map(p=>p.id);
-      const { error } = await supabase.from("cartao_lancamentos").delete().in("id", ids);
-      if (error) { console.error(error); return alert("Erro ao excluir compra."); }
-      state.editingPurchaseParcels = [];
-      showView(viewFaturas);
-      await loadFaturaForSelected();
-      alert("Compra excluída com sucesso.");
-    };
-
-    // auxiliares usados na edição
-    async function popularSelectCategoriaEdicao(selectedId){
-      const { data } = await supabase.from("categorias").select("*").order("nome");
-      const sel = document.getElementById("edit-categoria");
-      if(!sel) return;
-      sel.innerHTML = "";
-      (data||[]).forEach((c)=>{ const op = new Option(c.nome, c.id); if(c.id===selectedId) op.selected=true; sel.appendChild(op); });
-      if(!selectedId && sel.options.length>0) sel.selectedIndex=0;
-    }
-    async function popularSelectCartaoEdicao(selectedId){
-      const { data } = await supabase.from("cartoes_credito").select("*").eq("user_id", state.user.id);
-      const sel = document.getElementById("edit-cartao");
-      if(!sel) return;
-      sel.innerHTML = "";
-      (data||[]).forEach((c)=>{ const op = new Option(c.nome, c.id); if(c.id===selectedId) op.selected=true; sel.appendChild(op); });
-    }
-
-    // ----------------- Reabrir Fatura (OPÇÃO A) -----------------
-    async function reabrirFatura(){
-      if (!state.faturaAtual) return alert("Nenhuma fatura selecionada para reabrir.");
-      if (state.faturaAtual.pago) return alert("Não é possível reabrir uma fatura já paga.");
-      if (!confirm("Deseja realmente reabrir esta fatura? Isso removerá o registro de fechamento e permitirá editar as compras.")) return;
-      try {
-        // OPÇÃO A: removemos o registro da tabela cartao_faturas
-        const { error } = await supabase.from("cartao_faturas").delete().eq("id", state.faturaAtual.id);
-        if (error) {
-          console.error("Erro ao reabrir fatura (delete):", error);
-          return alert("Erro ao reabrir fatura. Veja console.");
-        }
-
-        // Limpa o estado local e recarrega a fatura (agora sem bloqueio)
-        state.faturaAtual = null;
-        await loadFaturaForSelected();
-        alert("Fatura reaberta com sucesso. Agora você pode editar os lançamentos.");
-      } catch (err) {
-        console.error("Erro reabrirFatura:", err);
-        alert("Erro ao reabrir fatura. Veja console.");
-      }
-    }
-
-    // ----------------- Inicial load -----------------
-    try {
-      await loadCards();
-      await loadCategorias();
-      popularMesFatura();
-      popularFaturasLancamento();
-      showView(viewFaturas);
-    } catch (err) {
-      console.error("Erro na inicialização do cartao.js:", err);
-    }
-
-    // Expor funções (compatibilidade)
-    if (typeof abrirEdicaoCompraParcelada === "function") window.abrirEdicaoCompra = abrirEdicaoCompraParcelada;
-    window.abrirEdicaoAvista = abrirEdicaoAvista;
-    window.editarParcela = abrirModalEditarParcela;
-    window.editarParcelaInline = async (id) => {
-      const parcela = state.editingPurchaseParcels.find(x => x.id === id);
-      if (!parcela) return alert("Parcela não encontrada.");
-      const novoValor = prompt("Novo valor da parcela:", parcela.valor);
-      if (novoValor === null) return;
-      const novaData = prompt("Nova data da parcela (AAAA-MM-DD):", parcela.data_compra);
-      if (novaData === null) return;
-      await supabase.from("cartao_lancamentos").update({ valor: Number(novoValor), data_compra: novaData }).eq("id", id);
-      await loadFaturaForSelected();
-      alert("Parcela editada com sucesso.");
-    };
-    window.excluirParcela = excluirParcela;
-    window.anteciparParcela = anteciparParcela;
-    window.excluirCompraCompleta = async (id) => {
-      const { data } = await supabase.from("cartao_lancamentos").select("*").eq("id", id).maybeSingle();
-      if (!data) return alert("Compra não encontrada.");
-      const descricaoBase = (data.descricao||"").replace(/\s*\(\d+\/\d+\)\s*$/,"").trim();
-      const q = await supabase.from("cartao_lancamentos").select("*").eq("cartao_id", data.cartao_id).ilike("descricao", `${descricaoBase}%`);
-      const ids = (q.data||[]).map(x=>x.id);
-      if (!ids.length) return alert("Nenhuma parcela encontrada.");
-      await supabase.from("cartao_lancamentos").delete().in("id", ids);
-      await loadFaturaForSelected();
-      alert("Compra excluída.");
-    };
-    window.salvarAlteracoesCompra = document.getElementById("btn-salvar-edicao") ? (async ()=>{ document.getElementById("btn-salvar-edicao").click(); }) : (async ()=>{ alert("Salvar não disponível"); });
-
-  })();
-
-}); 
 
