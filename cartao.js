@@ -1,41 +1,41 @@
 document.addEventListener("DOMContentLoaded", () => {
 
+  // ===========================
+  // Toast simples
+  // ===========================
+  function showToast(message, type = "success") {
+    const container = document.getElementById("toast-container");
+    if (!container) { alert(message); return; }
+
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    if (type === "error") toast.classList.add("error");
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.remove();
+    }, 3500);
+  }
+
   (async () => {
-    // --- CHECAGEM BÁSICA ---
-    if (typeof supabase === "undefined") {
-      alert("Erro: supabase.js não carregado.");
-      return;
-    }
 
-    // ----------------- Toast helper -----------------
-    function showToast(message, type = "success") {
-      const container = document.getElementById("toast-container");
-      if (!container) {
-        // fallback to alert if container not present
-        alert(message);
-        return;
-      }
-      const toast = document.createElement("div");
-      toast.className = "toast";
-      if (type === "error") toast.classList.add("error");
-      toast.textContent = message;
-      container.appendChild(toast);
-      setTimeout(() => {
-        toast.remove();
-      }, 3500);
-    }
-
-    // ----------------- Estado -----------------
+    // ==========================================
+    // Estado
+    // ==========================================
     const state = {
       user: null,
       cards: [],
       categories: [],
       editingPurchaseFull: null,
       editingPurchaseParcels: [],
-      faturaAtual: null, // fatura fechada para cartao+mes atualmente visualizado
+      faturaAtual: null,
     };
 
-    // ----------------- ELEMENTOS DO DOM (IDs do cartao.html) -----------------
+    // ==========================================
+    // Elementos DOM
+    // ==========================================
     const btnBack = document.getElementById("btn-back");
     const btnLogout = document.getElementById("btn-logout");
     const userEmail = document.getElementById("user-email");
@@ -45,26 +45,34 @@ document.addEventListener("DOMContentLoaded", () => {
     const viewFaturas = document.getElementById("view-faturas");
     const viewLancamento = document.getElementById("view-lancamento");
     const viewHistorico = document.getElementById("view-historico");
+
     const boxPagAntecipado = document.getElementById("box-pag-antecipado");
     const viewEditarCompra = document.getElementById("view-editar-compra");
-    let viewEditarAvista = document.getElementById("view-editar-avista"); // gerado dinamicamente
+    let viewEditarAvista = document.getElementById("view-editar-avista");
+
     const btnSaveCard = document.getElementById("btn-save-card");
     const btnCancelCard = document.getElementById("btn-cancel-card");
+
     const cardNome = document.getElementById("card-nome");
     const cardLimite = document.getElementById("card-limite");
     const cardDiaFechamento = document.getElementById("card-dia-fechamento");
     const cardDiaVencimento = document.getElementById("card-dia-vencimento");
+
     const selectCartaoFaturas = document.getElementById("select-cartao-faturas");
     const selectMesFaturas = document.getElementById("select-mes-faturas");
     const mesDisplay = document.getElementById("mes-display");
     const btnMesPrev = document.getElementById("mes-prev");
     const btnMesNext = document.getElementById("mes-next");
+
     const faturaSummary = document.getElementById("fatura-summary");
     const listaComprasFatura = document.getElementById("lista-compras-fatura");
+
     const selectContaPagamento = document.getElementById("select-conta-pagamento");
     const dataVencimentoFatura = document.getElementById("data-vencimento-fatura");
+
     const btnFecharFatura = document.getElementById("btn-fechar-fatura");
     const btnPagarFatura = document.getElementById("btn-pagar-fatura");
+
     const selectCartaoLanc = document.getElementById("select-cartao-lanc");
     const selectCategoriaLancCartao = document.getElementById("select-categoria-lanc-cartao");
     const cartDesc = document.getElementById("cart-desc");
@@ -72,115 +80,189 @@ document.addEventListener("DOMContentLoaded", () => {
     const cartData = document.getElementById("cart-data");
     const cartParcelas = document.getElementById("cart-parcelas");
     const parcelaInicialInput = document.getElementById("parcela-inicial");
+
     const fatDisplay = document.getElementById("fat-display");
     const btnFatPrev = document.getElementById("fat-prev");
     const btnFatNext = document.getElementById("fat-next");
+
     const selectFaturaInicial = document.getElementById("select-fatura-inicial");
     const btnAddPurchase = document.getElementById("btn-add-purchase");
     const btnCancelPurchase = document.getElementById("btn-cancel-purchase");
+
     const btnPagamentoAntecipado = document.getElementById("btn-pagamento-antecipado");
     const contaPagAntecipado = document.getElementById("conta-pag-antecipado");
     const valorPagAntecipado = document.getElementById("valor-pag-antecipado");
     const dataPagAntecipado = document.getElementById("data-pag-antecipado");
     const btnConfirmarPagAntecipado = document.getElementById("btn-confirmar-pag-antecipado");
+
     const listaFaturasHistorico = document.getElementById("lista-faturas-historico");
 
-    // modal edição parcela
     const modalEditarParcela = document.getElementById("modal-editar-parcela");
     const modalParcelaValor = document.getElementById("modal-parcela-valor");
     const modalParcelaData = document.getElementById("modal-parcela-data");
     const modalParcelaSalvar = document.getElementById("modal-parcela-salvar");
     const modalParcelaCancelar = document.getElementById("modal-parcela-cancelar");
 
-    // --- datas de controle de visualização ---
     let mesFatura = new Date();
     let mesLanc = new Date();
 
-    // ---------- HELPERS ----------
+    // ==========================================
+    // Helpers
+    // ==========================================
     function formatReal(v) {
-      return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      return Number(v || 0).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      });
     }
-    function formatDateShort(d) {
-      if(!d) return "";
-      const dt = new Date(d + "T00:00:00");
-      return dt.toLocaleDateString("pt-BR");
-    }
+
     function formatISO(d) {
       return new Date(d).toISOString().slice(0, 10);
     }
+
     function displayMes(dateObj) {
-      const meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+      const meses = [
+        "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+        "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
+      ];
       return `${meses[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
     }
-    function formatYM(dateObj){
-      const a = dateObj.getFullYear();
-      const m = String(dateObj.getMonth()+1).padStart(2,"0");
-      return `${a}-${m}`;
-    }
-    function safeNumberFromCurrency(text){
-      if(!text) return 0;
-      // remove R$ and dots, replace comma with dot
-      return Number(text.replace(/[R$\s\.]/g,"").replace(",",".")||0);
+
+    function hideAllViews() {
+      [
+        viewNewCard,
+        viewFaturas,
+        viewLancamento,
+        viewHistorico,
+        boxPagAntecipado,
+        viewEditarCompra,
+        viewEditarAvista,
+      ].forEach((v) => v?.classList.add("hidden"));
     }
 
-    function hideAllViews(){
-      if(viewNewCard) viewNewCard.classList.add("hidden");
-      if(viewFaturas) viewFaturas.classList.add("hidden");
-      if(viewLancamento) viewLancamento.classList.add("hidden");
-      if(viewHistorico) viewHistorico.classList.add("hidden");
-      if(boxPagAntecipado) boxPagAntecipado.classList.add("hidden");
-      if(viewEditarCompra) viewEditarCompra.classList.add("hidden");
-      if(viewEditarAvista) viewEditarAvista.classList.add("hidden");
+    function showView(v) {
+      hideAllViews();
+      v?.classList.remove("hidden");
     }
-    function showView(v){ hideAllViews(); if(v) v.classList.remove("hidden"); }
 
-    // ----------------- Inicialização sessão -----------------
+    // ==========================================
+    // Sessão
+    // ==========================================
     const sessionResp = await supabase.auth.getSession();
     if (!sessionResp.data.session) {
       window.location.href = "login.html";
       return;
     }
+
     state.user = sessionResp.data.session.user;
     if (userEmail) userEmail.textContent = state.user.email;
 
-    // ----------------- Eventos UI -----------------
-    if (btnBack) btnBack.onclick = () => window.location.href = "app.html";
-    if (btnLogout) btnLogout.onclick = async () => { await supabase.auth.signOut(); window.location.href = "login.html"; };
-    if (document.getElementById("nav-fatura")) document.getElementById("nav-fatura").onclick = () => { showView(viewFaturas); loadFaturasSelect(); };
-    if (document.getElementById("nav-lancamento")) document.getElementById("nav-lancamento").onclick = () => { showView(viewLancamento); loadSelectsForLanc(); popularFaturasLancamento(); };
-    if (document.getElementById("nav-historico")) document.getElementById("nav-historico").onclick = () => { showView(viewHistorico); loadHistoricoFaturas(); };
-    if (btnNewCard) btnNewCard.onclick = () => { showView(viewNewCard); if(cardNome) cardNome.value=""; if(cardLimite) cardLimite.value="0"; if(cardDiaFechamento) cardDiaFechamento.value="5"; if(cardDiaVencimento) cardDiaVencimento.value="25"; };
-    if (btnCancelCard) btnCancelCard.onclick = () => showView(viewFaturas);
-    if (btnSaveCard) btnSaveCard.onclick = async () => {
-      const nome = cardNome.value.trim(); const limite = Number(cardLimite.value||0);
-      const diaFech = Number(cardDiaFechamento.value); const diaVenc = Number(cardDiaVencimento.value);
-      if(!nome) return showToast("Informe o nome do cartão.", "error");
-      await supabase.from("cartoes_credito").insert([{ user_id: state.user.id, nome, limite, dia_fechamento: diaFech, dia_vencimento: diaVenc }]);
-      await loadCards();
-      showView(viewFaturas);
-      showToast("Cartão criado com sucesso.");
-    };
-        function populateCardSelects(){
-      if(!selectCartaoFaturas || !selectCartaoLanc) return;
+    // ==========================================
+    // Dados principais
+    // ==========================================
+    async function loadCards() {
+      const { data } = await supabase
+        .from("cartoes_credito")
+        .select("*")
+        .eq("user_id", state.user.id)
+        .order("created_at", { ascending: false });
+      state.cards = data || [];
+      renderCards();
+      populateCardSelects();
+    }
+
+    function renderCards() {
+      if (!cardsList) return;
+      cardsList.innerHTML = "";
+      (state.cards || []).forEach((c) => {
+        const el = document.createElement("div");
+        el.className = "card-item";
+        el.innerHTML = `
+          <div class="card-meta">
+            <div class="card-name">${c.nome}</div>
+            <div class="card-balance">Limite: ${formatReal(c.limite)}</div>
+            <div class="card-balance">Fecha dia: ${c.dia_fechamento} • Venc: ${c.dia_vencimento}</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn-view-faturas" data-id="${c.id}">Faturas</button>
+            <button class="btn-lancar" data-id="${c.id}">Lançar</button>
+            <button class="btn-delete" data-id="${c.id}">Excluir</button>
+          </div>`;
+        cardsList.appendChild(el);
+      });
+
+      document.querySelectorAll(".btn-view-faturas").forEach((btn) => {
+        btn.onclick = () => {
+          selectCartaoFaturas.value = btn.dataset.id;
+          loadFaturasSelect();
+          showView(viewFaturas);
+        };
+      });
+      document.querySelectorAll(".btn-lancar").forEach((btn) => {
+        btn.onclick = () => {
+          selectCartaoLanc.value = btn.dataset.id;
+          loadSelectsForLanc();
+          popularFaturasLancamento();
+          showView(viewLancamento);
+        };
+      });
+      document.querySelectorAll(".btn-delete").forEach((btn) => {
+        btn.onclick = async () => {
+          if (!confirm("Excluir este cartão?")) return;
+          await supabase.from("cartoes_credito").delete().eq("id", btn.dataset.id);
+          await loadCards();
+          showToast("Cartão excluído.");
+        };
+      });
+    }
+
+    function populateCardSelects() {
+      if (!selectCartaoFaturas || !selectCartaoLanc) return;
       selectCartaoFaturas.innerHTML = "";
       selectCartaoLanc.innerHTML = "";
-      (state.cards||[]).forEach((card) => {
+      (state.cards || []).forEach((card) => {
         selectCartaoFaturas.appendChild(new Option(card.nome, card.id));
         selectCartaoLanc.appendChild(new Option(card.nome, card.id));
       });
     }
 
-    async function loadCategorias(){
+    async function loadCategorias() {
       const { data } = await supabase.from("categorias").select("*").order("nome");
       state.categories = data || [];
       if (selectCategoriaLancCartao) {
         selectCategoriaLancCartao.innerHTML = "";
-        (state.categories||[]).forEach((cat) => selectCategoriaLancCartao.appendChild(new Option(cat.nome, cat.id)));
+        (state.categories || []).forEach((cat) =>
+          selectCategoriaLancCartao.appendChild(new Option(cat.nome, cat.id))
+        );
       }
     }
 
-    // ----------------- Faturas -----------------
-    async function loadFaturasSelect(){
+    // ==========================================
+    // Faturas: carregar / renderizar / botões
+    // ==========================================
+    function popularMesFatura() {
+      if (mesDisplay) mesDisplay.textContent = displayMes(mesFatura);
+      if (selectMesFaturas) selectMesFaturas.value = `${mesFatura.getFullYear()}-${String(mesFatura.getMonth() + 1).padStart(2, "0")}`;
+    }
+    if (btnMesPrev) btnMesPrev.onclick = () => {
+      mesFatura.setMonth(mesFatura.getMonth() - 1);
+      popularMesFatura();
+      loadFaturaForSelected();
+    };
+    if (btnMesNext) btnMesNext.onclick = () => {
+      mesFatura.setMonth(mesFatura.getMonth() + 1);
+      popularMesFatura();
+      loadFaturaForSelected();
+    };
+
+    function popularFaturasLancamento() {
+      if (fatDisplay) fatDisplay.textContent = displayMes(mesLanc);
+      if (selectFaturaInicial) selectFaturaInicial.value = `${mesLanc.getFullYear()}-${String(mesLanc.getMonth() + 1).padStart(2, "0")}`;
+    }
+    if (btnFatPrev) btnFatPrev.onclick = () => { mesLanc.setMonth(mesLanc.getMonth() - 1); popularFaturasLancamento(); };
+    if (btnFatNext) btnFatNext.onclick = () => { mesLanc.setMonth(mesLanc.getMonth() + 1); popularFaturasLancamento(); };
+
+    async function loadFaturasSelect() {
       await loadCards();
       await loadCategorias();
       popularMesFatura();
@@ -193,8 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // principal: carrega compras do cartão no mês selecionado
-    async function loadFaturaForSelected(){
+    async function loadFaturaForSelected() {
       if (!selectCartaoFaturas || !selectMesFaturas) return;
       const cartao_id = selectCartaoFaturas.value;
       const ym = selectMesFaturas.value;
@@ -227,7 +308,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const total = (compras || []).reduce((s,c) => s + Number(c.valor||0), 0);
+      const total = (compras || []).reduce((s, c) => s + Number(c.valor || 0), 0);
       const card = state.cards.find(x => x.id === cartao_id);
 
       if (faturaSummary) {
@@ -239,11 +320,11 @@ document.addEventListener("DOMContentLoaded", () => {
         listaComprasFatura.innerHTML = "";
         (compras || []).forEach((c) => {
           const li = document.createElement("li");
-          const descr = ((c.descricao||"") + "").replace(/\s*\(\d+\/\d+\)\s*$/,"").trim();
-          li.innerHTML = `<span>${formatDateShort(c.data_compra)} — ${descr}</span><span>${formatReal(c.valor)}</span>`;
+          const descr = ((c.descricao || "") + "").replace(/\s*\(\d+\/\d+\)\s*$/,"").trim();
+          li.innerHTML = `<span>${new Date(c.data_compra + "T00:00:00").toLocaleDateString("pt-BR")} — ${descr}</span><span>${formatReal(c.valor)}</span>`;
           li.style.cursor = "pointer";
           li.onclick = () => {
-            if (Number(c.parcelas||0) === 1) abrirEdicaoAvista(c);
+            if (Number(c.parcelas || 0) === 1) abrirEdicaoAvista(c);
             else abrirEdicaoCompraParcelada(c);
           };
           listaComprasFatura.appendChild(li);
@@ -261,9 +342,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       state.faturaAtual = faturaDB || null;
 
-      // set data_vencimento default from card if exists (only if no closed fatura)
       if (card && dataVencimentoFatura && !state.faturaAtual) {
-        const venc = new Date(ano, mes-1, card.dia_vencimento);
+        const venc = new Date(ano, mes - 1, card.dia_vencimento);
         dataVencimentoFatura.value = formatISO(venc);
       } else if (state.faturaAtual && dataVencimentoFatura) {
         if (state.faturaAtual.data_vencimento) dataVencimentoFatura.value = state.faturaAtual.data_vencimento;
@@ -272,11 +352,9 @@ document.addEventListener("DOMContentLoaded", () => {
       updateButtonsForFatura();
     }
 
-    function updateButtonsForFatura(){
-      // remove any leftover reabrir button first (it will be re-created if needed)
+    function updateButtonsForFatura() {
       const existingReabrir = document.getElementById("btn-reabrir-fatura");
       if (existingReabrir) existingReabrir.remove();
-
       const statusEl = document.getElementById("status-fatura");
 
       if (state.faturaAtual) {
@@ -287,11 +365,9 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        // fatura fechada but NOT paid -> allow reabrir
         if (btnPagarFatura) { btnPagarFatura.disabled = false; btnPagarFatura.textContent = "Pagar Fatura"; }
         if (statusEl) statusEl.textContent = "FATURA FECHADA";
 
-        // create "Reabrir Fatura" button appended next to fechar button
         if (btnFecharFatura && btnFecharFatura.parentNode && !document.getElementById("btn-reabrir-fatura")) {
           const btn = document.createElement("button");
           btn.id = "btn-reabrir-fatura";
@@ -303,26 +379,28 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
       } else {
-        // no closed fatura
         if (btnFecharFatura) { btnFecharFatura.disabled = false; btnFecharFatura.textContent = "Fechar Fatura"; }
         if (btnPagarFatura) { btnPagarFatura.disabled = false; btnPagarFatura.textContent = "Gerar Despesa"; }
         if (statusEl) statusEl.textContent = "";
       }
     }
-    // FECHAR FATURA — cria registro em cartao_faturas e bloqueia edição
+    // ==========================================
+    // FECHAR FATURA
+    // ==========================================
     if (btnFecharFatura) btnFecharFatura.onclick = async () => {
       try {
         const cartaoId = selectCartaoFaturas.value;
         const venc = dataVencimentoFatura.value;
         const ym = selectMesFaturas.value;
+
         if (!cartaoId) return showToast("Selecione um cartão.", "error");
         if (!venc) return showToast("Informe o vencimento.", "error");
         if (state.faturaAtual) return showToast("Esta fatura já está fechada.", "error");
 
         const [ano, mes] = ym.split("-").map(Number);
-        const inicio = `${ano}-${String(mes).padStart(2,"0")}-01`;
+        const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
         const last = new Date(ano, mes, 0).getDate();
-        const fim = `${ano}-${String(mes).padStart(2,"0")}-${last}`;
+        const fim = `${ano}-${String(mes).padStart(2, "0")}-${last}`;
 
         const { data: compras } = await supabase
           .from("cartao_lancamentos")
@@ -331,7 +409,7 @@ document.addEventListener("DOMContentLoaded", () => {
           .gte("data_compra", inicio)
           .lte("data_compra", fim);
 
-        const total = (compras||[]).reduce((s,c) => s + Number(c.valor||0), 0);
+        const total = (compras || []).reduce((s, c) => s + Number(c.valor || 0), 0);
 
         const { error } = await supabase.from("cartao_faturas").insert([{
           user_id: state.user.id,
@@ -339,45 +417,48 @@ document.addEventListener("DOMContentLoaded", () => {
           ano,
           mes,
           valor_total: total,
-          data_vencimento: venc,          // <<-- CORREÇÃO: usar data_vencimento
+          data_vencimento: venc,
           pago: false,
           status: "fechada"
         }]);
 
         if (error) {
           console.error("Erro ao fechar fatura:", error);
-          return showToast("Erro ao fechar fatura. Veja o console.", "error");
+          showToast("Erro ao fechar fatura.", "error");
+          return;
         }
 
-        // recarregar para atualizar UI e bloquear edições
         await loadFaturaForSelected();
         showToast("Fatura fechada com sucesso.");
       } catch (err) {
-        console.error("Erro btnFecharFatura:", err);
-        showToast("Erro ao fechar fatura. Veja o console.", "error");
+        console.error("Erro ao fechar fatura:", err);
+        showToast("Erro ao fechar fatura.", "error");
       }
     };
 
-    // GERAR DESPESA / PAGAR FATURA — cria despesa + movimentação e marca fatura paga
+    // ==========================================
+    // PAGAR FATURA (Gerar despesa)
+    // ==========================================
     if (btnPagarFatura) btnPagarFatura.onclick = async () => {
       try {
         if (!state.faturaAtual) return showToast("Feche a fatura antes de pagar.", "error");
         if (state.faturaAtual.pago) return showToast("Esta fatura já foi paga.", "error");
-        if (!selectContaPagamento) return showToast("Selecione a conta para pagamento.", "error");
-        const cartaoId = selectCartaoFaturas?.value;
-        const contaId = selectContaPagamento?.value;
-        const venc = dataVencimentoFatura?.value;
+
+        const contaId = selectContaPagamento.value;
+        const venc = dataVencimentoFatura.value;
+
         if (!contaId) return showToast("Selecione a conta para pagamento.", "error");
+
         const total = Number(state.faturaAtual.valor_total || 0);
         if (total <= 0) return showToast("Fatura sem valor.", "error");
 
-        // 1) criar despesa marcada como baixada
+        // 1 — Criar despesa baixada
         const despId = crypto.randomUUID();
         const { error: errDesp } = await supabase.from("despesas").insert([{
           id: despId,
           user_id: state.user.id,
           conta_id: contaId,
-          descricao: `Pagamento fatura cartão ${state.faturaAtual.ano}-${String(state.faturaAtual.mes).padStart(2,"0")}`,
+          descricao: `Pagamento fatura cartão`,
           valor: total,
           data: venc,
           categoria_id: null,
@@ -386,15 +467,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }]);
 
         if (errDesp) {
-          console.error("Erro ao criar despesa:", errDesp);
-          return showToast("Erro ao gerar despesa. Veja console.", "error");
+          console.error(errDesp);
+          return showToast("Erro ao gerar despesa.", "error");
         }
 
-        // 2) movimentação e atualiza saldo
-        const { data: conta } = await supabase.from("contas_bancarias").select("*").eq("id", contaId).single();
-        const novoSaldo = Number(conta.saldo_atual || 0) - total;
-        await supabase.from("contas_bancarias").update({ saldo_atual: novoSaldo }).eq("id", contaId);
+        // 2 — Atualizar saldo da conta
+        const { data: conta } = await supabase.from("contas_bancarias")
+          .select("*").eq("id", contaId).single();
 
+        const novoSaldo = Number(conta.saldo_atual || 0) - total;
+
+        await supabase.from("contas_bancarias")
+          .update({ saldo_atual: novoSaldo }).eq("id", contaId);
+
+        // 3 — Criar movimentação
         await supabase.from("movimentacoes").insert([{
           id: crypto.randomUUID(),
           user_id: state.user.id,
@@ -406,33 +492,75 @@ document.addEventListener("DOMContentLoaded", () => {
           lancamento_id: despId
         }]);
 
-        // 3) marcar fatura como paga
-        await supabase.from("cartao_faturas").update({ pago: true, status: "paga", data_vencimento: venc }).eq("id", state.faturaAtual.id);
+        // 4 — Marcar fatura como paga
+        await supabase.from("cartao_faturas")
+          .update({ pago: true, status: "paga", data_vencimento: venc })
+          .eq("id", state.faturaAtual.id);
 
         showToast("Fatura paga com sucesso!");
         await loadFaturaForSelected();
+
       } catch (err) {
-        console.error("Erro btnPagarFatura:", err);
-        showToast("Erro ao pagar fatura. Veja console.", "error");
+        console.error("Erro ao pagar fatura:", err);
+        showToast("Erro ao pagar fatura.", "error");
       }
     };
 
-    // ----------------- LANÇAR COMPRA -----------------
+    // ==========================================
+    // REABRIR FATURA (Opção A)
+    // ==========================================
+    async function reabrirFatura() {
+      if (!state.faturaAtual)
+        return showToast("Nenhuma fatura selecionada.", "error");
+
+      if (state.faturaAtual.pago)
+        return showToast("Não é possível reabrir fatura paga.", "error");
+
+      if (!confirm("Deseja realmente reabrir esta fatura?"))
+        return;
+
+      try {
+        const { error } = await supabase
+          .from("cartao_faturas")
+          .delete()
+          .eq("id", state.faturaAtual.id);
+
+        if (error) {
+          console.error(error);
+          return showToast("Erro ao reabrir fatura.", "error");
+        }
+
+        state.faturaAtual = null;
+
+        await loadFaturaForSelected();
+        showToast("Fatura reaberta com sucesso.");
+
+      } catch (err) {
+        console.error(err);
+        showToast("Erro ao reabrir fatura.", "error");
+      }
+    }
+
+    // ==========================================
+    // LANÇAR COMPRA
+    // ==========================================
     if (btnAddPurchase) btnAddPurchase.onclick = async () => {
       try {
-        const cartao_id = selectCartaoLanc?.value;
-        const descricao = cartDesc?.value?.trim();
-        const valor = Number(cartValor?.value || 0);
-        const parcelas = Number(cartParcelas?.value || 1);
-        const parcelaInicial = Number(parcelaInicialInput?.value || 1);
-        const dataCompra = cartData?.value;
-        const categoriaSelecionada = selectCategoriaLancCartao?.value;
+        const cartao_id = selectCartaoLanc.value;
+        const descricao = cartDesc.value.trim();
+        const valor = Number(cartValor.value || 0);
+        const parcelas = Number(cartParcelas.value || 1);
+        const parcelaInicial = Number(parcelaInicialInput.value || 1);
+        const dataCompra = cartData.value;
+        const categoriaSelecionada = selectCategoriaLancCartao.value;
 
-        if (!cartao_id || !descricao || !valor || !dataCompra) return showToast("Preencha todos os campos, inclusive data.", "error");
+        if (!cartao_id || !descricao || !valor || !dataCompra)
+          return showToast("Preencha todos os campos.", "error");
 
-        // verificar se existe fatura fechada para o mês inicial da compra
         const [ano0, mes0] = dataCompra.split("-").map(Number);
-        const { data: f } = await supabase.from("cartao_faturas")
+
+        const { data: f } = await supabase
+          .from("cartao_faturas")
           .select("*")
           .eq("user_id", state.user.id)
           .eq("cartao_id", cartao_id)
@@ -440,16 +568,16 @@ document.addEventListener("DOMContentLoaded", () => {
           .eq("mes", mes0)
           .maybeSingle();
 
-        // only block if status === 'fechada'
-        if (f && f.status === "fechada") return showToast("Não é possível lançar compra: fatura já está fechada para o mês da compra.", "error");
+        if (f && f.status === "fechada")
+          return showToast("Não é possível lançar: fatura fechada.", "error");
 
-        // cria parcelas
         const [ano, mes, dia] = dataCompra.split("-").map(Number);
+
         for (let p = parcelaInicial; p <= parcelas; p++) {
-          const dt = new Date(ano, (mes-1) + (p - parcelaInicial), dia);
+          const dt = new Date(ano, (mes - 1) + (p - parcelaInicial), dia);
           const dataISO = formatISO(dt);
           const descFinal = parcelas === 1 ? descricao : `${descricao} (${p}/${parcelas})`;
-          const valorParcela = parcelas === 1 ? valor : Number((valor/parcelas).toFixed(2));
+          const valorParcela = parcelas === 1 ? valor : Number((valor / parcelas).toFixed(2));
 
           await supabase.from("cartao_lancamentos").insert([{
             user_id: state.user.id,
@@ -465,30 +593,51 @@ document.addEventListener("DOMContentLoaded", () => {
           }]);
         }
 
-        cartDesc.value = ""; cartValor.value = ""; cartParcelas.value = 1; cartData.value = ""; parcelaInicialInput.value = 1;
+        cartDesc.value = "";
+        cartValor.value = "";
+        cartParcelas.value = 1;
+        cartData.value = "";
+        parcelaInicialInput.value = 1;
+
         await loadFaturaForSelected();
         showToast("Compra lançada!");
+
       } catch (err) {
-        console.error("Erro btnAddPurchase:", err);
-        showToast("Erro ao lançar compra. Veja console.", "error");
+        console.error(err);
+        showToast("Erro ao lançar compra.", "error");
       }
     };
 
-    if (btnCancelPurchase) btnCancelPurchase.onclick = () => { if(cartDesc) cartDesc.value=""; if(cartValor) cartValor.value=""; if(cartParcelas) cartParcelas.value=1; if(cartData) cartData.value=""; if(parcelaInicialInput) parcelaInicialInput.value=1; showView(viewFaturas); };
-    // ----------------- PAGAMENTO ANTECIPADO -----------------
+    if (btnCancelPurchase)
+      btnCancelPurchase.onclick = () => {
+        cartDesc.value = "";
+        cartValor.value = "";
+        cartParcelas.value = 1;
+        cartData.value = "";
+        parcelaInicialInput.value = 1;
+        showView(viewFaturas);
+      };
+
+    // ==========================================
+    // PAGAMENTO ANTECIPADO
+    // ==========================================
     if (btnPagamentoAntecipado) btnPagamentoAntecipado.onclick = async () => {
       await loadSelectsForLanc();
-      if (contaPagAntecipado && selectContaPagamento) contaPagAntecipado.innerHTML = selectContaPagamento.innerHTML;
-      if (valorPagAntecipado) valorPagAntecipado.value = "";
-      if (dataPagAntecipado) dataPagAntecipado.value = formatISO(new Date());
+      contaPagAntecipado.innerHTML = selectContaPagamento.innerHTML;
+      valorPagAntecipado.value = "";
+      dataPagAntecipado.value = formatISO(new Date());
       showView(boxPagAntecipado);
     };
+
     if (btnConfirmarPagAntecipado) btnConfirmarPagAntecipado.onclick = async () => {
-      const conta = contaPagAntecipado?.value;
-      const valor = Number(valorPagAntecipado?.value || 0);
-      const data = dataPagAntecipado?.value;
-      const cartaoId = selectCartaoFaturas?.value;
-      if (!conta || !valor || !data) return showToast("Preencha tudo.", "error");
+      const conta = contaPagAntecipado.value;
+      const valor = Number(valorPagAntecipado.value || 0);
+      const data = dataPagAntecipado.value;
+      const cartaoId = selectCartaoFaturas.value;
+
+      if (!conta || !valor || !data)
+        return showToast("Preencha todos os campos.", "error");
+
       await supabase.from("cartao_lancamentos").insert([{
         user_id: state.user.id,
         cartao_id: cartaoId,
@@ -500,211 +649,345 @@ document.addEventListener("DOMContentLoaded", () => {
         parcela_atual: 1,
         billed: false
       }]);
+
       showToast("Pagamento antecipado registrado.");
       showView(viewFaturas);
       await loadFaturaForSelected();
     };
 
-    // ----------------- HISTÓRICO -----------------
-    async function loadHistoricoFaturas(){
-      const { data } = await supabase.from("cartao_faturas").select("*, cartoes_credito(nome)").eq("user_id", state.user.id).order("created_at", { ascending: false });
-      if(!listaFaturasHistorico) return;
+    // ==========================================
+    // HISTÓRICO DE FATURAS
+    // ==========================================
+    async function loadHistoricoFaturas() {
+      const { data } = await supabase
+        .from("cartao_faturas")
+        .select("*, cartoes_credito(nome)")
+        .eq("user_id", state.user.id)
+        .order("created_at", { ascending: false });
+
       listaFaturasHistorico.innerHTML = "";
       (data || []).forEach((f) => {
         const li = document.createElement("li");
-        li.textContent = `${f.cartoes_credito?.nome} • ${f.mes}/${f.ano} — ${formatReal(f.valor_total||0)} — ${f.pago ? "Paga" : f.status}`;
+        li.textContent =
+          `${f.cartoes_credito?.nome} • ${f.mes}/${f.ano} — ` +
+          `${formatReal(f.valor_total || 0)} — ` +
+          `${f.pago ? "Paga" : f.status}`;
         listaFaturasHistorico.appendChild(li);
       });
     }
 
-    // ----------------- SELECTS AUXILIARES -----------------
-    async function loadSelectsForLanc(){
+    // ==========================================
+    // SELECTS AUXILIARES
+    // ==========================================
+    async function loadSelectsForLanc() {
       await loadCategorias();
-      const { data: contas } = await supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id);
-      if (!selectContaPagamento) return;
+      const { data: contas } = await supabase
+        .from("contas_bancarias")
+        .select("*")
+        .eq("user_id", state.user.id);
+
       selectContaPagamento.innerHTML = "";
-      (contas || []).forEach((c) => selectContaPagamento.appendChild(new Option(`${c.nome} (${formatReal(c.saldo_atual||c.saldo_inicial)})`, c.id)));
+      (contas || []).forEach((c) =>
+        selectContaPagamento.appendChild(
+          new Option(`${c.nome} (${formatReal(c.saldo_atual)})`, c.id)
+        )
+      );
     }
 
-    // ----------------- EDIÇÃO DE COMPRAS (À VISTA / PARCELADAS) -----------------
-    function ensureAvistaViewExists(){
+    // ==========================================
+    // EDIÇÃO DE COMPRA À VISTA
+    // ==========================================
+    function ensureAvistaViewExists() {
       if (viewEditarAvista) return;
-      const rightColumn = document.querySelector(".right-column") || document.body;
+      const right = document.querySelector(".right-column") || document.body;
+
       const div = document.createElement("div");
       div.id = "view-editar-avista";
       div.className = "panel view hidden";
-      div.innerHTML = `<div class="panel-header"><h2>Editar Compra (À vista)</h2><button id="btn-avista-voltar" class="btn-secondary">Voltar</button></div>
+      div.innerHTML = `
+        <div class="panel-header">
+          <h2>Editar Compra (À vista)</h2>
+          <button id="btn-avista-voltar" class="btn-secondary">Voltar</button>
+        </div>
         <div class="form">
           <label>Descrição</label><input id="avista-desc">
           <label>Valor</label><input id="avista-valor" type="number" step="0.01">
           <label>Data</label><input id="avista-data" type="date">
           <label>Categoria</label><select id="avista-categoria"></select>
           <label>Cartão</label><select id="avista-cartao"></select>
-          <div class="actions-row"><button id="btn-avista-salvar" class="btn-primary">Salvar</button><button id="btn-avista-excluir" class="btn-danger">Excluir</button></div>
+          <div class="actions-row">
+            <button id="btn-avista-salvar" class="btn-primary">Salvar</button>
+            <button id="btn-avista-excluir" class="btn-danger">Excluir</button>
+          </div>
         </div>`;
-      rightColumn.appendChild(div);
+
+      right.appendChild(div);
       viewEditarAvista = div;
+
       document.getElementById("btn-avista-voltar").onclick = () => showView(viewFaturas);
       document.getElementById("btn-avista-salvar").onclick = salvarEdicaoAvista;
       document.getElementById("btn-avista-excluir").onclick = excluirCompraAvista;
     }
 
-    async function abrirEdicaoAvista(lanc){
+    async function abrirEdicaoAvista(l) {
       ensureAvistaViewExists();
-      document.getElementById("avista-desc").value = (lanc.descricao||"").replace(/\s*\(\d+\/\d+\)\s*$/,"").trim();
-      document.getElementById("avista-valor").value = Number(lanc.valor);
-      document.getElementById("avista-data").value = lanc.data_compra || lanc.data || "";
-      await popularSelectCategoriaAvista(lanc.categoria_id);
-      await popularSelectCartaoAvista(lanc.cartao_id);
-      viewEditarAvista.dataset.lancId = lanc.id;
+      document.getElementById("avista-desc").value =
+        (l.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
+      document.getElementById("avista-valor").value = Number(l.valor);
+      document.getElementById("avista-data").value =
+        l.data_compra || l.data || "";
+
+      await popularSelectCategoriaAvista(l.categoria_id);
+      await popularSelectCartaoAvista(l.cartao_id);
+
+      viewEditarAvista.dataset.lancId = l.id;
       showView(viewEditarAvista);
     }
 
-    async function popularSelectCategoriaAvista(selectedId){
+    async function popularSelectCategoriaAvista(id) {
       const { data } = await supabase.from("categorias").select("*").order("nome");
       const sel = document.getElementById("avista-categoria");
       sel.innerHTML = "";
       (data || []).forEach((c) => {
         const op = new Option(c.nome, c.id);
-        if (c.id === selectedId) op.selected = true;
-        sel.appendChild(op);
-      });
-      if (!selectedId && sel.options.length) sel.selectedIndex = 0;
-    }
-    async function popularSelectCartaoAvista(selectedId){
-      const { data } = await supabase.from("cartoes_credito").select("*").eq("user_id", state.user.id);
-      const sel = document.getElementById("avista-cartao");
-      sel.innerHTML = "";
-      (data || []).forEach((c) => {
-        const op = new Option(c.nome, c.id);
-        if (c.id === selectedId) op.selected = true;
+        if (c.id === id) op.selected = true;
         sel.appendChild(op);
       });
     }
 
-    async function salvarEdicaoAvista(){
+    async function popularSelectCartaoAvista(id) {
+      const { data } = await supabase
+        .from("cartoes_credito")
+        .select("*")
+        .eq("user_id", state.user.id);
+
+      const sel = document.getElementById("avista-cartao");
+      sel.innerHTML = "";
+      (data || []).forEach((c) => {
+        const op = new Option(c.nome, c.id);
+        if (c.id === id) op.selected = true;
+        sel.appendChild(op);
+      });
+    }
+
+    async function salvarEdicaoAvista() {
       const id = viewEditarAvista.dataset.lancId;
       const desc = document.getElementById("avista-desc").value.trim();
-      const valor = Number(document.getElementById("avista-valor").value||0);
+      const valor = Number(document.getElementById("avista-valor").value || 0);
       const data = document.getElementById("avista-data").value;
       const cat = document.getElementById("avista-categoria").value;
       const cartao = document.getElementById("avista-cartao").value;
-      if (!desc || !valor || !data) return showToast("Preencha tudo!", "error");
-      const { error } = await supabase.from("cartao_lancamentos").update({ descricao: desc, valor, data_compra: data, categoria_id: cat, cartao_id: cartao }).eq("id", id);
-      if (error) { console.error(error); return showToast("Erro ao salvar.", "error"); }
+
+      if (!desc || !valor || !data)
+        return showToast("Preencha tudo!", "error");
+
+      const { error } = await supabase
+        .from("cartao_lancamentos")
+        .update({
+          descricao: desc,
+          valor,
+          data_compra: data,
+          categoria_id: cat,
+          cartao_id: cartao,
+        })
+        .eq("id", id);
+
+      if (error) {
+        console.error(error);
+        return showToast("Erro ao salvar.", "error");
+      }
+
       showToast("Compra salva!");
       await loadFaturaForSelected();
       showView(viewFaturas);
     }
 
-    async function excluirCompraAvista(){
+    async function excluirCompraAvista() {
       const id = viewEditarAvista.dataset.lancId;
       if (!confirm("Excluir compra?")) return;
+
       await supabase.from("cartao_lancamentos").delete().eq("id", id);
+
       showToast("Compra excluída.");
       await loadFaturaForSelected();
       showView(viewFaturas);
     }
 
-    // ----------------- EDIÇÃO PARCELADA (simplificada) -----------------
-    async function abrirEdicaoCompraParcelada(compra){
+    // ==========================================
+    // EDIÇÃO PARCELADA
+    // ==========================================
+    async function abrirEdicaoCompraParcelada(c) {
       try {
-        const descricaoBase = (compra.descricao||"").replace(/\s*\(\d+\/\d+\)\s*$/,"").trim();
-        const q = await supabase.from("cartao_lancamentos").select("*").eq("cartao_id", compra.cartao_id).ilike("descricao", `${descricaoBase}%`).order("parcela_atual", { ascending: true });
-        if (!q.data || q.data.length === 0) { showToast("Não foi possível carregar as parcelas dessa compra.", "error"); return; }
+        const base = (c.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
+
+        const q = await supabase
+          .from("cartao_lancamentos")
+          .select("*")
+          .eq("cartao_id", c.cartao_id)
+          .ilike("descricao", `${base}%`)
+          .order("parcela_atual", { ascending: true });
+
+        if (!q.data || q.data.length === 0)
+          return showToast("Não foi possível carregar parcelas.", "error");
+
         state.editingPurchaseParcels = q.data;
         state.editingPurchaseFull = q.data[0];
-        // preencher campos de edição (existentes no DOM)
-        document.getElementById("edit-desc").value = descricaoBase;
-        const somaTotal = state.editingPurchaseParcels.reduce((s,p) => s + Number(p.valor||0), 0);
-        document.getElementById("edit-valor-total").value = Number(somaTotal.toFixed(2));
-        document.getElementById("edit-data-inicial").value = state.editingPurchaseParcels[0].data_compra;
-        document.getElementById("edit-total-parcelas").value = state.editingPurchaseParcels.length;
+
+        document.getElementById("edit-desc").value = base;
+
+        const soma = q.data.reduce((s, p) => s + Number(p.valor), 0);
+        document.getElementById("edit-valor-total").value = soma;
+
+        document.getElementById("edit-data-inicial").value = q.data[0].data_compra;
+        document.getElementById("edit-total-parcelas").value = q.data.length;
+
         await popularSelectCategoriaEdicao(state.editingPurchaseFull.categoria_id);
         await popularSelectCartaoEdicao(state.editingPurchaseFull.cartao_id);
+
         renderParcelasEdicao();
         showView(viewEditarCompra);
+
       } catch (err) {
-        console.error("abrirEdicaoCompraParcelada:", err);
-        showToast("Erro ao abrir edição da compra. Veja console.", "error");
+        console.error(err);
+        showToast("Erro ao abrir edição.", "error");
       }
     }
 
-    function renderParcelasEdicao(){
+    function renderParcelasEdicao() {
       const lista = document.getElementById("lista-parcelas-editar");
       lista.innerHTML = "";
+
       const parcelas = state.editingPurchaseParcels || [];
       const total = parcelas.length;
+
       parcelas.forEach((p) => {
         const li = document.createElement("li");
         li.className = "parcela-item";
         li.dataset.parcelaId = p.id;
-        const leftSpan = document.createElement("span");
-        leftSpan.textContent = `(${p.parcela_atual}/${total}) — ${formatDateShort(p.data_compra)} — ${formatReal(p.valor)}`;
-        const actionsDiv = document.createElement("div");
-        actionsDiv.style.display = "flex";
-        actionsDiv.style.gap = "6px";
-        const btnEdit = document.createElement("button"); btnEdit.className="btn-secondary"; btnEdit.textContent="Editar";
-        btnEdit.onclick = (ev) => { ev.stopPropagation(); abrirModalEditarParcela(p); };
-        const btnDel = document.createElement("button"); btnDel.className="btn-danger"; btnDel.textContent="Excluir";
-        btnDel.onclick = (ev) => { ev.stopPropagation(); excluirParcela(p.id); };
-        const btnAnt = document.createElement("button"); btnAnt.className="btn-primary"; btnAnt.textContent="Antecipar";
-        btnAnt.onclick = (ev) => { ev.stopPropagation(); anteciparParcela(p.id); };
-        actionsDiv.appendChild(btnEdit); actionsDiv.appendChild(btnDel); actionsDiv.appendChild(btnAnt);
-        li.appendChild(leftSpan); li.appendChild(actionsDiv);
+
+        li.innerHTML = `
+          <span>(${p.parcela_atual}/${total}) — 
+            ${new Date(p.data_compra + "T00:00:00").toLocaleDateString("pt-BR")} —
+            ${formatReal(p.valor)}
+          </span>
+          <div class="parcela-actions">
+            <button class="btn-secondary btn-edit">Editar</button>
+            <button class="btn-danger btn-del">Excluir</button>
+            <button class="btn-primary btn-ant">Antecipar</button>
+          </div>`;
+
+        li.querySelector(".btn-edit").onclick = () => abrirModalEditarParcela(p);
+        li.querySelector(".btn-del").onclick = () => excluirParcela(p.id);
+        li.querySelector(".btn-ant").onclick = () => anteciparParcela(p.id);
+
         lista.appendChild(li);
       });
     }
 
-    // modal editar parcela
+    // ==========================================
+    // MODAL EDITAR PARCELA
+    // ==========================================
     let parcelaEditandoId = null;
-    function abrirModalEditarParcela(parcela){
+
+    function abrirModalEditarParcela(parcela) {
       parcelaEditandoId = parcela.id;
-      if (modalParcelaValor) modalParcelaValor.value = parcela.valor;
-      if (modalParcelaData) modalParcelaData.value = parcela.data_compra;
-      if (modalEditarParcela) modalEditarParcela.classList.remove("hidden");
+      modalParcelaValor.value = parcela.valor;
+      modalParcelaData.value = parcela.data_compra;
+      modalEditarParcela.classList.remove("hidden");
     }
-    function fecharModalEditarParcela(){ parcelaEditandoId = null; if (modalEditarParcela) modalEditarParcela.classList.add("hidden"); }
-    if (modalParcelaSalvar) modalParcelaSalvar.onclick = async () => {
-      const novoValor = Number(modalParcelaValor?.value); const novaData = modalParcelaData?.value;
-      if (!novaData || !novoValor) return showToast("Preencha os campos.", "error");
-      const { error } = await supabase.from("cartao_lancamentos").update({ valor: novoValor, data_compra: novaData }).eq("id", parcelaEditandoId);
-      if (error) { console.error(error); showToast("Erro ao salvar a parcela.", "error"); return; }
+
+    function fecharModalEditarParcela() {
+      parcelaEditandoId = null;
+      modalEditarParcela.classList.add("hidden");
+    }
+
+    modalParcelaCancelar.onclick = fecharModalEditarParcela;
+
+    modalParcelaSalvar.onclick = async () => {
+      const novoValor = Number(modalParcelaValor.value);
+      const novaData = modalParcelaData.value;
+
+      if (!novaData || !novoValor)
+        return showToast("Preencha todos os campos.", "error");
+
+      const { error } = await supabase
+        .from("cartao_lancamentos")
+        .update({ valor: novoValor, data_compra: novaData })
+        .eq("id", parcelaEditandoId);
+
+      if (error) {
+        console.error(error);
+        return showToast("Erro ao salvar parcela.", "error");
+      }
+
       fecharModalEditarParcela();
       await loadFaturaForSelected();
-      await abrirEdicaoCompraParcelada({ id: parcelaEditandoId }); // reabre para sincronizar
+      showToast("Parcela atualizada.");
     };
-    if (modalParcelaCancelar) modalParcelaCancelar.onclick = fecharModalEditarParcela;
 
-    async function excluirParcela(id){
-      if (!confirm("Deseja excluir somente esta parcela?")) return;
-      const p = state.editingPurchaseParcels.find(x => x.id === id);
-      if (!p) return showToast("Parcela não encontrada.", "error");
-      const { error } = await supabase.from("cartao_lancamentos").delete().eq("id", id);
-      if (error) { console.error(error); showToast("Erro ao excluir parcela.", "error"); return; }
+    // ==========================================
+    // EXCLUIR PARCELA
+    // ==========================================
+    async function excluirParcela(id) {
+      if (!confirm("Excluir somente esta parcela?")) return;
+
+      const { error } = await supabase
+        .from("cartao_lancamentos")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error(error);
+        return showToast("Erro ao excluir parcela.", "error");
+      }
+
       await loadFaturaForSelected();
       showToast("Parcela excluída.");
     }
 
-    async function anteciparParcela(id){
-      const p = state.editingPurchaseParcels.find(x => x.id === id);
-      if (!p) return showToast("Parcela não encontrada.", "error");
-      const valor = Number(p.valor);
+    // ==========================================
+    // ANTECIPAR PARCELA
+    // ==========================================
+    async function anteciparParcela(id) {
+      const parcela = state.editingPurchaseParcels.find((p) => p.id === id);
+      if (!parcela)
+        return showToast("Parcela não encontrada.", "error");
+
+      if (!confirm(`Antecipar parcela de ${formatReal(parcela.valor)}?`))
+        return;
+
       const hoje = formatISO(new Date());
-      if (!confirm(`Antecipar parcela de ${formatReal(valor)} ?`)) return;
+
       await supabase.from("cartao_lancamentos").insert([{
         user_id: state.user.id,
-        cartao_id: p.cartao_id,
-        descricao: `Antecipação ${p.descricao}`,
-        valor: -Math.abs(valor),
+        cartao_id: parcela.cartao_id,
+        descricao: `Antecipação ${parcela.descricao}`,
+        valor: -Math.abs(parcela.valor),
         data_compra: hoje,
         parcelas: 1,
         parcela_atual: 1,
         tipo: "pagamento",
         billed: false
       }]);
+
       showToast("Parcela antecipada.");
-      await abrirEdicaoCompraParcelada(p);
       await loadFaturaForSelected();
     }
 
+    // ==========================================
+    // INICIALIZAÇÃO FINAL
+    // ==========================================
+    try {
+      await loadCards();
+      await loadCategorias();
+      popularMesFatura();
+      popularFaturasLancamento();
+      showView(viewFaturas);
+    } catch (err) {
+      console.error(err);
+      showToast("Erro ao carregar dados.", "error");
+    }
+
+  })(); 
+
+}); 
