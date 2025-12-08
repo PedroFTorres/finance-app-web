@@ -16,9 +16,6 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => toast.remove(), 3500);
   }
 
-  // ===========================
-  // ESTADO GLOBAL
-  ===========================
   const state = {
     user: null,
     cards: [],
