@@ -1239,11 +1239,9 @@ document.addEventListener("DOMContentLoaded", () => {
         sel.appendChild(op);
       });
     }
-
-    // -----------------------------------------------------
+    // ==========================================
     // INICIALIZAÇÃO FINAL
-    // -----------------------------------------------------
-       
+    // ==========================================
     (async () => {
       try {
         await loadCards();
@@ -1251,8 +1249,7 @@ document.addEventListener("DOMContentLoaded", () => {
         popularMesFatura();
         popularFaturasLancamento();
 
-        if (viewFaturas) showView(viewFaturas);
-        else if (viewNewCard) showView(viewNewCard);
+        showView(viewFaturas);
 
       } catch (err) {
         console.error(err);
@@ -1260,4 +1257,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     })();
 
+  })(); // fecha o async principal iniciado dentro do DOMContentLoaded
+
 }); // fecha DOMContentLoaded
+
+  
