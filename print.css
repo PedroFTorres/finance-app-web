@@ -1,49 +1,83 @@
+/* print.css — estilo limpo para impressão */
+:root {
+  --roxo: #7a4dff;
+  --text: #333;
+  --bg: #fff;
+}
+
 body {
   font-family: "Inter", sans-serif;
-  background: #ffffff;
-  padding: 32px;
-  color: #333;
+  color: var(--text);
+  background: var(--bg);
+  margin: 28px;
+  line-height: 1.4;
 }
 
 .print-header {
   text-align: center;
-  margin-bottom: 25px;
+  margin-bottom: 18px;
 }
 
 .print-logo {
   width: 140px;
-  margin-bottom: 8px;
+  display: block;
+  margin: 0 auto 8px;
 }
 
-h1 {
-  color: #7a4dff;
-  margin: 0;
+.print-header h1 {
+  color: var(--roxo);
+  margin: 0 0 6px;
+  font-size: 20px;
 }
 
+.print-header .meta {
+  color: #666;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* tabela padrão */
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
+  margin-top: 12px;
+  font-size: 13px;
 }
 
-th {
-  background: #efe9ff;
-  padding: 10px;
+thead th {
   text-align: left;
+  padding: 8px 6px;
   border-bottom: 1px solid #ddd;
+  background: #f3f0ff;
+  color: #222;
 }
 
-td {
-  padding: 10px;
+tbody td {
+  padding: 8px 6px;
   border-bottom: 1px solid #eee;
 }
 
-ul {
-  list-style: none;
-  padding: 0;
+/* listas simples */
+ul { margin-top: 8px; }
+ul li { padding: 8px 6px; border-bottom: 1px solid #eee; }
+
+/* esconder ações e botões no print (fallback) */
+.actions-col, .col-acoes, th.actions, .btn, button, .action-btn, .nav-btn {
+  display: none !important;
 }
 
-ul li {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
+/* se houver colunas específicas com "Ações", esconder via nth-child pode ser necessário */
+@media print {
+  /* remove fundo do body e quaisquer sombras */
+  body, .print-content { background: #fff !important; box-shadow: none !important; }
+
+  /* garante que botões nunca apareçam */
+  button, .btn, .action-btn, .nav-btn { display: none !important; }
+
+  /* opcional: ajustar fontes e tamanhos para impressão */
+  a::after { content: ""; } /* remove links visuais */
+  img { max-width: 160px; height: auto; }
 }
+
+/* pequenas melhorias visuais para PDF */
+.print-content { margin-top: 8px; }
