@@ -1243,6 +1243,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // -----------------------------------------------------
     // INICIALIZAÇÃO FINAL
     // -----------------------------------------------------
+       
     (async () => {
       try {
         await loadCards();
@@ -1250,13 +1251,13 @@ document.addEventListener("DOMContentLoaded", () => {
         popularMesFatura();
         popularFaturasLancamento();
 
-        // abrir view padrão
         if (viewFaturas) showView(viewFaturas);
         else if (viewNewCard) showView(viewNewCard);
+
       } catch (err) {
         console.error(err);
         showToast("Erro ao iniciar aplicação.", "error");
       }
     })();
-    }); // fecha DOMContentLoaded
 
+}); // fecha DOMContentLoaded
