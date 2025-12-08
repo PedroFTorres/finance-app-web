@@ -240,3 +240,44 @@ body {
 .modal-content h3 {
   margin-bottom: 6px;
 }
+/* ===========================
+   TOAST NOTIFICATIONS
+   =========================== */
+#toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toast {
+  background: var(--roxo);
+  color: white;
+  padding: 12px 18px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  font-size: 15px;
+  font-weight: 600;
+  max-width: 320px;
+  opacity: 0;
+  transform: translateX(30px);
+  animation: toastIn 0.3s forwards, toastOut 0.3s forwards 3.2s;
+}
+
+.toast.error {
+  background: #e83f5b; /* vermelho usado no tema */
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(30px); }
+}
+
