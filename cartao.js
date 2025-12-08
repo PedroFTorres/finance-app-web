@@ -1,3 +1,8 @@
+/* cartao.js - parte 1/3
+   Versão corrigida: inicialização segura para evitar travamento por elementos inexistentes
+   Fonte original carregada: :contentReference[oaicite:1]{index=1}
+*/
+
 document.addEventListener("DOMContentLoaded", () => {
 
   // ===========================
@@ -48,7 +53,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const boxPagAntecipado = document.getElementById("box-pag-antecipado");
     const viewEditarCompra = document.getElementById("view-editar-compra");
-    let viewEditarAvista = document.getElementById("view-editar-avista");
+
+    // CORREÇÃO: viewEditarAvista pode não existir inicialmente → inicializa com null
+    let viewEditarAvista = document.getElementById("view-editar-avista") || null;
 
     const btnSaveCard = document.getElementById("btn-save-card");
     const btnCancelCard = document.getElementById("btn-cancel-card");
@@ -128,6 +135,9 @@ document.addEventListener("DOMContentLoaded", () => {
       return `${meses[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
     }
 
+    // ==========================================
+    // CORREÇÕES DE INICIALIZAÇÃO (IMPEDIR TRAVAMENTO)
+    // ==========================================
     function hideAllViews() {
       [
         viewNewCard,
@@ -136,14 +146,17 @@ document.addEventListener("DOMContentLoaded", () => {
         viewHistorico,
         boxPagAntecipado,
         viewEditarCompra,
-        viewEditarAvista,
-      ].forEach((v) => v?.classList.add("hidden"));
+        viewEditarAvista
+      ]
+      .filter(Boolean) // remove null/undefined
+      .forEach(v => v.classList.add("hidden"));
     }
 
     function showView(v) {
       hideAllViews();
-      v?.classList.remove("hidden");
+      if (v && v.classList) v.classList.remove("hidden");
     }
+// Parte 2/3 — continua
 
     // ==========================================
     // Sessão
@@ -191,16 +204,17 @@ document.addEventListener("DOMContentLoaded", () => {
         cardsList.appendChild(el);
       });
 
+      // Re-bind buttons (com checagem)
       document.querySelectorAll(".btn-view-faturas").forEach((btn) => {
         btn.onclick = () => {
-          selectCartaoFaturas.value = btn.dataset.id;
+          if (selectCartaoFaturas) selectCartaoFaturas.value = btn.dataset.id;
           loadFaturasSelect();
           showView(viewFaturas);
         };
       });
       document.querySelectorAll(".btn-lancar").forEach((btn) => {
         btn.onclick = () => {
-          selectCartaoLanc.value = btn.dataset.id;
+          if (selectCartaoLanc) selectCartaoLanc.value = btn.dataset.id;
           loadSelectsForLanc();
           popularFaturasLancamento();
           showView(viewLancamento);
@@ -366,7 +380,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (btnPagarFatura) { btnPagarFatura.disabled = false; btnPagarFatura.textContent = "Pagar Fatura"; }
-        if (statusEl) statusEl.textContent = "FATURA FECHADA";
+        if (statusEl) statusEl.textContent = "Fatura Fechada".toUpperCase(); // keep same behavior
 
         if (btnFecharFatura && btnFecharFatura.parentNode && !document.getElementById("btn-reabrir-fatura")) {
           const btn = document.createElement("button");
@@ -384,9 +398,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (statusEl) statusEl.textContent = "";
       }
     }
-    // ==========================================
+
     // FECHAR FATURA
-    // ==========================================
     if (btnFecharFatura) btnFecharFatura.onclick = async () => {
       try {
         const cartaoId = selectCartaoFaturas.value;
@@ -435,10 +448,9 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("Erro ao fechar fatura.", "error");
       }
     };
+    // Parte 3/3 — final
 
-    // ==========================================
     // PAGAR FATURA (Gerar despesa)
-    // ==========================================
     if (btnPagarFatura) btnPagarFatura.onclick = async () => {
       try {
         if (!state.faturaAtual) return showToast("Feche a fatura antes de pagar.", "error");
@@ -506,9 +518,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
 
-    // ==========================================
-    // REABRIR FATURA (Opção A)
-    // ==========================================
+    // REABRIR FATURA
     async function reabrirFatura() {
       if (!state.faturaAtual)
         return showToast("Nenhuma fatura selecionada.", "error");
@@ -541,9 +551,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // ==========================================
     // LANÇAR COMPRA
-    // ==========================================
     if (btnAddPurchase) btnAddPurchase.onclick = async () => {
       try {
         const cartao_id = selectCartaoLanc.value;
@@ -552,7 +560,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const parcelas = Number(cartParcelas.value || 1);
         const parcelaInicial = Number(parcelaInicialInput.value || 1);
         const dataCompra = cartData.value;
-        const categoriaSelecionada = selectCategoriaLancCartao.value;
+        const categoriaSelecionada = selectCategoriaLancCartao ? selectCategoriaLancCartao.value : null;
 
         if (!cartao_id || !descricao || !valor || !dataCompra)
           return showToast("Preencha todos os campos.", "error");
@@ -618,22 +626,20 @@ document.addEventListener("DOMContentLoaded", () => {
         showView(viewFaturas);
       };
 
-    // ==========================================
     // PAGAMENTO ANTECIPADO
-    // ==========================================
     if (btnPagamentoAntecipado) btnPagamentoAntecipado.onclick = async () => {
       await loadSelectsForLanc();
-      contaPagAntecipado.innerHTML = selectContaPagamento.innerHTML;
-      valorPagAntecipado.value = "";
-      dataPagAntecipado.value = formatISO(new Date());
+      if (contaPagAntecipado && selectContaPagamento) contaPagAntecipado.innerHTML = selectContaPagamento.innerHTML;
+      if (valorPagAntecipado) valorPagAntecipado.value = "";
+      if (dataPagAntecipado) dataPagAntecipado.value = formatISO(new Date());
       showView(boxPagAntecipado);
     };
 
     if (btnConfirmarPagAntecipado) btnConfirmarPagAntecipado.onclick = async () => {
-      const conta = contaPagAntecipado.value;
-      const valor = Number(valorPagAntecipado.value || 0);
-      const data = dataPagAntecipado.value;
-      const cartaoId = selectCartaoFaturas.value;
+      const conta = contaPagAntecipado ? contaPagAntecipado.value : null;
+      const valor = Number(valorPagAntecipado ? valorPagAntecipado.value || 0 : 0);
+      const data = dataPagAntecipado ? dataPagAntecipado.value : null;
+      const cartaoId = selectCartaoFaturas ? selectCartaoFaturas.value : null;
 
       if (!conta || !valor || !data)
         return showToast("Preencha todos os campos.", "error");
@@ -655,9 +661,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await loadFaturaForSelected();
     };
 
-    // ==========================================
     // HISTÓRICO DE FATURAS
-    // ==========================================
     async function loadHistoricoFaturas() {
       const { data } = await supabase
         .from("cartao_faturas")
@@ -665,20 +669,20 @@ document.addEventListener("DOMContentLoaded", () => {
         .eq("user_id", state.user.id)
         .order("created_at", { ascending: false });
 
-      listaFaturasHistorico.innerHTML = "";
-      (data || []).forEach((f) => {
-        const li = document.createElement("li");
-        li.textContent =
-          `${f.cartoes_credito?.nome} • ${f.mes}/${f.ano} — ` +
-          `${formatReal(f.valor_total || 0)} — ` +
-          `${f.pago ? "Paga" : f.status}`;
-        listaFaturasHistorico.appendChild(li);
-      });
+      if (listaFaturasHistorico) {
+        listaFaturasHistorico.innerHTML = "";
+        (data || []).forEach((f) => {
+          const li = document.createElement("li");
+          li.textContent =
+            `${f.cartoes_credito?.nome} • ${f.mes}/${f.ano} — ` +
+            `${formatReal(f.valor_total || 0)} — ` +
+            `${f.pago ? "Paga" : f.status}`;
+          listaFaturasHistorico.appendChild(li);
+        });
+      }
     }
 
-    // ==========================================
     // SELECTS AUXILIARES
-    // ==========================================
     async function loadSelectsForLanc() {
       await loadCategorias();
       const { data: contas } = await supabase
@@ -686,17 +690,17 @@ document.addEventListener("DOMContentLoaded", () => {
         .select("*")
         .eq("user_id", state.user.id);
 
-      selectContaPagamento.innerHTML = "";
-      (contas || []).forEach((c) =>
-        selectContaPagamento.appendChild(
-          new Option(`${c.nome} (${formatReal(c.saldo_atual)})`, c.id)
-        )
-      );
+      if (selectContaPagamento) {
+        selectContaPagamento.innerHTML = "";
+        (contas || []).forEach((c) =>
+          selectContaPagamento.appendChild(
+            new Option(`${c.nome} (${formatReal(c.saldo_atual)})`, c.id)
+          )
+        );
+      }
     }
 
-    // ==========================================
     // EDIÇÃO DE COMPRA À VISTA
-    // ==========================================
     function ensureAvistaViewExists() {
       if (viewEditarAvista) return;
       const right = document.querySelector(".right-column") || document.body;
@@ -747,6 +751,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function popularSelectCategoriaAvista(id) {
       const { data } = await supabase.from("categorias").select("*").order("nome");
       const sel = document.getElementById("avista-categoria");
+      if (!sel) return;
       sel.innerHTML = "";
       (data || []).forEach((c) => {
         const op = new Option(c.nome, c.id);
@@ -762,6 +767,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .eq("user_id", state.user.id);
 
       const sel = document.getElementById("avista-cartao");
+      if (!sel) return;
       sel.innerHTML = "";
       (data || []).forEach((c) => {
         const op = new Option(c.nome, c.id);
@@ -813,9 +819,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showView(viewFaturas);
     }
 
-    // ==========================================
     // EDIÇÃO PARCELADA
-    // ==========================================
     async function abrirEdicaoCompraParcelada(c) {
       try {
         const base = (c.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
@@ -833,13 +837,17 @@ document.addEventListener("DOMContentLoaded", () => {
         state.editingPurchaseParcels = q.data;
         state.editingPurchaseFull = q.data[0];
 
-        document.getElementById("edit-desc").value = base;
+        const editDescEl = document.getElementById("edit-desc");
+        if (editDescEl) editDescEl.value = base;
 
         const soma = q.data.reduce((s, p) => s + Number(p.valor), 0);
-        document.getElementById("edit-valor-total").value = soma;
+        const editValorTotal = document.getElementById("edit-valor-total");
+        if (editValorTotal) editValorTotal.value = soma;
 
-        document.getElementById("edit-data-inicial").value = q.data[0].data_compra;
-        document.getElementById("edit-total-parcelas").value = q.data.length;
+        const editDataInicial = document.getElementById("edit-data-inicial");
+        const editTotalParcelas = document.getElementById("edit-total-parcelas");
+        if (editDataInicial) editDataInicial.value = q.data[0].data_compra;
+        if (editTotalParcelas) editTotalParcelas.value = q.data.length;
 
         await popularSelectCategoriaEdicao(state.editingPurchaseFull.categoria_id);
         await popularSelectCartaoEdicao(state.editingPurchaseFull.cartao_id);
@@ -855,6 +863,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderParcelasEdicao() {
       const lista = document.getElementById("lista-parcelas-editar");
+      if (!lista) return;
       lista.innerHTML = "";
 
       const parcelas = state.editingPurchaseParcels || [];
@@ -876,36 +885,38 @@ document.addEventListener("DOMContentLoaded", () => {
             <button class="btn-primary btn-ant">Antecipar</button>
           </div>`;
 
-        li.querySelector(".btn-edit").onclick = () => abrirModalEditarParcela(p);
-        li.querySelector(".btn-del").onclick = () => excluirParcela(p.id);
-        li.querySelector(".btn-ant").onclick = () => anteciparParcela(p.id);
+        const btnEdit = li.querySelector(".btn-edit");
+        const btnDel = li.querySelector(".btn-del");
+        const btnAnt = li.querySelector(".btn-ant");
+
+        if (btnEdit) btnEdit.onclick = () => abrirModalEditarParcela(p);
+        if (btnDel) btnDel.onclick = () => excluirParcela(p.id);
+        if (btnAnt) btnAnt.onclick = () => anteciparParcela(p.id);
 
         lista.appendChild(li);
       });
     }
 
-    // ==========================================
     // MODAL EDITAR PARCELA
-    // ==========================================
     let parcelaEditandoId = null;
 
     function abrirModalEditarParcela(parcela) {
       parcelaEditandoId = parcela.id;
-      modalParcelaValor.value = parcela.valor;
-      modalParcelaData.value = parcela.data_compra;
-      modalEditarParcela.classList.remove("hidden");
+      if (modalParcelaValor) modalParcelaValor.value = parcela.valor;
+      if (modalParcelaData) modalParcelaData.value = parcela.data_compra;
+      if (modalEditarParcela) modalEditarParcela.classList.remove("hidden");
     }
 
     function fecharModalEditarParcela() {
       parcelaEditandoId = null;
-      modalEditarParcela.classList.add("hidden");
+      if (modalEditarParcela) modalEditarParcela.classList.add("hidden");
     }
 
-    modalParcelaCancelar.onclick = fecharModalEditarParcela;
+    if (modalParcelaCancelar) modalParcelaCancelar.onclick = fecharModalEditarParcela;
 
-    modalParcelaSalvar.onclick = async () => {
-      const novoValor = Number(modalParcelaValor.value);
-      const novaData = modalParcelaData.value;
+    if (modalParcelaSalvar) modalParcelaSalvar.onclick = async () => {
+      const novoValor = Number(modalParcelaValor ? modalParcelaValor.value : 0);
+      const novaData = modalParcelaData ? modalParcelaData.value : null;
 
       if (!novaData || !novoValor)
         return showToast("Preencha todos os campos.", "error");
@@ -925,9 +936,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("Parcela atualizada.");
     };
 
-    // ==========================================
     // EXCLUIR PARCELA
-    // ==========================================
     async function excluirParcela(id) {
       if (!confirm("Excluir somente esta parcela?")) return;
 
@@ -945,9 +954,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("Parcela excluída.");
     }
 
-    // ==========================================
     // ANTECIPAR PARCELA
-    // ==========================================
     async function anteciparParcela(id) {
       const parcela = state.editingPurchaseParcels.find((p) => p.id === id);
       if (!parcela)
@@ -974,9 +981,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await loadFaturaForSelected();
     }
 
-    // ==========================================
     // INICIALIZAÇÃO FINAL
-    // ==========================================
     try {
       await loadCards();
       await loadCategorias();
@@ -988,6 +993,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("Erro ao carregar dados.", "error");
     }
 
-  })(); 
+  })();
 
 }); 
+
