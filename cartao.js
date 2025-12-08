@@ -1258,3 +1258,5 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("Erro ao iniciar aplicação.", "error");
       }
     })();
+    }); // fecha DOMContentLoaded
+
