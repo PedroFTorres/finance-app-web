@@ -1,12 +1,7 @@
-/* cartao.js - parte 1/3
-   Versão corrigida: inicialização segura para evitar travamento por elementos inexistentes
-   Fonte original carregada: :contentReference[oaicite:1]{index=1}
-*/
-
 document.addEventListener("DOMContentLoaded", () => {
 
   // ===========================
-  // Toast simples
+  // TOAST SIMPLES
   // ===========================
   function showToast(message, type = "success") {
     const container = document.getElementById("toast-container");
@@ -18,161 +13,150 @@ document.addEventListener("DOMContentLoaded", () => {
     toast.textContent = message;
 
     container.appendChild(toast);
-
-    setTimeout(() => {
-      toast.remove();
-    }, 3500);
+    setTimeout(() => toast.remove(), 3500);
   }
 
+  // ===========================
+  // ESTADO GLOBAL
+  ===========================
+  const state = {
+    user: null,
+    cards: [],
+    categories: [],
+    editingPurchaseFull: null,
+    editingPurchaseParcels: [],
+    faturaAtual: null,
+  };
+
+  // ===========================
+  // ELEMENTOS DOM
+  // ===========================
+  const btnBack = document.getElementById("btn-back");
+  const btnLogout = document.getElementById("btn-logout");
+  const userEmail = document.getElementById("user-email");
+
+  const cardsList = document.getElementById("cards-list");
+  const btnNewCard = document.getElementById("btn-new-card");
+
+  const viewNewCard = document.getElementById("view-new-card");
+  const viewFaturas = document.getElementById("view-faturas");
+  const viewLancamento = document.getElementById("view-lancamento");
+  const viewHistorico = document.getElementById("view-historico");
+  const boxPagAntecipado = document.getElementById("box-pag-antecipado");
+  const viewEditarCompra = document.getElementById("view-editar-compra");
+
+  // ⚠️ este só existe dinamicamente → começa como null
+  let viewEditarAvista = null;
+
+  // ===========================
+  // HELPERS
+  // ===========================
+  const formatReal = v =>
+    Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const formatISO = d => new Date(d).toISOString().slice(0, 10);
+
+  const displayMes = dateObj => {
+    const meses = [
+      "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+      "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
+    ];
+    return `${meses[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+  };
+
+  // ===========================
+  // CORREÇÃO CRÍTICA: VIEW CONTROLLER
+  // ===========================
+  function hideAllViews() {
+    [
+      viewNewCard,
+      viewFaturas,
+      viewLancamento,
+      viewHistorico,
+      boxPagAntecipado,
+      viewEditarCompra,
+      viewEditarAvista
+    ]
+    .filter(Boolean)
+    .forEach(v => v.classList.add("hidden"));
+  }
+
+  function showView(v) {
+    hideAllViews();
+    if (v) v.classList.remove("hidden");
+  }
+
+  // ===========================
+  // EVENTOS ESTÁTICOS DO HTML
+  // ===========================
+
+  // ← VOLTAR
+  if (btnBack) {
+    btnBack.onclick = () => {
+      if (history.length > 1) history.back();
+      else window.location.href = "app.html";
+    };
+  }
+
+  // SAIR
+  if (btnLogout) {
+    btnLogout.onclick = async () => {
+      try { await supabase.auth.signOut(); } catch {}
+      window.location.href = "login.html";
+    };
+  }
+
+  // Atalhos da coluna esquerda
+  const navFatura = document.getElementById("nav-fatura");
+  const navLancamento = document.getElementById("nav-lancamento");
+  const navHistorico = document.getElementById("nav-historico");
+
+  if (navFatura) {
+    navFatura.onclick = async () => {
+      await loadFaturasSelect();
+      showView(viewFaturas);
+    };
+  }
+
+  if (navLancamento) {
+    navLancamento.onclick = async () => {
+      await loadSelectsForLanc();
+      popularFaturasLancamento();
+      showView(viewLancamento);
+    };
+  }
+
+  if (navHistorico) {
+    navHistorico.onclick = async () => {
+      await loadHistoricoFaturas();
+      showView(viewHistorico);
+    };
+  }
+
+  // ===========================
+  // INÍCIO DA LÓGICA PRINCIPAL
+  // ===========================
   (async () => {
 
-    // ==========================================
-    // Estado
-    // ==========================================
-    const state = {
-      user: null,
-      cards: [],
-      categories: [],
-      editingPurchaseFull: null,
-      editingPurchaseParcels: [],
-      faturaAtual: null,
-    };
-
-    // ==========================================
-    // Elementos DOM
-    // ==========================================
-    const btnBack = document.getElementById("btn-back");
-    const btnLogout = document.getElementById("btn-logout");
-    const userEmail = document.getElementById("user-email");
-    const cardsList = document.getElementById("cards-list");
-    const btnNewCard = document.getElementById("btn-new-card");
-    const viewNewCard = document.getElementById("view-new-card");
-    const viewFaturas = document.getElementById("view-faturas");
-    const viewLancamento = document.getElementById("view-lancamento");
-    const viewHistorico = document.getElementById("view-historico");
-
-    const boxPagAntecipado = document.getElementById("box-pag-antecipado");
-    const viewEditarCompra = document.getElementById("view-editar-compra");
-
-    // CORREÇÃO: viewEditarAvista pode não existir inicialmente → inicializa com null
-    let viewEditarAvista = document.getElementById("view-editar-avista") || null;
-
-    const btnSaveCard = document.getElementById("btn-save-card");
-    const btnCancelCard = document.getElementById("btn-cancel-card");
-
-    const cardNome = document.getElementById("card-nome");
-    const cardLimite = document.getElementById("card-limite");
-    const cardDiaFechamento = document.getElementById("card-dia-fechamento");
-    const cardDiaVencimento = document.getElementById("card-dia-vencimento");
-
-    const selectCartaoFaturas = document.getElementById("select-cartao-faturas");
-    const selectMesFaturas = document.getElementById("select-mes-faturas");
-    const mesDisplay = document.getElementById("mes-display");
-    const btnMesPrev = document.getElementById("mes-prev");
-    const btnMesNext = document.getElementById("mes-next");
-
-    const faturaSummary = document.getElementById("fatura-summary");
-    const listaComprasFatura = document.getElementById("lista-compras-fatura");
-
-    const selectContaPagamento = document.getElementById("select-conta-pagamento");
-    const dataVencimentoFatura = document.getElementById("data-vencimento-fatura");
-
-    const btnFecharFatura = document.getElementById("btn-fechar-fatura");
-    const btnPagarFatura = document.getElementById("btn-pagar-fatura");
-
-    const selectCartaoLanc = document.getElementById("select-cartao-lanc");
-    const selectCategoriaLancCartao = document.getElementById("select-categoria-lanc-cartao");
-    const cartDesc = document.getElementById("cart-desc");
-    const cartValor = document.getElementById("cart-valor");
-    const cartData = document.getElementById("cart-data");
-    const cartParcelas = document.getElementById("cart-parcelas");
-    const parcelaInicialInput = document.getElementById("parcela-inicial");
-
-    const fatDisplay = document.getElementById("fat-display");
-    const btnFatPrev = document.getElementById("fat-prev");
-    const btnFatNext = document.getElementById("fat-next");
-
-    const selectFaturaInicial = document.getElementById("select-fatura-inicial");
-    const btnAddPurchase = document.getElementById("btn-add-purchase");
-    const btnCancelPurchase = document.getElementById("btn-cancel-purchase");
-
-    const btnPagamentoAntecipado = document.getElementById("btn-pagamento-antecipado");
-    const contaPagAntecipado = document.getElementById("conta-pag-antecipado");
-    const valorPagAntecipado = document.getElementById("valor-pag-antecipado");
-    const dataPagAntecipado = document.getElementById("data-pag-antecipado");
-    const btnConfirmarPagAntecipado = document.getElementById("btn-confirmar-pag-antecipado");
-
-    const listaFaturasHistorico = document.getElementById("lista-faturas-historico");
-
-    const modalEditarParcela = document.getElementById("modal-editar-parcela");
-    const modalParcelaValor = document.getElementById("modal-parcela-valor");
-    const modalParcelaData = document.getElementById("modal-parcela-data");
-    const modalParcelaSalvar = document.getElementById("modal-parcela-salvar");
-    const modalParcelaCancelar = document.getElementById("modal-parcela-cancelar");
-
-    let mesFatura = new Date();
-    let mesLanc = new Date();
-
-    // ==========================================
-    // Helpers
-    // ==========================================
-    function formatReal(v) {
-      return Number(v || 0).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      });
-    }
-
-    function formatISO(d) {
-      return new Date(d).toISOString().slice(0, 10);
-    }
-
-    function displayMes(dateObj) {
-      const meses = [
-        "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-        "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
-      ];
-      return `${meses[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-    }
-
-    // ==========================================
-    // CORREÇÕES DE INICIALIZAÇÃO (IMPEDIR TRAVAMENTO)
-    // ==========================================
-    function hideAllViews() {
-      [
-        viewNewCard,
-        viewFaturas,
-        viewLancamento,
-        viewHistorico,
-        boxPagAntecipado,
-        viewEditarCompra,
-        viewEditarAvista
-      ]
-      .filter(Boolean) // remove null/undefined
-      .forEach(v => v.classList.add("hidden"));
-    }
-
-    function showView(v) {
-      hideAllViews();
-      if (v && v.classList) v.classList.remove("hidden");
-    }
-// Parte 2/3 — continua
-
-    // ==========================================
-    // Sessão
-    // ==========================================
-    const sessionResp = await supabase.auth.getSession();
-    if (!sessionResp.data.session) {
+    // verifica sessão
+    const session = await supabase.auth.getSession();
+    if (!session.data.session) {
       window.location.href = "login.html";
       return;
     }
 
-    state.user = sessionResp.data.session.user;
+    state.user = session.data.session.user;
     if (userEmail) userEmail.textContent = state.user.email;
 
-    // ==========================================
-    // Dados principais
-    // ==========================================
+    // a partir daqui começa a lógica (loadCards, render, faturas, etc.)
+// ============================
+// CARTAO.JS — OPÇÃO B
+// Parte 2/5 — loadCards, renderCards, selects e faturas
+// ============================
+
+    // ==========================
+    // loadCards / render / selects
+    // ==========================
     async function loadCards() {
       const { data } = await supabase
         .from("cartoes_credito")
@@ -187,6 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderCards() {
       if (!cardsList) return;
       cardsList.innerHTML = "";
+
       (state.cards || []).forEach((c) => {
         const el = document.createElement("div");
         el.className = "card-item";
@@ -204,22 +189,24 @@ document.addEventListener("DOMContentLoaded", () => {
         cardsList.appendChild(el);
       });
 
-      // Re-bind buttons (com checagem)
+      // rebind (com checagens)
       document.querySelectorAll(".btn-view-faturas").forEach((btn) => {
         btn.onclick = () => {
           if (selectCartaoFaturas) selectCartaoFaturas.value = btn.dataset.id;
-          loadFaturasSelect();
+          loadFaturasSelect().catch(err => console.error(err));
           showView(viewFaturas);
         };
       });
+
       document.querySelectorAll(".btn-lancar").forEach((btn) => {
         btn.onclick = () => {
           if (selectCartaoLanc) selectCartaoLanc.value = btn.dataset.id;
-          loadSelectsForLanc();
+          loadSelectsForLanc().catch(err => console.error(err));
           popularFaturasLancamento();
           showView(viewLancamento);
         };
       });
+
       document.querySelectorAll(".btn-delete").forEach((btn) => {
         btn.onclick = async () => {
           if (!confirm("Excluir este cartão?")) return;
@@ -251,28 +238,34 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // ==========================================
-    // Faturas: carregar / renderizar / botões
-    // ==========================================
+    // ==========================
+    // Faturas: navegação por mês e carregamento
+    // ==========================
+    let mesFatura = new Date();
+    let mesLanc = new Date();
+
     function popularMesFatura() {
       if (mesDisplay) mesDisplay.textContent = displayMes(mesFatura);
       if (selectMesFaturas) selectMesFaturas.value = `${mesFatura.getFullYear()}-${String(mesFatura.getMonth() + 1).padStart(2, "0")}`;
     }
+
     if (btnMesPrev) btnMesPrev.onclick = () => {
       mesFatura.setMonth(mesFatura.getMonth() - 1);
       popularMesFatura();
-      loadFaturaForSelected();
+      loadFaturaForSelected().catch(err => console.error(err));
     };
+
     if (btnMesNext) btnMesNext.onclick = () => {
       mesFatura.setMonth(mesFatura.getMonth() + 1);
       popularMesFatura();
-      loadFaturaForSelected();
+      loadFaturaForSelected().catch(err => console.error(err));
     };
 
     function popularFaturasLancamento() {
       if (fatDisplay) fatDisplay.textContent = displayMes(mesLanc);
       if (selectFaturaInicial) selectFaturaInicial.value = `${mesLanc.getFullYear()}-${String(mesLanc.getMonth() + 1).padStart(2, "0")}`;
     }
+
     if (btnFatPrev) btnFatPrev.onclick = () => { mesLanc.setMonth(mesLanc.getMonth() - 1); popularFaturasLancamento(); };
     if (btnFatNext) btnFatNext.onclick = () => { mesLanc.setMonth(mesLanc.getMonth() + 1); popularFaturasLancamento(); };
 
@@ -380,7 +373,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (btnPagarFatura) { btnPagarFatura.disabled = false; btnPagarFatura.textContent = "Pagar Fatura"; }
-        if (statusEl) statusEl.textContent = "Fatura Fechada".toUpperCase(); // keep same behavior
+        if (statusEl) statusEl.textContent = "FATURA FECHADA";
 
         if (btnFecharFatura && btnFecharFatura.parentNode && !document.getElementById("btn-reabrir-fatura")) {
           const btn = document.createElement("button");
@@ -398,8 +391,14 @@ document.addEventListener("DOMContentLoaded", () => {
         if (statusEl) statusEl.textContent = "";
       }
     }
+// ============================
+// CARTAO.JS — OPÇÃO B
+// Parte 3/5 — fechar/pagar/reabrir fatura, lançar compra
+// ============================
 
+    // ==========================
     // FECHAR FATURA
+    // ==========================
     if (btnFecharFatura) btnFecharFatura.onclick = async () => {
       try {
         const cartaoId = selectCartaoFaturas.value;
@@ -436,21 +435,23 @@ document.addEventListener("DOMContentLoaded", () => {
         }]);
 
         if (error) {
-          console.error("Erro ao fechar fatura:", error);
+          console.error(error);
           showToast("Erro ao fechar fatura.", "error");
           return;
         }
 
         await loadFaturaForSelected();
         showToast("Fatura fechada com sucesso.");
+
       } catch (err) {
-        console.error("Erro ao fechar fatura:", err);
+        console.error(err);
         showToast("Erro ao fechar fatura.", "error");
       }
     };
-    // Parte 3/3 — final
 
-    // PAGAR FATURA (Gerar despesa)
+    // ==========================
+    // PAGAR FATURA
+    // ==========================
     if (btnPagarFatura) btnPagarFatura.onclick = async () => {
       try {
         if (!state.faturaAtual) return showToast("Feche a fatura antes de pagar.", "error");
@@ -459,18 +460,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const contaId = selectContaPagamento.value;
         const venc = dataVencimentoFatura.value;
 
-        if (!contaId) return showToast("Selecione a conta para pagamento.", "error");
+        if (!contaId) return showToast("Selecione a conta.", "error");
 
         const total = Number(state.faturaAtual.valor_total || 0);
         if (total <= 0) return showToast("Fatura sem valor.", "error");
 
-        // 1 — Criar despesa baixada
-        const despId = crypto.randomUUID();
+        // 1 — inserir despesa
+        const idDesp = crypto.randomUUID();
         const { error: errDesp } = await supabase.from("despesas").insert([{
-          id: despId,
+          id: idDesp,
           user_id: state.user.id,
           conta_id: contaId,
-          descricao: `Pagamento fatura cartão`,
+          descricao: "Pagamento fatura cartão",
           valor: total,
           data: venc,
           categoria_id: null,
@@ -483,8 +484,9 @@ document.addEventListener("DOMContentLoaded", () => {
           return showToast("Erro ao gerar despesa.", "error");
         }
 
-        // 2 — Atualizar saldo da conta
-        const { data: conta } = await supabase.from("contas_bancarias")
+        // 2 — atualizar saldo da conta
+        const { data: conta } = await supabase
+          .from("contas_bancarias")
           .select("*").eq("id", contaId).single();
 
         const novoSaldo = Number(conta.saldo_atual || 0) - total;
@@ -492,19 +494,19 @@ document.addEventListener("DOMContentLoaded", () => {
         await supabase.from("contas_bancarias")
           .update({ saldo_atual: novoSaldo }).eq("id", contaId);
 
-        // 3 — Criar movimentação
+        // 3 — criar movimentação
         await supabase.from("movimentacoes").insert([{
           id: crypto.randomUUID(),
           user_id: state.user.id,
           conta_id: contaId,
           tipo: "debito",
           valor: total,
-          descricao: `Pagamento fatura cartão`,
+          descricao: "Pagamento fatura cartão",
           data: venc,
-          lancamento_id: despId
+          lancamento_id: idDesp
         }]);
 
-        // 4 — Marcar fatura como paga
+        // 4 — marcar fatura como paga
         await supabase.from("cartao_faturas")
           .update({ pago: true, status: "paga", data_vencimento: venc })
           .eq("id", state.faturaAtual.id);
@@ -513,12 +515,14 @@ document.addEventListener("DOMContentLoaded", () => {
         await loadFaturaForSelected();
 
       } catch (err) {
-        console.error("Erro ao pagar fatura:", err);
+        console.error(err);
         showToast("Erro ao pagar fatura.", "error");
       }
     };
 
+    // ==========================
     // REABRIR FATURA
+    // ==========================
     async function reabrirFatura() {
       if (!state.faturaAtual)
         return showToast("Nenhuma fatura selecionada.", "error");
@@ -541,7 +545,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         state.faturaAtual = null;
-
         await loadFaturaForSelected();
         showToast("Fatura reaberta com sucesso.");
 
@@ -551,7 +554,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // LANÇAR COMPRA
+    // ==========================
+    // LANÇAR COMPRA NO CARTÃO
+    // ==========================
     if (btnAddPurchase) btnAddPurchase.onclick = async () => {
       try {
         const cartao_id = selectCartaoLanc.value;
@@ -565,25 +570,27 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!cartao_id || !descricao || !valor || !dataCompra)
           return showToast("Preencha todos os campos.", "error");
 
-        const [ano0, mes0] = dataCompra.split("-").map(Number);
+        const [anoLanc, mesLancBuy] = dataCompra.split("-").map(Number);
 
-        const { data: f } = await supabase
+        // verifica se a fatura do mês está fechada
+        const { data: fat } = await supabase
           .from("cartao_faturas")
           .select("*")
           .eq("user_id", state.user.id)
           .eq("cartao_id", cartao_id)
-          .eq("ano", ano0)
-          .eq("mes", mes0)
+          .eq("ano", anoLanc)
+          .eq("mes", mesLancBuy)
           .maybeSingle();
 
-        if (f && f.status === "fechada")
+        if (fat && fat.status === "fechada")
           return showToast("Não é possível lançar: fatura fechada.", "error");
 
+        // gerar parcelas
         const [ano, mes, dia] = dataCompra.split("-").map(Number);
 
         for (let p = parcelaInicial; p <= parcelas; p++) {
           const dt = new Date(ano, (mes - 1) + (p - parcelaInicial), dia);
-          const dataISO = formatISO(dt);
+          const dataParcela = formatISO(dt);
           const descFinal = parcelas === 1 ? descricao : `${descricao} (${p}/${parcelas})`;
           const valorParcela = parcelas === 1 ? valor : Number((valor / parcelas).toFixed(2));
 
@@ -592,7 +599,7 @@ document.addEventListener("DOMContentLoaded", () => {
             cartao_id,
             descricao: descFinal,
             valor: valorParcela,
-            data_compra: dataISO,
+            data_compra: dataParcela,
             parcelas,
             parcela_atual: p,
             categoria_id: categoriaSelecionada || null,
@@ -601,6 +608,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }]);
         }
 
+        // limpar inputs
         cartDesc.value = "";
         cartValor.value = "";
         cartParcelas.value = 1;
@@ -616,6 +624,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
 
+    // CANCELAR LANÇAMENTO (volta para faturas)
     if (btnCancelPurchase)
       btnCancelPurchase.onclick = () => {
         cartDesc.value = "";
@@ -626,18 +635,23 @@ document.addEventListener("DOMContentLoaded", () => {
         showView(viewFaturas);
       };
 
+    // ==========================
     // PAGAMENTO ANTECIPADO
+    // ==========================
     if (btnPagamentoAntecipado) btnPagamentoAntecipado.onclick = async () => {
       await loadSelectsForLanc();
-      if (contaPagAntecipado && selectContaPagamento) contaPagAntecipado.innerHTML = selectContaPagamento.innerHTML;
+      if (contaPagAntecipado && selectContaPagamento)
+        contaPagAntecipado.innerHTML = selectContaPagamento.innerHTML;
+
       if (valorPagAntecipado) valorPagAntecipado.value = "";
       if (dataPagAntecipado) dataPagAntecipado.value = formatISO(new Date());
+
       showView(boxPagAntecipado);
     };
 
     if (btnConfirmarPagAntecipado) btnConfirmarPagAntecipado.onclick = async () => {
       const conta = contaPagAntecipado ? contaPagAntecipado.value : null;
-      const valor = Number(valorPagAntecipado ? valorPagAntecipado.value || 0 : 0);
+      const valor = Number(valorPagAntecipado ? valorPagAntecipado.value : 0);
       const data = dataPagAntecipado ? dataPagAntecipado.value : null;
       const cartaoId = selectCartaoFaturas ? selectCartaoFaturas.value : null;
 
@@ -660,8 +674,14 @@ document.addEventListener("DOMContentLoaded", () => {
       showView(viewFaturas);
       await loadFaturaForSelected();
     };
+// ============================
+// CARTAO.JS — OPÇÃO B
+// Parte 4/5 — Histórico, selects auxiliares, edição à vista
+// ============================
 
+    // ==========================
     // HISTÓRICO DE FATURAS
+    // ==========================
     async function loadHistoricoFaturas() {
       const { data } = await supabase
         .from("cartao_faturas")
@@ -682,9 +702,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // ==========================
     // SELECTS AUXILIARES
+    // usadas ao lançar compra, pagamento fatura, etc.
+    // ==========================
     async function loadSelectsForLanc() {
       await loadCategorias();
+
       const { data: contas } = await supabase
         .from("contas_bancarias")
         .select("*")
@@ -700,43 +724,67 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // ======================================================================
     // EDIÇÃO DE COMPRA À VISTA
+    // ======================================================================
+
+    // cria view se ainda não existir
     function ensureAvistaViewExists() {
       if (viewEditarAvista) return;
+
       const right = document.querySelector(".right-column") || document.body;
 
       const div = document.createElement("div");
       div.id = "view-editar-avista";
       div.className = "panel view hidden";
+
       div.innerHTML = `
         <div class="panel-header">
           <h2>Editar Compra (À vista)</h2>
           <button id="btn-avista-voltar" class="btn-secondary">Voltar</button>
         </div>
+
         <div class="form">
-          <label>Descrição</label><input id="avista-desc">
-          <label>Valor</label><input id="avista-valor" type="number" step="0.01">
-          <label>Data</label><input id="avista-data" type="date">
-          <label>Categoria</label><select id="avista-categoria"></select>
-          <label>Cartão</label><select id="avista-cartao"></select>
+
+          <label>Descrição</label>
+          <input id="avista-desc">
+
+          <label>Valor</label>
+          <input id="avista-valor" type="number" step="0.01">
+
+          <label>Data</label>
+          <input id="avista-data" type="date">
+
+          <label>Categoria</label>
+          <select id="avista-categoria"></select>
+
+          <label>Cartão</label>
+          <select id="avista-cartao"></select>
+
           <div class="actions-row">
             <button id="btn-avista-salvar" class="btn-primary">Salvar</button>
             <button id="btn-avista-excluir" class="btn-danger">Excluir</button>
           </div>
-        </div>`;
+
+        </div>
+      `;
 
       right.appendChild(div);
       viewEditarAvista = div;
 
+      // ligar botões
       document.getElementById("btn-avista-voltar").onclick = () => showView(viewFaturas);
       document.getElementById("btn-avista-salvar").onclick = salvarEdicaoAvista;
       document.getElementById("btn-avista-excluir").onclick = excluirCompraAvista;
     }
 
+    // abrir tela de edição de compra à vista
     async function abrirEdicaoAvista(l) {
       ensureAvistaViewExists();
+
       document.getElementById("avista-desc").value =
         (l.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
+
       document.getElementById("avista-valor").value = Number(l.valor);
       document.getElementById("avista-data").value =
         l.data_compra || l.data || "";
@@ -748,11 +796,14 @@ document.addEventListener("DOMContentLoaded", () => {
       showView(viewEditarAvista);
     }
 
+    // preencher select de categorias
     async function popularSelectCategoriaAvista(id) {
       const { data } = await supabase.from("categorias").select("*").order("nome");
       const sel = document.getElementById("avista-categoria");
       if (!sel) return;
+
       sel.innerHTML = "";
+
       (data || []).forEach((c) => {
         const op = new Option(c.nome, c.id);
         if (c.id === id) op.selected = true;
@@ -760,6 +811,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
+    // preencher select de cartões
     async function popularSelectCartaoAvista(id) {
       const { data } = await supabase
         .from("cartoes_credito")
@@ -768,7 +820,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const sel = document.getElementById("avista-cartao");
       if (!sel) return;
+
       sel.innerHTML = "";
+
       (data || []).forEach((c) => {
         const op = new Option(c.nome, c.id);
         if (c.id === id) op.selected = true;
@@ -776,6 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
+    // salvar alterações da compra à vista
     async function salvarEdicaoAvista() {
       const id = viewEditarAvista.dataset.lancId;
       const desc = document.getElementById("avista-desc").value.trim();
@@ -808,18 +863,33 @@ document.addEventListener("DOMContentLoaded", () => {
       showView(viewFaturas);
     }
 
+    // excluir compra à vista
     async function excluirCompraAvista() {
       const id = viewEditarAvista.dataset.lancId;
       if (!confirm("Excluir compra?")) return;
 
-      await supabase.from("cartao_lancamentos").delete().eq("id", id);
+      const { error } = await supabase
+        .from("cartao_lancamentos")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error(error);
+        return showToast("Erro ao excluir compra.", "error");
+      }
 
       showToast("Compra excluída.");
       await loadFaturaForSelected();
       showView(viewFaturas);
     }
+// ============================
+// CARTAO.JS — OPÇÃO B
+// Parte 5/5 — parceladas, modal, inicialização final
+// ============================
 
-    // EDIÇÃO PARCELADA
+    // =====================================================
+    // EDIÇÃO PARCELADA: abrir, renderizar parcelas, ações
+    // =====================================================
     async function abrirEdicaoCompraParcelada(c) {
       try {
         const base = (c.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
@@ -837,16 +907,17 @@ document.addEventListener("DOMContentLoaded", () => {
         state.editingPurchaseParcels = q.data;
         state.editingPurchaseFull = q.data[0];
 
+        // preencher campos de edição principal (se existirem)
         const editDescEl = document.getElementById("edit-desc");
         if (editDescEl) editDescEl.value = base;
 
-        const soma = q.data.reduce((s, p) => s + Number(p.valor), 0);
         const editValorTotal = document.getElementById("edit-valor-total");
-        if (editValorTotal) editValorTotal.value = soma;
+        if (editValorTotal) editValorTotal.value = q.data.reduce((s, p) => s + Number(p.valor), 0);
 
         const editDataInicial = document.getElementById("edit-data-inicial");
-        const editTotalParcelas = document.getElementById("edit-total-parcelas");
         if (editDataInicial) editDataInicial.value = q.data[0].data_compra;
+
+        const editTotalParcelas = document.getElementById("edit-total-parcelas");
         if (editTotalParcelas) editTotalParcelas.value = q.data.length;
 
         await popularSelectCategoriaEdicao(state.editingPurchaseFull.categoria_id);
@@ -897,7 +968,9 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // MODAL EDITAR PARCELA
+    // =====================================================
+    // MODAL: editar parcela (abrir, salvar, cancelar)
+    // =====================================================
     let parcelaEditandoId = null;
 
     function abrirModalEditarParcela(parcela) {
@@ -936,7 +1009,9 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("Parcela atualizada.");
     };
 
+    // =====================================================
     // EXCLUIR PARCELA
+    // =====================================================
     async function excluirParcela(id) {
       if (!confirm("Excluir somente esta parcela?")) return;
 
@@ -954,7 +1029,9 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("Parcela excluída.");
     }
 
+    // =====================================================
     // ANTECIPAR PARCELA
+    // =====================================================
     async function anteciparParcela(id) {
       const parcela = state.editingPurchaseParcels.find((p) => p.id === id);
       if (!parcela)
@@ -981,19 +1058,55 @@ document.addEventListener("DOMContentLoaded", () => {
       await loadFaturaForSelected();
     }
 
+    // =====================================================
+    // FUNÇÕES AUXILIARES DE EDIÇÃO (populares usados na edição parcelada)
+    // =====================================================
+    async function popularSelectCategoriaEdicao(id) {
+      const { data } = await supabase.from("categorias").select("*").order("nome");
+      const sel = document.getElementById("edit-categoria");
+      if (!sel) return;
+      sel.innerHTML = "";
+      (data || []).forEach((c) => {
+        const op = new Option(c.nome, c.id);
+        if (c.id === id) op.selected = true;
+        sel.appendChild(op);
+      });
+    }
+
+    async function popularSelectCartaoEdicao(id) {
+      const { data } = await supabase
+        .from("cartoes_credito")
+        .select("*")
+        .eq("user_id", state.user.id);
+
+      const sel = document.getElementById("edit-cartao");
+      if (!sel) return;
+      sel.innerHTML = "";
+      (data || []).forEach((c) => {
+        const op = new Option(c.nome, c.id);
+        if (c.id === id) op.selected = true;
+        sel.appendChild(op);
+      });
+    }
+
+    // =====================================================
     // INICIALIZAÇÃO FINAL
+    // =====================================================
     try {
       await loadCards();
       await loadCategorias();
       popularMesFatura();
       popularFaturasLancamento();
-      showView(viewFaturas);
+
+      // exibe faturas por padrão (se existir)
+      if (viewFaturas) showView(viewFaturas);
+      else if (viewNewCard) showView(viewNewCard);
+
     } catch (err) {
       console.error(err);
       showToast("Erro ao carregar dados.", "error");
     }
 
-  })();
+  })(); // fim main async
 
-}); 
-
+}); // fim DOMContentLoaded
