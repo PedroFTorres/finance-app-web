@@ -1,7 +1,4 @@
-// cartao.js — reescrito e compatível com o HTML existente
-// Mantém a integração com Supabase e exposições window.* usadas por outras partes.
 
-// Envolver execução até o DOM estar pronto para evitar erros de "null" em getElementById
 document.addEventListener("DOMContentLoaded", () => {
 
   (async () => {
@@ -87,6 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     }
     function formatDateShort(d) {
+      if(!d) return "";
       const dt = new Date(d + "T00:00:00");
       return dt.toLocaleDateString("pt-BR");
     }
@@ -109,15 +107,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function hideAllViews(){
-      viewNewCard.classList.add("hidden");
-      viewFaturas.classList.add("hidden");
-      viewLancamento.classList.add("hidden");
-      viewHistorico.classList.add("hidden");
-      boxPagAntecipado.classList.add("hidden");
-      viewEditarCompra.classList.add("hidden");
+      if(viewNewCard) viewNewCard.classList.add("hidden");
+      if(viewFaturas) viewFaturas.classList.add("hidden");
+      if(viewLancamento) viewLancamento.classList.add("hidden");
+      if(viewHistorico) viewHistorico.classList.add("hidden");
+      if(boxPagAntecipado) boxPagAntecipado.classList.add("hidden");
+      if(viewEditarCompra) viewEditarCompra.classList.add("hidden");
       if(viewEditarAvista) viewEditarAvista.classList.add("hidden");
     }
-    function showView(v){ hideAllViews(); v.classList.remove("hidden"); }
+    function showView(v){ hideAllViews(); if(v) v.classList.remove("hidden"); }
 
     // ----------------- Inicialização sessão -----------------
     const sessionResp = await supabase.auth.getSession();
@@ -126,17 +124,17 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     state.user = sessionResp.data.session.user;
-    userEmail.textContent = state.user.email;
+    if (userEmail) userEmail.textContent = state.user.email;
 
     // ----------------- Eventos UI -----------------
-    btnBack.onclick = () => window.location.href = "app.html";
-    btnLogout.onclick = async () => { await supabase.auth.signOut(); window.location.href = "login.html"; };
-    document.getElementById("nav-fatura").onclick = () => { showView(viewFaturas); loadFaturasSelect(); };
-    document.getElementById("nav-lancamento").onclick = () => { showView(viewLancamento); loadSelectsForLanc(); popularFaturasLancamento(); };
-    document.getElementById("nav-historico").onclick = () => { showView(viewHistorico); loadHistoricoFaturas(); };
-    btnNewCard.onclick = () => { showView(viewNewCard); cardNome.value=""; cardLimite.value="0"; cardDiaFechamento.value="5"; cardDiaVencimento.value="25"; };
-    btnCancelCard.onclick = () => showView(viewFaturas);
-    btnSaveCard.onclick = async () => {
+    if (btnBack) btnBack.onclick = () => window.location.href = "app.html";
+    if (btnLogout) btnLogout.onclick = async () => { await supabase.auth.signOut(); window.location.href = "login.html"; };
+    if (document.getElementById("nav-fatura")) document.getElementById("nav-fatura").onclick = () => { showView(viewFaturas); loadFaturasSelect(); };
+    if (document.getElementById("nav-lancamento")) document.getElementById("nav-lancamento").onclick = () => { showView(viewLancamento); loadSelectsForLanc(); popularFaturasLancamento(); };
+    if (document.getElementById("nav-historico")) document.getElementById("nav-historico").onclick = () => { showView(viewHistorico); loadHistoricoFaturas(); };
+    if (btnNewCard) btnNewCard.onclick = () => { showView(viewNewCard); if(cardNome) cardNome.value=""; if(cardLimite) cardLimite.value="0"; if(cardDiaFechamento) cardDiaFechamento.value="5"; if(cardDiaVencimento) cardDiaVencimento.value="25"; };
+    if (btnCancelCard) btnCancelCard.onclick = () => showView(viewFaturas);
+    if (btnSaveCard) btnSaveCard.onclick = async () => {
       const nome = cardNome.value.trim(); const limite = Number(cardLimite.value||0);
       const diaFech = Number(cardDiaFechamento.value); const diaVenc = Number(cardDiaVencimento.value);
       if(!nome) return alert("Informe o nome do cartão.");
@@ -146,14 +144,14 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // Mês de exibição fatura
-    function popularMesFatura(){ mesDisplay.textContent = displayMes(mesFatura); selectMesFaturas.value = formatYM(mesFatura); }
-    btnMesPrev.onclick = () => { mesFatura.setMonth(mesFatura.getMonth()-1); popularMesFatura(); loadFaturaForSelected(); };
-    btnMesNext.onclick = () => { mesFatura.setMonth(mesFatura.getMonth()+1); popularMesFatura(); loadFaturaForSelected(); };
+    function popularMesFatura(){ if(mesDisplay) mesDisplay.textContent = displayMes(mesFatura); if(selectMesFaturas) selectMesFaturas.value = formatYM(mesFatura); }
+    if(btnMesPrev) btnMesPrev.onclick = () => { mesFatura.setMonth(mesFatura.getMonth()-1); popularMesFatura(); loadFaturaForSelected(); };
+    if(btnMesNext) btnMesNext.onclick = () => { mesFatura.setMonth(mesFatura.getMonth()+1); popularMesFatura(); loadFaturaForSelected(); };
 
     // Mês para lançamento inicial
-    function popularFaturasLancamento(){ fatDisplay.textContent = displayMes(mesLanc); selectFaturaInicial.value = formatYM(mesLanc); }
-    btnFatPrev.onclick = () => { mesLanc.setMonth(mesLanc.getMonth()-1); popularFaturasLancamento(); }
-    btnFatNext.onclick = () => { mesLanc.setMonth(mesLanc.getMonth()+1); popularFaturasLancamento(); }
+    function popularFaturasLancamento(){ if(fatDisplay) fatDisplay.textContent = displayMes(mesLanc); if(selectFaturaInicial) selectFaturaInicial.value = formatYM(mesLanc); }
+    if(btnFatPrev) btnFatPrev.onclick = () => { mesLanc.setMonth(mesLanc.getMonth()-1); popularFaturasLancamento(); }
+    if(btnFatNext) btnFatNext.onclick = () => { mesLanc.setMonth(mesLanc.getMonth()+1); popularFaturasLancamento(); }
 
     // ----------------- Carregar Dados Principais -----------------
     async function loadCards(){
@@ -164,6 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderCards(){
+      if(!cardsList) return;
       cardsList.innerHTML = "";
       (state.cards||[]).forEach((c) => {
         const el = document.createElement("div");
@@ -195,8 +194,8 @@ document.addEventListener("DOMContentLoaded", () => {
         };
       });
     }
-
-    function populateCardSelects(){
+        function populateCardSelects(){
+      if(!selectCartaoFaturas || !selectCartaoLanc) return;
       selectCartaoFaturas.innerHTML = "";
       selectCartaoLanc.innerHTML = "";
       (state.cards||[]).forEach((card) => {
@@ -208,8 +207,10 @@ document.addEventListener("DOMContentLoaded", () => {
     async function loadCategorias(){
       const { data } = await supabase.from("categorias").select("*").order("nome");
       state.categories = data || [];
-      selectCategoriaLancCartao.innerHTML = "";
-      (state.categories||[]).forEach((cat) => selectCategoriaLancCartao.appendChild(new Option(cat.nome, cat.id)));
+      if (selectCategoriaLancCartao) {
+        selectCategoriaLancCartao.innerHTML = "";
+        (state.categories||[]).forEach((cat) => selectCategoriaLancCartao.appendChild(new Option(cat.nome, cat.id)));
+      }
     }
 
     // ----------------- Faturas -----------------
@@ -219,7 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
       popularMesFatura();
       await loadSelectsForLanc();
 
-      if (selectCartaoFaturas.options.length > 0) {
+      if (selectCartaoFaturas && selectCartaoFaturas.options.length > 0) {
         await loadFaturaForSelected();
       } else {
         showView(viewNewCard);
@@ -228,23 +229,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // principal: carrega compras do cartão no mês selecionado
     async function loadFaturaForSelected(){
+      if (!selectCartaoFaturas || !selectMesFaturas) return;
       const cartao_id = selectCartaoFaturas.value;
       const ym = selectMesFaturas.value;
       if (!cartao_id || !ym) {
-        faturaSummary.innerHTML = "<div>Nenhum cartão/mês selecionado.</div>";
-        listaComprasFatura.innerHTML = "";
+        if (faturaSummary) faturaSummary.innerHTML = "<div>Nenhum cartão/mês selecionado.</div>";
+        if (listaComprasFatura) listaComprasFatura.innerHTML = "";
         state.faturaAtual = null;
+        updateButtonsForFatura();
         return;
       }
 
-      const [anoStr, mesStr] = ym.split("-").map(Number);
-      const ano = anoStr;
-      const mes = mesStr;
+      const [anoNum, mesNum] = ym.split("-").map(Number);
+      const ano = anoNum; const mes = mesNum;
       const inicio = `${ano}-${String(mes).padStart(2,"0")}-01`;
       const last = new Date(ano, mes, 0).getDate();
       const fim = `${ano}-${String(mes).padStart(2,"0")}-${last}`;
 
-      // compras no mês
       const { data: compras, error: errCompras } = await supabase
         .from("cartao_lancamentos")
         .select("*")
@@ -255,30 +256,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (errCompras) {
         console.error("Erro ao carregar fatura:", errCompras);
-        listaComprasFatura.innerHTML = "<li>Erro ao carregar fatura.</li>";
+        if (listaComprasFatura) listaComprasFatura.innerHTML = "<li>Erro ao carregar fatura.</li>";
         return;
       }
 
       const total = (compras || []).reduce((s,c) => s + Number(c.valor||0), 0);
       const card = state.cards.find(x => x.id === cartao_id);
 
-      faturaSummary.innerHTML = `<div class="big">${card?.nome || "Cartão"}</div><div>${ym}</div><div class="big">${formatReal(total)}</div>
-        <div id="status-fatura" style="margin-top:8px;"></div>`;
+      if (faturaSummary) {
+        faturaSummary.innerHTML = `<div class="big">${card?.nome || "Cartão"}</div><div>${ym}</div><div class="big">${formatReal(total)}</div>
+          <div id="status-fatura" style="margin-top:8px;"></div>`;
+      }
 
-      listaComprasFatura.innerHTML = "";
-      (compras || []).forEach((c) => {
-        const li = document.createElement("li");
-        const descr = ((c.descricao||"") + "").replace(/\s*\(\d+\/\d+\)\s*$/,"").trim();
-        li.innerHTML = `<span>${formatDateShort(c.data_compra)} — ${descr}</span><span>${formatReal(c.valor)}</span>`;
-        li.style.cursor = "pointer";
-        li.onclick = () => {
-          if (Number(c.parcelas||0) === 1) abrirEdicaoAvista(c);
-          else abrirEdicaoCompraParcelada(c);
-        };
-        listaComprasFatura.appendChild(li);
-      });
+      if (listaComprasFatura) {
+        listaComprasFatura.innerHTML = "";
+        (compras || []).forEach((c) => {
+          const li = document.createElement("li");
+          const descr = ((c.descricao||"") + "").replace(/\s*\(\d+\/\d+\)\s*$/,"").trim();
+          li.innerHTML = `<span>${formatDateShort(c.data_compra)} — ${descr}</span><span>${formatReal(c.valor)}</span>`;
+          li.style.cursor = "pointer";
+          li.onclick = () => {
+            if (Number(c.parcelas||0) === 1) abrirEdicaoAvista(c);
+            else abrirEdicaoCompraParcelada(c);
+          };
+          listaComprasFatura.appendChild(li);
+        });
+      }
 
-      // carrega fatura fechada caso exista
       const { data: faturaDB } = await supabase
         .from("cartao_faturas")
         .select("*")
@@ -290,205 +294,234 @@ document.addEventListener("DOMContentLoaded", () => {
 
       state.faturaAtual = faturaDB || null;
 
-      // fixa vencimento do card, caso haja
-      if (card) {
+      // set data_vencimento default from card if exists (only if no closed fatura)
+      if (card && dataVencimentoFatura && !state.faturaAtual) {
         const venc = new Date(ano, mes-1, card.dia_vencimento);
         dataVencimentoFatura.value = formatISO(venc);
+      } else if (state.faturaAtual && dataVencimentoFatura) {
+        if (state.faturaAtual.data_vencimento) dataVencimentoFatura.value = state.faturaAtual.data_vencimento;
       }
 
-      // atualiza UI botões (fechar/pagar)
       updateButtonsForFatura();
     }
 
     function updateButtonsForFatura(){
+      // remove any leftover reabrir button first (it will be re-created if needed)
+      const existingReabrir = document.getElementById("btn-reabrir-fatura");
+      if (existingReabrir) existingReabrir.remove();
+
+      const statusEl = document.getElementById("status-fatura");
+
       if (state.faturaAtual) {
-        btnFecharFatura.disabled = true;
-        btnFecharFatura.textContent = "Fatura Fechada";
+        if (btnFecharFatura) { btnFecharFatura.disabled = true; btnFecharFatura.textContent = "Fatura Fechada"; }
         if (state.faturaAtual.pago) {
-          btnPagarFatura.disabled = true;
-          btnPagarFatura.textContent = "Fatura Paga";
-        } else {
-          btnPagarFatura.disabled = false;
-          btnPagarFatura.textContent = "Pagar Fatura";
+          if (btnPagarFatura) { btnPagarFatura.disabled = true; btnPagarFatura.textContent = "Fatura Paga"; }
+          if (statusEl) statusEl.textContent = "FATURA PAGA";
+          return;
         }
-        const statusEl = document.getElementById("status-fatura");
-        if (statusEl) statusEl.textContent = state.faturaAtual.pago ? "FATURA PAGA" : "FATURA FECHADA";
+
+        // fatura fechada mas NÃO paga -> allow reabrir
+        if (btnPagarFatura) { btnPagarFatura.disabled = false; btnPagarFatura.textContent = "Pagar Fatura"; }
+        if (statusEl) statusEl.textContent = "FATURA FECHADA";
+
+        // create "Reabrir Fatura" button appended next to fechar button
+        if (btnFecharFatura && btnFecharFatura.parentNode && !document.getElementById("btn-reabrir-fatura")) {
+          const btn = document.createElement("button");
+          btn.id = "btn-reabrir-fatura";
+          btn.className = "btn-secondary";
+          btn.style.marginLeft = "8px";
+          btn.textContent = "Reabrir Fatura";
+          btn.onclick = reabrirFatura;
+          btnFecharFatura.parentNode.appendChild(btn);
+        }
+
       } else {
-        btnFecharFatura.disabled = false;
-        btnFecharFatura.textContent = "Fechar Fatura";
-        btnPagarFatura.disabled = false;
-        btnPagarFatura.textContent = "Gerar Despesa";
-        const statusEl = document.getElementById("status-fatura");
+        // no closed fatura
+        if (btnFecharFatura) { btnFecharFatura.disabled = false; btnFecharFatura.textContent = "Fechar Fatura"; }
+        if (btnPagarFatura) { btnPagarFatura.disabled = false; btnPagarFatura.textContent = "Gerar Despesa"; }
         if (statusEl) statusEl.textContent = "";
       }
     }
-
     // FECHAR FATURA — cria registro em cartao_faturas e bloqueia edição
-    btnFecharFatura.onclick = async () => {
-      const cartaoId = selectCartaoFaturas.value;
-      const venc = dataVencimentoFatura.value;
-      const ym = selectMesFaturas.value;
-      if (!cartaoId) return alert("Selecione um cartão.");
-      if (!venc) return alert("Informe o vencimento.");
-      if (state.faturaAtual) return alert("Esta fatura já está fechada.");
+    if (btnFecharFatura) btnFecharFatura.onclick = async () => {
+      try {
+        const cartaoId = selectCartaoFaturas.value;
+        const venc = dataVencimentoFatura.value;
+        const ym = selectMesFaturas.value;
+        if (!cartaoId) return alert("Selecione um cartão.");
+        if (!venc) return alert("Informe o vencimento.");
+        if (state.faturaAtual) return alert("Esta fatura já está fechada.");
 
-      // soma itens (mais confiável: consultar DB novamente)
-      const [ano, mes] = ym.split("-").map(Number);
-      const inicio = `${ano}-${String(mes).padStart(2,"0")}-01`;
-      const last = new Date(ano, mes, 0).getDate();
-      const fim = `${ano}-${String(mes).padStart(2,"0")}-${last}`;
+        const [ano, mes] = ym.split("-").map(Number);
+        const inicio = `${ano}-${String(mes).padStart(2,"0")}-01`;
+        const last = new Date(ano, mes, 0).getDate();
+        const fim = `${ano}-${String(mes).padStart(2,"0")}-${last}`;
 
-      const { data: compras } = await supabase
-        .from("cartao_lancamentos")
-        .select("*")
-        .eq("cartao_id", cartaoId)
-        .gte("data_compra", inicio)
-        .lte("data_compra", fim);
+        const { data: compras } = await supabase
+          .from("cartao_lancamentos")
+          .select("*")
+          .eq("cartao_id", cartaoId)
+          .gte("data_compra", inicio)
+          .lte("data_compra", fim);
 
-      const total = (compras||[]).reduce((s,c) => s + Number(c.valor||0), 0);
+        const total = (compras||[]).reduce((s,c) => s + Number(c.valor||0), 0);
 
-      const { error } = await supabase.from("cartao_faturas").insert([{
-        user_id: state.user.id,
-        cartao_id: cartaoId,
-        ano, mes,
-        valor_total: total,
-        data_vencimento: venc,          // <<-- CORREÇÃO: usar data_vencimento
-        pago: false,
-        status: "fechada"
-      }]);
+        const { error } = await supabase.from("cartao_faturas").insert([{
+          user_id: state.user.id,
+          cartao_id: cartaoId,
+          ano,
+          mes,
+          valor_total: total,
+          data_vencimento: venc,          // <<-- CORREÇÃO: usar data_vencimento
+          pago: false,
+          status: "fechada"
+        }]);
 
-      if (error) {
-        console.error("Erro ao fechar fatura:", error);
-        return alert("Erro ao fechar fatura. Veja console.");
+        if (error) {
+          console.error("Erro ao fechar fatura:", error);
+          return alert("Erro ao fechar fatura. Veja console.");
+        }
+
+        // recarregar para atualizar UI e bloquear edições
+        await loadFaturaForSelected();
+        alert("Fatura fechada com sucesso.");
+      } catch (err) {
+        console.error("Erro btnFecharFatura:", err);
+        alert("Erro ao fechar fatura. Veja console.");
       }
-
-      // recarregar para atualizar UI e bloquear edições
-      await loadFaturaForSelected();
-      alert("Fatura fechada com sucesso.");
     };
 
     // GERAR DESPESA / PAGAR FATURA — cria despesa + movimentação e marca fatura paga
-    btnPagarFatura.onclick = async () => {
-      const cartaoId = selectCartaoFaturas.value;
-      const contaId = selectContaPagamento.value;
-      const venc = dataVencimentoFatura.value;
-      if (!state.faturaAtual) return alert("Feche a fatura antes de pagar.");
-      if (state.faturaAtual.pago) return alert("Esta fatura já foi paga.");
-      if (!contaId) return alert("Selecione a conta para pagamento.");
+    if (btnPagarFatura) btnPagarFatura.onclick = async () => {
+      try {
+        if (!state.faturaAtual) return alert("Feche a fatura antes de pagar.");
+        if (state.faturaAtual.pago) return alert("Esta fatura já foi paga.");
+        if (!selectContaPagamento) return alert("Selecione a conta para pagamento.");
+        const cartaoId = selectCartaoFaturas?.value;
+        const contaId = selectContaPagamento?.value;
+        const venc = dataVencimentoFatura?.value;
+        if (!contaId) return alert("Selecione a conta para pagamento.");
+        const total = Number(state.faturaAtual.valor_total || 0);
+        if (total <= 0) return alert("Fatura sem valor.");
 
-      const total = Number(state.faturaAtual.valor_total || 0);
-      if (total <= 0) return alert("Fatura sem valor.");
+        // 1) criar despesa marcada como baixada
+        const despId = crypto.randomUUID();
+        const { error: errDesp } = await supabase.from("despesas").insert([{
+          id: despId,
+          user_id: state.user.id,
+          conta_id: contaId,
+          descricao: `Pagamento fatura cartão ${state.faturaAtual.ano}-${String(state.faturaAtual.mes).padStart(2,"0")}`,
+          valor: total,
+          data: venc,
+          categoria_id: null,
+          baixado: true,
+          data_baixa: venc
+        }]);
 
-      // 1) criar despesa (baixada imediatamente)
-      const despId = crypto.randomUUID();
-      const { error: errDesp } = await supabase.from("despesas").insert([{
-        id: despId,
-        user_id: state.user.id,
-        conta_id: contaId,
-        descricao: `Pagamento fatura cartão ${state.faturaAtual.ano}-${String(state.faturaAtual.mes).padStart(2,"0")}`,
-        valor: total,
-        data: venc,
-        categoria_id: null,
-        baixado: true,
-        data_baixa: venc
-      }]);
+        if (errDesp) {
+          console.error("Erro ao criar despesa:", errDesp);
+          return alert("Erro ao gerar despesa. Veja console.");
+        }
 
-      if (errDesp) {
-        console.error("Erro ao criar despesa:", errDesp);
-        return alert("Erro ao criar despesa. Veja console.");
+        // 2) movimentação e atualiza saldo
+        const { data: conta } = await supabase.from("contas_bancarias").select("*").eq("id", contaId).single();
+        const novoSaldo = Number(conta.saldo_atual || 0) - total;
+        await supabase.from("contas_bancarias").update({ saldo_atual: novoSaldo }).eq("id", contaId);
+
+        await supabase.from("movimentacoes").insert([{
+          id: crypto.randomUUID(),
+          user_id: state.user.id,
+          conta_id: contaId,
+          tipo: "debito",
+          valor: total,
+          descricao: `Pagamento fatura cartão`,
+          data: venc,
+          lancamento_id: despId
+        }]);
+
+        // 3) marcar fatura como paga
+        await supabase.from("cartao_faturas").update({ pago: true, status: "paga", data_vencimento: venc }).eq("id", state.faturaAtual.id);
+
+        alert("Fatura paga com sucesso!");
+        await loadFaturaForSelected();
+      } catch (err) {
+        console.error("Erro btnPagarFatura:", err);
+        alert("Erro ao pagar fatura. Veja console.");
       }
-
-      // 2) cria movimentação e atualiza saldo da conta
-      const { data: conta } = await supabase.from("contas_bancarias").select("*").eq("id", contaId).single();
-      const novoSaldo = Number(conta.saldo_atual || 0) - total;
-      await supabase.from("contas_bancarias").update({ saldo_atual: novoSaldo }).eq("id", contaId);
-
-      await supabase.from("movimentacoes").insert([{
-        id: crypto.randomUUID(),
-        user_id: state.user.id,
-        conta_id: contaId,
-        tipo: "debito",
-        valor: total,
-        descricao: `Pagamento fatura cartão`,
-        data: venc,
-        lancamento_id: despId
-      }]);
-
-      // 3) marca fatura como paga
-      await supabase.from("cartao_faturas").update({ pago: true, status: "paga" }).eq("id", state.faturaAtual.id);
-
-      alert("Fatura paga com sucesso!");
-      await loadFaturaForSelected();
     };
 
     // ----------------- LANÇAR COMPRA -----------------
-    btnAddPurchase.onclick = async () => {
-      // bloqueio: se já existe fatura fechada para o mês de compra, não permitir
-      const cartao_id = selectCartaoLanc.value;
-      const descricao = cartDesc.value.trim();
-      const valor = Number(cartValor.value || 0);
-      const parcelas = Number(cartParcelas.value || 1);
-      const parcelaInicial = Number(parcelaInicialInput.value || 1);
-      const dataCompra = cartData.value;
-      const categoriaSelecionada = selectCategoriaLancCartao.value;
+    if (btnAddPurchase) btnAddPurchase.onclick = async () => {
+      try {
+        const cartao_id = selectCartaoLanc?.value;
+        const descricao = cartDesc?.value?.trim();
+        const valor = Number(cartValor?.value || 0);
+        const parcelas = Number(cartParcelas?.value || 1);
+        const parcelaInicial = Number(parcelaInicialInput?.value || 1);
+        const dataCompra = cartData?.value;
+        const categoriaSelecionada = selectCategoriaLancCartao?.value;
 
-      if (!cartao_id || !descricao || !valor || !dataCompra) return alert("Preencha todos os campos, inclusive data.");
+        if (!cartao_id || !descricao || !valor || !dataCompra) return alert("Preencha todos os campos, inclusive data.");
 
-      // verificar se existe fatura fechada para o mês inicial da compra
-      const [ano0, mes0] = dataCompra.split("-").map(Number);
-      const { data: f } = await supabase.from("cartao_faturas")
-        .select("*")
-        .eq("user_id", state.user.id)
-        .eq("cartao_id", cartao_id)
-        .eq("ano", ano0)
-        .eq("mes", mes0)
-        .maybeSingle();
+        // verificar se existe fatura fechada para o mês inicial da compra
+        const [ano0, mes0] = dataCompra.split("-").map(Number);
+        const { data: f } = await supabase.from("cartao_faturas")
+          .select("*")
+          .eq("user_id", state.user.id)
+          .eq("cartao_id", cartao_id)
+          .eq("ano", ano0)
+          .eq("mes", mes0)
+          .maybeSingle();
 
-      if (f) return alert("Não é possível lançar compra: fatura já está fechada para o mês da compra.");
+        // only block if status === 'fechada'
+        if (f && f.status === "fechada") return alert("Não é possível lançar compra: fatura já está fechada para o mês da compra.");
 
-      // cria parcelas
-      const [ano, mes, dia] = dataCompra.split("-").map(Number);
-      for (let p = parcelaInicial; p <= parcelas; p++) {
-        const dt = new Date(ano, (mes-1) + (p - parcelaInicial), dia);
-        const dataISO = formatISO(dt);
-        const descFinal = parcelas === 1 ? descricao : `${descricao} (${p}/${parcelas})`;
-        const valorParcela = parcelas === 1 ? valor : Number((valor/parcelas).toFixed(2));
+        // cria parcelas
+        const [ano, mes, dia] = dataCompra.split("-").map(Number);
+        for (let p = parcelaInicial; p <= parcelas; p++) {
+          const dt = new Date(ano, (mes-1) + (p - parcelaInicial), dia);
+          const dataISO = formatISO(dt);
+          const descFinal = parcelas === 1 ? descricao : `${descricao} (${p}/${parcelas})`;
+          const valorParcela = parcelas === 1 ? valor : Number((valor/parcelas).toFixed(2));
 
-        await supabase.from("cartao_lancamentos").insert([{
-          user_id: state.user.id,
-          cartao_id,
-          descricao: descFinal,
-          valor: valorParcela,
-          data_compra: dataISO,
-          parcelas,
-          parcela_atual: p,
-          categoria_id: categoriaSelecionada || null,
-          tipo: "compra",
-          billed: false
-        }]);
+          await supabase.from("cartao_lancamentos").insert([{
+            user_id: state.user.id,
+            cartao_id,
+            descricao: descFinal,
+            valor: valorParcela,
+            data_compra: dataISO,
+            parcelas,
+            parcela_atual: p,
+            categoria_id: categoriaSelecionada || null,
+            tipo: "compra",
+            billed: false
+          }]);
+        }
+
+        cartDesc.value = ""; cartValor.value = ""; cartParcelas.value = 1; cartData.value = ""; parcelaInicialInput.value = 1;
+        await loadFaturaForSelected();
+        alert("Compra lançada!");
+      } catch (err) {
+        console.error("Erro btnAddPurchase:", err);
+        alert("Erro ao lançar compra. Veja console.");
       }
-
-      // limpar campos e recarregar
-      cartDesc.value = ""; cartValor.value = ""; cartParcelas.value = 1; cartData.value = ""; parcelaInicialInput.value = 1;
-      await loadFaturaForSelected();
-      alert("Compra lançada!");
     };
 
-    btnCancelPurchase.onclick = () => { cartDesc.value=""; cartValor.value=""; cartParcelas.value=1; cartData.value=""; parcelaInicialInput.value=1; showView(viewFaturas); };
+    if (btnCancelPurchase) btnCancelPurchase.onclick = () => { if(cartDesc) cartDesc.value=""; if(cartValor) cartValor.value=""; if(cartParcelas) cartParcelas.value=1; if(cartData) cartData.value=""; if(parcelaInicialInput) parcelaInicialInput.value=1; showView(viewFaturas); };
 
     // ----------------- PAGAMENTO ANTECIPADO -----------------
-    btnPagamentoAntecipado.onclick = async () => {
+    if (btnPagamentoAntecipado) btnPagamentoAntecipado.onclick = async () => {
       await loadSelectsForLanc();
-      contaPagAntecipado.innerHTML = selectContaPagamento.innerHTML;
-      valorPagAntecipado.value = "";
-      dataPagAntecipado.value = formatISO(new Date());
+      if (contaPagAntecipado && selectContaPagamento) contaPagAntecipado.innerHTML = selectContaPagamento.innerHTML;
+      if (valorPagAntecipado) valorPagAntecipado.value = "";
+      if (dataPagAntecipado) dataPagAntecipado.value = formatISO(new Date());
       showView(boxPagAntecipado);
     };
-    btnConfirmarPagAntecipado.onclick = async () => {
-      const conta = contaPagAntecipado.value;
-      const valor = Number(valorPagAntecipado.value || 0);
-      const data = dataPagAntecipado.value;
-      const cartaoId = selectCartaoFaturas.value;
+    if (btnConfirmarPagAntecipado) btnConfirmarPagAntecipado.onclick = async () => {
+      const conta = contaPagAntecipado?.value;
+      const valor = Number(valorPagAntecipado?.value || 0);
+      const data = dataPagAntecipado?.value;
+      const cartaoId = selectCartaoFaturas?.value;
       if (!conta || !valor || !data) return alert("Preencha tudo.");
       await supabase.from("cartao_lancamentos").insert([{
         user_id: state.user.id,
@@ -509,6 +542,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ----------------- HISTÓRICO -----------------
     async function loadHistoricoFaturas(){
       const { data } = await supabase.from("cartao_faturas").select("*, cartoes_credito(nome)").eq("user_id", state.user.id).order("created_at", { ascending: false });
+      if(!listaFaturasHistorico) return;
       listaFaturasHistorico.innerHTML = "";
       (data || []).forEach((f) => {
         const li = document.createElement("li");
@@ -521,12 +555,11 @@ document.addEventListener("DOMContentLoaded", () => {
     async function loadSelectsForLanc(){
       await loadCategorias();
       const { data: contas } = await supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id);
+      if (!selectContaPagamento) return;
       selectContaPagamento.innerHTML = "";
       (contas || []).forEach((c) => selectContaPagamento.appendChild(new Option(`${c.nome} (${formatReal(c.saldo_atual||c.saldo_inicial)})`, c.id)));
     }
-
     // ----------------- EDIÇÃO DE COMPRAS (À VISTA / PARCELADAS) -----------------
-    // Gera view editar à vista (se não existir)
     function ensureAvistaViewExists(){
       if (viewEditarAvista) return;
       const rightColumn = document.querySelector(".right-column") || document.body;
@@ -660,13 +693,13 @@ document.addEventListener("DOMContentLoaded", () => {
     let parcelaEditandoId = null;
     function abrirModalEditarParcela(parcela){
       parcelaEditandoId = parcela.id;
-      modalParcelaValor.value = parcela.valor;
-      modalParcelaData.value = parcela.data_compra;
-      modalEditarParcela.classList.remove("hidden");
+      if (modalParcelaValor) modalParcelaValor.value = parcela.valor;
+      if (modalParcelaData) modalParcelaData.value = parcela.data_compra;
+      if (modalEditarParcela) modalEditarParcela.classList.remove("hidden");
     }
-    function fecharModalEditarParcela(){ parcelaEditandoId = null; modalEditarParcela.classList.add("hidden"); }
-    modalParcelaSalvar.onclick = async () => {
-      const novoValor = Number(modalParcelaValor.value); const novaData = modalParcelaData.value;
+    function fecharModalEditarParcela(){ parcelaEditandoId = null; if (modalEditarParcela) modalEditarParcela.classList.add("hidden"); }
+    if (modalParcelaSalvar) modalParcelaSalvar.onclick = async () => {
+      const novoValor = Number(modalParcelaValor?.value); const novaData = modalParcelaData?.value;
       if (!novaData || !novoValor) return alert("Preencha os campos.");
       const { error } = await supabase.from("cartao_lancamentos").update({ valor: novoValor, data_compra: novaData }).eq("id", parcelaEditandoId);
       if (error) { console.error(error); alert("Erro ao salvar a parcela."); return; }
@@ -674,7 +707,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await loadFaturaForSelected();
       await abrirEdicaoCompraParcelada({ id: parcelaEditandoId }); // reabre para sincronizar
     };
-    modalParcelaCancelar.onclick = fecharModalEditarParcela;
+    if (modalParcelaCancelar) modalParcelaCancelar.onclick = fecharModalEditarParcela;
 
     async function excluirParcela(id){
       if (!confirm("Deseja excluir somente esta parcela?")) return;
@@ -682,7 +715,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!p) return alert("Parcela não encontrada.");
       const { error } = await supabase.from("cartao_lancamentos").delete().eq("id", id);
       if (error) { console.error(error); alert("Erro ao excluir parcela."); return; }
-      // tentar reabrir compra ou recarregar fatura
       await loadFaturaForSelected();
       alert("Parcela excluída.");
     }
@@ -709,17 +741,17 @@ document.addEventListener("DOMContentLoaded", () => {
       await loadFaturaForSelected();
     }
 
-    // Salvar alterações compra parcelada (botão "Salvar" na tela editar)
-    document.getElementById("btn-salvar-edicao").onclick = async () => {
+    // salvar alterações compra parcelada
+    if (document.getElementById("btn-salvar-edicao")) document.getElementById("btn-salvar-edicao").onclick = async () => {
       try {
         const parcelasOriginais = state.editingPurchaseParcels;
         if (!parcelasOriginais || parcelasOriginais.length === 0) return alert("Nada carregado.");
-        const novaDesc = document.getElementById("edit-desc").value.trim();
-        const novoValorTotal = Number(document.getElementById("edit-valor-total").value || 0);
-        const novaDataInicial = document.getElementById("edit-data-inicial").value;
-        const novoTotalParcelas = Number(document.getElementById("edit-total-parcelas").value || 1);
-        const novoCartaoId = document.getElementById("edit-cartao").value;
-        const novaCategoria = document.getElementById("edit-categoria").value;
+        const novaDesc = document.getElementById("edit-desc")?.value.trim();
+        const novoValorTotal = Number(document.getElementById("edit-valor-total")?.value || 0);
+        const novaDataInicial = document.getElementById("edit-data-inicial")?.value;
+        const novoTotalParcelas = Number(document.getElementById("edit-total-parcelas")?.value || 1);
+        const novoCartaoId = document.getElementById("edit-cartao")?.value;
+        const novaCategoria = document.getElementById("edit-categoria")?.value;
         if(!novaDesc||!novoValorTotal||!novaDataInicial) return alert("Preencha todos os campos.");
         const ids = parcelasOriginais.map(p=>p.id);
         let { error } = await supabase.from("cartao_lancamentos").delete().in("id", ids);
@@ -748,8 +780,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (err) { console.error(err); alert("Erro ao salvar edição."); }
     };
 
-    // Excluir compra completa (botão)
-    document.getElementById("btn-excluir-compra").onclick = async () => {
+    if (document.getElementById("btn-excluir-compra")) document.getElementById("btn-excluir-compra").onclick = async () => {
       if (!state.editingPurchaseFull) return alert("Nenhuma compra selecionada.");
       if (!confirm("Deseja excluir toda a compra (todas as parcelas)?")) return;
       const parcelas = state.editingPurchaseParcels;
@@ -767,6 +798,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function popularSelectCategoriaEdicao(selectedId){
       const { data } = await supabase.from("categorias").select("*").order("nome");
       const sel = document.getElementById("edit-categoria");
+      if(!sel) return;
       sel.innerHTML = "";
       (data||[]).forEach((c)=>{ const op = new Option(c.nome, c.id); if(c.id===selectedId) op.selected=true; sel.appendChild(op); });
       if(!selectedId && sel.options.length>0) sel.selectedIndex=0;
@@ -774,8 +806,32 @@ document.addEventListener("DOMContentLoaded", () => {
     async function popularSelectCartaoEdicao(selectedId){
       const { data } = await supabase.from("cartoes_credito").select("*").eq("user_id", state.user.id);
       const sel = document.getElementById("edit-cartao");
+      if(!sel) return;
       sel.innerHTML = "";
       (data||[]).forEach((c)=>{ const op = new Option(c.nome, c.id); if(c.id===selectedId) op.selected=true; sel.appendChild(op); });
+    }
+
+    // ----------------- Reabrir Fatura (OPÇÃO A) -----------------
+    async function reabrirFatura(){
+      if (!state.faturaAtual) return alert("Nenhuma fatura selecionada para reabrir.");
+      if (state.faturaAtual.pago) return alert("Não é possível reabrir uma fatura já paga.");
+      if (!confirm("Deseja realmente reabrir esta fatura? Isso removerá o registro de fechamento e permitirá editar as compras.")) return;
+      try {
+        // OPÇÃO A: removemos o registro da tabela cartao_faturas
+        const { error } = await supabase.from("cartao_faturas").delete().eq("id", state.faturaAtual.id);
+        if (error) {
+          console.error("Erro ao reabrir fatura (delete):", error);
+          return alert("Erro ao reabrir fatura. Veja console.");
+        }
+
+        // Limpa o estado local e recarrega a fatura (agora sem bloqueio)
+        state.faturaAtual = null;
+        await loadFaturaForSelected();
+        alert("Fatura reaberta com sucesso. Agora você pode editar os lançamentos.");
+      } catch (err) {
+        console.error("Erro reabrirFatura:", err);
+        alert("Erro ao reabrir fatura. Veja console.");
+      }
     }
 
     // ----------------- Inicial load -----------------
@@ -794,7 +850,6 @@ document.addEventListener("DOMContentLoaded", () => {
     window.abrirEdicaoAvista = abrirEdicaoAvista;
     window.editarParcela = abrirModalEditarParcela;
     window.editarParcelaInline = async (id) => {
-      // abre prompt inline para editar (pequeno helper compatível)
       const parcela = state.editingPurchaseParcels.find(x => x.id === id);
       if (!parcela) return alert("Parcela não encontrada.");
       const novoValor = prompt("Novo valor da parcela:", parcela.valor);
@@ -808,7 +863,6 @@ document.addEventListener("DOMContentLoaded", () => {
     window.excluirParcela = excluirParcela;
     window.anteciparParcela = anteciparParcela;
     window.excluirCompraCompleta = async (id) => {
-      // compat shim: exclui todas parcelas relacionadas ao id passado (se for parcela)
       const { data } = await supabase.from("cartao_lancamentos").select("*").eq("id", id).maybeSingle();
       if (!data) return alert("Compra não encontrada.");
       const descricaoBase = (data.descricao||"").replace(/\s*\(\d+\/\d+\)\s*$/,"").trim();
@@ -824,3 +878,4 @@ document.addEventListener("DOMContentLoaded", () => {
   })();
 
 }); 
+
