@@ -1030,38 +1030,44 @@ document.addEventListener("DOMContentLoaded", () => {
   // SALVAR/EXCLUIR EDIÇÃO PARCELADA
   // ===========================
   if (document.getElementById("btn-salvar-edicao"))
-    document.getElementById("btn-salvar-edicao").onclick = async () => {
-      try {
-        const idFull = state.editingPurchaseFull.id;
-        const desc = document.getElementById("edit-desc").value.trim();
-        const total = Number(document.getElementById("edit-valor-total").value || 0);
-        const dataIni = document.getElementById("edit-data-inicial").value;
-        const totalParcelas = Number(document.getElementById("edit-total-parcelas").value || 1);
-        const categoria = document.getElementById("edit-categoria").value;
-        const cartao = document.getElementById("edit-cartao").value;
+  document.getElementById("btn-salvar-edicao").onclick = async () => {
+  try {
+    const idFull = state.editingPurchaseFull.id;
 
-        // atualizar cada parcela conforme lista state.editingPurchaseParcels
-        // aqui assumimos que edição de valor total deve distribuir ou manter valores individuais,
-        // para simplicidade vamos atualizar metadados (desc/categoria/cartao,data de primeira parcela)
-        const { error } = await supabase
-          .from("cartao_lancamentos")
-          .update({
-            descricao: supabase.raw('regexp_replace(descricao, E\'\\s*\\(\\d+/\\d+\\)$\', \'\') || \'\''),
-            categoria_id: categoria,
-            cartao_id: cartao
-          })
-          .eq("id", idFull);
+    const desc = document.getElementById("edit-desc").value.trim();
+    const total = Number(document.getElementById("edit-valor-total").value || 0);
+    const dataIni = document.getElementById("edit-data-inicial").value;
+    const totalParcelas = Number(document.getElementById("edit-total-parcelas").value || 1);
+    const categoria = document.getElementById("edit-categoria").value;
+    const cartao = document.getElementById("edit-cartao").value;
 
-        // (opcional) atualizar as demais parcelas logicamente — omissão intencional para manter consistência
-        showToast("Alterações aplicadas (parcial). Atualize valores individuais se necessário.");
-        await loadFaturaForSelected();
-        showView(viewFaturas);
+    // limpar "(x/y)" da descrição
+    const descLimpa = desc.replace(/\s*\(\d+\/\d+\)\s*$/, "");
 
-      } catch (err) {
-        console.error(err);
-        showToast("Erro ao salvar edição.", "error");
-      }
-    };
+    // atualizar apenas o registro base da compra
+    const { error } = await supabase
+      .from("cartao_lancamentos")
+      .update({
+        descricao: descLimpa,
+        categoria_id: categoria,
+        cartao_id: cartao
+      })
+      .eq("id", idFull);
+
+    if (error) {
+      console.error(error);
+      return showToast("Erro ao salvar edição.", "error");
+    }
+
+    showToast("Alterações aplicadas (parcial). Atualize valores individuais se necessário.");
+    await loadFaturaForSelected();
+    showView(viewFaturas);
+
+  } catch (err) {
+    console.error(err);
+    showToast("Erro ao salvar edição.", "error");
+  }
+};
 
   if (document.getElementById("btn-excluir-compra"))
     document.getElementById("btn-excluir-compra").onclick = async () => {
