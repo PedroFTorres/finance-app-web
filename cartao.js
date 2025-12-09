@@ -611,30 +611,20 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     const cartao_id = selectCartaoLanc.value;
     const descricao = cartDesc.value.trim();
     const valor = Number(cartValor.value || 0);
-    const parcelas = Number(cartParcelas.value || 1);
-    const parcelaInicial = Number(parcelaInicialInput.value || 1);
+    let parcelas = Number(cartParcelas.value || 1);
     const dataCompra = cartData.value;
     const categoriaSelecionada = selectCategoriaLancCartao.value;
 
     if (!cartao_id || !descricao || !valor || !dataCompra)
       return showToast("Preencha todos os campos.", "error");
 
-    // ------------------------------
-    // DATA REAL DA COMPRA
-    // ------------------------------
-    const [compAno, compMes, compDia] = dataCompra.split("-").map(Number);
-
-    // ------------------------------
-    // FATURA INICIAL ESCOLHIDA PELO USUÁRIO
-    // ------------------------------
     if (!selectFaturaInicial.value)
       return showToast("Selecione a fatura inicial.", "error");
 
-    const [fatAno, fatMes] = selectFaturaInicial.value.split("-").map(Number);
+    if (parcelas < 1) parcelas = 1;
 
-    // ------------------------------
-    // VERIFICAR SE A FATURA INICIAL ESTÁ FECHADA
-    // ------------------------------
+    // Verificar fatura inicial
+    const [fatAno, fatMes] = selectFaturaInicial.value.split("-").map(Number);
     const { data: f } = await supabase
       .from("cartao_faturas")
       .select("*")
@@ -647,56 +637,70 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     if (f && f.status === "fechada")
       return showToast("Não é possível lançar: fatura fechada.", "error");
 
-    // ------------------------------
-    // GERAR PARCELAS
-    // ------------------------------
-    for (let p = parcelaInicial; p <= parcelas; p++) {
+    // ================================
+    // CORREÇÃO DE CENTAVOS DAS PARCELAS
+    // ================================
+    const valorParcelaBase = Number((valor / parcelas).toFixed(2));
+    const somaBase = Number((valorParcelaBase * parcelas).toFixed(2));
+    const diferenca = Number((valor - somaBase).toFixed(2)); 
 
-      const dt = new Date(fatAno, (fatMes - 1) + (p - parcelaInicial), compDia);
-      const dataISO = formatISO(dt);
+    // Data da compra apenas informativa → vamos manter dia
+    const [, , compDia] = dataCompra.split("-").map(Number);
 
-      const descFinal = parcelas === 1
+    // ================================
+    // GERAR TODAS AS PARCELAS
+    // ================================
+    for (let p = 1; p <= parcelas; p++) {
+
+      // calcular data da fatura
+      const mesOffset = p - 1;
+      const dataFatura = new Date(fatAno, (fatMes - 1) + mesOffset, compDia);
+      const dataFaturaISO = formatISO(dataFatura);
+
+      // descrição com parcela x/y
+      const descricaoFinal = parcelas === 1
         ? descricao
         : `${descricao} (${p}/${parcelas})`;
 
-      const valorParcela = parcelas === 1
-        ? valor
-        : Number((valor / parcelas).toFixed(2));
+      // ajustar valor da primeira parcela (centavos)
+      let valorParcela = valorParcelaBase;
+      if (p === 1 && diferenca !== 0) {
+        valorParcela = Number((valorParcelaBase + diferenca).toFixed(2));
+      }
 
+      // INSERIR NO BANCO
       await supabase
         .from("cartao_lancamentos")
         .insert([{
           id: crypto.randomUUID(),
           user_id: state.user.id,
           cartao_id,
-          descricao: descFinal,
-          valor: valorParcela,
+          descricao: descricaoFinal,
+          valor: Number(valorParcela.toFixed(2)),
           data_compra: dataCompra,
-          data_fatura: dataISO,
+          data_fatura: dataFaturaISO,
           parcelas,
           parcela_atual: p,
           categoria_id: categoriaSelecionada || null,
           tipo: "compra",
           billed: false
-        }], { returning: "minimal" }); // 👈 CORREÇÃO IMPORTANTE
+        }], { returning: "minimal" });
     }
 
-    // limpar campos
+    // Limpar campos
     cartDesc.value = "";
     cartValor.value = "";
     cartParcelas.value = 1;
     cartData.value = "";
-    parcelaInicialInput.value = 1;
 
     await loadFaturaForSelected();
-    showToast("Compra lançada!");
+    showToast("Compra lançada com sucesso!");
 
   } catch (err) {
     console.error(err);
     showToast("Erro ao lançar compra.", "error");
   }
 };
-
 
   if (btnCancelPurchase) btnCancelPurchase.onclick = () => {
     cartDesc.value = "";
