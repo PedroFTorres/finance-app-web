@@ -606,72 +606,93 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===========================
   // LANÇAR COMPRA (com parcelas)
   // ===========================
-  if (btnAddPurchase) btnAddPurchase.onclick = async () => {
-    try {
-      const cartao_id = selectCartaoLanc.value;
-      const descricao = cartDesc.value.trim();
-      const valor = Number(cartValor.value || 0);
-      const parcelas = Number(cartParcelas.value || 1);
-      const parcelaInicial = Number(parcelaInicialInput.value || 1);
-      const dataCompra = cartData.value;
-      const categoriaSelecionada = selectCategoriaLancCartao.value;
+ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
+  try {
+    const cartao_id = selectCartaoLanc.value;
+    const descricao = cartDesc.value.trim();
+    const valor = Number(cartValor.value || 0);
+    const parcelas = Number(cartParcelas.value || 1);
+    const parcelaInicial = Number(parcelaInicialInput.value || 1);
+    const dataCompra = cartData.value;
+    const categoriaSelecionada = selectCategoriaLancCartao.value;
 
-      if (!cartao_id || !descricao || !valor || !dataCompra) return showToast("Preencha todos os campos.", "error");
+    if (!cartao_id || !descricao || !valor || !dataCompra)
+      return showToast("Preencha todos os campos.", "error");
 
-      // verificar se fatura está fechada
-      const { data: f } = await supabase.from("cartao_faturas").select("*").eq("user_id", state.user.id).eq("cartao_id", cartao_id).eq("ano", ano0).eq("mes", mes0).maybeSingle();
-      if (f && f.status === "fechada") return showToast("Não é possível lançar: fatura fechada.", "error");
+    // ------------------------------
+    // DATA REAL DA COMPRA
+    // ------------------------------
+    const [compAno, compMes, compDia] = dataCompra.split("-").map(Number);
 
-     // DATA REAL DA COMPRA
-const [compAno, compMes, compDia] = dataCompra.split("-").map(Number);
+    // ------------------------------
+    // FATURA INICIAL ESCOLHIDA PELO USUÁRIO
+    // ------------------------------
+    if (!selectFaturaInicial.value)
+      return showToast("Selecione a fatura inicial.", "error");
 
-// FATURA INICIAL ESCOLHIDA PELO USUÁRIO (select-fatura-inicial)
-const [fatAno, fatMes] = selectFaturaInicial.value.split("-").map(Number);
+    const [fatAno, fatMes] = selectFaturaInicial.value.split("-").map(Number);
 
-for (let p = parcelaInicial; p <= parcelas; p++) {
+    // ------------------------------
+    // VERIFICAR SE A FATURA INICIAL ESTÁ FECHADA
+    // ------------------------------
+    const { data: f } = await supabase
+      .from("cartao_faturas")
+      .select("*")
+      .eq("user_id", state.user.id)
+      .eq("cartao_id", cartao_id)
+      .eq("ano", fatAno)
+      .eq("mes", fatMes)
+      .maybeSingle();
 
-  // gerando data baseada na fatura inicial, não na data da compra
-  const dt = new Date(fatAno, (fatMes - 1) + (p - parcelaInicial), compDia);
-  const dataISO = formatISO(dt);
+    if (f && f.status === "fechada")
+      return showToast("Não é possível lançar: fatura fechada.", "error");
 
-  const descFinal = parcelas === 1
-    ? descricao
-    : `${descricao} (${p}/${parcelas})`;
+    // ------------------------------
+    // GERAR PARCELAS
+    // ------------------------------
+    for (let p = parcelaInicial; p <= parcelas; p++) {
 
-  const valorParcela = parcelas === 1
-    ? valor
-    : Number((valor / parcelas).toFixed(2));
+      const dt = new Date(fatAno, (fatMes - 1) + (p - parcelaInicial), compDia);
+      const dataISO = formatISO(dt);
 
-  await supabase.from("cartao_lancamentos").insert([{
-    id: crypto.randomUUID(),
-    user_id: state.user.id,
-    cartao_id,
-    descricao: descFinal,
-    valor: valorParcela,
-    data_compra: dataCompra,    // mantém data real da compra
-    data_fatura: dataISO,       // mês/ano para cair na fatura correta
-    parcelas,
-    parcela_atual: p,
-    categoria_id: categoriaSelecionada || null,
-    tipo: "compra",
-    billed: false
-  }]);
-}
+      const descFinal = parcelas === 1
+        ? descricao
+        : `${descricao} (${p}/${parcelas})`;
 
-      cartDesc.value = "";
-      cartValor.value = "";
-      cartParcelas.value = 1;
-      cartData.value = "";
-      parcelaInicialInput.value = 1;
+      const valorParcela = parcelas === 1
+        ? valor
+        : Number((valor / parcelas).toFixed(2));
 
-      await loadFaturaForSelected();
-      showToast("Compra lançada!");
-
-    } catch (err) {
-      console.error(err);
-      showToast("Erro ao lançar compra.", "error");
+      await supabase.from("cartao_lancamentos").insert([{
+        id: crypto.randomUUID(),
+        user_id: state.user.id,
+        cartao_id,
+        descricao: descFinal,
+        valor: valorParcela,
+        data_compra: dataCompra,
+        data_fatura: dataISO,
+        parcelas,
+        parcela_atual: p,
+        categoria_id: categoriaSelecionada || null,
+        tipo: "compra",
+        billed: false
+      }]);
     }
-  };
+
+    cartDesc.value = "";
+    cartValor.value = "";
+    cartParcelas.value = 1;
+    cartData.value = "";
+    parcelaInicialInput.value = 1;
+
+    await loadFaturaForSelected();
+    showToast("Compra lançada!");
+
+  } catch (err) {
+    console.error(err);
+    showToast("Erro ao lançar compra.", "error");
+  }
+};
 
   if (btnCancelPurchase) btnCancelPurchase.onclick = () => {
     cartDesc.value = "";
