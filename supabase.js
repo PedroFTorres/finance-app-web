@@ -1,12 +1,5 @@
-// supabase.js — carregado como módulo ES
-
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 const SUPABASE_URL = "https://febwinynlbviadasgwlg.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZlYndpbnlubGJ2aWFkYXNnd2xnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjI3MjMsImV4cCI6MjA3OTczODcyM30.WubNRAHhlH6wnjGAWc4B7oHEbrU9fd1xU5uWWqRjE4c";
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// torna disponível globalmente para cartao.js
-window.supabase = supabase;
+window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
