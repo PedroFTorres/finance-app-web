@@ -606,7 +606,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===========================
   // LANÇAR COMPRA (com parcelas)
   // ===========================
- if (btnAddPurchase) btnAddPurchase.onclick = async () => {
+if (btnAddPurchase) btnAddPurchase.onclick = async () => {
   try {
     const cartao_id = selectCartaoLanc.value;
     const descricao = cartDesc.value.trim();
@@ -663,22 +663,25 @@ document.addEventListener("DOMContentLoaded", () => {
         ? valor
         : Number((valor / parcelas).toFixed(2));
 
-      await supabase.from("cartao_lancamentos").insert([{
-        id: crypto.randomUUID(),
-        user_id: state.user.id,
-        cartao_id,
-        descricao: descFinal,
-        valor: valorParcela,
-        data_compra: dataCompra,
-        data_fatura: dataISO,
-        parcelas,
-        parcela_atual: p,
-        categoria_id: categoriaSelecionada || null,
-        tipo: "compra",
-        billed: false
-      }]);
+      await supabase
+        .from("cartao_lancamentos")
+        .insert([{
+          id: crypto.randomUUID(),
+          user_id: state.user.id,
+          cartao_id,
+          descricao: descFinal,
+          valor: valorParcela,
+          data_compra: dataCompra,
+          data_fatura: dataISO,
+          parcelas,
+          parcela_atual: p,
+          categoria_id: categoriaSelecionada || null,
+          tipo: "compra",
+          billed: false
+        }], { returning: "minimal" }); // 👈 CORREÇÃO IMPORTANTE
     }
 
+    // limpar campos
     cartDesc.value = "";
     cartValor.value = "";
     cartParcelas.value = 1;
@@ -693,6 +696,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast("Erro ao lançar compra.", "error");
   }
 };
+
 
   if (btnCancelPurchase) btnCancelPurchase.onclick = () => {
     cartDesc.value = "";
