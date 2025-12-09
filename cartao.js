@@ -609,34 +609,45 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!cartao_id || !descricao || !valor || !dataCompra) return showToast("Preencha todos os campos.", "error");
 
-      const [ano0, mes0] = dataCompra.split("-").map(Number);
-
       // verificar se fatura está fechada
       const { data: f } = await supabase.from("cartao_faturas").select("*").eq("user_id", state.user.id).eq("cartao_id", cartao_id).eq("ano", ano0).eq("mes", mes0).maybeSingle();
       if (f && f.status === "fechada") return showToast("Não é possível lançar: fatura fechada.", "error");
 
-      const [ano, mes, dia] = dataCompra.split("-").map(Number);
+     // DATA REAL DA COMPRA
+const [compAno, compMes, compDia] = dataCompra.split("-").map(Number);
 
-      for (let p = parcelaInicial; p <= parcelas; p++) {
-        const dt = new Date(ano, (mes - 1) + (p - parcelaInicial), dia);
-        const dataISO = formatISO(dt);
-        const descFinal = parcelas === 1 ? descricao : `${descricao} (${p}/${parcelas})`;
-        const valorParcela = parcelas === 1 ? valor : Number((valor / parcelas).toFixed(2));
+// FATURA INICIAL ESCOLHIDA PELO USUÁRIO (select-fatura-inicial)
+const [fatAno, fatMes] = selectFaturaInicial.value.split("-").map(Number);
 
-        await supabase.from("cartao_lancamentos").insert([{
-          id: crypto.randomUUID(),
-          user_id: state.user.id,
-          cartao_id,
-          descricao: descFinal,
-          valor: valorParcela,
-          data_compra: dataISO,
-          parcelas,
-          parcela_atual: p,
-          categoria_id: categoriaSelecionada || null,
-          tipo: "compra",
-          billed: false
-        }]);
-      }
+for (let p = parcelaInicial; p <= parcelas; p++) {
+
+  // gerando data baseada na fatura inicial, não na data da compra
+  const dt = new Date(fatAno, (fatMes - 1) + (p - parcelaInicial), compDia);
+  const dataISO = formatISO(dt);
+
+  const descFinal = parcelas === 1
+    ? descricao
+    : `${descricao} (${p}/${parcelas})`;
+
+  const valorParcela = parcelas === 1
+    ? valor
+    : Number((valor / parcelas).toFixed(2));
+
+  await supabase.from("cartao_lancamentos").insert([{
+    id: crypto.randomUUID(),
+    user_id: state.user.id,
+    cartao_id,
+    descricao: descFinal,
+    valor: valorParcela,
+    data_compra: dataCompra,    // mantém data real da compra
+    data_fatura: dataISO,       // mês/ano para cair na fatura correta
+    parcelas,
+    parcela_atual: p,
+    categoria_id: categoriaSelecionada || null,
+    tipo: "compra",
+    billed: false
+  }]);
+}
 
       cartDesc.value = "";
       cartValor.value = "";
