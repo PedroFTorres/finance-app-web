@@ -340,20 +340,29 @@ document.addEventListener("DOMContentLoaded", () => {
         <div id="status-fatura" style="margin-top:8px;"></div>`;
     }
 
-    if (listaComprasFatura) {
-      listaComprasFatura.innerHTML = "";
-      (compras || []).forEach((c) => {
-        const li = document.createElement("li");
-        const descr = ((c.descricao || "") + "").replace(/\s*\(\d+\/\d+\)\s*$/,"").trim();
-        li.innerHTML = `<span>${new Date(c.data_compra + "T00:00:00").toLocaleDateString("pt-BR")} — ${descr}</span><span>${formatReal(c.valor)}</span>`;
-        li.style.cursor = "pointer";
-        li.onclick = () => {
-          if (Number(c.parcelas || 0) === 1) abrirEdicaoAvista(c);
-          else abrirEdicaoCompraParcelada(c);
-        };
-        listaComprasFatura.appendChild(li);
-      });
-    }
+   if (listaComprasFatura) {
+  listaComprasFatura.innerHTML = "";
+
+  (compras || []).forEach((c) => {
+    const li = document.createElement("li");
+
+    // manter descrição completa, incluindo (1/2)
+    const descr = c.descricao || "";
+
+    li.innerHTML = `
+      <span>${new Date((c.data_fatura || c.data_compra) + "T00:00:00").toLocaleDateString("pt-BR")} — ${descr}</span>
+      <span>${formatReal(c.valor)}</span>
+    `;
+
+    li.onclick = () => {
+      if (Number(c.parcelas || 0) === 1) abrirEdicaoAvista(c);
+      else abrirEdicaoCompraParcelada(c);
+    };
+
+    listaComprasFatura.appendChild(li);
+  });
+}
+
 
     const { data: faturaDB } = await supabase
       .from("cartao_faturas")
