@@ -593,95 +593,84 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ===========================
-  // LANÇAR COMPRA (com parcelas) — usa Fatura Inicial e data_fatura
-  // ===========================
-  if (btnAddPurchase) btnAddPurchase.onclick = async () => {
-    try {
-      const cartao_id = selectCartaoLanc.value;
-      const descricao = cartDesc.value.trim();
-      const valor = Number(cartValor.value || 0);
-      let parcelas = Number(cartParcelas.value || 1);
-      const dataCompra = cartData.value;
-      const categoriaSelecionada = selectCategoriaLancCartao.value;
+ // ====================== LANÇAR COMPRA (PARCELADA) ======================
+if (btnAddPurchase) btnAddPurchase.onclick = async () => {
+  try {
+    const cartao_id = selectCartaoLanc.value;
+    const descricao = cartDesc.value.trim();
+    const valor = Number(cartValor.value || 0);
+    let parcelas = Number(cartParcelas.value || 1);
+    const dataCompra = cartData.value; // será exibida ao usuário
+    const categoriaSelecionada = selectCategoriaLancCartao.value;
 
-      if (!cartao_id || !descricao || !valor || !dataCompra) return showToast("Preencha todos os campos.", "error");
+    if (!cartao_id || !descricao || !valor || !dataCompra)
+      return showToast("Preencha todos os campos.", "error");
 
-      if (!selectFaturaInicial.value) return showToast("Selecione a fatura inicial.", "error");
+    if (!selectFaturaInicial.value)
+      return showToast("Selecione a fatura inicial.", "error");
 
-      if (parcelas < 1) parcelas = 1;
+    if (parcelas < 1) parcelas = 1;
 
-      // Verifica se a fatura inicial está fechada — a fatura inicial é identificada por ano-mes escolhido
-      const [fatAno, fatMes] = selectFaturaInicial.value.split("-").map(Number);
-      const { data: f } = await supabase
-        .from("cartao_faturas")
-        .select("*")
-        .eq("user_id", state.user.id)
-        .eq("cartao_id", cartao_id)
-        .eq("ano", fatAno)
-        .eq("mes", fatMes)
-        .maybeSingle();
+    // ---- PARCELAMENTO CORRIGIDO ----
+    const [fatAno, fatMes] = selectFaturaInicial.value.split("-").map(Number);
 
-      if (f && f.status === "fechada") return showToast("Não é possível lançar: fatura fechada.", "error");
+    // corrigir centavos
+    const valorParcelaBase = Number((valor / parcelas).toFixed(2));
+    const somaBase = Number((valorParcelaBase * parcelas).toFixed(2));
+    const diferenca = Number((valor - somaBase).toFixed(2));
 
-      // CORREÇÃO DE CENTAVOS DAS PARCELAS
-      const valorParcelaBase = Number((valor / parcelas).toFixed(2));
-      const somaBase = Number((valorParcelaBase * parcelas).toFixed(2));
-      const diferenca = Number((valor - somaBase).toFixed(2)); 
+    for (let p = 1; p <= parcelas; p++) {
 
-      // Data da compra apenas informativa — guardamos data_compra para histórico
-      const [, , compDia] = dataCompra.split("-").map(Number);
+      // mês da parcela
+      const mesOffset = p - 1;
 
-      // GERAR TODAS AS PARCELAS com data_fatura baseada em fatura inicial + offset de parcelas
-      for (let p = 1; p <= parcelas; p++) {
+      // data_fatura será sempre dia 1
+      const dataFatura = new Date(fatAno, (fatMes - 1) + mesOffset, 1);
+      const dataFaturaISO = formatISO(dataFatura);
 
-        // calcular mês da fatura: fatura inicial + (p-1)
-        const mesOffset = p - 1;
-        const dataFatura = new Date(fatAno, (fatMes - 1) + mesOffset, compDia || 1);
-        const dataFaturaISO = formatISO(dataFatura);
+      // monta descrição com parcela
+      const descricaoFinal = parcelas === 1
+        ? descricao
+        : `${descricao} (${p}/${parcelas})`;
 
-        // descrição com parcela x/y
-        const descricaoFinal = parcelas === 1 ? descricao : `${descricao} (${p}/${parcelas})`;
-
-        // ajustar valor da primeira parcela (centavos)
-        let valorParcela = valorParcelaBase;
-        if (p === 1 && diferenca !== 0) {
-          valorParcela = Number((valorParcelaBase + diferenca).toFixed(2));
-        }
-
-        // INSERIR NO BANCO
-        await supabase
-          .from("cartao_lancamentos")
-          .insert([{
-            id: crypto.randomUUID(),
-            user_id: state.user.id,
-            cartao_id,
-            descricao: descricaoFinal,
-            valor: Number(valorParcela.toFixed(2)),
-            data_compra: dataCompra,
-            data_fatura: dataFaturaISO,
-            parcelas,
-            parcela_atual: p,
-            categoria_id: categoriaSelecionada || null,
-            tipo: "compra",
-            billed: false
-          }], { returning: "minimal" });
+      // acerta centavos na primeira parcela
+      let valorParcela = valorParcelaBase;
+      if (p === 1 && diferenca !== 0) {
+        valorParcela = Number((valorParcelaBase + diferenca).toFixed(2));
       }
 
-      // Limpar campos
-      cartDesc.value = "";
-      cartValor.value = "";
-      cartParcelas.value = 1;
-      cartData.value = "";
-
-      await loadFaturaForSelected();
-      showToast("Compra lançada!");
-
-    } catch (err) {
-      console.error(err);
-      showToast("Erro ao lançar compra.", "error");
+      // insere no banco
+      await supabase.from("cartao_lancamentos").insert([{
+        id: crypto.randomUUID(),
+        user_id: state.user.id,
+        cartao_id,
+        descricao: descricaoFinal,
+        valor: Number(valorParcela.toFixed(2)),
+        data_compra: dataCompra,          // EXIBIDA AO USUÁRIO
+        data_fatura: dataFaturaISO,       // USADA NO CÁLCULO
+        parcelas,
+        parcela_atual: p,
+        categoria_id: categoriaSelecionada || null,
+        tipo: "compra",
+        billed: false
+      }], { returning: "minimal" });
     }
-  };
+
+    // limpar campos
+    cartDesc.value = "";
+    cartValor.value = "";
+    cartParcelas.value = 1;
+    cartData.value = "";
+
+    await loadFaturaForSelected();
+    showToast("Compra lançada com sucesso!");
+
+  } catch (err) {
+    console.error(err);
+    showToast("Erro ao lançar compra.", "error");
+  }
+};
+
 
   if (btnCancelPurchase) btnCancelPurchase.onclick = () => {
     cartDesc.value = "";
