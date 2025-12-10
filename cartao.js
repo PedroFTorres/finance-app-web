@@ -1,4 +1,4 @@
-// cartao.js — Versão corrigida completa
+// cartao.js — Versão atualizada com modal de escolha de conta ao fechar fatura
 // Mantém todas as funcionalidades: CRUD cartões, faturas, lançamentos parcelados,
 // edição de parcelas, antecipação, pagamento antecipado, fechar/pagar/reabrir fatura,
 // histórico, toasts, modais.
@@ -105,6 +105,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalParcelaData = document.getElementById("modal-parcela-data");
   const modalParcelaSalvar = document.getElementById("modal-parcela-salvar");
   const modalParcelaCancelar = document.getElementById("modal-parcela-cancelar");
+
+  // Modal de escolha de conta para fechar fatura (assumindo que você adicionou no HTML)
+  const modalContaFatura = document.getElementById("modal-conta-fatura");
+  const contaFaturaSelect = document.getElementById("conta-fatura-select");
+  const contaFaturaConfirmar = document.getElementById("conta-fatura-confirmar");
+  const contaFaturaCancelar = document.getElementById("conta-fatura-cancelar");
 
   const toastContainer = document.getElementById("toast-container");
 
@@ -437,9 +443,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ===========================
-  // FECHAR FATURA → cria registro em cartao_faturas E cria DESPESA NÃO BAIXADA
+  // Funções auxiliares para modal de escolha de conta ao fechar fatura (OPÇÃO B)
   // ===========================
-  if (btnFecharFatura) btnFecharFatura.onclick = async () => {
+  async function carregarContasModal() {
+    if (!contaFaturaSelect) return;
+    const { data: contas } = await supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id);
+
+    contaFaturaSelect.innerHTML = "";
+    (contas || []).forEach(c => {
+      contaFaturaSelect.appendChild(new Option(`${c.nome} (${formatReal(c.saldo_atual)})`, c.id));
+    });
+
+    // se não houver opções, cria uma opção vazia
+    if ((contas || []).length === 0) {
+      contaFaturaSelect.appendChild(new Option("Nenhuma conta disponível", ""));
+    }
+  }
+
+  async function fecharFaturaComConta(conta_id) {
     try {
       const cartaoId = selectCartaoFaturas.value;
       const venc = dataVencimentoFatura.value;
@@ -447,12 +468,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!cartaoId) return showToast("Selecione um cartão.", "error");
       if (!venc) return showToast("Informe o vencimento.", "error");
-      if (state.faturaAtual) return showToast("Esta fatura já está fechada.", "error");
 
       const [ano, mes] = ym.split("-").map(Number);
-      const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
+      const inicio = `${ano}-${String(mes).padStart(2,"0")}-01`;
       const last = new Date(ano, mes, 0).getDate();
-      const fim = `${ano}-${String(mes).padStart(2, "0")}-${last}`;
+      const fim = `${ano}-${String(mes).padStart(2,"0")}-${last}`;
 
       const { data: compras } = await supabase
         .from("cartao_lancamentos")
@@ -486,7 +506,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const { error: errDesp } = await supabase.from("despesas").insert([{
         id: crypto.randomUUID(),
         user_id: state.user.id,
-        conta_id: null,
+        conta_id: conta_id || null, // conta escolhida pelo usuário
         descricao: `Fatura ${fData.id} — ${ (state.cards.find(c=>c.id===cartaoId)||{}).nome || 'Cartão' }`,
         valor: total,
         data: venc,
@@ -502,11 +522,52 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("Fatura fechada e despesa criada (a pagar).");
       }
 
+      // fechar modal se estiver aberto
+      if (modalContaFatura) modalContaFatura.classList.add("hidden");
+
       await loadFaturaForSelected();
 
     } catch (err) {
       console.error(err);
       showToast("Erro ao fechar fatura.", "error");
+    }
+  }
+
+  // ===========================
+  // FECHAR FATURA → abre modal para escolher conta (valida campos primeiro) - fluxo B
+  // ===========================
+  if (btnFecharFatura) btnFecharFatura.onclick = async () => {
+    try {
+      const cartaoId = selectCartaoFaturas.value;
+      const venc = dataVencimentoFatura.value;
+      const ym = selectMesFaturas.value;
+
+      if (!cartaoId) return showToast("Selecione um cartão.", "error");
+      if (!venc) return showToast("Informe o vencimento.", "error");
+      if (state.faturaAtual) return showToast("Esta fatura já está fechada.", "error");
+
+      // carregar contas no modal e abrir modal
+      await carregarContasModal();
+      if (modalContaFatura) modalContaFatura.classList.remove("hidden");
+
+      // configurar botões do modal (evitar bind múltiplo: limpar antes)
+      if (contaFaturaConfirmar) {
+        contaFaturaConfirmar.onclick = async () => {
+          const contaEscolhida = contaFaturaSelect ? contaFaturaSelect.value : null;
+          if (!contaEscolhida) return showToast("Selecione uma conta.", "error");
+          await fecharFaturaComConta(contaEscolhida);
+        };
+      }
+
+      if (contaFaturaCancelar) {
+        contaFaturaCancelar.onclick = () => {
+          if (modalContaFatura) modalContaFatura.classList.add("hidden");
+        };
+      }
+
+    } catch (err) {
+      console.error(err);
+      showToast("Erro ao processar fechamento.", "error");
     }
   };
 
@@ -737,10 +798,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     listaFaturasHistorico.innerHTML = "";
     (data || []).forEach((f) => {
       const li = document.createElement("li");
-      li.textContent =
-        `${f.cartoes_credito?.nome} • ${f.mes}/${f.ano} — ` +
-        `${formatReal(f.valor_total || 0)} — ` +
-        `${f.pago ? "Paga" : f.status}`;
+      li.textContent = `${f.cartoes_credito?.nome} • ${f.mes}/${f.ano} — ${formatReal(f.valor_total || 0)} — ${f.pago ? "Paga" : f.status}`;
       listaFaturasHistorico.appendChild(li);
     });
   }
