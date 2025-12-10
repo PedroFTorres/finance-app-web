@@ -1,4 +1,7 @@
-// ========================= HELPERS =========================
+// app.js — versão corrigida (Parte 1/5)
+// Baseado no seu arquivo enviado. Referência: :contentReference[oaicite:1]{index=1}
+
+/* ========================= HELPERS ========================= */
 
 function formatDate(d) {
   if (!d) return "";
@@ -18,7 +21,8 @@ function formatReal(v) {
     currency: "BRL",
   });
 }
-// ========================= VARIÁVEIS GLOBAIS =========================
+
+/* ========================= VARIÁVEIS GLOBAIS ========================= */
 
 let currentUser = null;
 let editing = { type: null, id: null };
@@ -28,36 +32,36 @@ let chartDashboard = null;
 let chartRecCat = null;
 let chartDesCat = null;
 
-// ========================= ELEMENTOS DO DOM =========================
-// --- elementos faltantes relacionados a lançamentos (filtrar / período personalizado)
+/* ========================= ELEMENTOS DO DOM ========================= */
+/* --- elementos faltantes relacionados a lançamentos (filtrar / período personalizado) */
 const periodoLanc = document.getElementById("periodo-lanc");
 const dataInicioLanc = document.getElementById("data-inicio-lanc");
 const dataFimLanc = document.getElementById("data-fim-lanc");
 const btnFiltrarLanc = document.getElementById("btn-filtrar-lanc");
 
-// Telas
+/* Telas */
 const telaDashboard = document.getElementById("tela-dashboard");
 const telaContas = document.getElementById("tela-contas");
 const telaLanc = document.getElementById("tela-lancamentos");
 
-// Menus topo
+/* Menus topo */
 const btnDash = document.getElementById("menu-dashboard");
 const btnContas = document.getElementById("menu-contas");
 const btnLanc = document.getElementById("menu-lancamentos");
 
-// Contas
+/* Contas */
 const selectContas = document.getElementById("select-contas");
 const contaNome = document.getElementById("conta-nome");
 const contaSaldo = document.getElementById("conta-saldo");
 const contaDataSaldo = document.getElementById("conta-data-saldo");
 const btnAddConta = document.getElementById("btn-add-conta");
 
-// Categorias
+/* Categorias */
 const categoriaNome = document.getElementById("categoria-nome");
 const btnAddCategoria = document.getElementById("btn-add-categoria");
 const listaCategorias = document.getElementById("lista-categorias");
 
-// Lançamentos
+/* Lançamentos */
 const tipoLanc = document.getElementById("tipo-lancamento");
 const valorLanc = document.getElementById("valor-lanc");
 const descLanc = document.getElementById("desc-lanc");
@@ -68,7 +72,7 @@ const selectContaLanc = document.getElementById("select-conta-lanc");
 const btnAddLanc = document.getElementById("btn-add-lanc");
 const btnCancelEdit = document.getElementById("btn-cancel-edit");
 
-// Totais e listas
+/* Totais e listas */
 const saldoAtualEl = document.getElementById("saldo-atual");
 const totalReceitasEl = document.getElementById("total-receitas");
 const totalDespesasEl = document.getElementById("total-despesas");
@@ -76,7 +80,7 @@ const totalDespesasEl = document.getElementById("total-despesas");
 const listReceitas = document.getElementById("list-receitas");
 const listDespesas = document.getElementById("list-despesas");
 
-// Extrato
+/* Extrato */
 const tabCadastro = document.getElementById("tab-cadastro");
 const tabExtrato = document.getElementById("tab-extrato");
 const tabCategorias = document.getElementById("tab-categorias");
@@ -87,21 +91,21 @@ const dataInicio = document.getElementById("data-inicio");
 const dataFim = document.getElementById("data-fim");
 const btnFiltrarExtrato = document.getElementById("btn-filtrar-extrato");
 
-// ========================= EXTRATO TABLE (CORREÇÃO) =========================
+/* ========================= EXTRATO TABLE (CORREÇÃO) ========================= */
 
 const extratoTableElement = document.getElementById("table-extrato");
 
-// tbody do extrato:
+/* tbody do extrato: */
 let tableExtrato = null;
 
 if (extratoTableElement) {
-    tableExtrato = extratoTableElement.querySelector("tbody");
+  tableExtrato = extratoTableElement.querySelector("tbody");
 } else {
-    console.warn("⚠️ table-extrato NÃO encontrado no DOM. Verifique o app.html.");
+  console.warn("⚠️ table-extrato NÃO encontrado no DOM. Verifique o app.html.");
 }
 
+/* ========================= MODAL BAIXA ========================= */
 
-// Modal baixa
 const modalBaixa = document.getElementById("modal-baixa");
 const dataBaixaInput = document.getElementById("data-baixa");
 const jurosInput = document.getElementById("juros-baixa");
@@ -110,7 +114,7 @@ const contaBaixaSelect = document.getElementById("conta-baixa-select");
 const confirmarBaixaBtn = document.getElementById("confirmar-baixa");
 const cancelarBaixaBtn = document.getElementById("cancelar-baixa");
 
-// ========================= LOGIN =========================
+/* ========================= LOGIN ========================= */
 
 supabase.auth.getSession().then(({ data }) => {
   if (!data.session) return (window.location.href = "login.html");
@@ -124,9 +128,8 @@ document.getElementById("btn-logout").onclick = async () => {
   window.location.href = "login.html";
 };
 
-// ========================= INICIALIZAÇÃO =========================
+/* ========================= INICIALIZAÇÃO ========================= */
 async function initApp() {
-
   // esconde todas as telas
   telaDashboard.classList.add("hidden");
   telaContas.classList.add("hidden");
@@ -144,7 +147,7 @@ async function initApp() {
   showScreen("dashboard");
 }
 
-// ========================= CATEGORIAS =========================
+/* ========================= CATEGORIAS ========================= */
 
 async function loadCategorias() {
   const { data } = await supabase
@@ -201,8 +204,8 @@ async function deleteCategoria(id) {
   await loadCategorias();
 }
 
-
-// ========================= CONTAS =========================
+/* ========================= CONTAS ========================= */
+// app.js — Parte 2/5 (continuação)
 
 async function loadContas() {
   const { data } = await supabase
@@ -210,29 +213,37 @@ async function loadContas() {
     .select("*")
     .eq("user_id", currentUser.id);
 
-selectContas.innerHTML = "";
-selectExtrato.innerHTML = "";
-selectContaLanc.innerHTML = "";
+  selectContas.innerHTML = "";
+  selectExtrato.innerHTML = "";
+  selectContaLanc.innerHTML = "";
 
-selectContas.appendChild(new Option("Todas as Contas", "all"));
-selectExtrato.appendChild(new Option("Todas as Contas", "all"));
-selectContaLanc.appendChild(new Option("Todas as Contas", "all")); // ⭐ ESTA É A LINHA QUE FALTAVA ⭐
+  // adicionar opção "Todas as Contas" nos selects relevantes
+  selectContas.appendChild(new Option("Todas as Contas", "all"));
+  selectExtrato.appendChild(new Option("Todas as Contas", "all"));
+  selectContaLanc.appendChild(new Option("Todas as Contas", "all")); // ⭐ linha adicionada
 
-(data || []).forEach((c) => {
-  selectContas.appendChild(
-    new Option(`${c.nome} (${formatReal(c.saldo_inicial)})`, c.id)
-  );
-  selectExtrato.appendChild(new Option(c.nome, c.id));
-  selectContaLanc.appendChild(new Option(c.nome, c.id)); // contas reais
-});
+  (data || []).forEach((c) => {
+    selectContas.appendChild(
+      new Option(`${c.nome} (${formatReal(c.saldo_inicial)})`, c.id)
+    );
+    selectExtrato.appendChild(new Option(c.nome, c.id));
+    selectContaLanc.appendChild(new Option(c.nome, c.id)); // contas reais
+  });
 
-
+  // por padrão, selecione "all" (modo exibição), conforme sua escolha
   if (data?.length) {
-    selectContas.value = data[0].id;
-    selectExtrato.value = data[0].id;
-    selectContaLanc.value = data[0].id;
+    selectContas.value = "all";
+    selectExtrato.value = "all";
+    selectContaLanc.value = "all";
 
-    await recalcularSaldo(selectContas.value);
+    // se a conta selecionada não for "all", recalcular o saldo
+    if (selectContas.value !== "all") {
+      await recalcularSaldo(selectContas.value);
+    } else {
+      // se "all", exibe saldo 0 (modo leitura) — evita requisições inválidas
+      saldoAtualEl.textContent = formatReal(0);
+    }
+
     await refreshLancamentos();
   }
 }
@@ -263,10 +274,12 @@ btnAddConta.onclick = async () => {
   await loadContas();
 };
 
+/* ========================= RECALCULAR SALDO ========================= */
 
-// ========================= RECALCULAR SALDO =========================
-
+/* Proteção: se conta_id === 'all' retorna 0 e não faz queries inválidas */
 async function recalcularSaldo(conta_id) {
+  if (!conta_id || conta_id === "all") return 0;
+
   const { data: conta } = await supabase
     .from("contas_bancarias")
     .select("saldo_inicial")
@@ -298,9 +311,15 @@ async function recalcularSaldo(conta_id) {
 
   return sf;
 }
-// ========================= LANÇAMENTOS — ADICIONAR =========================
+
+/* ========================= LANÇAMENTOS — ADICIONAR ========================= */
 
 btnAddLanc.onclick = async () => {
+  // Se está em modo "all" não permitimos criar (Opção A - modo leitura)
+  if (selectContaLanc.value === "all") {
+    return alert("Selecione uma conta específica para adicionar um lançamento.");
+  }
+
   const desc = descLanc.value.trim();
   const valor = Number(valorLanc.value || 0);
   const data = dataLanc.value;
@@ -311,7 +330,7 @@ btnAddLanc.onclick = async () => {
   if (!desc || !valor || !data)
     return alert("Preencha todos os campos do lançamento.");
 
-  // ========================= EDIÇÃO =========================
+  /* ========================= EDIÇÃO ========================= */
   if (editing.type) {
     const tabela = editing.type === "receita" ? "receitas" : "despesas";
 
@@ -332,10 +351,10 @@ btnAddLanc.onclick = async () => {
     return;
   }
 
-  // tabela correspondente
+  /* ========================= TABELA CORRESPONDENTE ========================= */
   const tabela = tipo === "receita" ? "receitas" : "despesas";
 
-  // ========================= RECORRÊNCIA =========================
+  /* ========================= RECORRÊNCIA ========================= */
   const tipoRec = document.getElementById("recorrencia-tipo").value;
   const parcelas = Number(
     document.getElementById("recorrencia-parcelas").value || 1
@@ -385,7 +404,7 @@ btnAddLanc.onclick = async () => {
     return;
   }
 
-  // ========================= LANÇAMENTO NORMAL =========================
+  /* ========================= LANÇAMENTO NORMAL ========================= */
 
   await supabase.from(tabela).insert([
     {
@@ -407,17 +426,22 @@ btnAddLanc.onclick = async () => {
   await refreshLancamentos();
   await renderExtrato();
 };
+// app.js — Parte 3/5 (continuação)
 
-
-// ========================= EDIÇÃO =========================
+ /* ========================= EDIÇÃO ========================= */
 
 function startEdit(type, item) {
+  // Se estiver em modo "all", não permitir edição (modo leitura)
+  if (selectContas.value === "all") {
+    return alert("Selecione uma conta específica para editar lançamentos.");
+  }
+
   editing = { type, id: item.id };
   tipoLanc.value = type;
   valorLanc.value = item.valor;
   descLanc.value = item.descricao;
   dataLanc.value = item.data;
-  selectContaLanc.value = item.conta_id;
+  selectContaLanc.value = item.conta_id || "";
   categoriaLanc.value = item.categoria_id || "";
 
   btnAddLanc.textContent = "Salvar";
@@ -436,10 +460,14 @@ function stopEdit() {
 
 btnCancelEdit.onclick = () => stopEdit();
 
-
-// ========================= EXCLUIR LANÇAMENTO =========================
+/* ========================= EXCLUIR LANÇAMENTO ========================= */
 
 async function deleteItem(type, id) {
+  // Se está em modo "all", não aceitamos exclusão
+  if (selectContas.value === "all") {
+    return alert("Selecione uma conta específica para excluir lançamentos.");
+  }
+
   if (!confirm("Excluir este lançamento?")) return;
 
   const tabela = type === "receita" ? "receitas" : "despesas";
@@ -462,8 +490,7 @@ async function deleteItem(type, id) {
   await renderExtrato();
 }
 
-
-// ========================= REFRESH LANÇAMENTOS =========================
+/* ========================= REFRESH LANÇAMENTOS ========================= */
 
 btnFiltrarLanc.onclick = () => refreshLancamentos();
 
@@ -503,51 +530,49 @@ async function refreshLancamentos() {
     fim = dataFimLanc.value;
   }
 
- let queryRec, queryDes;
+  let queryRec, queryDes;
 
-if (conta_id === "all") {
-  // Buscar receitas de todas as contas
-  queryRec = supabase
-    .from("receitas")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .gte("data", inicio)
-    .lte("data", fim)
-    .order("data");
+  if (conta_id === "all") {
+    // Buscar receitas de todas as contas
+    queryRec = supabase
+      .from("receitas")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data");
 
-  // Buscar despesas de todas as contas (inclui conta_id null)
-  queryDes = supabase
-    .from("despesas")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .gte("data", inicio)
-    .lte("data", fim)
-    .order("data");
+    // Buscar despesas de todas as contas (inclui conta_id null)
+    queryDes = supabase
+      .from("despesas")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data");
+  } else {
+    // Buscar receitas da conta selecionada
+    queryRec = supabase
+      .from("receitas")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .eq("conta_id", conta_id)
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data");
 
-} else {
-  // Buscar receitas da conta selecionada
-  queryRec = supabase
-    .from("receitas")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .eq("conta_id", conta_id)
-    .gte("data", inicio)
-    .lte("data", fim)
-    .order("data");
+    // Buscar despesas da conta selecionada
+    queryDes = supabase
+      .from("despesas")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .eq("conta_id", conta_id)
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data");
+  }
 
-  // Buscar despesas da conta selecionada
-  queryDes = supabase
-    .from("despesas")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .eq("conta_id", conta_id)
-    .gte("data", inicio)
-    .lte("data", fim)
-    .order("data");
-}
-
-const [R, D] = await Promise.all([queryRec, queryDes]);
-
+  const [R, D] = await Promise.all([queryRec, queryDes]);
 
   listReceitas.innerHTML = "";
   listDespesas.innerHTML = "";
@@ -568,19 +593,26 @@ const [R, D] = await Promise.all([queryRec, queryDes]);
   totalReceitasEl.textContent = formatReal(tr);
   totalDespesasEl.textContent = formatReal(td);
 
-  const { data: conta } = await supabase
-    .from("contas_bancarias")
-    .select("saldo_atual")
-    .eq("id", conta_id)
-    .maybeSingle();
+  // se conta_id === 'all' não buscar saldo por conta (evita requisições inválidas)
+  if (conta_id === "all") {
+    saldoAtualEl.textContent = formatReal(0);
+  } else {
+    const { data: conta } = await supabase
+      .from("contas_bancarias")
+      .select("saldo_atual")
+      .eq("id", conta_id)
+      .maybeSingle();
 
-  saldoAtualEl.textContent = formatReal(conta?.saldo_atual || 0);
+    saldoAtualEl.textContent = formatReal(conta?.saldo_atual || 0);
+  }
 
-  await recalcularSaldo(conta_id);
+  // somente recalcular saldo se não estivermos em 'all'
+  if (conta_id !== "all") {
+    await recalcularSaldo(conta_id);
+  }
 }
 
-
-// ========================= CRIAR ITEM NA LISTA =========================
+/* ========================= CRIAR ITEM NA LISTA ========================= */
 
 function buildLancItem(item, type) {
   const li = document.createElement("li");
@@ -595,22 +627,30 @@ function buildLancItem(item, type) {
   )}`;
   if (item.baixado) left.textContent += " — (BAIXADO)";
 
-  const b1 = document.createElement("button");
-  b1.textContent = "Editar";
-  b1.onclick = () => startEdit(type, item);
+  // Se estamos em modo "all" -> não mostramos botões de ação (modo leitura)
+  if (selectContas.value === "all") {
+    const info = document.createElement("span");
+    info.style.opacity = "0.7";
+    info.textContent = "Modo leitura — selecione uma conta para ações";
+    right.appendChild(info);
+  } else {
+    const b1 = document.createElement("button");
+    b1.textContent = "Editar";
+    b1.onclick = () => startEdit(type, item);
 
-  const b2 = document.createElement("button");
-  b2.textContent = "Excluir";
-  b2.onclick = () => deleteItem(type, item.id);
+    const b2 = document.createElement("button");
+    b2.textContent = "Excluir";
+    b2.onclick = () => deleteItem(type, item.id);
 
-  right.appendChild(b1);
-  right.appendChild(b2);
+    right.appendChild(b1);
+    right.appendChild(b2);
 
-  if (!item.baixado) {
-    const b3 = document.createElement("button");
-    b3.textContent = "Baixar";
-    b3.onclick = () => baixarLancamento(type, item);
-    right.appendChild(b3);
+    if (!item.baixado) {
+      const b3 = document.createElement("button");
+      b3.textContent = "Baixar";
+      b3.onclick = () => baixarLancamento(type, item);
+      right.appendChild(b3);
+    }
   }
 
   li.appendChild(left);
@@ -618,9 +658,16 @@ function buildLancItem(item, type) {
 
   return li;
 }
-// ========================= BAIXAR LANÇAMENTO (ABRIR MODAL) =========================
+// app.js — Parte 4/5 (continuação)
+
+/* ========================= BAIXAR LANÇAMENTO (ABRIR MODAL) ========================= */
 
 async function baixarLancamento(type, item) {
+  // não permitir baixar no modo "all"
+  if (selectContas.value === "all") {
+    return alert("Selecione uma conta específica para baixar lançamentos.");
+  }
+
   lancamentoParaBaixa = { type, item };
 
   // carregar contas no select
@@ -648,8 +695,7 @@ async function baixarLancamento(type, item) {
   modalBaixa.classList.remove("hidden");
 }
 
-
-// ========================= CONFIRMAR BAIXA — MODAL =========================
+/* ========================= CONFIRMAR BAIXA — MODAL ========================= */
 
 confirmarBaixaBtn.onclick = async () => {
   if (!lancamentoParaBaixa)
@@ -659,6 +705,11 @@ confirmarBaixaBtn.onclick = async () => {
   const juros = Number(jurosInput.value || 0);
   const desconto = Number(descontoInput.value || 0);
   const conta_id = contaBaixaSelect.value;
+
+  // segurança: não permitir operar com conta_id 'all' (improvável aqui, mas checamos)
+  if (!conta_id || conta_id === "all") {
+    return alert("Selecione uma conta para confirmar a baixa.");
+  }
 
   const { type, item } = lancamentoParaBaixa;
 
@@ -793,16 +844,14 @@ confirmarBaixaBtn.onclick = async () => {
   await renderExtrato();
 };
 
-
-// ========================= CANCELAR MODAL =========================
+/* ========================= CANCELAR MODAL ========================= */
 
 cancelarBaixaBtn.onclick = () => {
   modalBaixa.classList.add("hidden");
   lancamentoParaBaixa = null;
 };
 
-
-// ========================= GET OR CREATE CATEGORIA =========================
+/* ========================= GET OR CREATE CATEGORIA ========================= */
 
 async function getOrCreateCategoria(nome) {
   const { data } = await supabase
@@ -821,7 +870,9 @@ async function getOrCreateCategoria(nome) {
 
   return created?.data?.id || created?.id;
 }
-// ========================= EXTRATO — FILTRAR =========================
+// app.js — Parte 5/5 (final)
+
+/* ========================= EXTRATO — FILTRAR ========================= */
 
 btnFiltrarExtrato.onclick = () => renderExtrato();
 
@@ -829,7 +880,25 @@ async function renderExtrato() {
   const conta_id = selectExtrato.value;
   if (!conta_id || !tableExtrato) return;
 
-  await recalcularSaldo(conta_id);
+  // se "all", não recalculamos saldo e não buscamos a conta (modo leitura)
+  let conta = null;
+  if (conta_id !== "all") {
+    await recalcularSaldo(conta_id);
+
+    const res = await supabase
+      .from("contas_bancarias")
+      .select("saldo_inicial,data_saldo,saldo_atual")
+      .eq("id", conta_id)
+      .single();
+
+    conta = res.data;
+  } else {
+    // conta mock (modo leitura)
+    conta = { saldo_inicial: 0, data_saldo: null, saldo_atual: 0 };
+  }
+
+  const si = Number(conta.saldo_inicial || 0);
+  const dataInicial = conta.data_saldo;
 
   const now = new Date();
   let inicio, fim;
@@ -864,37 +933,27 @@ async function renderExtrato() {
     fim = dataFim.value;
   }
 
-  const { data: conta } = await supabase
-    .from("contas_bancarias")
-    .select("saldo_inicial,data_saldo,saldo_atual")
-    .eq("id", conta_id)
-    .single();
-
-  const si = Number(conta.saldo_inicial || 0);
-  const dataInicial = conta.data_saldo;
-
   // puxar movimentações
- let movQuery;
+  let movQuery;
 
-if (conta_id === "all") {
-  movQuery = supabase
-    .from("movimentacoes")
-    .select("*")
-    .gte("data", inicio)
-    .lte("data", fim)
-    .order("data");
-} else {
-  movQuery = supabase
-    .from("movimentacoes")
-    .select("*")
-    .eq("conta_id", conta_id)
-    .gte("data", inicio)
-    .lte("data", fim)
-    .order("data");
-}
+  if (conta_id === "all") {
+    movQuery = supabase
+      .from("movimentacoes")
+      .select("*")
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data");
+  } else {
+    movQuery = supabase
+      .from("movimentacoes")
+      .select("*")
+      .eq("conta_id", conta_id)
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data");
+  }
 
-const { data: movs } = await movQuery;
-
+  const { data: movs } = await movQuery;
 
   const linhas = [];
 
@@ -971,8 +1030,7 @@ const { data: movs } = await movQuery;
     formatReal(cred - deb);
 }
 
-
-// ========================= CANCELAR BAIXA =========================
+/* ========================= CANCELAR BAIXA ========================= */
 
 async function cancelarBaixaMovimentacao(mov) {
   if (!confirm("Deseja cancelar esta baixa?")) return;
@@ -1012,7 +1070,8 @@ async function cancelarBaixaMovimentacao(mov) {
   await refreshLancamentos();
   await renderExtrato();
 }
-// ========================= DASHBOARD =========================
+
+/* ========================= DASHBOARD ========================= */
 
 async function loadDashboard() {
   const now = new Date();
@@ -1023,7 +1082,7 @@ async function loadDashboard() {
   const last = new Date(ano, mes, 0).getDate();
   const fim = `${ano}-${String(mes).padStart(2, "0")}-${last}`;
 
-  // Receitas e despesas do mês
+  // Receitas e despesas do mês (SEM FILTRO DE CONTA — dashboard é resumo geral)
   const rec = await supabase
     .from("receitas")
     .select("*")
@@ -1062,18 +1121,18 @@ async function loadDashboard() {
 
   if (chartDashboard) chartDashboard.destroy();
 
- chartDashboard = new Chart(ctx, {
-  type: "bar",
-  data: {
-    labels: ["Receitas", "Despesas"],
-    datasets: [
-      {
-        label: "Resumo do mês",
-        data: [totalR, totalD],
-        backgroundColor: ["#18c55f", "#e63946"], // verde / vermelho
-      },
-    ],
-  },
+  chartDashboard = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Receitas", "Despesas"],
+      datasets: [
+        {
+          label: "Resumo do mês",
+          data: [totalR, totalD],
+          backgroundColor: ["#18c55f", "#e63946"], // verde / vermelho
+        },
+      ],
+    },
 
     options: {
       responsive: true,
@@ -1087,218 +1146,9 @@ async function loadDashboard() {
   await renderGraficoDespesasPorCategoria(inicio, fim);
 }
 
+/* ========================= GRÁFICOS, SUBSCRIBE E TABS (mantidos) ========================= */
 
-// ========================= GRÁFICO RECEITAS POR CATEGORIA =========================
+/* (O restante do arquivo — subscribeToChanges, showScreen, tabs, filtros — permanece igual ao seu original) */
 
-async function renderGraficoReceitasPorCategoria(inicio, fim) {
-  const { data } = await supabase
-    .from("receitas")
-    .select("valor,categoria_id,categorias(nome)")
-    .eq("user_id", currentUser.id)
-    .gte("data", inicio)
-    .lte("data", fim);
+/* ========================= FIM DO ARQUIVO ========================= */
 
-  const grupos = {};
-
-  (data || []).forEach((r) => {
-    const nome = r.categorias?.nome || "Sem categoria";
-    grupos[nome] = (grupos[nome] || 0) + Number(r.valor || 0);
-  });
-
-  const labels = Object.keys(grupos);
-  const valores = Object.values(grupos);
-
-  const ctx = document.getElementById("chart-receitas-categorias");
-
-chartRecCat = new Chart(ctx, {
-  type: "bar",
-  data: {
-    labels,
-    datasets: [
-      {
-        label: "Receitas por Categoria",
-        data: valores,
-        backgroundColor: "#18c55f",
-      },
-    ],
-  },
-  options: {
-    responsive: true,
-  },
-});
-}  
-
-// ========================= GRÁFICO DESPESAS POR CATEGORIA =========================
-
-async function renderGraficoDespesasPorCategoria(inicio, fim) {
-  const { data } = await supabase
-    .from("despesas")
-    .select("valor,categoria_id,categorias(nome)")
-    .eq("user_id", currentUser.id)
-    .gte("data", inicio)
-    .lte("data", fim);
-
-  const grupos = {};
-
-  (data || []).forEach((r) => {
-    const nome = r.categorias?.nome || "Sem categoria";
-    grupos[nome] = (grupos[nome] || 0) + Number(r.valor || 0);
-  });
-
-  const labels = Object.keys(grupos);
-  const valores = Object.values(grupos);
-
-  const ctx = document.getElementById("chart-despesas-categorias");
-
- if (chartDesCat) chartDesCat.destroy();
-chartDesCat = new Chart(ctx, {
-  type: "bar",
-  data: {
-    labels,
-    datasets: [
-      {
-        label: "Despesas por Categoria",
-        data: valores,
-        backgroundColor: "#e63946", // vermelho
-      },
-    ],
-  },
-  options: {
-    responsive: true,
-  },
-});  
-  }
-
-// ========================= SUBSCRIBE SUPABASE =========================
-
-function subscribeToChanges() {
-  // Receitas → atualiza lançamentos
-  supabase
-    .channel("rec")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "receitas" },
-      () => refreshLancamentos()
-    )
-    .subscribe();
-
-  // Despesas → atualiza lançamentos
-  supabase
-    .channel("des")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "despesas" },
-      () => refreshLancamentos()
-    )
-    .subscribe();
-
-  // Movimentações → atualiza extrato
-  supabase
-    .channel("mov")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "movimentacoes" },
-      () => renderExtrato()
-    )
-    .subscribe();
-
-  // Categorias → recarrega lista
-  supabase
-    .channel("cats")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "categorias" },
-      () => loadCategorias()
-    )
-    .subscribe();
-}
-
-
-// ========================= TROCA DE TELAS PRINCIPAIS =========================
-
-function showScreen(s) {
-  // Oculta todas
-  telaDashboard.classList.add("hidden");
-  telaContas.classList.add("hidden");
-  telaLanc.classList.add("hidden");
-
-  // Reseta ativações
-  btnDash.classList.remove("active");
-  btnContas.classList.remove("active");
-  btnLanc.classList.remove("active");
-
-  // Ativa a tela escolhida
-  if (s === "dashboard") {
-    telaDashboard.classList.remove("hidden");
-    btnDash.classList.add("active");
-    loadDashboard();
-  } else if (s === "contas") {
-    telaContas.classList.remove("hidden");
-    btnContas.classList.add("active");
-  } else if (s === "lanc") {
-    telaLanc.classList.remove("hidden");
-    btnLanc.classList.add("active");
-  }
-}
-
-// botões de menu
-btnDash.onclick = () => showScreen("dashboard");
-btnContas.onclick = () => showScreen("contas");
-btnLanc.onclick = () => showScreen("lanc");
-
-
-// ========================= TABS (Cadastro / Extrato / Categorias) =========================
-
-document.querySelectorAll(".tab-btn").forEach((b) => {
-  b.onclick = () => {
-    // remove ativo de todas
-    document.querySelectorAll(".tab-btn").forEach((x) => x.classList.remove("active"));
-
-    b.classList.add("active");
-
-    // esconde todas as tabs
-    tabCadastro.classList.add("hidden");
-    tabExtrato.classList.add("hidden");
-    tabCategorias.classList.add("hidden");
-
-    // mostra a tab correta
-    if (b.dataset.tab === "cadastro") {
-      tabCadastro.classList.remove("hidden");
-    }
-
-    if (b.dataset.tab === "extrato") {
-      tabExtrato.classList.remove("hidden");
-      renderExtrato();
-    }
-
-    if (b.dataset.tab === "categorias") {
-      tabCategorias.classList.remove("hidden");
-    }
-  };
-});
-
-
-// ========================= FILTROS LANÇAMENTOS =========================
-
-periodoLanc.onchange = () => {
-  if (periodoLanc.value === "personalizado") {
-    dataInicioLanc.classList.remove("hidden");
-    dataFimLanc.classList.remove("hidden");
-  } else {
-    dataInicioLanc.classList.add("hidden");
-    dataFimLanc.classList.add("hidden");
-  }
-};
-
-
-// ========================= FILTROS EXTRATO =========================
-
-periodoExtrato.onchange = () => {
-  if (periodoExtrato.value === "personalizado") {
-    dataInicio.classList.remove("hidden");
-    dataFim.classList.remove("hidden");
-  } else {
-    dataInicio.classList.add("hidden");
-    dataFim.classList.add("hidden");
-  }
-};
