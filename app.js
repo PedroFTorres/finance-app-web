@@ -1146,9 +1146,98 @@ async function loadDashboard() {
   await renderGraficoDespesasPorCategoria(inicio, fim);
 }
 
-/* ========================= GRÁFICOS, SUBSCRIBE E TABS (mantidos) ========================= */
+/* ========================= SUBSCRIBE TO CHANGES (realtime / fallback) ========================= */
 
-/* (O restante do arquivo — subscribeToChanges, showScreen, tabs, filtros — permanece igual ao seu original) */
+function unsubscribePrevious() {
+  try {
+    if (window._appRealtimeChannel && window._appRealtimeChannel.unsubscribe) {
+      window._appRealtimeChannel.unsubscribe();
+    }
+    if (window._appRealtimeChannels && Array.isArray(window._appRealtimeChannels)) {
+      window._appRealtimeChannels.forEach(ch => {
+        try { ch.unsubscribe && ch.unsubscribe(); } catch(_) {}
+      });
+    }
+  } catch (e) {
+    console.warn("Erro ao limpar subscriptions anteriores", e);
+  }
+  try {
+    if (window._appPoll) {
+      clearInterval(window._appPoll);
+      window._appPoll = null;
+    }
+  } catch (e) {}
+}
+
+function subscribeToChanges() {
+  // Limpa subscriptions/polling anteriores caso existam (útil em hot-reload)
+  unsubscribePrevious();
+
+  // Tenta usar realtime (supabase-js v2 channels)
+  try {
+    if (typeof supabase.channel === "function") {
+      const tables = ["receitas","despesas","movimentacoes","contas_bancarias","categorias"];
+      window._appRealtimeChannels = [];
+
+      tables.forEach((tbl) => {
+        try {
+          const ch = supabase
+            .channel(`public:${tbl}:changes`)
+            .on(
+              "postgres_changes",
+              { event: "*", schema: "public", table: tbl },
+              (payload) => {
+                // Para evitar chamadas redundantes demais, faz ações mínimas:
+                // atualiza a lista de lançamentos/extrato/dashboard conforme necessário.
+                // payload.eventType pode ser 'INSERT','UPDATE','DELETE'
+                // Reage de forma conservadora: atualiza tudo relevante.
+                try {
+                  if (tbl === "contas_bancarias") {
+                    // recarrega contas e dashboards
+                    loadContas().catch(() => {});
+                    loadDashboard().catch(() => {});
+                  } else {
+                    // receitas/despesas/movimentacoes -> refresh e extrato
+                    refreshLancamentos().catch(() => {});
+                    renderExtrato().catch(() => {});
+                    loadDashboard().catch(() => {});
+                  }
+                } catch (e) {
+                  console.warn("Erro ao processar payload realtime", e);
+                }
+              }
+            );
+
+          // subscribe (retorna objeto com unsubscribe)
+          ch.subscribe();
+          window._appRealtimeChannels.push(ch);
+        } catch (e) {
+          console.warn("Não foi possível inscrever canal realtime para", tbl, e);
+        }
+      });
+
+      // guarda referência ao channel conjunto (opcional)
+      window._appRealtimeChannel = window._appRealtimeChannels;
+      console.info("Subscribed to Supabase Realtime channels (if available).");
+      return;
+    }
+  } catch (e) {
+    console.warn("Realtime supabase.channel não disponível ou falha ao inscrever:", e);
+  }
+
+  // Fallback: se não houver realtime, usa polling leve (a cada 8s)
+  try {
+    window._appPoll = setInterval(() => {
+      // atualizações seguras e idempotentes
+      try { refreshLancamentos().catch(()=>{}); } catch(_) {}
+      try { renderExtrato().catch(()=>{}); } catch(_) {}
+      try { loadDashboard().catch(()=>{}); } catch(_) {}
+    }, 8000);
+    console.info("Realtime não disponível — usando polling fallback (8s).");
+  } catch (e) {
+    console.warn("Erro ao configurar polling fallback:", e);
+  }
+}
 
 /* ========================= FIM DO ARQUIVO ========================= */
 
