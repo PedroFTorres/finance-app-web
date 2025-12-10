@@ -214,18 +214,18 @@ selectContas.innerHTML = "";
 selectExtrato.innerHTML = "";
 selectContaLanc.innerHTML = "";
 
-// ➕ Adicionar opção "Todas as contas"
 selectContas.appendChild(new Option("Todas as Contas", "all"));
 selectExtrato.appendChild(new Option("Todas as Contas", "all"));
+selectContaLanc.appendChild(new Option("Todas as Contas", "all")); // ⭐ ESTA É A LINHA QUE FALTAVA ⭐
 
+(data || []).forEach((c) => {
+  selectContas.appendChild(
+    new Option(`${c.nome} (${formatReal(c.saldo_inicial)})`, c.id)
+  );
+  selectExtrato.appendChild(new Option(c.nome, c.id));
+  selectContaLanc.appendChild(new Option(c.nome, c.id)); // contas reais
+});
 
-  (data || []).forEach((c) => {
-    selectContas.appendChild(
-      new Option(`${c.nome} (${formatReal(c.saldo_inicial)})`, c.id)
-    );
-    selectExtrato.appendChild(new Option(c.nome, c.id));
-    selectContaLanc.appendChild(new Option(c.nome, c.id));
-  });
 
   if (data?.length) {
     selectContas.value = data[0].id;
