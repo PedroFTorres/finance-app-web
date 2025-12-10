@@ -500,20 +500,24 @@ document.addEventListener("DOMContentLoaded", () => {
         return showToast("Erro ao fechar fatura.", "error");
       }
 
-      // criar categoria "Cartão de Crédito"
-      const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
+     // criar categoria "Cartão de Crédito"
+const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
 
-      const { error: errDesp } = await supabase.from("despesas").insert([{
-        id: crypto.randomUUID(),
-        user_id: state.user.id,
-        conta_id: conta_id || null, // conta escolhida pelo usuário
-        descricao: `Fatura ${fData.id} — ${ (state.cards.find(c=>c.id===cartaoId)||{}).nome || 'Cartão' }`,
-        valor: total,
-        data: venc,
-        categoria_id: categoriaId,
-        baixado: false,
-        cartao_fatura_id: fData.id
-      }]);
+// pegar nome do cartão para a descrição
+const card = state.cards.find(c => c.id === cartaoId) || { nome: "Cartão" };
+
+const { error: errDesp } = await supabase.from("despesas").insert([{
+  id: crypto.randomUUID(),
+  user_id: state.user.id,
+  conta_id: conta_id || null,
+  descricao: `Fatura ${card.nome} — ${String(mes).padStart(2,"0")}/${ano}`,
+  valor: total,
+  data: venc,
+  categoria_id: categoriaId,
+  baixado: false,
+  cartao_fatura_id: fData.id
+}]);
+
 
       if (errDesp) {
         console.error("Erro ao criar despesa vinculada:", errDesp);
