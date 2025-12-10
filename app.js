@@ -210,9 +210,14 @@ async function loadContas() {
     .select("*")
     .eq("user_id", currentUser.id);
 
-  selectContas.innerHTML = "";
-  selectExtrato.innerHTML = "";
-  selectContaLanc.innerHTML = "";
+selectContas.innerHTML = "";
+selectExtrato.innerHTML = "";
+selectContaLanc.innerHTML = "";
+
+// ➕ Adicionar opção "Todas as contas"
+selectContas.appendChild(new Option("Todas as Contas", "all"));
+selectExtrato.appendChild(new Option("Todas as Contas", "all"));
+
 
   (data || []).forEach((c) => {
     selectContas.appendChild(
@@ -498,24 +503,51 @@ async function refreshLancamentos() {
     fim = dataFimLanc.value;
   }
 
-  const [R, D] = await Promise.all([
-    supabase
-      .from("receitas")
-      .select("*")
-      .eq("user_id", currentUser.id)
-      .eq("conta_id", conta_id)
-      .gte("data", inicio)
-      .lte("data", fim)
-      .order("data"),
-    supabase
-      .from("despesas")
-      .select("*")
-      .eq("user_id", currentUser.id)
-      .eq("conta_id", conta_id)
-      .gte("data", inicio)
-      .lte("data", fim)
-      .order("data"),
-  ]);
+ let queryRec, queryDes;
+
+if (conta_id === "all") {
+  // Buscar receitas de todas as contas
+  queryRec = supabase
+    .from("receitas")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .gte("data", inicio)
+    .lte("data", fim)
+    .order("data");
+
+  // Buscar despesas de todas as contas (inclui conta_id null)
+  queryDes = supabase
+    .from("despesas")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .gte("data", inicio)
+    .lte("data", fim)
+    .order("data");
+
+} else {
+  // Buscar receitas da conta selecionada
+  queryRec = supabase
+    .from("receitas")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .eq("conta_id", conta_id)
+    .gte("data", inicio)
+    .lte("data", fim)
+    .order("data");
+
+  // Buscar despesas da conta selecionada
+  queryDes = supabase
+    .from("despesas")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .eq("conta_id", conta_id)
+    .gte("data", inicio)
+    .lte("data", fim)
+    .order("data");
+}
+
+const [R, D] = await Promise.all([queryRec, queryDes]);
+
 
   listReceitas.innerHTML = "";
   listDespesas.innerHTML = "";
@@ -842,13 +874,27 @@ async function renderExtrato() {
   const dataInicial = conta.data_saldo;
 
   // puxar movimentações
-  const { data: movs } = await supabase
+ let movQuery;
+
+if (conta_id === "all") {
+  movQuery = supabase
+    .from("movimentacoes")
+    .select("*")
+    .gte("data", inicio)
+    .lte("data", fim)
+    .order("data");
+} else {
+  movQuery = supabase
     .from("movimentacoes")
     .select("*")
     .eq("conta_id", conta_id)
     .gte("data", inicio)
     .lte("data", fim)
     .order("data");
+}
+
+const { data: movs } = await movQuery;
+
 
   const linhas = [];
 
