@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
- 
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 
@@ -28,7 +28,7 @@
   <!-- ========================= CONTEÚDO ========================= -->
   <main>
 
- <img src="logo-arolix.png" class="app-logo-center" alt="Arolix">
+    <img src="logo-arolix.png" class="app-logo-center" alt="Arolix">
 
     <!-- ============================================================
          TELA DASHBOARD
@@ -79,12 +79,12 @@
           <button class="tab-btn active" data-tab="cadastro">Cadastro</button>
           <button class="tab-btn" data-tab="extrato">Extrato</button>
           <button class="tab-btn" data-tab="categorias">Categorias</button>
-          <button id="btn-print-extrato" class="btn-secondary" style="margin-top:10px;">
-  Imprimir / PDF
-</button>
-<script src="print.js"></script>
-<link rel="stylesheet" href="print.css">
 
+          <button id="btn-print-extrato" class="btn-secondary" style="margin-top:10px;">
+            Imprimir / PDF
+          </button>
+          <script src="print.js"></script>
+          <link rel="stylesheet" href="print.css">
         </div>
 
 
@@ -173,7 +173,9 @@
           <label>Nova categoria</label>
           <input id="categoria-nome" placeholder="Ex: Mercado, Transporte..."/>
 
-          <button id="btn-add-categoria" class="btn-primary" style="margin-top:10px;">Adicionar Categoria</button>
+          <button id="btn-add-categoria" class="btn-primary" style="margin-top:10px;">
+            Adicionar Categoria
+          </button>
 
           <hr style="margin:20px 0"/>
 
@@ -188,13 +190,18 @@
 
 
 
+
     <!-- ============================================================
-         TELA LANÇAMENTOS
+         TELA LANÇAMENTOS (CORRIGIDA)
     ============================================================ -->
     <section id="tela-lancamentos" class="hidden page">
 
       <div class="card-panel">
         <h2>Lançamentos</h2>
+
+        <!-- NOVO: filtro de contas (necessário para o JS funcionar) -->
+        <label>Conta</label>
+        <select id="select-contas"></select>
 
         <div class="filtros-lanc">
           <label>Período</label>
@@ -220,7 +227,7 @@
         <input id="desc-lanc" placeholder="Descrição"/>
         <input id="data-lanc" type="date"/>
 
-        <label>Conta</label>
+        <label>Conta do lançamento</label>
         <select id="select-conta-lanc"></select>
 
         <label>Categoria</label>
@@ -259,40 +266,26 @@
       </div>
 
 
-      <!-- =============================
-           CARD DE TOTAIS PROFISSIONAL
-      ============================= -->
+      <!-- CARD DE TOTAIS -->
       <div class="card-panel card-totais">
         <h3>Totais do Período</h3>
 
-        <!-- SALDO ATUAL -->
         <div class="total-item total-saldo">
           <div class="total-left">
-            <svg width="26" height="26" fill="#7a4dff" viewBox="0 0 24 24">
-              <path d="M12 3C6.48 3 2 7.03 2 12s4.48 9 10 9 10-4.03 10-9-4.48-9-10-9zm1 14.93c-2.83.48-5.45-1.1-6.36-3.79-.14-.39.18-.79.6-.79.27 0 .51.17.6.42.74 2.14 2.98 3.36 5.05 2.73 1.52-.47 2.66-1.85 2.66-3.57 0-2.06-1.68-3.73-3.74-3.73H11v1.79c0 .45-.54.67-.85.35l-3-2.8a.5.5 0 010-.72l3-2.8c.31-.29.85-.1.85.35V7h1.26c3.03 0 5.49 2.46 5.49 5.49 0 2.65-1.87 4.91-4.64 5.44z"/>
-            </svg>
             <strong>Saldo atual</strong>
           </div>
           <span id="saldo-atual" class="total-value">R$ 0,00</span>
         </div>
 
-        <!-- RECEITAS -->
         <div class="total-item total-receitas">
           <div class="total-left">
-            <svg width="26" height="26" fill="#1da83a" viewBox="0 0 24 24">
-              <path d="M12 3L2 9l10 6 9.99-5.99L12 3zm0 10.75L3.21 9 12 4.25 20.79 9 12 13.75zM2 17l10 6 10-6-10-6-10 6zm10 4.75L3.21 17 12 12.25 20.79 17 12 21.75z"/>
-            </svg>
             <strong>Total de receitas</strong>
           </div>
           <span id="total-receitas" class="total-value">R$ 0,00</span>
         </div>
 
-        <!-- DESPESAS -->
         <div class="total-item total-despesas">
           <div class="total-left">
-            <svg width="26" height="26" fill="#d93025" viewBox="0 0 24 24">
-              <path d="M12 2 2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM4 10v10h16V10H4zm10 8h-4v-2h4v2z"/>
-            </svg>
             <strong>Total de despesas</strong>
           </div>
           <span id="total-despesas" class="total-value">R$ 0,00</span>
@@ -338,22 +331,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="supabase.js"></script>
   <script src="app.js"></script>
-
-
-  <!-- ========================= ANIMAÇÃO DOS TOTAIS ========================= -->
-  <script>
-  function animateValue(id, newValue) {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    el.classList.add("animate");
-
-    setTimeout(() => {
-      el.textContent = newValue;
-      el.classList.remove("animate");
-    }, 200);
-  }
-  </script>
 
 </body>
 </html>
