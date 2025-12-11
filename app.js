@@ -18,6 +18,7 @@ function formatReal(v) {
     currency: "BRL",
   });
 }
+
 // ========================= VARIÁVEIS GLOBAIS =========================
 
 let currentUser = null;
@@ -29,7 +30,8 @@ let chartRecCat = null;
 let chartDesCat = null;
 
 // ========================= ELEMENTOS DO DOM =========================
-// --- elementos faltantes relacionados a lançamentos (filtrar / período personalizado)
+
+// Filtros de lançamentos
 const periodoLanc = document.getElementById("periodo-lanc");
 const dataInicioLanc = document.getElementById("data-inicio-lanc");
 const dataFimLanc = document.getElementById("data-fim-lanc");
@@ -68,7 +70,7 @@ const selectContaLanc = document.getElementById("select-conta-lanc");
 const btnAddLanc = document.getElementById("btn-add-lanc");
 const btnCancelEdit = document.getElementById("btn-cancel-edit");
 
-// Totais e listas
+// Totais e listas na tela de lançamentos
 const saldoAtualEl = document.getElementById("saldo-atual");
 const totalReceitasEl = document.getElementById("total-receitas");
 const totalDespesasEl = document.getElementById("total-despesas");
@@ -87,21 +89,17 @@ const dataInicio = document.getElementById("data-inicio");
 const dataFim = document.getElementById("data-fim");
 const btnFiltrarExtrato = document.getElementById("btn-filtrar-extrato");
 
-// ========================= EXTRATO TABLE (CORREÇÃO) =========================
-
+// Tabela do extrato
 const extratoTableElement = document.getElementById("table-extrato");
-
-// tbody do extrato:
 let tableExtrato = null;
 
 if (extratoTableElement) {
-    tableExtrato = extratoTableElement.querySelector("tbody");
+  tableExtrato = extratoTableElement.querySelector("tbody");
 } else {
-    console.warn("⚠️ table-extrato NÃO encontrado no DOM. Verifique o app.html.");
+  console.warn("⚠️ table-extrato NÃO encontrado no DOM. Verifique o app.html.");
 }
 
-
-// Modal baixa
+// Modal de baixa
 const modalBaixa = document.getElementById("modal-baixa");
 const dataBaixaInput = document.getElementById("data-baixa");
 const jurosInput = document.getElementById("juros-baixa");
@@ -125,8 +123,8 @@ document.getElementById("btn-logout").onclick = async () => {
 };
 
 // ========================= INICIALIZAÇÃO =========================
-async function initApp() {
 
+async function initApp() {
   // esconde todas as telas
   telaDashboard.classList.add("hidden");
   telaContas.classList.add("hidden");
@@ -136,11 +134,9 @@ async function initApp() {
   await loadContas();
   subscribeToChanges();
 
-  // tabela do extrato
   const t = document.getElementById("table-extrato");
   if (t) tableExtrato = t.querySelector("tbody");
 
-  // tela inicial correta
   showScreen("dashboard");
 }
 
@@ -194,13 +190,11 @@ async function deleteCategoria(id) {
   if (!confirm("Excluir categoria?")) return;
 
   await supabase.from("categorias").delete().eq("id", id);
-
   await supabase.from("receitas").update({ categoria_id: null }).eq("categoria_id", id);
   await supabase.from("despesas").update({ categoria_id: null }).eq("categoria_id", id);
 
   await loadCategorias();
 }
-
 
 // ========================= CONTAS =========================
 
@@ -210,22 +204,21 @@ async function loadContas() {
     .select("*")
     .eq("user_id", currentUser.id);
 
-selectContas.innerHTML = "";
-selectExtrato.innerHTML = "";
-selectContaLanc.innerHTML = "";
+  selectContas.innerHTML = "";
+  selectExtrato.innerHTML = "";
+  selectContaLanc.innerHTML = "";
 
-selectContas.appendChild(new Option("Todas as Contas", "all"));
-selectExtrato.appendChild(new Option("Todas as Contas", "all"));
-selectContaLanc.appendChild(new Option("Todas as Contas", "all")); // ⭐ ESTA É A LINHA QUE FALTAVA ⭐
+  selectContas.appendChild(new Option("Todas as Contas", "all"));
+  selectExtrato.appendChild(new Option("Todas as Contas", "all"));
+  selectContaLanc.appendChild(new Option("Todas as Contas", "all"));
 
-(data || []).forEach((c) => {
-  selectContas.appendChild(
-    new Option(`${c.nome} (${formatReal(c.saldo_inicial)})`, c.id)
-  );
-  selectExtrato.appendChild(new Option(c.nome, c.id));
-  selectContaLanc.appendChild(new Option(c.nome, c.id)); // contas reais
-});
-
+  (data || []).forEach((c) => {
+    selectContas.appendChild(
+      new Option(`${c.nome} (${formatReal(c.saldo_inicial)})`, c.id)
+    );
+    selectExtrato.appendChild(new Option(c.nome, c.id));
+    selectContaLanc.appendChild(new Option(c.nome, c.id));
+  });
 
   if (data?.length) {
     selectContas.value = data[0].id;
@@ -262,11 +255,19 @@ btnAddConta.onclick = async () => {
 
   await loadContas();
 };
-
-
 // ========================= RECALCULAR SALDO =========================
+// 🔧 CORREÇÃO IMPORTANTE:
+// Quando "conta_id" === "all", NÃO devemos consultar ou atualizar
+// saldo de conta individual → isso causava erro 400 e sumiço de lançamentos.
 
 async function recalcularSaldo(conta_id) {
+
+  // 🔧 CORREÇÃO: evitar erro eq("id","all")
+  if (conta_id === "all") {
+    // não recalcula saldo de conta individual quando é "todas"
+    return;
+  }
+
   const { data: conta } = await supabase
     .from("contas_bancarias")
     .select("saldo_inicial")
@@ -298,6 +299,8 @@ async function recalcularSaldo(conta_id) {
 
   return sf;
 }
+
+
 // ========================= LANÇAMENTOS — ADICIONAR =========================
 
 btnAddLanc.onclick = async () => {
@@ -365,17 +368,12 @@ btnAddLanc.onclick = async () => {
         },
       ]);
 
-      // avançar a data
       if (tipoRec === "monthly") dataAtual.setMonth(dataAtual.getMonth() + 1);
-      else if (tipoRec === "fortnight")
-        dataAtual.setDate(dataAtual.getDate() + 15);
-      else if (tipoRec === "weekly")
-        dataAtual.setDate(dataAtual.getDate() + 7);
-      else if (tipoRec === "annual")
-        dataAtual.setFullYear(dataAtual.getFullYear() + 1);
+      else if (tipoRec === "fortnight") dataAtual.setDate(dataAtual.getDate() + 15);
+      else if (tipoRec === "weekly") dataAtual.setDate(dataAtual.getDate() + 7);
+      else if (tipoRec === "annual") dataAtual.setFullYear(dataAtual.getFullYear() + 1);
     }
 
-    // limpar campos
     descLanc.value = "";
     valorLanc.value = "";
     dataLanc.value = "";
@@ -446,7 +444,6 @@ async function deleteItem(type, id) {
 
   await supabase.from(tabela).delete().eq("id", id);
 
-  // remover movimentação vinculada
   const { data: mv } = await supabase
     .from("movimentacoes")
     .select("id,conta_id")
@@ -475,19 +472,9 @@ async function refreshLancamentos() {
   const p = periodoLanc.value;
 
   if (p === "mes_atual") {
-    inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}-01`;
-    const last = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      0
-    ).getDate();
-    fim = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}-${last}`;
+    inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    const last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    fim = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${last}`;
   } else if (p === "mes_anterior") {
     const ano = now.getFullYear();
     const mes = now.getMonth();
@@ -503,51 +490,49 @@ async function refreshLancamentos() {
     fim = dataFimLanc.value;
   }
 
- let queryRec, queryDes;
+  let queryRec, queryDes;
 
-if (conta_id === "all") {
-  // Buscar receitas de todas as contas
-  queryRec = supabase
-    .from("receitas")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .gte("data", inicio)
-    .lte("data", fim)
-    .order("data");
+  if (conta_id === "all") {
+    // Buscar receitas de todas as contas
+    queryRec = supabase
+      .from("receitas")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data");
 
-  // Buscar despesas de todas as contas (inclui conta_id null)
-  queryDes = supabase
-    .from("despesas")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .gte("data", inicio)
-    .lte("data", fim)
-    .order("data");
+    // Buscar despesas de todas as contas (inclui conta_id null)
+    queryDes = supabase
+      .from("despesas")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data");
 
-} else {
-  // Buscar receitas da conta selecionada
-  queryRec = supabase
-    .from("receitas")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .eq("conta_id", conta_id)
-    .gte("data", inicio)
-    .lte("data", fim)
-    .order("data");
+  } else {
 
-  // Buscar despesas da conta selecionada
-  queryDes = supabase
-    .from("despesas")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .eq("conta_id", conta_id)
-    .gte("data", inicio)
-    .lte("data", fim)
-    .order("data");
-}
+    queryRec = supabase
+      .from("receitas")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .eq("conta_id", conta_id)
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data");
 
-const [R, D] = await Promise.all([queryRec, queryDes]);
+    queryDes = supabase
+      .from("despesas")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .eq("conta_id", conta_id)
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data");
+  }
 
+  const [R, D] = await Promise.all([queryRec, queryDes]);
 
   listReceitas.innerHTML = "";
   listDespesas.innerHTML = "";
@@ -568,15 +553,22 @@ const [R, D] = await Promise.all([queryRec, queryDes]);
   totalReceitasEl.textContent = formatReal(tr);
   totalDespesasEl.textContent = formatReal(td);
 
-  const { data: conta } = await supabase
-    .from("contas_bancarias")
-    .select("saldo_atual")
-    .eq("id", conta_id)
-    .maybeSingle();
+  // -------------------------------------------
+  // 🔧 CORREÇÃO: impedir consulta eq("id","all")
+  // -------------------------------------------
+  if (conta_id === "all") {
+    // quando todas as contas, NÃO consultar saldo individual
+    saldoAtualEl.textContent = "—";
+  } else {
+    const { data: conta } = await supabase
+      .from("contas_bancarias")
+      .select("saldo_atual")
+      .eq("id", conta_id)
+      .maybeSingle();
 
-  saldoAtualEl.textContent = formatReal(conta?.saldo_atual || 0);
-
-  await recalcularSaldo(conta_id);
+    saldoAtualEl.textContent = formatReal(conta?.saldo_atual || 0);
+    await recalcularSaldo(conta_id);
+  }
 }
 
 
@@ -590,9 +582,7 @@ function buildLancItem(item, type) {
   const left = document.createElement("div");
   const right = document.createElement("div");
 
-  left.textContent = `${formatDate(item.data)} — ${item.descricao} — ${formatReal(
-    item.valor
-  )}`;
+  left.textContent = `${formatDate(item.data)} — ${item.descricao} — ${formatReal(item.valor)}`;
   if (item.baixado) left.textContent += " — (BAIXADO)";
 
   const b1 = document.createElement("button");
@@ -618,12 +608,13 @@ function buildLancItem(item, type) {
 
   return li;
 }
+
+
 // ========================= BAIXAR LANÇAMENTO (ABRIR MODAL) =========================
 
 async function baixarLancamento(type, item) {
   lancamentoParaBaixa = { type, item };
 
-  // carregar contas no select
   const { data: contas } = await supabase
     .from("contas_bancarias")
     .select("*")
@@ -639,16 +630,12 @@ async function baixarLancamento(type, item) {
     );
   });
 
-  // valores iniciais
   dataBaixaInput.value = new Date().toISOString().slice(0, 10);
   jurosInput.value = "";
   descontoInput.value = "";
 
-  // abrir modal
   modalBaixa.classList.remove("hidden");
 }
-
-
 // ========================= CONFIRMAR BAIXA — MODAL =========================
 
 confirmarBaixaBtn.onclick = async () => {
@@ -662,7 +649,6 @@ confirmarBaixaBtn.onclick = async () => {
 
   const { type, item } = lancamentoParaBaixa;
 
-  // pegar conta existente
   const { data: conta } = await supabase
     .from("contas_bancarias")
     .select("*")
@@ -671,7 +657,6 @@ confirmarBaixaBtn.onclick = async () => {
 
   let novoSaldo = Number(conta.saldo_atual || 0);
 
-  // ajustar saldo
   if (type === "receita") novoSaldo += Number(item.valor);
   else novoSaldo -= Number(item.valor);
 
@@ -680,7 +665,6 @@ confirmarBaixaBtn.onclick = async () => {
     .update({ saldo_atual: novoSaldo })
     .eq("id", conta_id);
 
-  // marcar lançamento como baixado
   const tabela = type === "receita" ? "receitas" : "despesas";
 
   await supabase
@@ -688,7 +672,6 @@ confirmarBaixaBtn.onclick = async () => {
     .update({ baixado: true, data_baixa: dataBaixa })
     .eq("id", item.id);
 
-  // inserir movimentação principal
   const movId = crypto.randomUUID();
   await supabase.from("movimentacoes").insert([
     {
@@ -703,12 +686,11 @@ confirmarBaixaBtn.onclick = async () => {
     },
   ]);
 
-  // ========================= JUROS (DESPESA) =========================
+  // ========================= JUROS =========================
   if (juros > 0) {
     const catId = await getOrCreateCategoria("Juros/Multa");
     const despId = crypto.randomUUID();
 
-    // cria despesa juros
     await supabase.from("despesas").insert([
       {
         id: despId,
@@ -723,7 +705,6 @@ confirmarBaixaBtn.onclick = async () => {
       },
     ]);
 
-    // movimentação débito
     await supabase.from("movimentacoes").insert([
       {
         id: crypto.randomUUID(),
@@ -738,13 +719,14 @@ confirmarBaixaBtn.onclick = async () => {
     ]);
 
     novoSaldo -= juros;
+
     await supabase
       .from("contas_bancarias")
       .update({ saldo_atual: novoSaldo })
       .eq("id", conta_id);
   }
 
-  // ========================= DESCONTO (RECEITA) =========================
+  // ========================= DESCONTO =========================
   if (desconto > 0) {
     const catId = await getOrCreateCategoria("Desconto");
     const recId = crypto.randomUUID();
@@ -763,7 +745,6 @@ confirmarBaixaBtn.onclick = async () => {
       },
     ]);
 
-    // movimentação crédito
     await supabase.from("movimentacoes").insert([
       {
         id: crypto.randomUUID(),
@@ -778,13 +759,13 @@ confirmarBaixaBtn.onclick = async () => {
     ]);
 
     novoSaldo += desconto;
+
     await supabase
       .from("contas_bancarias")
       .update({ saldo_atual: novoSaldo })
       .eq("id", conta_id);
   }
 
-  // fechar modal
   modalBaixa.classList.add("hidden");
   lancamentoParaBaixa = null;
 
@@ -821,6 +802,8 @@ async function getOrCreateCategoria(nome) {
 
   return created?.data?.id || created?.id;
 }
+
+
 // ========================= EXTRATO — FILTRAR =========================
 
 btnFiltrarExtrato.onclick = () => renderExtrato();
@@ -829,26 +812,19 @@ async function renderExtrato() {
   const conta_id = selectExtrato.value;
   if (!conta_id || !tableExtrato) return;
 
-  await recalcularSaldo(conta_id);
+  // 🔧 CORREÇÃO: só recalcula saldo se NÃO for "all"
+  if (conta_id !== "all") {
+    await recalcularSaldo(conta_id);
+  }
 
   const now = new Date();
   let inicio, fim;
   const p = periodoExtrato.value;
 
   if (p === "mes_atual") {
-    inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}-01`;
-    const last = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      0
-    ).getDate();
-    fim = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}-${last}`;
+    inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    const last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    fim = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${last}`;
   } else if (p === "mes_anterior") {
     const ano = now.getFullYear();
     const mes = now.getMonth();
@@ -864,48 +840,54 @@ async function renderExtrato() {
     fim = dataFim.value;
   }
 
-  const { data: conta } = await supabase
-    .from("contas_bancarias")
-    .select("saldo_inicial,data_saldo,saldo_atual")
-    .eq("id", conta_id)
-    .single();
+  // consulta conta apenas se NÃO for "all"
+  let conta;
+  if (conta_id !== "all") {
+    const res = await supabase
+      .from("contas_bancarias")
+      .select("saldo_inicial,data_saldo,saldo_atual")
+      .eq("id", conta_id)
+      .single();
 
-  const si = Number(conta.saldo_inicial || 0);
-  const dataInicial = conta.data_saldo;
+    conta = res.data;
+  }
 
-  // puxar movimentações
- let movQuery;
+  let movQuery;
 
-if (conta_id === "all") {
-  movQuery = supabase
-    .from("movimentacoes")
-    .select("*")
-    .gte("data", inicio)
-    .lte("data", fim)
-    .order("data");
-} else {
-  movQuery = supabase
-    .from("movimentacoes")
-    .select("*")
-    .eq("conta_id", conta_id)
-    .gte("data", inicio)
-    .lte("data", fim)
-    .order("data");
-}
+  if (conta_id === "all") {
+    movQuery = supabase
+      .from("movimentacoes")
+      .select("*")
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data");
+  } else {
+    movQuery = supabase
+      .from("movimentacoes")
+      .select("*")
+      .eq("conta_id", conta_id)
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data");
+  }
 
-const { data: movs } = await movQuery;
-
+  const { data: movs } = await movQuery;
 
   const linhas = [];
 
-  // saldo inicial
-  if (si !== 0 && dataInicial)
-    linhas.push({
-      tipo: "inicial",
-      data: dataInicial,
-      descricao: "SALDO INICIAL",
-      valor: si,
-    });
+  if (conta_id !== "all") {
+    const si = Number(conta.saldo_inicial || 0);
+    const dataInicial = conta.data_saldo;
+
+    if (si !== 0 && dataInicial) {
+      linhas.push({
+        tipo: "inicial",
+        data: dataInicial,
+        descricao: "SALDO INICIAL",
+        valor: si,
+      });
+    }
+  }
 
   (movs || []).forEach((m) => {
     linhas.push({
@@ -917,9 +899,7 @@ const { data: movs } = await movQuery;
     });
   });
 
-  // ordenar
   linhas.sort((a, b) => new Date(a.data) - new Date(b.data));
-
   tableExtrato.innerHTML = "";
 
   let cred = 0;
@@ -929,7 +909,6 @@ const { data: movs } = await movQuery;
     const tr = document.createElement("tr");
     const tdAcoes = document.createElement("td");
 
-    // linha de saldo inicial
     if (l.tipo === "inicial") {
       tr.innerHTML = `
         <td>${formatDate(l.data)}</td>
@@ -959,16 +938,17 @@ const { data: movs } = await movQuery;
     tableExtrato.appendChild(tr);
   });
 
-  document.getElementById("total-receitas-extrato").textContent =
-    formatReal(cred);
-  document.getElementById("total-despesas-extrato").textContent =
-    formatReal(deb);
-  document.getElementById("saldo-periodo-extrato").textContent =
-    formatReal(cred - deb);
-  document.getElementById("saldo-atual-conta-extrato").textContent =
-    formatReal(conta.saldo_atual);
-  document.getElementById("total-valor").textContent =
-    formatReal(cred - deb);
+  document.getElementById("total-receitas-extrato").textContent = formatReal(cred);
+  document.getElementById("total-despesas-extrato").textContent = formatReal(deb);
+  document.getElementById("saldo-periodo-extrato").textContent = formatReal(cred - deb);
+
+  if (conta_id === "all") {
+    document.getElementById("saldo-atual-conta-extrato").textContent = "—";
+  } else {
+    document.getElementById("saldo-atual-conta-extrato").textContent = formatReal(conta.saldo_atual);
+  }
+
+  document.getElementById("total-valor").textContent = formatReal(cred - deb);
 }
 
 
@@ -985,7 +965,6 @@ async function cancelarBaixaMovimentacao(mov) {
 
   let novoSaldo = Number(conta.saldo_atual || 0);
 
-  // desfazer crédito/débito
   if (mov.tipo === "credito") novoSaldo -= Number(mov.valor);
   else novoSaldo += Number(mov.valor);
 
@@ -994,24 +973,17 @@ async function cancelarBaixaMovimentacao(mov) {
     .update({ saldo_atual: novoSaldo })
     .eq("id", mov.conta_id);
 
-  // apagar a movimentação
   await supabase.from("movimentacoes").delete().eq("id", mov.id);
 
-  // desfazer marcação de baixa no lançamento original
-  await supabase
-    .from("receitas")
-    .update({ baixado: false, data_baixa: null })
-    .eq("id", mov.lancamento_id);
-
-  await supabase
-    .from("despesas")
-    .update({ baixado: false, data_baixa: null })
-    .eq("id", mov.lancamento_id);
+  await supabase.from("receitas").update({ baixado: false, data_baixa: null }).eq("id", mov.lancamento_id);
+  await supabase.from("despesas").update({ baixado: false, data_baixa: null }).eq("id", mov.lancamento_id);
 
   await recalcularSaldo(mov.conta_id);
   await refreshLancamentos();
   await renderExtrato();
 }
+
+
 // ========================= DASHBOARD =========================
 
 async function loadDashboard() {
@@ -1062,19 +1034,18 @@ async function loadDashboard() {
 
   if (chartDashboard) chartDashboard.destroy();
 
- chartDashboard = new Chart(ctx, {
-  type: "bar",
-  data: {
-    labels: ["Receitas", "Despesas"],
-    datasets: [
-      {
-        label: "Resumo do mês",
-        data: [totalR, totalD],
-        backgroundColor: ["#18c55f", "#e63946"], // verde / vermelho
-      },
-    ],
-  },
-
+  chartDashboard = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Receitas", "Despesas"],
+      datasets: [
+        {
+          label: "Resumo do mês",
+          data: [totalR, totalD],
+          backgroundColor: ["#18c55f", "#e63946"],
+        },
+      ],
+    },
     options: {
       responsive: true,
       scales: {
@@ -1087,8 +1058,7 @@ async function loadDashboard() {
   await renderGraficoDespesasPorCategoria(inicio, fim);
 }
 
-
-// ========================= GRÁFICO RECEITAS POR CATEGORIA =========================
+// ========================= GRÁFICOS (Receitas/Despesas por categoria) =========================
 
 async function renderGraficoReceitasPorCategoria(inicio, fim) {
   const { data } = await supabase
@@ -1110,25 +1080,25 @@ async function renderGraficoReceitasPorCategoria(inicio, fim) {
 
   const ctx = document.getElementById("chart-receitas-categorias");
 
-chartRecCat = new Chart(ctx, {
-  type: "bar",
-  data: {
-    labels,
-    datasets: [
-      {
-        label: "Receitas por Categoria",
-        data: valores,
-        backgroundColor: "#18c55f",
-      },
-    ],
-  },
-  options: {
-    responsive: true,
-  },
-});
-}  
+  if (chartRecCat) chartRecCat.destroy();
 
-// ========================= GRÁFICO DESPESAS POR CATEGORIA =========================
+  chartRecCat = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Receitas por Categoria",
+          data: valores,
+          backgroundColor: "#18c55f",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+    },
+  });
+}
 
 async function renderGraficoDespesasPorCategoria(inicio, fim) {
   const { data } = await supabase
@@ -1150,24 +1120,25 @@ async function renderGraficoDespesasPorCategoria(inicio, fim) {
 
   const ctx = document.getElementById("chart-despesas-categorias");
 
- if (chartDesCat) chartDesCat.destroy();
-chartDesCat = new Chart(ctx, {
-  type: "bar",
-  data: {
-    labels,
-    datasets: [
-      {
-        label: "Despesas por Categoria",
-        data: valores,
-        backgroundColor: "#e63946", // vermelho
-      },
-    ],
-  },
-  options: {
-    responsive: true,
-  },
-});  
-  }
+  if (chartDesCat) chartDesCat.destroy();
+
+  chartDesCat = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Despesas por Categoria",
+          data: valores,
+          backgroundColor: "#e63946",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+    },
+  });
+}
 
 // ========================= SUBSCRIBE SUPABASE =========================
 
@@ -1213,7 +1184,6 @@ function subscribeToChanges() {
     .subscribe();
 }
 
-
 // ========================= TROCA DE TELAS PRINCIPAIS =========================
 
 function showScreen(s) {
@@ -1246,7 +1216,6 @@ btnDash.onclick = () => showScreen("dashboard");
 btnContas.onclick = () => showScreen("contas");
 btnLanc.onclick = () => showScreen("lanc");
 
-
 // ========================= TABS (Cadastro / Extrato / Categorias) =========================
 
 document.querySelectorAll(".tab-btn").forEach((b) => {
@@ -1277,7 +1246,6 @@ document.querySelectorAll(".tab-btn").forEach((b) => {
   };
 });
 
-
 // ========================= FILTROS LANÇAMENTOS =========================
 
 periodoLanc.onchange = () => {
@@ -1289,7 +1257,6 @@ periodoLanc.onchange = () => {
     dataFimLanc.classList.add("hidden");
   }
 };
-
 
 // ========================= FILTROS EXTRATO =========================
 
