@@ -1316,3 +1316,54 @@ if (periodoExtrato) {
     }
   };
 }
+// ========================= PATCH DEFINITIVO — FILTRO DE CONTAS =========================
+// Este patch corrige qualquer problema de listener, DOM duplicado ou handler que não dispara.
+
+(function patchFiltroContas() {
+  try {
+    const sel = document.getElementById("select-contas");
+    const btn = document.getElementById("btn-filtrar-lanc");
+
+    function aplicarFiltro() {
+      if (!sel) {
+        console.warn("[PATCH] select-contas não encontrado.");
+        return;
+      }
+      console.log("[PATCH] Filtrando lançamentos para conta:", sel.value);
+
+      // chama a função oficial
+      if (typeof refreshLancamentos === "function") {
+        refreshLancamentos();
+      } else {
+        console.error("[PATCH] refreshLancamentos() não encontrada!");
+      }
+    }
+
+    // Listener ao trocar conta
+    if (sel) {
+      sel.addEventListener("change", () => {
+        console.log("[PATCH] select-contas alterado →", sel.value);
+        aplicarFiltro();
+      });
+    }
+
+    // Listener no botão Filtrar
+    if (btn) {
+      btn.onclick = (ev) => {
+        ev.preventDefault();
+        console.log("[PATCH] Botão FILTRAR clicado.");
+        aplicarFiltro();
+      };
+    }
+
+    // Chamada inicial segura
+    setTimeout(() => {
+      if (sel) console.log("[PATCH] Execução inicial (startup). Conta atual:", sel.value);
+      aplicarFiltro();
+    }, 400);
+
+  } catch (e) {
+    console.error("[PATCH] Erro no patch definitivo:", e);
+  }
+})();
+
