@@ -195,117 +195,154 @@
 
     </section>
 
+<!-- ============================================================
+     TELA LANÇAMENTOS (substituir a antiga)
+============================================================ -->
+<section class="screen hidden" data-screen="lanc">
 
+  <div class="card-panel">
+    <h2>Lançamentos</h2>
 
+    <!-- FILTROS - topo -->
+    <div class="filtros-top" style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+      <div style="display:flex;flex-direction:column;">
+        <label>Período</label>
+        <select id="periodo-lanc" style="min-width:160px;">
+          <option value="mes_atual">Mês atual</option>
+          <option value="mes_anterior">Mês anterior</option>
+          <option value="ultimos_30">Últimos 30 dias</option>
+          <option value="personalizado">Personalizado</option>
+        </select>
+      </div>
 
-    <!-- ============================================================
-         TELA LANÇAMENTOS
-    ============================================================ -->
-    <section class="screen hidden" data-screen="lanc">
-
-      <div class="card-panel">
-        <h2>Lançamentos</h2>
-
-        <label>Conta</label>
-        <select id="select-contas"></select>
-
-        <div class="filtros-lanc">
-          <label>Período</label>
-          <select id="periodo-lanc">
-            <option value="mes_atual">Mês atual</option>
-            <option value="mes_anterior">Mês anterior</option>
-            <option value="ultimos_30">Últimos 30 dias</option>
-            <option value="personalizado">Personalizado</option>
-          </select>
-
+      <div id="date-range-lanc" style="display:flex;gap:8px;align-items:end;">
+        <div style="display:flex;flex-direction:column;">
+          <label>de</label>
           <input type="date" id="data-inicio-lanc" class="hidden"/>
-          <input type="date" id="data-fim-lanc" class="hidden"/>
-
-          <button id="btn-filtrar-lanc" class="btn-secondary">Filtrar</button>
         </div>
+        <div style="display:flex;flex-direction:column;">
+          <label>até</label>
+          <input type="date" id="data-fim-lanc" class="hidden"/>
+        </div>
+      </div>
 
-        <select id="tipo-lancamento">
+      <div style="display:flex;flex-direction:column;">
+        <label>Conta</label>
+        <select id="select-contas" style="min-width:200px;"></select>
+      </div>
+
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+        <button id="btn-filtrar-lanc" class="btn-secondary">Filtrar</button>
+        <button id="btn-open-add-lanc" class="btn-primary">Adicionar</button>
+      </div>
+    </div>
+
+    <!-- LISTAS -->
+    <div class="listas" style="display:flex;gap:18px;">
+      <div class="box" style="flex:1;">
+        <h3>Receitas</h3>
+        <ul id="list-receitas"></ul>
+      </div>
+
+      <div class="box" style="flex:1;">
+        <h3>Despesas</h3>
+        <ul id="list-despesas"></ul>
+      </div>
+    </div>
+
+    <!-- TOTAIS -->
+    <div class="card-panel card-totais" style="margin-top:18px;">
+      <h3>Totais do Período</h3>
+
+      <div class="total-item" style="display:flex;justify-content:space-between;padding:6px 0;">
+        <strong>Total de receitas</strong>
+        <span id="total-receitas" class="total-value">R$ 0,00</span>
+      </div>
+
+      <div class="total-item" style="display:flex;justify-content:space-between;padding:6px 0;">
+        <strong>Total de despesas</strong>
+        <span id="total-despesas" class="total-value">R$ 0,00</span>
+      </div>
+
+      <div class="total-item" style="display:flex;justify-content:space-between;padding:6px 0;">
+        <strong>Saldo atual (filtro)</strong>
+        <span id="saldo-atual" class="total-value">—</span>
+      </div>
+    </div>
+
+  </div>
+
+</section>
+
+<!-- ========================= MODAL ADICIONAR LANÇAMENTO (PROFISSIONAL) ========================= -->
+<div id="modal-add-lanc" class="modal hidden" aria-hidden="true" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1200;">
+  <div class="modal-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.45);" onclick="document.getElementById('modal-add-lanc').classList.add('hidden')"></div>
+
+  <div class="modal-card" role="dialog" aria-modal="true" style="position:relative;background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.25);width:720px;max-width:94%;padding:20px;z-index:1210;">
+    <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="margin:0">Adicionar Lançamento</h3>
+      <button id="btn-close-add-lanc" class="btn-icon" title="Fechar">✕</button>
+    </header>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="display:flex;flex-direction:column;">
+        <label>Tipo</label>
+        <select id="modal-tipo">
           <option value="receita">Receita</option>
           <option value="despesa">Despesa</option>
         </select>
+      </div>
 
-        <input id="valor-lanc" type="number" placeholder="Valor"/>
-        <input id="desc-lanc" placeholder="Descrição"/>
-        <input id="data-lanc" type="date"/>
+      <div style="display:flex;flex-direction:column;">
+        <label>Valor</label>
+        <input id="modal-valor" type="number" step="0.01" placeholder="0.00"/>
+      </div>
 
-        <label>Conta do lançamento</label>
-        <select id="select-conta-lanc"></select>
+      <div style="grid-column:1 / -1;display:flex;flex-direction:column;">
+        <label>Descrição</label>
+        <input id="modal-desc" placeholder="Ex: Venda, Compra supermercado..." />
+      </div>
 
+      <div>
+        <label>Data</label>
+        <input id="modal-data" type="date" />
+      </div>
+
+      <div>
+        <label>Conta</label>
+        <select id="modal-conta"></select>
+      </div>
+
+      <div>
         <label>Categoria</label>
-        <select id="categoria-lanc"></select>
-
-        <div class="recorrencia">
-          <label>Recorrência</label>
-          <select id="recorrencia-tipo">
-            <option value="none">Não recorrente</option>
-            <option value="monthly">Mensal</option>
-            <option value="fortnight">Quinzenal</option>
-            <option value="weekly">Semanal</option>
-            <option value="annual">Anual</option>
-          </select>
-
-          <label>Parcelas</label>
-          <input id="recorrencia-parcelas" type="number" min="1" value="1"/>
-        </div>
-
-        <button id="btn-add-lanc" class="btn-primary">Adicionar</button>
-        <button id="btn-cancel-edit" class="btn-secondary hidden">Cancelar</button>
+        <select id="modal-categoria"></select>
       </div>
 
-
-      <!-- LISTAS -->
-      <div class="listas">
-        <div class="box">
-          <h3>Receitas</h3>
-          <ul id="list-receitas"></ul>
-        </div>
-
-        <div class="box">
-          <h3>Despesas</h3>
-          <ul id="list-despesas"></ul>
-        </div>
+      <div style="display:flex;flex-direction:column;">
+        <label>Recorrência</label>
+        <select id="modal-recorrencia">
+          <option value="none">Não recorrente</option>
+          <option value="monthly">Mensal</option>
+          <option value="fortnight">Quinzenal</option>
+          <option value="weekly">Semanal</option>
+          <option value="annual">Anual</option>
+        </select>
       </div>
 
-
-      <!-- CARD DE TOTAIS -->
-      <div class="card-panel card-totais">
-        <h3>Totais do Período</h3>
-
-        <div class="total-item total-saldo">
-          <div class="total-left">
-            <strong>Saldo atual</strong>
-          </div>
-          <span id="saldo-atual" class="total-value">R$ 0,00</span>
-        </div>
-
-        <div class="total-item total-receitas">
-          <div class="total-left">
-            <strong>Total de receitas</strong>
-          </div>
-          <span id="total-receitas" class="total-value">R$ 0,00</span>
-        </div>
-
-        <div class="total-item total-despesas">
-          <div class="total-left">
-            <strong>Total de despesas</strong>
-          </div>
-          <span id="total-despesas" class="total-value">R$ 0,00</span>
-        </div>
-
+      <div style="display:flex;flex-direction:column;">
+        <label>Parcelas</label>
+        <input id="modal-parcelas" type="number" min="1" value="1" />
       </div>
+    </div>
 
-    </section>
-
-  </main>
-
-
-
-
+    <footer style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
+      <button id="modal-cancel-lanc" class="btn-secondary">Cancelar</button>
+      <button id="modal-save-lanc" class="btn-primary">Salvar</button>
+    </footer>
+  </div>
+</div>
+ 
+   
   <!-- ========================= MODAL DE BAIXA ========================= -->
 
   <div id="modal-baixa" class="modal hidden">
