@@ -105,7 +105,8 @@
           <hr style="margin:25px 0"/>
 
           <label>Contas existentes</label>
-          <select id="select-contas"></select>
+          <!-- corrigido: id alterado -->
+          <select id="select-contas-lista"></select>
 
         </div>
 
@@ -192,14 +193,14 @@
 
 
     <!-- ============================================================
-         TELA LANÇAMENTOS (CORRIGIDA)
+         TELA LANÇAMENTOS (CORRIGIDA • FILTRO FUNCIONAL)
     ============================================================ -->
     <section id="tela-lancamentos" class="hidden page">
 
       <div class="card-panel">
         <h2>Lançamentos</h2>
 
-        <!-- NOVO: filtro de contas (necessário para o JS funcionar) -->
+        <!-- este é o select que o JS usa -->
         <label>Conta</label>
         <select id="select-contas"></select>
 
@@ -299,6 +300,7 @@
 
 
 
+
   <!-- ========================= MODAL DE BAIXA ========================= -->
 
   <div id="modal-baixa" class="modal hidden">
@@ -323,6 +325,7 @@
       </div>
     </div>
   </div>
+
 
 
 
