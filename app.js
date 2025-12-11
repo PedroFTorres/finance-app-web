@@ -1227,30 +1227,52 @@ function subscribeToChanges() {
   }
 }
 
-// ========================= TROCA DE TELAS PRINCIPAIS =========================
+// ========================= TROCA DE TELAS PRINCIPAIS (CORRIGIDA) =========================
 
 function showScreen(s) {
-  // Oculta todas
+  // Oculta todas as telas
   if (telaDashboard) telaDashboard.classList.add("hidden");
   if (telaContas) telaContas.classList.add("hidden");
   if (telaLanc) telaLanc.classList.add("hidden");
 
-  // Reseta ativações
+  // Remove "active" do menu
   if (btnDash) btnDash.classList.remove("active");
   if (btnContas) btnContas.classList.remove("active");
   if (btnLanc) btnLanc.classList.remove("active");
 
-  // Ativa a tela escolhida
+  // ------------------ DASHBOARD ------------------
   if (s === "dashboard") {
     if (telaDashboard) telaDashboard.classList.remove("hidden");
     if (btnDash) btnDash.classList.add("active");
     loadDashboard();
-  } else if (s === "contas") {
+  }
+
+  // ------------------ CONTAS ------------------
+  else if (s === "contas") {
     if (telaContas) telaContas.classList.remove("hidden");
     if (btnContas) btnContas.classList.add("active");
-  } else if (s === "lanc") {
+  }
+
+  // ------------------ LANÇAMENTOS (CORRIGIDO) ------------------
+  else if (s === "lanc") {
     if (telaLanc) telaLanc.classList.remove("hidden");
     if (btnLanc) btnLanc.classList.add("active");
+
+    // ⚠️ Correção crítica:
+    const sel = document.getElementById("select-contas");
+
+    if (sel) {
+      if (!sel.value || sel.value.trim() === "") {
+        sel.value = "all";
+        console.log("[FIX] select-contas estava vazio → Ajustado para: all");
+      } else {
+        console.log("[FIX] select-contas ao abrir tela →", sel.value);
+      }
+    } else {
+      console.warn("[FIX] select-contas NÃO encontrado ao abrir a tela de lançamentos.");
+    }
+
+    refreshLancamentos();
   }
 }
 
