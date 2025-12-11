@@ -360,39 +360,60 @@
     },
 
     // populate all relevant selects with contas and categorias
-    populateSelects() {
-      const selFilter = $(IDS.selectContas);
-      const selModalConta = $(IDS.modalConta);
-      const selModalCat = $(IDS.modalCategoria);
-      const selExtr = $(IDS.selectExtrato);
-      const selLista = $(IDS.selectContasLista);
+   populateSelects() {
+  const selFilter = $(IDS.selectContas);
+  const selModalConta = $(IDS.modalConta);
+  const selModalCat = $(IDS.modalCategoria);
+  const selExtr = $(IDS.selectExtrato);
+  const selLista = $(IDS.selectContasLista);
 
-      [selFilter, selModalConta, selModalCat, selExtr, selLista].forEach(el => { if (el) el.innerHTML = ''; });
+  // Limpar selects
+  [selFilter, selModalConta, selModalCat, selExtr, selLista].forEach(el => {
+    if (el) el.innerHTML = '';
+  });
 
-      const addAllOpt = el => { if(!el) return; const o = new Option('Todas as Contas', 'all'); el.appendChild(o); };
+  const addAllOpt = el => {
+    if (!el) return;
+    el.appendChild(new Option('Todas as Contas', 'all'));
+  };
 
-      addAllOpt(selFilter); addAllOpt(selExtr); addAllOpt(selModalConta); addAllOpt(selLista);
+  // ✔ Só Filtros recebem "Todas as Contas"
+  addAllOpt(selFilter);
+  addAllOpt(selExtr);
+  addAllOpt(selLista);
 
-      (STATE.contas || []).forEach(c => {
-        const label = `${c.nome} (${fmtMoney(c.saldo_atual ?? c.saldo_inicial)})`;
-        if (selFilter) selFilter.appendChild(new Option(label, c.id));
-        if (selModalConta) selModalConta.appendChild(new Option(c.nome, c.id));
-        if (selExtr) selExtr.appendChild(new Option(c.nome, c.id));
-        if (selLista) selLista.appendChild(new Option(c.nome, c.id));
-      });
+  // ✔ Modal NÃO recebe "Todas as Contas", apenas contas reais
+  if (selModalConta) {
+    selModalConta.innerHTML = '';
+    (STATE.contas || []).forEach(c => {
+      selModalConta.appendChild(new Option(c.nome, c.id));
+    });
+  }
 
-      if (selModalCat) {
-        selModalCat.innerHTML = '';
-        selModalCat.appendChild(new Option('Sem categoria', ''));
-        (STATE.categorias || []).forEach(cat => selModalCat.appendChild(new Option(cat.nome, cat.id)));
-      }
+  // ✔ Popular contas nos filtros normalmente
+  (STATE.contas || []).forEach(c => {
+    const label = `${c.nome} (${fmtMoney(c.saldo_atual ?? c.saldo_inicial)})`;
+    if (selFilter) selFilter.appendChild(new Option(label, c.id));
+    if (selExtr) selExtr.appendChild(new Option(c.nome, c.id));
+    if (selLista) selLista.appendChild(new Option(c.nome, c.id));
+  });
 
-      // defaults
-      if (selFilter && (!selFilter.value || selFilter.value.trim() === '')) selFilter.value = 'all';
-      if (selModalConta && (!selModalConta.value || selModalConta.value.trim() === '')) selModalConta.value = 'all';
-      if (selExtr && (!selExtr.value || selExtr.value.trim() === '')) selExtr.value = 'all';
-    },
+  // ✔ Categorias no modal
+  if (selModalCat) {
+    selModalCat.innerHTML = '';
+    selModalCat.appendChild(new Option('Sem categoria', ''));
+    (STATE.categorias || []).forEach(cat => {
+      selModalCat.appendChild(new Option(cat.nome, cat.id));
+    });
+  }
 
+  // Defaults
+  if (selFilter && (!selFilter.value || selFilter.value.trim() === ''))
+    selFilter.value = 'all';
+
+  if (selExtr && (!selExtr.value || selExtr.value.trim() === ''))
+    selExtr.value = 'all';
+}
     renderCategorias() {
       const ul = $(IDS.listaCategorias);
       if (!ul) return;
