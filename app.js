@@ -413,7 +413,7 @@
 
   if (selExtr && (!selExtr.value || selExtr.value.trim() === ''))
     selExtr.value = 'all';
-}
+},
     renderCategorias() {
       const ul = $(IDS.listaCategorias);
       if (!ul) return;
