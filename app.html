@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Finance App</title>
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -11,10 +12,14 @@
 
   <!-- ========================= TOPO / MENU ========================= -->
   <header class="top-header">
+
     <nav class="top-menu">
-      <button id="menu-dashboard" class="menu-btn">Dashboard</button>
-      <button id="menu-contas" class="menu-btn">Contas</button>
-      <button id="menu-lancamentos" class="menu-btn">Lançamentos</button>
+      <!-- Navegação moderna com data-target -->
+      <button class="menu-btn" data-target="dashboard">Dashboard</button>
+      <button class="menu-btn" data-target="contas">Contas</button>
+      <button class="menu-btn" data-target="lanc">Lançamentos</button>
+
+      <!-- Mantido: botão de cartão abre página externa -->
       <button class="menu-btn" onclick="window.location.href='cartao.html'">Cartão</button>
     </nav>
 
@@ -31,9 +36,9 @@
     <img src="logo-arolix.png" class="app-logo-center" alt="Arolix">
 
     <!-- ============================================================
-         TELA DASHBOARD
+         TELA DASHBOARD (data-screen)
     ============================================================ -->
-    <section id="tela-dashboard" class="hidden page">
+    <section class="screen hidden" data-screen="dashboard">
 
       <section class="card-panel">
         <h2>Resumo do Mês</h2>
@@ -53,6 +58,7 @@
           <div class="card">
             <h3>Resumo Geral</h3>
             <canvas id="chart-dashboard"></canvas>
+
             <p><strong>Período:</strong> <span id="dash-period"></span></p>
             <p><strong>Total a receber:</strong> <span id="dash-receber">R$ 0,00</span></p>
             <p><strong>Total a pagar:</strong> <span id="dash-pagar">R$ 0,00</span></p>
@@ -70,7 +76,7 @@
     <!-- ============================================================
          TELA CONTAS
     ============================================================ -->
-    <section id="tela-contas" class="page hidden">
+    <section class="screen hidden" data-screen="contas">
 
       <div class="card-panel">
         <h2>Contas</h2>
@@ -83,6 +89,7 @@
           <button id="btn-print-extrato" class="btn-secondary" style="margin-top:10px;">
             Imprimir / PDF
           </button>
+
           <script src="print.js"></script>
           <link rel="stylesheet" href="print.css">
         </div>
@@ -105,7 +112,6 @@
           <hr style="margin:25px 0"/>
 
           <label>Contas existentes</label>
-          <!-- corrigido: id alterado -->
           <select id="select-contas-lista"></select>
 
         </div>
@@ -193,14 +199,13 @@
 
 
     <!-- ============================================================
-         TELA LANÇAMENTOS (CORRIGIDA • FILTRO FUNCIONAL)
+         TELA LANÇAMENTOS
     ============================================================ -->
-    <section id="tela-lancamentos" class="hidden page">
+    <section class="screen hidden" data-screen="lanc">
 
       <div class="card-panel">
         <h2>Lançamentos</h2>
 
-        <!-- este é o select que o JS usa -->
         <label>Conta</label>
         <select id="select-contas"></select>
 
@@ -330,6 +335,7 @@
 
 
   <!-- ========================= SCRIPTS ========================= -->
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="supabase.js"></script>
