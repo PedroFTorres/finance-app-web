@@ -113,22 +113,26 @@ const cancelarBaixaBtn = document.getElementById("cancelar-baixa");
 supabase.auth.getSession().then(({ data }) => {
   if (!data.session) return (window.location.href = "login.html");
   currentUser = data.session.user;
-  document.getElementById("user-email").textContent = currentUser.email;
+  const el = document.getElementById("user-email");
+  if (el) el.textContent = currentUser.email;
   initApp();
 });
 
-document.getElementById("btn-logout").onclick = async () => {
-  await supabase.auth.signOut();
-  window.location.href = "login.html";
-};
+const logoutBtn = document.getElementById("btn-logout");
+if (logoutBtn) {
+  logoutBtn.onclick = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "login.html";
+  };
+}
 
 // ========================= INICIALIZAÇÃO =========================
 
 async function initApp() {
   // esconde todas as telas
-  telaDashboard.classList.add("hidden");
-  telaContas.classList.add("hidden");
-  telaLanc.classList.add("hidden");
+  if (telaDashboard) telaDashboard.classList.add("hidden");
+  if (telaContas) telaContas.classList.add("hidden");
+  if (telaLanc) telaLanc.classList.add("hidden");
 
   await loadCategorias();
   await loadContas();
@@ -148,43 +152,49 @@ async function loadCategorias() {
     .select("*")
     .order("nome");
 
-  categoriaLanc.innerHTML = "";
-  listaCategorias.innerHTML = "";
+  if (categoriaLanc) categoriaLanc.innerHTML = "";
+  if (listaCategorias) listaCategorias.innerHTML = "";
 
   (data || []).forEach((cat) => {
-    const opt = document.createElement("option");
-    opt.value = cat.id;
-    opt.textContent = cat.nome;
-    categoriaLanc.appendChild(opt);
+    if (categoriaLanc) {
+      const opt = document.createElement("option");
+      opt.value = cat.id;
+      opt.textContent = cat.nome;
+      categoriaLanc.appendChild(opt);
+    }
 
-    const li = document.createElement("li");
-    li.style.display = "flex";
-    li.style.justifyContent = "space-between";
+    if (listaCategorias) {
+      const li = document.createElement("li");
+      li.style.display = "flex";
+      li.style.justifyContent = "space-between";
 
-    const span = document.createElement("span");
-    span.textContent = cat.nome;
+      const span = document.createElement("span");
+      span.textContent = cat.nome;
 
-    const btn = document.createElement("button");
-    btn.textContent = "Excluir";
-    btn.onclick = () => deleteCategoria(cat.id);
+      const btn = document.createElement("button");
+      btn.textContent = "Excluir";
+      btn.onclick = () => deleteCategoria(cat.id);
 
-    li.appendChild(span);
-    li.appendChild(btn);
-    listaCategorias.appendChild(li);
+      li.appendChild(span);
+      li.appendChild(btn);
+      listaCategorias.appendChild(li);
+    }
   });
 }
 
-btnAddCategoria.onclick = async () => {
-  const nome = categoriaNome.value.trim();
-  if (!nome) return alert("Informe o nome da categoria.");
+if (btnAddCategoria) {
+  btnAddCategoria.onclick = async () => {
+    const nome = categoriaNome.value.trim();
+    if (!nome) return alert("Informe o nome da categoria.");
 
-  await supabase
-    .from("categorias")
-    .insert([{ id: crypto.randomUUID(), nome }]);
+    await supabase
+      .from("categorias")
+      .insert([{ id: crypto.randomUUID(), nome }]);
 
-  categoriaNome.value = "";
-  await loadCategorias();
-};
+    categoriaNome.value = "";
+    await loadCategorias();
+  };
+}
 
 async function deleteCategoria(id) {
   if (!confirm("Excluir categoria?")) return;
@@ -204,64 +214,74 @@ async function loadContas() {
     .select("*")
     .eq("user_id", currentUser.id);
 
-  selectContas.innerHTML = "";
-  selectExtrato.innerHTML = "";
-  selectContaLanc.innerHTML = "";
+  if (selectContas) selectContas.innerHTML = "";
+  if (selectExtrato) selectExtrato.innerHTML = "";
+  if (selectContaLanc) selectContaLanc.innerHTML = "";
 
-  selectContas.appendChild(new Option("Todas as Contas", "all"));
-  selectExtrato.appendChild(new Option("Todas as Contas", "all"));
-  selectContaLanc.appendChild(new Option("Todas as Contas", "all"));
+  // adiciona a opção "Todas as Contas"
+  if (selectContas) selectContas.appendChild(new Option("Todas as Contas", "all"));
+  if (selectExtrato) selectExtrato.appendChild(new Option("Todas as Contas", "all"));
+  if (selectContaLanc) selectContaLanc.appendChild(new Option("Todas as Contas", "all"));
 
   (data || []).forEach((c) => {
-    selectContas.appendChild(
+    if (selectContas) selectContas.appendChild(
       new Option(`${c.nome} (${formatReal(c.saldo_inicial)})`, c.id)
     );
-    selectExtrato.appendChild(new Option(c.nome, c.id));
-    selectContaLanc.appendChild(new Option(c.nome, c.id));
+    if (selectExtrato) selectExtrato.appendChild(new Option(c.nome, c.id));
+    if (selectContaLanc) selectContaLanc.appendChild(new Option(c.nome, c.id));
   });
 
   if (data?.length) {
-    selectContas.value = data[0].id;
-    selectExtrato.value = data[0].id;
-    selectContaLanc.value = data[0].id;
+    // 🔧 CORREÇÃO: começar com "Todas as Contas" por padrão
+    if (selectContas) selectContas.value = "all";
+    if (selectExtrato) selectExtrato.value = "all";
+    if (selectContaLanc) selectContaLanc.value = "all";
 
-    await recalcularSaldo(selectContas.value);
+    // carregar lançamentos (com "all" já trata corretamente)
     await refreshLancamentos();
+  } else {
+    // se não há conta, garantir que os selects fiquem vazios ou com 'all'
+    if (selectContas) selectContas.value = "all";
+    if (selectExtrato) selectExtrato.value = "all";
+    if (selectContaLanc) selectContaLanc.value = "all";
   }
 }
 
-btnAddConta.onclick = async () => {
-  const nome = contaNome.value.trim();
-  const saldo = Number(contaSaldo.value || 0);
-  const data_saldo = contaDataSaldo.value;
+if (btnAddConta) {
+  btnAddConta.onclick = async () => {
+    const nome = contaNome.value.trim();
+    const saldo = Number(contaSaldo.value || 0);
+    const data_saldo = contaDataSaldo.value;
 
-  if (!nome) return alert("Informe o nome da conta.");
-  if (!data_saldo) return alert("Informe a data do saldo.");
+    if (!nome) return alert("Informe o nome da conta.");
+    if (!data_saldo) return alert("Informe a data do saldo.");
 
-  await supabase.from("contas_bancarias").insert([
-    {
-      id: crypto.randomUUID(),
-      nome,
-      saldo_inicial: saldo,
-      saldo_atual: saldo,
-      data_saldo,
-      user_id: currentUser.id,
-    },
-  ]);
+    await supabase.from("contas_bancarias").insert([
+      {
+        id: crypto.randomUUID(),
+        nome,
+        saldo_inicial: saldo,
+        saldo_atual: saldo,
+        data_saldo,
+        user_id: currentUser.id,
+      },
+    ]);
 
-  contaNome.value = "";
-  contaSaldo.value = "";
-  contaDataSaldo.value = "";
+    contaNome.value = "";
+    contaSaldo.value = "";
+    contaDataSaldo.value = "";
 
-  await loadContas();
-};
+    await loadContas();
+  };
+}
+
 // ========================= RECALCULAR SALDO =========================
 // 🔧 CORREÇÃO IMPORTANTE:
 // Quando "conta_id" === "all", NÃO devemos consultar ou atualizar
 // saldo de conta individual → isso causava erro 400 e sumiço de lançamentos.
 
 async function recalcularSaldo(conta_id) {
-
+  if (!conta_id) return;
   // 🔧 CORREÇÃO: evitar erro eq("id","all")
   if (conta_id === "all") {
     // não recalcula saldo de conta individual quando é "todas"
@@ -303,76 +323,101 @@ async function recalcularSaldo(conta_id) {
 
 // ========================= LANÇAMENTOS — ADICIONAR =========================
 
-btnAddLanc.onclick = async () => {
-  const desc = descLanc.value.trim();
-  const valor = Number(valorLanc.value || 0);
-  const data = dataLanc.value;
-  const tipo = tipoLanc.value;
-  const conta_id = selectContaLanc.value;
-  const categoria_id = categoriaLanc.value;
+if (btnAddLanc) {
+  btnAddLanc.onclick = async () => {
+    const desc = descLanc.value.trim();
+    const valor = Number(valorLanc.value || 0);
+    const data = dataLanc.value;
+    const tipo = tipoLanc.value;
+    const conta_id = selectContaLanc.value;
+    const categoria_id = categoriaLanc.value;
 
-  if (!desc || !valor || !data)
-    return alert("Preencha todos os campos do lançamento.");
+    if (!desc || !valor || !data)
+      return alert("Preencha todos os campos do lançamento.");
 
-  // ========================= EDIÇÃO =========================
-  if (editing.type) {
-    const tabela = editing.type === "receita" ? "receitas" : "despesas";
+    // ========================= EDIÇÃO =========================
+    if (editing.type) {
+      const tabela = editing.type === "receita" ? "receitas" : "despesas";
 
-    await supabase
-      .from(tabela)
-      .update({
+      await supabase
+        .from(tabela)
+        .update({
+          descricao: desc,
+          valor,
+          data,
+          conta_id,
+          categoria_id,
+        })
+        .eq("id", editing.id);
+
+      stopEdit();
+      await refreshLancamentos();
+      await renderExtrato();
+      return;
+    }
+
+    // tabela correspondente
+    const tabela = tipo === "receita" ? "receitas" : "despesas";
+
+    // ========================= RECORRÊNCIA =========================
+    const tipoRec = document.getElementById("recorrencia-tipo").value;
+    const parcelas = Number(
+      document.getElementById("recorrencia-parcelas").value || 1
+    );
+
+    if (tipoRec !== "none" && parcelas > 1) {
+      let dataAtual = new Date(data + "T00:00:00");
+
+      for (let i = 0; i < parcelas; i++) {
+        const dataFormatada =
+          dataAtual.getFullYear() +
+          "-" +
+          String(dataAtual.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(dataAtual.getDate()).padStart(2, "0");
+
+        await supabase.from(tabela).insert([
+          {
+            id: crypto.randomUUID(),
+            descricao: `${desc} (${i + 1}/${parcelas})`,
+            valor,
+            data: dataFormatada,
+            conta_id,
+            categoria_id,
+            user_id: currentUser.id,
+            baixado: false,
+          },
+        ]);
+
+        if (tipoRec === "monthly") dataAtual.setMonth(dataAtual.getMonth() + 1);
+        else if (tipoRec === "fortnight") dataAtual.setDate(dataAtual.getDate() + 15);
+        else if (tipoRec === "weekly") dataAtual.setDate(dataAtual.getDate() + 7);
+        else if (tipoRec === "annual") dataAtual.setFullYear(dataAtual.getFullYear() + 1);
+      }
+
+      descLanc.value = "";
+      valorLanc.value = "";
+      dataLanc.value = "";
+
+      await refreshLancamentos();
+      await renderExtrato();
+      return;
+    }
+
+    // ========================= LANÇAMENTO NORMAL =========================
+
+    await supabase.from(tabela).insert([
+      {
+        id: crypto.randomUUID(),
         descricao: desc,
         valor,
         data,
         conta_id,
         categoria_id,
-      })
-      .eq("id", editing.id);
-
-    stopEdit();
-    await refreshLancamentos();
-    await renderExtrato();
-    return;
-  }
-
-  // tabela correspondente
-  const tabela = tipo === "receita" ? "receitas" : "despesas";
-
-  // ========================= RECORRÊNCIA =========================
-  const tipoRec = document.getElementById("recorrencia-tipo").value;
-  const parcelas = Number(
-    document.getElementById("recorrencia-parcelas").value || 1
-  );
-
-  if (tipoRec !== "none" && parcelas > 1) {
-    let dataAtual = new Date(data + "T00:00:00");
-
-    for (let i = 0; i < parcelas; i++) {
-      const dataFormatada =
-        dataAtual.getFullYear() +
-        "-" +
-        String(dataAtual.getMonth() + 1).padStart(2, "0") +
-        "-" +
-        String(dataAtual.getDate()).padStart(2, "0");
-
-      await supabase.from(tabela).insert([
-        {
-          id: crypto.randomUUID(),
-          descricao: `${desc} (${i + 1}/${parcelas})`,
-          valor,
-          data: dataFormatada,
-          conta_id,
-          categoria_id,
-          user_id: currentUser.id,
-          baixado: false,
-        },
-      ]);
-
-      if (tipoRec === "monthly") dataAtual.setMonth(dataAtual.getMonth() + 1);
-      else if (tipoRec === "fortnight") dataAtual.setDate(dataAtual.getDate() + 15);
-      else if (tipoRec === "weekly") dataAtual.setDate(dataAtual.getDate() + 7);
-      else if (tipoRec === "annual") dataAtual.setFullYear(dataAtual.getFullYear() + 1);
-    }
+        user_id: currentUser.id,
+        baixado: false,
+      },
+    ]);
 
     descLanc.value = "";
     valorLanc.value = "";
@@ -380,31 +425,8 @@ btnAddLanc.onclick = async () => {
 
     await refreshLancamentos();
     await renderExtrato();
-    return;
-  }
-
-  // ========================= LANÇAMENTO NORMAL =========================
-
-  await supabase.from(tabela).insert([
-    {
-      id: crypto.randomUUID(),
-      descricao: desc,
-      valor,
-      data,
-      conta_id,
-      categoria_id,
-      user_id: currentUser.id,
-      baixado: false,
-    },
-  ]);
-
-  descLanc.value = "";
-  valorLanc.value = "";
-  dataLanc.value = "";
-
-  await refreshLancamentos();
-  await renderExtrato();
-};
+  };
+}
 
 
 // ========================= EDIÇÃO =========================
@@ -432,7 +454,7 @@ function stopEdit() {
   btnCancelEdit.classList.add("hidden");
 }
 
-btnCancelEdit.onclick = () => stopEdit();
+if (btnCancelEdit) btnCancelEdit.onclick = () => stopEdit();
 
 
 // ========================= EXCLUIR LANÇAMENTO =========================
@@ -462,14 +484,14 @@ async function deleteItem(type, id) {
 
 // ========================= REFRESH LANÇAMENTOS =========================
 
-btnFiltrarLanc.onclick = () => refreshLancamentos();
+if (btnFiltrarLanc) btnFiltrarLanc.onclick = () => refreshLancamentos();
 
 async function refreshLancamentos() {
-  const conta_id = selectContas.value;
+  const conta_id = selectContas ? selectContas.value : "all";
 
   const now = new Date();
   let inicio, fim;
-  const p = periodoLanc.value;
+  const p = periodoLanc ? periodoLanc.value : "mes_atual";
 
   if (p === "mes_atual") {
     inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
@@ -486,8 +508,8 @@ async function refreshLancamentos() {
     inicio = past.toISOString().slice(0, 10);
     fim = now.toISOString().slice(0, 10);
   } else {
-    inicio = dataInicioLanc.value;
-    fim = dataFimLanc.value;
+    inicio = dataInicioLanc ? dataInicioLanc.value : "";
+    fim = dataFimLanc ? dataFimLanc.value : "";
   }
 
   let queryRec, queryDes;
@@ -534,31 +556,30 @@ async function refreshLancamentos() {
 
   const [R, D] = await Promise.all([queryRec, queryDes]);
 
-  listReceitas.innerHTML = "";
-  listDespesas.innerHTML = "";
+  if (listReceitas) listReceitas.innerHTML = "";
+  if (listDespesas) listDespesas.innerHTML = "";
 
   let tr = 0;
   let td = 0;
 
-  (R.data || []).forEach((i) => {
+  (R?.data || []).forEach((i) => {
     tr += Number(i.valor || 0);
     listReceitas.appendChild(buildLancItem(i, "receita"));
   });
 
-  (D.data || []).forEach((i) => {
+  (D?.data || []).forEach((i) => {
     td += Number(i.valor || 0);
     listDespesas.appendChild(buildLancItem(i, "despesa"));
   });
 
-  totalReceitasEl.textContent = formatReal(tr);
-  totalDespesasEl.textContent = formatReal(td);
+  if (totalReceitasEl) totalReceitasEl.textContent = formatReal(tr);
+  if (totalDespesasEl) totalDespesasEl.textContent = formatReal(td);
 
   // -------------------------------------------
   // 🔧 CORREÇÃO: impedir consulta eq("id","all")
   // -------------------------------------------
   if (conta_id === "all") {
-    // quando todas as contas, NÃO consultar saldo individual
-    saldoAtualEl.textContent = "—";
+    if (saldoAtualEl) saldoAtualEl.textContent = "—";
   } else {
     const { data: conta } = await supabase
       .from("contas_bancarias")
@@ -566,7 +587,7 @@ async function refreshLancamentos() {
       .eq("id", conta_id)
       .maybeSingle();
 
-    saldoAtualEl.textContent = formatReal(conta?.saldo_atual || 0);
+    if (saldoAtualEl) saldoAtualEl.textContent = formatReal(conta?.saldo_atual || 0);
     await recalcularSaldo(conta_id);
   }
 }
@@ -620,9 +641,9 @@ async function baixarLancamento(type, item) {
     .select("*")
     .eq("user_id", currentUser.id);
 
-  contaBaixaSelect.innerHTML = "";
+  if (contaBaixaSelect) contaBaixaSelect.innerHTML = "";
   (contas || []).forEach((c) => {
-    contaBaixaSelect.appendChild(
+    if (contaBaixaSelect) contaBaixaSelect.appendChild(
       new Option(
         `${c.nome} (${formatReal(c.saldo_atual || c.saldo_inicial)})`,
         c.id
@@ -630,158 +651,158 @@ async function baixarLancamento(type, item) {
     );
   });
 
-  dataBaixaInput.value = new Date().toISOString().slice(0, 10);
-  jurosInput.value = "";
-  descontoInput.value = "";
+  if (dataBaixaInput) dataBaixaInput.value = new Date().toISOString().slice(0, 10);
+  if (jurosInput) jurosInput.value = "";
+  if (descontoInput) descontoInput.value = "";
 
-  modalBaixa.classList.remove("hidden");
+  if (modalBaixa) modalBaixa.classList.remove("hidden");
 }
+
 // ========================= CONFIRMAR BAIXA — MODAL =========================
 
-confirmarBaixaBtn.onclick = async () => {
-  if (!lancamentoParaBaixa)
-    return alert("Nenhum lançamento selecionado para baixa.");
+if (confirmarBaixaBtn) {
+  confirmarBaixaBtn.onclick = async () => {
+    if (!lancamentoParaBaixa) return alert("Nenhum lançamento selecionado para baixa.");
 
-  const dataBaixa = dataBaixaInput.value;
-  const juros = Number(jurosInput.value || 0);
-  const desconto = Number(descontoInput.value || 0);
-  const conta_id = contaBaixaSelect.value;
+    const dataBaixa = dataBaixaInput.value;
+    const juros = Number(jurosInput.value || 0);
+    const desconto = Number(descontoInput.value || 0);
+    const conta_id = contaBaixaSelect.value;
 
-  const { type, item } = lancamentoParaBaixa;
+    const { type, item } = lancamentoParaBaixa;
 
-  const { data: conta } = await supabase
-    .from("contas_bancarias")
-    .select("*")
-    .eq("id", conta_id)
-    .single();
+    const { data: conta } = await supabase
+      .from("contas_bancarias")
+      .select("*")
+      .eq("id", conta_id)
+      .single();
 
-  let novoSaldo = Number(conta.saldo_atual || 0);
+    let novoSaldo = Number(conta.saldo_atual || 0);
 
-  if (type === "receita") novoSaldo += Number(item.valor);
-  else novoSaldo -= Number(item.valor);
-
-  await supabase
-    .from("contas_bancarias")
-    .update({ saldo_atual: novoSaldo })
-    .eq("id", conta_id);
-
-  const tabela = type === "receita" ? "receitas" : "despesas";
-
-  await supabase
-    .from(tabela)
-    .update({ baixado: true, data_baixa: dataBaixa })
-    .eq("id", item.id);
-
-  const movId = crypto.randomUUID();
-  await supabase.from("movimentacoes").insert([
-    {
-      id: movId,
-      user_id: currentUser.id,
-      conta_id,
-      tipo: type === "receita" ? "credito" : "debito",
-      valor: item.valor,
-      descricao: item.descricao,
-      data: dataBaixa,
-      lancamento_id: item.id,
-    },
-  ]);
-
-  // ========================= JUROS =========================
-  if (juros > 0) {
-    const catId = await getOrCreateCategoria("Juros/Multa");
-    const despId = crypto.randomUUID();
-
-    await supabase.from("despesas").insert([
-      {
-        id: despId,
-        user_id: currentUser.id,
-        conta_id,
-        descricao: `Juros/Multa — ${item.descricao}`,
-        valor: juros,
-        data: dataBaixa,
-        categoria_id: catId,
-        baixado: true,
-        data_baixa: dataBaixa,
-      },
-    ]);
-
-    await supabase.from("movimentacoes").insert([
-      {
-        id: crypto.randomUUID(),
-        user_id: currentUser.id,
-        conta_id,
-        tipo: "debito",
-        valor: juros,
-        descricao: `Juros/Multa — ${item.descricao}`,
-        data: dataBaixa,
-        lancamento_id: despId,
-      },
-    ]);
-
-    novoSaldo -= juros;
+    if (type === "receita") novoSaldo += Number(item.valor);
+    else novoSaldo -= Number(item.valor);
 
     await supabase
       .from("contas_bancarias")
       .update({ saldo_atual: novoSaldo })
       .eq("id", conta_id);
-  }
 
-  // ========================= DESCONTO =========================
-  if (desconto > 0) {
-    const catId = await getOrCreateCategoria("Desconto");
-    const recId = crypto.randomUUID();
-
-    await supabase.from("receitas").insert([
-      {
-        id: recId,
-        user_id: currentUser.id,
-        conta_id,
-        descricao: `Desconto — ${item.descricao}`,
-        valor: desconto,
-        data: dataBaixa,
-        categoria_id: catId,
-        baixado: true,
-        data_baixa: dataBaixa,
-      },
-    ]);
-
-    await supabase.from("movimentacoes").insert([
-      {
-        id: crypto.randomUUID(),
-        user_id: currentUser.id,
-        conta_id,
-        tipo: "credito",
-        valor: desconto,
-        descricao: `Desconto — ${item.descricao}`,
-        data: dataBaixa,
-        lancamento_id: recId,
-      },
-    ]);
-
-    novoSaldo += desconto;
+    const tabela = type === "receita" ? "receitas" : "despesas";
 
     await supabase
-      .from("contas_bancarias")
-      .update({ saldo_atual: novoSaldo })
-      .eq("id", conta_id);
-  }
+      .from(tabela)
+      .update({ baixado: true, data_baixa: dataBaixa })
+      .eq("id", item.id);
 
-  modalBaixa.classList.add("hidden");
-  lancamentoParaBaixa = null;
+    const movId = crypto.randomUUID();
+    await supabase.from("movimentacoes").insert([
+      {
+        id: movId,
+        user_id: currentUser.id,
+        conta_id,
+        tipo: type === "receita" ? "credito" : "debito",
+        valor: item.valor,
+        descricao: item.descricao,
+        data: dataBaixa,
+        lancamento_id: item.id,
+      },
+    ]);
 
-  await recalcularSaldo(conta_id);
-  await refreshLancamentos();
-  await renderExtrato();
-};
+    // ========================= JUROS =========================
+    if (juros > 0) {
+      const catId = await getOrCreateCategoria("Juros/Multa");
+      const despId = crypto.randomUUID();
 
+      await supabase.from("despesas").insert([
+        {
+          id: despId,
+          user_id: currentUser.id,
+          conta_id,
+          descricao: `Juros/Multa — ${item.descricao}`,
+          valor: juros,
+          data: dataBaixa,
+          categoria_id: catId,
+          baixado: true,
+          data_baixa: dataBaixa,
+        },
+      ]);
 
-// ========================= CANCELAR MODAL =========================
+      await supabase.from("movimentacoes").insert([
+        {
+          id: crypto.randomUUID(),
+          user_id: currentUser.id,
+          conta_id,
+          tipo: "debito",
+          valor: juros,
+          descricao: `Juros/Multa — ${item.descricao}`,
+          data: dataBaixa,
+          lancamento_id: despId,
+        },
+      ]);
 
-cancelarBaixaBtn.onclick = () => {
-  modalBaixa.classList.add("hidden");
-  lancamentoParaBaixa = null;
-};
+      novoSaldo -= juros;
 
+      await supabase
+        .from("contas_bancarias")
+        .update({ saldo_atual: novoSaldo })
+        .eq("id", conta_id);
+    }
+
+    // ========================= DESCONTO =========================
+    if (desconto > 0) {
+      const catId = await getOrCreateCategoria("Desconto");
+      const recId = crypto.randomUUID();
+
+      await supabase.from("receitas").insert([
+        {
+          id: recId,
+          user_id: currentUser.id,
+          conta_id,
+          descricao: `Desconto — ${item.descricao}`,
+          valor: desconto,
+          data: dataBaixa,
+          categoria_id: catId,
+          baixado: true,
+          data_baixa: dataBaixa,
+        },
+      ]);
+
+      await supabase.from("movimentacoes").insert([
+        {
+          id: crypto.randomUUID(),
+          user_id: currentUser.id,
+          conta_id,
+          tipo: "credito",
+          valor: desconto,
+          descricao: `Desconto — ${item.descricao}`,
+          data: dataBaixa,
+          lancamento_id: recId,
+        },
+      ]);
+
+      novoSaldo += desconto;
+
+      await supabase
+        .from("contas_bancarias")
+        .update({ saldo_atual: novoSaldo })
+        .eq("id", conta_id);
+    }
+
+    if (modalBaixa) modalBaixa.classList.add("hidden");
+    lancamentoParaBaixa = null;
+
+    await recalcularSaldo(conta_id);
+    await refreshLancamentos();
+    await renderExtrato();
+  };
+}
+
+if (cancelarBaixaBtn) {
+  cancelarBaixaBtn.onclick = () => {
+    if (modalBaixa) modalBaixa.classList.add("hidden");
+    lancamentoParaBaixa = null;
+  };
+}
 
 // ========================= GET OR CREATE CATEGORIA =========================
 
@@ -800,26 +821,31 @@ async function getOrCreateCategoria(nome) {
     .select()
     .maybeSingle();
 
-  return created?.data?.id || created?.id;
+  // created may be in different shapes depending on supabase response; try to return id robustly
+  if (created?.data && created.data.id) return created.data.id;
+  if (created?.id) return created.id;
+  // fallback: query again
+  const re = await supabase.from("categorias").select("id").eq("nome", nome).maybeSingle();
+  return re?.id || re?.data?.id || null;
 }
 
 
 // ========================= EXTRATO — FILTRAR =========================
 
-btnFiltrarExtrato.onclick = () => renderExtrato();
+if (btnFiltrarExtrato) btnFiltrarExtrato.onclick = () => renderExtrato();
 
 async function renderExtrato() {
-  const conta_id = selectExtrato.value;
-  if (!conta_id || !tableExtrato) return;
+  const conta_id = selectExtrato ? selectExtrato.value : "all";
+  if (!tableExtrato) return;
 
   // 🔧 CORREÇÃO: só recalcula saldo se NÃO for "all"
-  if (conta_id !== "all") {
+  if (conta_id && conta_id !== "all") {
     await recalcularSaldo(conta_id);
   }
 
   const now = new Date();
   let inicio, fim;
-  const p = periodoExtrato.value;
+  const p = periodoExtrato ? periodoExtrato.value : "mes_atual";
 
   if (p === "mes_atual") {
     inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
@@ -836,8 +862,8 @@ async function renderExtrato() {
     inicio = past.toISOString().slice(0, 10);
     fim = now.toISOString().slice(0, 10);
   } else {
-    inicio = dataInicio.value;
-    fim = dataFim.value;
+    inicio = dataInicio ? dataInicio.value : "";
+    fim = dataFim ? dataFim.value : "";
   }
 
   // consulta conta apenas se NÃO for "all"
@@ -875,7 +901,7 @@ async function renderExtrato() {
 
   const linhas = [];
 
-  if (conta_id !== "all") {
+  if (conta_id !== "all" && conta) {
     const si = Number(conta.saldo_inicial || 0);
     const dataInicial = conta.data_saldo;
 
@@ -938,17 +964,22 @@ async function renderExtrato() {
     tableExtrato.appendChild(tr);
   });
 
-  document.getElementById("total-receitas-extrato").textContent = formatReal(cred);
-  document.getElementById("total-despesas-extrato").textContent = formatReal(deb);
-  document.getElementById("saldo-periodo-extrato").textContent = formatReal(cred - deb);
+  const elTotalRec = document.getElementById("total-receitas-extrato");
+  const elTotalDes = document.getElementById("total-despesas-extrato");
+  const elSaldoPeriodo = document.getElementById("saldo-periodo-extrato");
+  const elSaldoAtualConta = document.getElementById("saldo-atual-conta-extrato");
+  const elTotalValor = document.getElementById("total-valor");
+
+  if (elTotalRec) elTotalRec.textContent = formatReal(cred);
+  if (elTotalDes) elTotalDes.textContent = formatReal(deb);
+  if (elSaldoPeriodo) elSaldoPeriodo.textContent = formatReal(cred - deb);
+  if (elTotalValor) elTotalValor.textContent = formatReal(cred - deb);
 
   if (conta_id === "all") {
-    document.getElementById("saldo-atual-conta-extrato").textContent = "—";
+    if (elSaldoAtualConta) elSaldoAtualConta.textContent = "—";
   } else {
-    document.getElementById("saldo-atual-conta-extrato").textContent = formatReal(conta.saldo_atual);
+    if (elSaldoAtualConta) elSaldoAtualConta.textContent = formatReal(conta?.saldo_atual);
   }
-
-  document.getElementById("total-valor").textContent = formatReal(cred - deb);
 }
 
 
@@ -1019,40 +1050,44 @@ async function loadDashboard() {
     0
   );
 
-  document.getElementById("dash-period").textContent = `${mes}/${ano}`;
-  document.getElementById("dash-receber").textContent = formatReal(totalR);
-  document.getElementById("dash-pagar").textContent = formatReal(totalD);
-  document.getElementById("dash-saldo-atual").textContent = formatReal(
-    totalR - totalD
-  );
-  document.getElementById("dash-saldo-previsto").textContent = formatReal(
-    totalR - totalD
-  );
+  const elDashPeriod = document.getElementById("dash-period");
+  const elDashReceber = document.getElementById("dash-receber");
+  const elDashPagar = document.getElementById("dash-pagar");
+  const elDashSaldoAtual = document.getElementById("dash-saldo-atual");
+  const elDashSaldoPrev = document.getElementById("dash-saldo-previsto");
+
+  if (elDashPeriod) elDashPeriod.textContent = `${mes}/${ano}`;
+  if (elDashReceber) elDashReceber.textContent = formatReal(totalR);
+  if (elDashPagar) elDashPagar.textContent = formatReal(totalD);
+  if (elDashSaldoAtual) elDashSaldoAtual.textContent = formatReal(totalR - totalD);
+  if (elDashSaldoPrev) elDashSaldoPrev.textContent = formatReal(totalR - totalD);
 
   // ========================= GRÁFICO GERAL =========================
   const ctx = document.getElementById("chart-dashboard");
 
   if (chartDashboard) chartDashboard.destroy();
 
-  chartDashboard = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: ["Receitas", "Despesas"],
-      datasets: [
-        {
-          label: "Resumo do mês",
-          data: [totalR, totalD],
-          backgroundColor: ["#18c55f", "#e63946"],
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: { beginAtZero: true },
+  if (ctx) {
+    chartDashboard = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: ["Receitas", "Despesas"],
+        datasets: [
+          {
+            label: "Resumo do mês",
+            data: [totalR, totalD],
+            backgroundColor: ["#18c55f", "#e63946"],
+          },
+        ],
       },
-    },
-  });
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true },
+        },
+      },
+    });
+  }
 
   await renderGraficoReceitasPorCategoria(inicio, fim);
   await renderGraficoDespesasPorCategoria(inicio, fim);
@@ -1082,22 +1117,24 @@ async function renderGraficoReceitasPorCategoria(inicio, fim) {
 
   if (chartRecCat) chartRecCat.destroy();
 
-  chartRecCat = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Receitas por Categoria",
-          data: valores,
-          backgroundColor: "#18c55f",
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-    },
-  });
+  if (ctx) {
+    chartRecCat = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Receitas por Categoria",
+            data: valores,
+            backgroundColor: "#18c55f",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+      },
+    });
+  }
 }
 
 async function renderGraficoDespesasPorCategoria(inicio, fim) {
@@ -1122,99 +1159,105 @@ async function renderGraficoDespesasPorCategoria(inicio, fim) {
 
   if (chartDesCat) chartDesCat.destroy();
 
-  chartDesCat = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Despesas por Categoria",
-          data: valores,
-          backgroundColor: "#e63946",
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-    },
-  });
+  if (ctx) {
+    chartDesCat = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Despesas por Categoria",
+            data: valores,
+            backgroundColor: "#e63946",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+      },
+    });
+  }
 }
 
 // ========================= SUBSCRIBE SUPABASE =========================
 
 function subscribeToChanges() {
-  // Receitas → atualiza lançamentos
-  supabase
-    .channel("rec")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "receitas" },
-      () => refreshLancamentos()
-    )
-    .subscribe();
+  try {
+    // Receitas → atualiza lançamentos
+    supabase
+      .channel("rec")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "receitas" },
+        () => refreshLancamentos()
+      )
+      .subscribe();
 
-  // Despesas → atualiza lançamentos
-  supabase
-    .channel("des")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "despesas" },
-      () => refreshLancamentos()
-    )
-    .subscribe();
+    // Despesas → atualiza lançamentos
+    supabase
+      .channel("des")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "despesas" },
+        () => refreshLancamentos()
+      )
+      .subscribe();
 
-  // Movimentações → atualiza extrato
-  supabase
-    .channel("mov")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "movimentacoes" },
-      () => renderExtrato()
-    )
-    .subscribe();
+    // Movimentações → atualiza extrato
+    supabase
+      .channel("mov")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "movimentacoes" },
+        () => renderExtrato()
+      )
+      .subscribe();
 
-  // Categorias → recarrega lista
-  supabase
-    .channel("cats")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "categorias" },
-      () => loadCategorias()
-    )
-    .subscribe();
+    // Categorias → recarrega lista
+    supabase
+      .channel("cats")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "categorias" },
+        () => loadCategorias()
+      )
+      .subscribe();
+  } catch (e) {
+    console.warn("Não foi possível subscrever a canais realtime (ok em dev).", e);
+  }
 }
 
 // ========================= TROCA DE TELAS PRINCIPAIS =========================
 
 function showScreen(s) {
   // Oculta todas
-  telaDashboard.classList.add("hidden");
-  telaContas.classList.add("hidden");
-  telaLanc.classList.add("hidden");
+  if (telaDashboard) telaDashboard.classList.add("hidden");
+  if (telaContas) telaContas.classList.add("hidden");
+  if (telaLanc) telaLanc.classList.add("hidden");
 
   // Reseta ativações
-  btnDash.classList.remove("active");
-  btnContas.classList.remove("active");
-  btnLanc.classList.remove("active");
+  if (btnDash) btnDash.classList.remove("active");
+  if (btnContas) btnContas.classList.remove("active");
+  if (btnLanc) btnLanc.classList.remove("active");
 
   // Ativa a tela escolhida
   if (s === "dashboard") {
-    telaDashboard.classList.remove("hidden");
-    btnDash.classList.add("active");
+    if (telaDashboard) telaDashboard.classList.remove("hidden");
+    if (btnDash) btnDash.classList.add("active");
     loadDashboard();
   } else if (s === "contas") {
-    telaContas.classList.remove("hidden");
-    btnContas.classList.add("active");
+    if (telaContas) telaContas.classList.remove("hidden");
+    if (btnContas) btnContas.classList.add("active");
   } else if (s === "lanc") {
-    telaLanc.classList.remove("hidden");
-    btnLanc.classList.add("active");
+    if (telaLanc) telaLanc.classList.remove("hidden");
+    if (btnLanc) btnLanc.classList.add("active");
   }
 }
 
 // botões de menu
-btnDash.onclick = () => showScreen("dashboard");
-btnContas.onclick = () => showScreen("contas");
-btnLanc.onclick = () => showScreen("lanc");
+if (btnDash) btnDash.onclick = () => showScreen("dashboard");
+if (btnContas) btnContas.onclick = () => showScreen("contas");
+if (btnLanc) btnLanc.onclick = () => showScreen("lanc");
 
 // ========================= TABS (Cadastro / Extrato / Categorias) =========================
 
@@ -1226,21 +1269,21 @@ document.querySelectorAll(".tab-btn").forEach((b) => {
     b.classList.add("active");
 
     // esconde todas as tabs
-    tabCadastro.classList.add("hidden");
-    tabExtrato.classList.add("hidden");
-    tabCategorias.classList.add("hidden");
+    if (tabCadastro) tabCadastro.classList.add("hidden");
+    if (tabExtrato) tabExtrato.classList.add("hidden");
+    if (tabCategorias) tabCategorias.classList.add("hidden");
 
     // mostra a tab correta
-    if (b.dataset.tab === "cadastro") {
+    if (b.dataset.tab === "cadastro" && tabCadastro) {
       tabCadastro.classList.remove("hidden");
     }
 
-    if (b.dataset.tab === "extrato") {
+    if (b.dataset.tab === "extrato" && tabExtrato) {
       tabExtrato.classList.remove("hidden");
       renderExtrato();
     }
 
-    if (b.dataset.tab === "categorias") {
+    if (b.dataset.tab === "categorias" && tabCategorias) {
       tabCategorias.classList.remove("hidden");
     }
   };
@@ -1248,24 +1291,28 @@ document.querySelectorAll(".tab-btn").forEach((b) => {
 
 // ========================= FILTROS LANÇAMENTOS =========================
 
-periodoLanc.onchange = () => {
-  if (periodoLanc.value === "personalizado") {
-    dataInicioLanc.classList.remove("hidden");
-    dataFimLanc.classList.remove("hidden");
-  } else {
-    dataInicioLanc.classList.add("hidden");
-    dataFimLanc.classList.add("hidden");
-  }
-};
+if (periodoLanc) {
+  periodoLanc.onchange = () => {
+    if (periodoLanc.value === "personalizado") {
+      if (dataInicioLanc) dataInicioLanc.classList.remove("hidden");
+      if (dataFimLanc) dataFimLanc.classList.remove("hidden");
+    } else {
+      if (dataInicioLanc) dataInicioLanc.classList.add("hidden");
+      if (dataFimLanc) dataFimLanc.classList.add("hidden");
+    }
+  };
+}
 
 // ========================= FILTROS EXTRATO =========================
 
-periodoExtrato.onchange = () => {
-  if (periodoExtrato.value === "personalizado") {
-    dataInicio.classList.remove("hidden");
-    dataFim.classList.remove("hidden");
-  } else {
-    dataInicio.classList.add("hidden");
-    dataFim.classList.add("hidden");
-  }
-};
+if (periodoExtrato) {
+  periodoExtrato.onchange = () => {
+    if (periodoExtrato.value === "personalizado") {
+      if (dataInicio) dataInicio.classList.remove("hidden");
+      if (dataFim) dataFim.classList.remove("hidden");
+    } else {
+      if (dataInicio) dataInicio.classList.add("hidden");
+      if (dataFim) dataFim.classList.add("hidden");
+    }
+  };
+}
