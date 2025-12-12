@@ -194,6 +194,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if (navFatura) navFatura.onclick = async () => { await loadFaturasSelect(); showView(viewFaturas); };
   if (navLancamento) navLancamento.onclick = async () => { await loadSelectsForLanc(); popularFaturasLancamento(); showView(viewLancamento); };
   if (navHistorico) navHistorico.onclick = async () => { await loadHistoricoFaturas(); showView(viewHistorico); };
+  const btnVoltarEdicao = document.getElementById("btn-voltar-edicao");
+if (btnVoltarEdicao) {
+  btnVoltarEdicao.onclick = () => {
+    showView(viewFaturas);
+  };
+}
 
   // ===========================
   // CARDS — carregar / renderizar / excluir
