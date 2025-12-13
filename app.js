@@ -481,10 +481,15 @@
 
       right.appendChild(btnEdit); right.appendChild(btnDelete);
 
-      if (!item.baixado) {
-        const btnBaixar = document.createElement('button'); btnBaixar.textContent = 'Baixar';
-        btnBaixar.addEventListener('click', () => UI.baixarFromList(tipo, item));
-        right.appendChild(btnBaixar);
+     if (!item.baixado) {
+  const btnBaixar = document.createElement('button');
+  btnBaixar.textContent = 'Baixar';
+
+  btnBaixar.addEventListener('click', () => abrirModalBaixa(tipo, item));
+
+  right.appendChild(btnBaixar);
+}
+
       } else {
         const btnCancel = document.createElement('button'); btnCancel.textContent = 'Cancelar Baixa';
         btnCancel.addEventListener('click', async () => {
