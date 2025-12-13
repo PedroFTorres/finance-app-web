@@ -26,6 +26,8 @@
     charts: { recCat: null, desCat: null, resumo: null },
     subs: [] // para armazenar channels se quiser unsub later
   };
+   let BAIXA_ATUAL = null;
+
 
   const IDS = {
     // header / auth
@@ -484,8 +486,9 @@
     if (!item.baixado) {
   const btnBaixar = document.createElement('button');
   btnBaixar.textContent = 'Baixar';
+       
+       btnBaixar.addEventListener('click', () => UI.abrirModalBaixa(tipo, item));
 
-  btnBaixar.addEventListener('click', () => abrirModalBaixa(tipo, item));
 
   right.appendChild(btnBaixar);
 
@@ -572,6 +575,27 @@
       modal.classList.add('hidden'); modal.setAttribute('aria-hidden','true');
       const saveBtn = $(IDS.modalSave); if (saveBtn) { delete saveBtn.dataset.edit; delete saveBtn.dataset.editId; saveBtn.textContent = 'Salvar'; }
     },
+     abrirModalBaixa(tipo, lancamento) {
+  BAIXA_ATUAL = { tipo, lancamento };
+
+  document.getElementById("data-baixa").value =
+    lancamento.data || new Date().toISOString().slice(0, 10);
+
+  document.getElementById("juros-baixa").value = "";
+  document.getElementById("desconto-baixa").value = "";
+
+  const selectConta = document.getElementById("conta-baixa-select");
+  selectConta.innerHTML = "";
+
+  (STATE.contas || []).forEach(c => {
+    selectConta.appendChild(
+      new Option(`${c.nome} (${fmtMoney(c.saldo_atual)})`, c.id)
+    );
+  });
+
+  document.getElementById("modal-baixa").classList.remove("hidden");
+},
+
 
     async handleSaveModal() {
       // called when user clicks save
