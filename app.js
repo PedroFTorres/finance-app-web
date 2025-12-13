@@ -602,23 +602,6 @@
       }
     },
 
-    async baixarFromList(tipo, item) {
-      try {
-        // choose conta: prefer filtro selecionado, fallback to item.conta_id
-        const contaFiltro = $(IDS.selectContas)?.value || 'all';
-        const contaToUse = (contaFiltro && contaFiltro !== 'all') ? contaFiltro : (item.conta_id || null);
-        if (!contaToUse) return alert('Selecione uma conta no filtro ou defina a conta no lançamento.');
-        const dt = isoToday();
-        const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
-        await LancService.update(tipo, item.id, { baixado: true, data_baixa: dt, conta_id: contaToUse });
-        await MovService.insert({ conta_id: contaToUse, descricao: item.descricao, tipo: tipo === 'receita' ? 'credito' : 'debito', valor: item.valor, data: dt, lancamento_id: item.id });
-        await ContasService.recalc(contaToUse);
-        await App.refreshLancamentos();
-        await App.renderExtrato();
-      } catch (e) { console.error('baixarFromList', e); alert('Erro ao baixar'); }
-    }
-  };
-
   /* ============================
      CHARTS
   ============================ */
