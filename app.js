@@ -481,29 +481,52 @@
 
       right.appendChild(btnEdit); right.appendChild(btnDelete);
 
-     if (!item.baixado) {
+    if (!item.baixado) {
   const btnBaixar = document.createElement('button');
   btnBaixar.textContent = 'Baixar';
 
   btnBaixar.addEventListener('click', () => abrirModalBaixa(tipo, item));
 
   right.appendChild(btnBaixar);
+
+} else {
+  const btnCancel = document.createElement('button');
+  btnCancel.textContent = 'Cancelar Baixa';
+
+  btnCancel.addEventListener('click', async () => {
+    if (!confirm('Cancelar baixa?')) return;
+
+    // localizar movimentação vinculada ao lançamento
+    const { data: mv } = await supabase
+      .from('movimentacoes')
+      .select('*')
+      .eq('lancamento_id', item.id)
+      .maybeSingle();
+
+    if (!mv) {
+      alert('Movimentação não encontrada.');
+      return;
+    }
+
+    await supabase
+      .from('movimentacoes')
+      .delete()
+      .eq('id', mv.id);
+
+    const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
+
+    await supabase
+      .from(tabela)
+      .update({ baixado: false, data_baixa: null })
+      .eq('id', item.id);
+
+    await App.refreshLancamentos();
+    await App.renderExtrato();
+  });
+
+  right.appendChild(btnCancel);
 }
 
-       else {
-        const btnCancel = document.createElement('button'); btnCancel.textContent = 'Cancelar Baixa';
-        btnCancel.addEventListener('click', async () => {
-          // localizar movimentacao pela referencia lancamento_id
-          const { data: mv } = await supabase.from('movimentacoes').select('*').eq('lancamento_id', item.id).maybeSingle();
-          if (!mv) return alert('Movimentação não encontrada para cancelar.');
-          await MovService.delete(mv.id);
-          const table = tipo === 'receita' ? 'receitas' : 'despesas';
-          await supabase.from(table).update({ baixado: false, data_baixa: null }).eq('id', item.id);
-          await App.refreshLancamentos();
-          await App.renderExtrato();
-        });
-        right.appendChild(btnCancel);
-      }
 
       li.appendChild(left); li.appendChild(right);
       return li;
