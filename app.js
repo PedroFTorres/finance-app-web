@@ -629,6 +629,7 @@
         alert('Erro ao salvar lançamento. Veja console.');
       }
     },
+  };
 
   /* ============================
      CHARTS
