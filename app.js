@@ -490,7 +490,7 @@
   right.appendChild(btnBaixar);
 }
 
-      } else {
+       else {
         const btnCancel = document.createElement('button'); btnCancel.textContent = 'Cancelar Baixa';
         btnCancel.addEventListener('click', async () => {
           // localizar movimentacao pela referencia lancamento_id
