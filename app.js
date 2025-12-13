@@ -487,7 +487,11 @@
   const btnBaixar = document.createElement('button');
   btnBaixar.textContent = 'Baixar';
        
-       btnBaixar.addEventListener('click', () => UI.abrirModalBaixa(tipo, item));
+btnBaixar.addEventListener('click', () => {
+  console.log('CLICK BAIXAR', tipo, item);
+  UI.abrirModalBaixa(tipo, item);
+});
+
 
 
   right.appendChild(btnBaixar);
