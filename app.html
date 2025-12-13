@@ -343,30 +343,47 @@
 </div>
  
    
-  <!-- ========================= MODAL DE BAIXA ========================= -->
+ <!-- ========================= MODAL DE BAIXA ========================= -->
+<div id="modal-baixa" class="modal hidden" aria-hidden="true"
+     style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1200;">
 
-  <div id="modal-baixa" class="modal hidden">
-    <div class="modal-content">
-      <h3>Baixar Lançamento</h3>
-
-      <label>Data da baixa</label>
-      <input type="date" id="data-baixa">
-
-      <label>Juros / Multa (opcional)</label>
-      <input type="number" id="juros-baixa" step="0.01">
-
-      <label>Desconto / Abatimento (opcional)</label>
-      <input type="number" id="desconto-baixa" step="0.01">
-
-      <label>Conta para baixar</label>
-      <select id="conta-baixa-select"></select>
-
-      <div class="modal-actions">
-        <button id="confirmar-baixa" class="btn-primary">Confirmar</button>
-        <button id="cancelar-baixa" class="btn-danger">Cancelar</button>
-      </div>
-    </div>
+  <div class="modal-backdrop"
+       style="position:absolute;inset:0;background:rgba(0,0,0,0.45);"
+       onclick="document.getElementById('modal-baixa').classList.add('hidden')">
   </div>
+
+  <div class="modal-card"
+       role="dialog"
+       aria-modal="true"
+       style="position:relative;background:#fff;border-radius:12px;
+              box-shadow:0 10px 30px rgba(0,0,0,0.25);
+              width:420px;max-width:95%;padding:20px;z-index:1210;">
+
+    <h3>Baixar Lançamento</h3>
+
+    <label>Data da baixa</label>
+    <input type="date" id="data-baixa">
+
+    <label>Juros / Multa (opcional)</label>
+    <input type="number" id="juros-baixa" step="0.01">
+
+    <label>Desconto / Abatimento (opcional)</label>
+    <input type="number" id="desconto-baixa" step="0.01">
+
+    <label>Conta para baixar</label>
+    <select id="conta-baixa-select"></select>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+      <button id="confirmar-baixa" class="btn-primary">Confirmar</button>
+      <button id="cancelar-baixa" class="btn-danger"
+              onclick="document.getElementById('modal-baixa').classList.add('hidden')">
+        Cancelar
+      </button>
+    </div>
+
+  </div>
+</div>
+
 
 
 
