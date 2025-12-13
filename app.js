@@ -597,7 +597,19 @@ btnBaixar.addEventListener('click', () => {
     );
   });
 
-  document.getElementById("modal-baixa").classList.remove("hidden");
+  const modal = document.getElementById("modal-baixa");
+if (!modal) {
+  alert("Modal de baixa não encontrado no HTML.");
+  return;
+}
+
+modal.classList.remove("hidden");
+modal.style.display = "flex";
+modal.style.position = "fixed";
+modal.style.inset = "0";
+modal.style.zIndex = "1200";
+modal.setAttribute("aria-hidden", "false");
+
 },
 
 
