@@ -881,6 +881,63 @@ modal.setAttribute("aria-hidden", "false");
       await drawDespesasPorCategoria(inicio, fim);
     }
   };
+   // =========================
+// CONFIRMAR BAIXA
+// =========================
+document.getElementById("confirmar-baixa")?.addEventListener("click", async () => {
+  try {
+    if (!BAIXA_ATUAL) {
+      alert("Nenhum lançamento selecionado para baixa.");
+      return;
+    }
+
+    const { tipo, lancamento } = BAIXA_ATUAL;
+
+    const dataBaixa = document.getElementById("data-baixa").value;
+    const juros = Number(document.getElementById("juros-baixa").value || 0);
+    const desconto = Number(document.getElementById("desconto-baixa").value || 0);
+    const contaId = document.getElementById("conta-baixa-select").value;
+
+    if (!dataBaixa || !contaId) {
+      alert("Informe a data e a conta.");
+      return;
+    }
+
+    const valorOriginal = Number(lancamento.valor);
+    const valorFinal = valorOriginal + juros - desconto;
+
+    await supabase.from("movimentacoes").insert([{
+      id: crypto.randomUUID(),
+      user_id: STATE.user.id,
+      conta_id: contaId,
+      tipo: tipo === "receita" ? "credito" : "debito",
+      valor: valorFinal,
+      descricao:
+        lancamento.descricao +
+        (juros ? ` (+Juros ${fmtMoney(juros)})` : "") +
+        (desconto ? ` (-Desc ${fmtMoney(desconto)})` : ""),
+      data: dataBaixa,
+      lancamento_id: lancamento.id
+    }]);
+
+    const tabela = tipo === "receita" ? "receitas" : "despesas";
+    await supabase.from(tabela).update({
+      baixado: true,
+      data_baixa: dataBaixa
+    }).eq("id", lancamento.id);
+
+    document.getElementById("modal-baixa").classList.add("hidden");
+    BAIXA_ATUAL = null;
+
+    await App.refreshLancamentos();
+    await App.renderExtrato();
+
+  } catch (err) {
+    console.error("Erro ao confirmar baixa:", err);
+    alert("Erro ao realizar a baixa.");
+  }
+});
+
 
   /* ============================
      BOOTSTRAP / START
