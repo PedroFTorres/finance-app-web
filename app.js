@@ -824,9 +824,10 @@ modal.setAttribute("aria-hidden", "false");
       }
     },
 
-  async renderExtrato() {
+async renderExtrato() {
   try {
     const conta_id = document.getElementById("select-contas-extrato")?.value;
+
     if (!conta_id || conta_id === "all") {
       document.getElementById("saldo-atual-conta-extrato").textContent = "—";
       return;
@@ -837,27 +838,31 @@ modal.setAttribute("aria-hidden", "false");
     let inicio, fim;
 
     if (periodo === "mes_atual") {
-      inicio = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-01`;
-      fim = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()}`;
+      inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      fim = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        0
+      ).getDate()}`;
     } else if (periodo === "ultimos_30") {
       const past = new Date(now.getTime() - 30 * 86400000);
-      inicio = past.toISOString().slice(0,10);
-      fim = new Date().toISOString().slice(0,10);
+      inicio = past.toISOString().slice(0, 10);
+      fim = new Date().toISOString().slice(0, 10);
     } else {
       inicio = document.getElementById("data-inicio").value;
       fim = document.getElementById("data-fim").value;
     }
 
-    // 1️⃣ Buscar conta
+    // Conta
     const { data: conta } = await supabase
       .from("contas_bancarias")
-      .select("*")
+      .select("saldo_inicial")
       .eq("id", conta_id)
       .single();
 
-    let saldo = Number(conta.saldo_inicial || 0);
+    let saldo = Number(conta?.saldo_inicial || 0);
 
-    // 2️⃣ Buscar movimentações ORDENADAS
+    // Movimentações
     const { data: movs } = await supabase
       .from("movimentacoes")
       .select("*")
@@ -866,16 +871,14 @@ modal.setAttribute("aria-hidden", "false");
       .lte("data", fim)
       .order("data", { ascending: true });
 
-    const tbody = document
-      .getElementById("table-extrato")
-      .querySelector("tbody");
-
+    const tbody = document.querySelector("#table-extrato tbody");
     tbody.innerHTML = "";
 
     let totalCred = 0;
     let totalDeb = 0;
 
     (movs || []).forEach(m => {
+      // cálculo
       if (m.tipo === "credito") {
         saldo += Number(m.valor);
         totalCred += Number(m.valor);
@@ -884,14 +887,36 @@ modal.setAttribute("aria-hidden", "false");
         totalDeb += Number(m.valor);
       }
 
+      // classes visuais
+      const classeTipo = m.tipo === "credito"
+        ? "extrato-credito"
+        : "extrato-debito";
+
+      const classeSaldo = saldo >= 0
+        ? "extrato-saldo-positivo"
+        : "extrato-saldo-negativo";
+
+      // linha
       const tr = document.createElement("tr");
 
       tr.innerHTML = `
         <td>${new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR")}</td>
         <td>${m.descricao}</td>
-        <td>${m.tipo === "credito" ? "Crédito" : "Débito"}</td>
-        <td>${Number(m.valor).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
-        <td><strong>${saldo.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</strong></td>
+        <td class="${classeTipo}">
+          ${m.tipo === "credito" ? "Crédito" : "Débito"}
+        </td>
+        <td class="${classeTipo}">
+          ${Number(m.valor).toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+          })}
+        </td>
+        <td class="${classeSaldo}">
+          ${saldo.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+          })}
+        </td>
         <td>
           <button class="btn-secondary btn-cancelar">Cancelar Baixa</button>
         </td>
@@ -918,19 +943,21 @@ modal.setAttribute("aria-hidden", "false");
       tbody.appendChild(tr);
     });
 
-    // 3️⃣ Totais corretos
+    // Totais
     document.getElementById("total-receitas-extrato").textContent =
-      totalCred.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+      totalCred.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
     document.getElementById("total-despesas-extrato").textContent =
-      totalDeb.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+      totalDeb.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
     document.getElementById("saldo-periodo-extrato").textContent =
-      (totalCred - totalDeb).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+      (totalCred - totalDeb).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      });
 
-    // 4️⃣ SALDO ATUAL REAL (última linha)
     document.getElementById("saldo-atual-conta-extrato").textContent =
-      saldo.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+      saldo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   } catch (err) {
     console.error("Erro no extrato:", err);
