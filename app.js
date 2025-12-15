@@ -723,6 +723,71 @@ modal.setAttribute("aria-hidden", "false");
       STATE.charts.resumo = new Chart(ctx, { type: 'bar', data: { labels: ['Receitas','Despesas'], datasets: [{ label: 'Resumo', data: [totalR, totalD] }] }, options: { responsive: true } });
     } catch (e) { console.error('drawResumo', e); }
   }
+async function transferirEntreContas({
+  contaOrigem,
+  contaDestino,
+  valor,
+  data,
+  descricao
+}) {
+  if (!contaOrigem || !contaDestino) {
+    alert("Selecione as duas contas.");
+    return;
+  }
+
+  if (contaOrigem === contaDestino) {
+    alert("A conta de origem e destino devem ser diferentes.");
+    return;
+  }
+
+  if (!valor || valor <= 0) {
+    alert("Informe um valor válido.");
+    return;
+  }
+
+  const transferenciaId = crypto.randomUUID();
+
+  // 1️⃣ Registrar transferência
+  await supabase.from("transferencias").insert([{
+    id: transferenciaId,
+    user_id: STATE.user.id,
+    conta_origem: contaOrigem,
+    conta_destino: contaDestino,
+    valor: valor,
+    data: data,
+    descricao: descricao
+  }]);
+
+  // 2️⃣ Débito na conta origem
+  await supabase.from("movimentacoes").insert([{
+    id: crypto.randomUUID(),
+    user_id: STATE.user.id,
+    conta_id: contaOrigem,
+    tipo: "debito",
+    valor: valor,
+    data: data,
+    descricao: `Transferência enviada — ${descricao}`,
+    transferencia_id: transferenciaId
+  }]);
+
+  // 3️⃣ Crédito na conta destino
+  await supabase.from("movimentacoes").insert([{
+    id: crypto.randomUUID(),
+    user_id: STATE.user.id,
+    conta_id: contaDestino,
+    tipo: "credito",
+    valor: valor,
+    data: data,
+    descricao: `Transferência recebida — ${descricao}`,
+    transferencia_id: transferenciaId
+  }]);
+
+  // 4️⃣ Atualizar telas
+  await App.renderExtrato();
+  await App.refreshLancamentos();
+
+  alert("Transferência realizada com sucesso.");
+}
 
   /* ============================
      APP CORE
