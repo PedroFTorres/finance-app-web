@@ -799,25 +799,63 @@ async function transferirEntreContas({
       UI.renderCategorias();
     },
 
-    async init() {
-      UI.attachHandlers();
-      await this.reloadAll();
-      // show dashboard initially
-      this.showScreen('dashboard');
+  async init() {
+  // carregar dados base
+  await this.reloadAll();
+  UI.attachHandlers();
+  this.showScreen('dashboard');
 
-      // setup realtime
-      this.subscribeRealtime();
+  // ================================
+  // TRANSFERÊNCIA — abrir modal
+  // ================================
+  const btnTransferir = document.getElementById("btn-transferir");
 
-      // initial renderings
-      await this.refreshLancamentos();
-      const now = new Date(); const ano = now.getFullYear(); const mes = now.getMonth() + 1;
-      const inicio = `${ano}-${String(mes).padStart(2,'0')}-01`;
-      const lastDay = new Date(ano, mes, 0).getDate();
-      const fim = `${ano}-${String(mes).padStart(2,'0')}-${lastDay}`;
-      await drawResumo(inicio, fim);
-      await drawReceitasPorCategoria(inicio, fim);
-      await drawDespesasPorCategoria(inicio, fim);
-    },
+  if (btnTransferir) {
+    btnTransferir.onclick = () => {
+      const modal = document.getElementById("modal-transferencia");
+      if (!modal) return;
+
+      modal.classList.remove("hidden");
+
+      const selOrigem = document.getElementById("transf-origem");
+      const selDestino = document.getElementById("transf-destino");
+
+      selOrigem.innerHTML = "";
+      selDestino.innerHTML = "";
+
+      (STATE.contas || []).forEach(c => {
+        selOrigem.appendChild(new Option(c.nome, c.id));
+        selDestino.appendChild(new Option(c.nome, c.id));
+      });
+
+      document.getElementById("transf-data").value =
+        new Date().toISOString().slice(0, 10);
+    };
+  }
+
+  // ================================
+  // REALTIME
+  // ================================
+  this.subscribeRealtime();
+
+  // ================================
+  // RENDERIZAÇÕES INICIAIS
+  // ================================
+  await this.refreshLancamentos();
+
+  const now = new Date();
+  const ano = now.getFullYear();
+  const mes = now.getMonth() + 1;
+
+  const inicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
+  const lastDay = new Date(ano, mes, 0).getDate();
+  const fim = `${ano}-${String(mes).padStart(2, '0')}-${lastDay}`;
+
+  await drawResumo(inicio, fim);
+  await drawReceitasPorCategoria(inicio, fim);
+  await drawDespesasPorCategoria(inicio, fim);
+},
+
 
     showScreen(name) {
       document.querySelectorAll(IDS.screens).forEach(s => s.classList.add('hidden'));
