@@ -449,36 +449,57 @@ button:hover { opacity: .9; }
   font-weight: 600;
 }
 
-/* =========================
-   MODAL TRANSFERENCIA — FIX DEFINITIVO
-========================= */
-#modal-transferencia {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
+/* =====================================================
+   MODAL — IMPLEMENTAÇÃO FINAL E ESTÁVEL
+   ===================================================== */
 
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+/* Overlay do modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
 
   background: rgba(0, 0, 0, 0.45);
-  z-index: 99999 !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 99999;
 }
 
-/* Conteúdo centralizado */
-#modal-transferencia .modal-content {
-  position: relative;
-  background: #fff;
+/* Conteúdo do modal */
+.modal-content {
+  background: #ffffff;
   border-radius: 12px;
   padding: 20px;
-  max-width: 420px;
   width: 100%;
+  max-width: 420px;
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
-/* Esconder */
-.hidden {
+/* ESCONDER MODAL (regra soberana) */
+.modal.hidden {
   display: none !important;
 }
 
+/* =========================
+   (Opcional) Animação leve
+   ========================= */
+.modal:not(.hidden) .modal-content {
+  animation: modalFadeIn 0.18s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
