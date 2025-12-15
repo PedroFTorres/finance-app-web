@@ -421,5 +421,32 @@ button:hover { opacity: .9; }
   margin: 0 auto 25px; /* centraliza e dá espaçamento inferior */
   opacity: 0.95;
 }
+/* =========================
+   EXTRATO — CORES
+========================= */
+
+/* Crédito (verde) */
+.extrato-credito {
+  color: #1da83a;
+  font-weight: 600;
+}
+
+/* Débito (vermelho) */
+.extrato-debito {
+  color: #d93025;
+  font-weight: 600;
+}
+
+/* Saldo positivo */
+.extrato-saldo-positivo {
+  color: #1da83a;
+  font-weight: 600;
+}
+
+/* Saldo negativo */
+.extrato-saldo-negativo {
+  color: #d93025;
+  font-weight: 600;
+}
 
 
