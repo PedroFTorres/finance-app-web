@@ -824,52 +824,118 @@ modal.setAttribute("aria-hidden", "false");
       }
     },
 
-    async renderExtrato() {
-      try {
-        const conta_id = $(IDS.selectExtrato)?.value || 'all';
-        const periodo = $(IDS.periodoExtrato)?.value || 'mes_atual';
-        const now = new Date();
-        let inicio, fim;
-        if (periodo === 'mes_atual') {
-          inicio = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
-          const last = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-          fim = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${last}`;
-        } else if (periodo === 'ultimos_30') {
-          const past = new Date(now.getTime() - 30 * 86400000);
-          inicio = past.toISOString().slice(0,10);
-          fim = isoToday();
-        } else { inicio = $(IDS.dataInicioExtrato).value; fim = $(IDS.dataFimExtrato).value; }
+  async renderExtrato() {
+  try {
+    const conta_id = document.getElementById("select-contas-extrato")?.value;
+    if (!conta_id || conta_id === "all") {
+      document.getElementById("saldo-atual-conta-extrato").textContent = "—";
+      return;
+    }
 
-        const movs = await ExtratoService.fetch(conta_id, inicio, fim);
-        const tbody = $(IDS.tableExtrato)?.querySelector('tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-        let totalCred = 0, totalDeb = 0;
-        (movs || []).forEach(m => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${fmtDateBR(m.data)}</td><td>${m.descricao}</td><td>${m.tipo==='credito'?'Crédito':'Débito'}</td><td>${fmtMoney(m.valor)}</td><td><button class="btn-small">Cancelar Baixa</button></td>`;
-          const btn = tr.querySelector('button');
-          btn.addEventListener('click', async () => {
-            if (!confirm('Cancelar baixa?')) return;
-            await MovService.delete(m.id);
-            const tabela = m.tipo === 'credito' ? 'receitas' : 'despesas';
-            await supabase.from(tabela).update({ baixado: false, data_baixa: null }).eq('id', m.lancamento_id);
-            await App.refreshLancamentos();
-            await App.renderExtrato();
-          });
-          tbody.appendChild(tr);
-          if (m.tipo === 'credito') totalCred += Number(m.valor || 0); else totalDeb += Number(m.valor || 0);
-        });
-        safeText($(IDS.totalReceitasExtrato), fmtMoney(totalCred));
-        safeText($(IDS.totalDespesasExtrato), fmtMoney(totalDeb));
-        safeText($(IDS.saldoPeriodoExtrato), fmtMoney(totalCred - totalDeb));
-        // saldo atual da conta no extrato
-        if (conta_id && conta_id !== 'all') {
-          const { data } = await supabase.from('contas_bancarias').select('saldo_atual').eq('id', conta_id).maybeSingle();
-          safeText($(IDS.saldoAtualContaExtrato), fmtMoney(data?.saldo_atual || 0));
-        } else safeText($(IDS.saldoAtualContaExtrato), '—');
-      } catch (e) { console.error('renderExtrato', e); }
-    },
+    const periodo = document.getElementById("periodo-extrato").value;
+    const now = new Date();
+    let inicio, fim;
+
+    if (periodo === "mes_atual") {
+      inicio = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-01`;
+      fim = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()}`;
+    } else if (periodo === "ultimos_30") {
+      const past = new Date(now.getTime() - 30 * 86400000);
+      inicio = past.toISOString().slice(0,10);
+      fim = new Date().toISOString().slice(0,10);
+    } else {
+      inicio = document.getElementById("data-inicio").value;
+      fim = document.getElementById("data-fim").value;
+    }
+
+    // 1️⃣ Buscar conta
+    const { data: conta } = await supabase
+      .from("contas_bancarias")
+      .select("*")
+      .eq("id", conta_id)
+      .single();
+
+    let saldo = Number(conta.saldo_inicial || 0);
+
+    // 2️⃣ Buscar movimentações ORDENADAS
+    const { data: movs } = await supabase
+      .from("movimentacoes")
+      .select("*")
+      .eq("conta_id", conta_id)
+      .gte("data", inicio)
+      .lte("data", fim)
+      .order("data", { ascending: true });
+
+    const tbody = document
+      .getElementById("table-extrato")
+      .querySelector("tbody");
+
+    tbody.innerHTML = "";
+
+    let totalCred = 0;
+    let totalDeb = 0;
+
+    (movs || []).forEach(m => {
+      if (m.tipo === "credito") {
+        saldo += Number(m.valor);
+        totalCred += Number(m.valor);
+      } else {
+        saldo -= Number(m.valor);
+        totalDeb += Number(m.valor);
+      }
+
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR")}</td>
+        <td>${m.descricao}</td>
+        <td>${m.tipo === "credito" ? "Crédito" : "Débito"}</td>
+        <td>${Number(m.valor).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
+        <td><strong>${saldo.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</strong></td>
+        <td>
+          <button class="btn-secondary btn-cancelar">Cancelar Baixa</button>
+        </td>
+      `;
+
+      tr.querySelector(".btn-cancelar").onclick = async () => {
+        if (!confirm("Cancelar baixa?")) return;
+
+        await supabase
+          .from("movimentacoes")
+          .delete()
+          .eq("id", m.id);
+
+        const tabela = m.tipo === "credito" ? "receitas" : "despesas";
+        await supabase
+          .from(tabela)
+          .update({ baixado: false, data_baixa: null })
+          .eq("id", m.lancamento_id);
+
+        await this.renderExtrato();
+        await this.refreshLancamentos();
+      };
+
+      tbody.appendChild(tr);
+    });
+
+    // 3️⃣ Totais corretos
+    document.getElementById("total-receitas-extrato").textContent =
+      totalCred.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+
+    document.getElementById("total-despesas-extrato").textContent =
+      totalDeb.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+
+    document.getElementById("saldo-periodo-extrato").textContent =
+      (totalCred - totalDeb).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+
+    // 4️⃣ SALDO ATUAL REAL (última linha)
+    document.getElementById("saldo-atual-conta-extrato").textContent =
+      saldo.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+
+  } catch (err) {
+    console.error("Erro no extrato:", err);
+  }
+},
 
     async loadDashboard() {
       const now = new Date(); const ano = now.getFullYear(); const mes = now.getMonth() + 1;
