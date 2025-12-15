@@ -379,9 +379,36 @@
   </div>
 </div>
 
+<!-- =========================
+     MODAL TRANSFERÊNCIA
+========================= -->
+<div id="modal-transferencia" class="modal hidden">
+  <div class="modal-content" style="max-width:420px;">
+    <h3>Transferir entre contas</h3>
 
+    <label>Conta origem</label>
+    <select id="transf-origem"></select>
 
+    <label>Conta destino</label>
+    <select id="transf-destino"></select>
 
+    <label>Valor</label>
+    <input type="number" id="transf-valor" step="0.01">
+
+    <label>Data</label>
+    <input type="date" id="transf-data">
+
+    <label>Descrição</label>
+    <input type="text" id="transf-desc" placeholder="Ex: Reserva, investimento...">
+
+    <div class="actions-row" style="margin-top:15px;">
+      <button id="btn-confirmar-transf" class="btn-primary">Confirmar</button>
+      <button onclick="document.getElementById('modal-transferencia').classList.add('hidden')" class="btn-secondary">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
 
   <!-- ========================= SCRIPTS ========================= -->
 
