@@ -449,4 +449,36 @@ button:hover { opacity: .9; }
   font-weight: 600;
 }
 
+/* =========================
+   MODAL TRANSFERENCIA — FIX DEFINITIVO
+========================= */
+#modal-transferencia {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 99999 !important;
+}
+
+/* Conteúdo centralizado */
+#modal-transferencia .modal-content {
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 420px;
+  width: 100%;
+}
+
+/* Esconder */
+.hidden {
+  display: none !important;
+}
 
