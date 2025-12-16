@@ -218,7 +218,7 @@
     console.error('CategoriasService.add', e);
     throw e;
   }
-},
+};
 
   const LancService = {
     async fetch(tipo, conta_id='all', inicio, fim) {
