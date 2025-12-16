@@ -176,49 +176,51 @@
     }
   };
 
-  const CategoriasService = {
-   async load() {
-  try {
-    const { data, error } = await supabase
-      .from('categorias')
-      .select('*')
-      .eq('user_id', STATE.user.id)   // 🔐 FILTRO POR USUÁRIO
-      .order('nome');
+const CategoriasService = {
+  async load() {
+    try {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*')
+        .eq('user_id', STATE.user.id)   // 🔐 FILTRO POR USUÁRIO
+        .order('nome');
 
-    if (error) throw error;
+      if (error) throw error;
 
-    STATE.categorias = data || [];
-    return STATE.categorias;
+      STATE.categorias = data || [];
+      return STATE.categorias;
 
-  } catch (e) {
-    console.error('CategoriasService.load', e);
-    STATE.categorias = [];
-    return [];
-  }
-},
+    } catch (e) {
+      console.error('CategoriasService.load', e);
+      STATE.categorias = [];
+      return [];
+    }
+  },
 
-    async add(nome) {
-  try {
-    const item = {
-      id: uid(),
-      nome,
-      user_id: STATE.user.id   // 🔐 ISOLAMENTO POR USUÁRIO
-    };
+  async add(nome) {
+    try {
+      const item = {
+        id: uid(),
+        nome,
+        user_id: STATE.user.id   // 🔐 ISOLAMENTO POR USUÁRIO
+      };
 
-    const { error } = await supabase
-      .from('categorias')
-      .insert([item]);
+      const { error } = await supabase
+        .from('categorias')
+        .insert([item]);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    await this.load();
-    return item;
+      await this.load();
+      return item;
 
-  } catch (e) {
-    console.error('CategoriasService.add', e);
-    throw e;
+    } catch (e) {
+      console.error('CategoriasService.add', e);
+      throw e;
+    }
   }
 };
+
 
   const LancService = {
     async fetch(tipo, conta_id='all', inicio, fim) {
