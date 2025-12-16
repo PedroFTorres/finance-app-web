@@ -1037,11 +1037,12 @@ async renderExtrato() {
     }
 
     // Conta
-    const { data: conta } = await supabase
-      .from("contas_bancarias")
-      .select("saldo_inicial")
-      .eq("id", conta_id)
-      .single();
+   const { data: conta } = await supabase
+  .from("contas_bancarias")
+  .select("saldo_inicial")
+  .eq("id", conta_id)
+  .eq("user_id", STATE.user.id) 
+  .single();
 
     let saldo = Number(conta?.saldo_inicial || 0);
 
