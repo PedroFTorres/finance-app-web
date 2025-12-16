@@ -828,7 +828,6 @@ async function transferirEntreContas({
   async init() {
   // carregar dados base
   await this.reloadAll();
-  UI.attachHandlers();
   this.showScreen('dashboard');
 
   // ================================
