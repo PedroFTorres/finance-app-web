@@ -283,7 +283,8 @@ const CategoriasService = {
     },
     async delete(id) {
       try {
-        const { error } = await supabase.from('movimentacoes').delete().eq('id', id);
+        const { error } = await supabase.from('movimentacoes') .delete().eq('id', id).eq('user_id', STATE.user.id); 
+
         if (error) throw error;
         return true;
       } catch (e) { console.error('MovService.delete', e); throw e; }
