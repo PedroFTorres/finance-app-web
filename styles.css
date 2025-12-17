@@ -201,6 +201,7 @@ button:hover { opacity: .9; }
 .listas .box {
   padding: 18px;
   box-sizing: border-box;
+  min-width: 0;
 }
 
 .listas ul {
@@ -217,17 +218,26 @@ button:hover { opacity: .9; }
   border-radius: 10px;
   margin-bottom: 6px;
 }
+/* Texto do lançamento (lado esquerdo) */
+.listas li > div:first-child {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Área dos botões (lado direito) */
+.listas li > div:last-child {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
 
 .listas li:nth-child(odd) { background: #fff; }
 .listas li:nth-child(even) { background: var(--roxo-claro); }
 
-/* Área dos botões da direita */
-.listas li > div:last-child {
-  display: flex;
-  gap: 6px;
-  min-width: 200px;
-  justify-content: flex-end;
-}
 
 /* =============================================================
    ÍCONES PROFISSIONAIS DOS BOTÕES
