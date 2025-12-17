@@ -641,13 +641,17 @@ openModalEdit(item, tipo) {
   document.getElementById("desconto-baixa").value = "";
 
   const selectConta = document.getElementById("conta-baixa-select");
-  selectConta.innerHTML = "";
+selectConta.innerHTML = "";
 
- (STATE.contas || []).forEach(c => {
-  selectConta.appendChild(
-    new Option(c.nome, c.id)
-  );
+// popular contas
+(STATE.contas || []).forEach(c => {
+  selectConta.appendChild(new Option(c.nome, c.id));
 });
+
+// ✅ selecionar automaticamente a conta do lançamento
+if (lancamento.conta_id) {
+  selectConta.value = lancamento.conta_id;
+},
 
 
   const modal = document.getElementById("modal-baixa");
