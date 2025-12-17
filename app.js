@@ -651,8 +651,7 @@ selectConta.innerHTML = "";
 // ✅ selecionar automaticamente a conta do lançamento
 if (lancamento.conta_id) {
   selectConta.value = lancamento.conta_id;
-},
-
+}
 
   const modal = document.getElementById("modal-baixa");
 if (!modal) {
