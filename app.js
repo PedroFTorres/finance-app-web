@@ -618,11 +618,12 @@ btnBaixar.addEventListener('click', () => {
   const selectConta = document.getElementById("conta-baixa-select");
   selectConta.innerHTML = "";
 
-  (STATE.contas || []).forEach(c => {
-    selectConta.appendChild(
-      new Option(`${c.nome} (${fmtMoney(c.saldo_atual)})`, c.id)
-    );
-  });
+ (STATE.contas || []).forEach(c => {
+  selectConta.appendChild(
+    new Option(c.nome, c.id)
+  );
+});
+
 
   const modal = document.getElementById("modal-baixa");
 if (!modal) {
