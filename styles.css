@@ -217,6 +217,7 @@ button:hover { opacity: .9; }
   padding: 12px;
   border-radius: 10px;
   margin-bottom: 6px;
+   font-size: 13px;
 }
 /* Texto do lançamento (lado esquerdo) */
 .listas li > div:first-child {
