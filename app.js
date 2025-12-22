@@ -1403,7 +1403,8 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
   ============================ */
 (async function bootstrap() {
   try {
-    await requireSessionRedirect();
+    await requireSessionOrRedirect();
+
 
     UI.attachHandlers();
 
