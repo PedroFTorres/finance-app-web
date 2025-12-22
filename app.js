@@ -696,6 +696,7 @@ modal.setAttribute("aria-hidden", "false");
 
         // insert: handle parcelamento
         if (recorrencia !== 'none' && parcelas > 1) {
+          const recorrenciaId = crypto.randomUUID(); 
           const base = new Date(data + 'T00:00:00');
           for (let i=1;i<=parcelas;i++) {
             let dt = new Date(base);
@@ -712,8 +713,8 @@ modal.setAttribute("aria-hidden", "false");
               const dif = Number((valor - soma).toFixed(2));
               vParc = Number((vParc + dif).toFixed(2));
             }
-            await LancService.insert({ tipo, descricao: `${descricao} (${i}/${parcelas})`, valor: vParc, data: dISO, conta_id: conta_id || null, categoria_id: categoria_id || null });
-          }
+            await LancService.insert({tipo,descricao: `${descricao} (${i}/${parcelas})`,valor: vParc,data: dISO,conta_id: conta_id || null,categoria_id: categoria_id || null, recorrencia_id: recorrenciaId});
+
         } else {
           await LancService.insert({ tipo, descricao, valor, data, conta_id: conta_id || null, categoria_id: categoria_id || null });
         }
