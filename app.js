@@ -654,7 +654,7 @@ openModalEditSemEscopo(item, tipo) {
 
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
-}
+},
 
     closeAddModal() {
       const modal = $(IDS.modalAdd); if (!modal) return;
