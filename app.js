@@ -876,7 +876,7 @@ await LancService.insert({
   console.error('handleSaveModal', e);
   alert('Erro ao salvar lançamento. Veja console.');
 }
-}, 
+} 
      };
      
   /* ============================
