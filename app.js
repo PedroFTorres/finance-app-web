@@ -784,13 +784,18 @@ modal.setAttribute("aria-hidden", "false");
   const recorrenciaId = saveBtn.dataset.recorrenciaId;
   const dataBase = saveBtn.dataset.dataBase;
 
-  const patch = {
-    descricao,
-    valor,
-    data,
-    conta_id: conta_id || null,
-    categoria_id: categoria_id || null
-  };
+  const patchBase = {
+  descricao,
+  valor,
+  conta_id: conta_id || null,
+  categoria_id: categoria_id || null
+};
+
+const patch =
+  escopo === 'one'
+    ? { ...patchBase, data }
+    : patchBase;
+
 
   // 🔹 Apenas este
   if (escopo === 'one' || !recorrenciaId) {
@@ -865,19 +870,13 @@ await LancService.insert({
   categoria_id: categoria_id || null
 });
 
-UI.closeAddModal();
-await App.refreshLancamentos();
-        
-        }
-
         UI.closeAddModal();
         await App.refreshLancamentos();
       } catch (e) {
         console.error('handleSaveModal', e);
         alert('Erro ao salvar lançamento. Veja console.');
       }
-    },
-  };
+    }
 
   /* ============================
      CHARTS
