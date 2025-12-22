@@ -240,15 +240,20 @@ const CategoriasService = {
       try {
         const tabela = t.tipo === 'receita' ? 'receitas' : 'despesas';
         const item = {
-          id: uid(),
-          user_id: STATE.user.id,
-          descricao: t.descricao,
-          valor: Number(t.valor || 0),
-          data: t.data,
-          conta_id: t.conta_id || null,
-          categoria_id: t.categoria_id || null,
-          baixado: false
-        };
+  id: uid(),
+  user_id: STATE.user.id,
+  descricao: t.descricao,
+  valor: Number(t.valor || 0),
+  data: t.data,
+  conta_id: t.conta_id || null,
+  categoria_id: t.categoria_id || null,
+
+  // 🔥 LINHA QUE FALTAVA
+  recorrencia_id: t.recorrencia_id || null,
+
+  baixado: false
+};
+
         const { error } = await supabase.from(tabela).insert([item]);
         if (error) throw error;
         return item;
