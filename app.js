@@ -821,29 +821,53 @@ modal.setAttribute("aria-hidden", "false");
   return;
 }
 
-        // insert: handle parcelamento
-        if (recorrencia !== 'none' && parcelas > 1) {
-          const recorrenciaId = crypto.randomUUID(); 
-          const base = new Date(data + 'T00:00:00');
-          for (let i=1;i<=parcelas;i++) {
-            let dt = new Date(base);
-            if (i > 1) {
-              if (recorrencia === 'monthly') dt.setMonth(dt.getMonth() + (i-1));
-              else if (recorrencia === 'fortnight') dt.setDate(dt.getDate() + 15*(i-1));
-              else if (recorrencia === 'weekly') dt.setDate(dt.getDate() + 7*(i-1));
-              else if (recorrencia === 'annual') dt.setFullYear(dt.getFullYear() + (i-1));
-            }
-            const dISO = dt.toISOString().slice(0,10);
-            let vParc = Number((valor / parcelas).toFixed(2));
-            if (i === 1) {
-              const soma = Number((vParc * parcelas).toFixed(2));
-              const dif = Number((valor - soma).toFixed(2));
-              vParc = Number((vParc + dif).toFixed(2));
-            }
-            await LancService.insert({tipo,descricao: `${descricao} (${i}/${parcelas})`,valor: vParc,data: dISO,conta_id: conta_id || null,categoria_id: categoria_id || null, recorrencia_id: recorrenciaId});
-          }
-          } else {
-          await LancService.insert({ tipo, descricao, valor, data, conta_id: conta_id || null, categoria_id: categoria_id || null });
+// RECORRÊNCIA (valor inteiro, repetido)
+if (recorrencia !== 'none' && parcelas > 1) {
+
+  const recorrenciaId = crypto.randomUUID();
+  const base = new Date(data + 'T00:00:00');
+
+  for (let i = 1; i <= parcelas; i++) {
+    const dt = new Date(base);
+
+    if (i > 1) {
+      if (recorrencia === 'monthly') dt.setMonth(dt.getMonth() + (i - 1));
+      else if (recorrencia === 'weekly') dt.setDate(dt.getDate() + 7 * (i - 1));
+      else if (recorrencia === 'fortnight') dt.setDate(dt.getDate() + 15 * (i - 1));
+      else if (recorrencia === 'annual') dt.setFullYear(dt.getFullYear() + (i - 1));
+    }
+
+    const dISO = dt.toISOString().slice(0, 10);
+
+    await LancService.insert({
+      tipo,
+      descricao: `${descricao} (${i}/${parcelas})`,
+      valor: Number(valor), // 🔥 VALOR INTEIRO
+      data: dISO,
+      conta_id: conta_id || null,
+      categoria_id: categoria_id || null,
+      recorrencia_id: recorrenciaId
+    });
+  }
+
+  UI.closeAddModal();
+  await App.refreshLancamentos();
+  return;
+}
+
+// LANÇAMENTO SIMPLES (não recorrente)
+await LancService.insert({
+  tipo,
+  descricao,
+  valor,
+  data,
+  conta_id: conta_id || null,
+  categoria_id: categoria_id || null
+});
+
+UI.closeAddModal();
+await App.refreshLancamentos();
+        
         }
 
         UI.closeAddModal();
