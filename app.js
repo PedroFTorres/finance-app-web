@@ -872,8 +872,8 @@ await LancService.insert({
 
         UI.closeAddModal();
         await App.refreshLancamentos();
-      } catch (e) {console.error('handleSaveModal', e);alert('Erro ao salvar lançamento. Veja console.');}
-    }
+      } catch (e) {console.error('handleSaveModal', e);alert('Erro ao salvar lançamento. Veja console.');
+       }
 
   /* ============================
      CHARTS
