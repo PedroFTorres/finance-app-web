@@ -587,13 +587,22 @@ btnBaixar.addEventListener('click', () => {
 
   // open modal to edit (CORRIGIDO)
 openModalEdit(item, tipo) {
+  if (item.recorrencia_id) {
+    UI.abrirModalEscopo(item, tipo);
+    return;
+  }
+
+  UI.openModalEditSemEscopo(item, tipo);
+}
+
+openModalEditSemEscopo(item, tipo) {
   const modal = $(IDS.modalAdd);
   if (!modal) return;
 
   // tipo (receita / despesa)
   $(IDS.modalTipo).value = tipo;
 
-  // descrição (remove "(x/y)" se existir)
+  // descrição
   $(IDS.modalDesc).value =
     (item.descricao || '').replace(/\s*\(\d+\/\d+\)$/, '');
 
@@ -601,30 +610,19 @@ openModalEdit(item, tipo) {
   $(IDS.modalValor).value = item.valor || '';
   $(IDS.modalData).value = item.data || isoToday();
 
-  // 🔹 PASSO 1 — popular selects ANTES
   UI.populateSelects();
 
-  // 🔹 PASSO 2 — agora sim aplicar os valores salvos
-  if (item.conta_id) {
-    $(IDS.modalConta).value = item.conta_id;
-  }
+  if (item.conta_id) $(IDS.modalConta).value = item.conta_id;
+  if (item.categoria_id) $(IDS.modalCategoria).value = item.categoria_id;
 
-  if (item.categoria_id) {
-    $(IDS.modalCategoria).value = item.categoria_id;
-  }
-
-  // marcar botão salvar como edição
   const saveBtn = $(IDS.modalSave);
-  if (saveBtn) {
-    saveBtn.dataset.edit = 'true';
-    saveBtn.dataset.editId = item.id;
-    saveBtn.textContent = 'Salvar alteração';
-  }
+  saveBtn.dataset.edit = 'true';
+  saveBtn.dataset.editId = item.id;
+  saveBtn.textContent = 'Salvar alteração';
 
-  // abrir modal
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
-},
+}
 
     closeAddModal() {
       const modal = $(IDS.modalAdd); if (!modal) return;
