@@ -584,6 +584,38 @@ btnBaixar.addEventListener('click', () => {
       modal.classList.remove('hidden');
       modal.setAttribute('aria-hidden','false');
     },
+abrirModalEscopo(item, tipo) {
+  const modal = document.getElementById("modal-escopo-recorrencia");
+  if (!modal) {
+    alert("Modal de escopo não encontrado no HTML");
+    return;
+  }
+
+  modal.classList.remove("hidden");
+
+  const btnCancelar = document.getElementById("btn-cancelar-escopo");
+  const btnConfirmar = document.getElementById("btn-confirmar-escopo");
+
+  btnCancelar.onclick = () => {
+    modal.classList.add("hidden");
+  };
+
+  btnConfirmar.onclick = () => {
+    const escopo =
+      document.querySelector('input[name="escopo-rec"]:checked')?.value || "one";
+
+    modal.classList.add("hidden");
+
+    // salvar escolha no botão Salvar
+    const saveBtn = document.getElementById(IDS.modalSave);
+    saveBtn.dataset.editScope = escopo;
+    saveBtn.dataset.recorrenciaId = item.recorrencia_id;
+    saveBtn.dataset.dataBase = item.data;
+
+    // abrir modal normal (SEM escopo)
+    UI.openModalEditSemEscopo(item, tipo);
+  };
+},
 
   // open modal to edit (CORRIGIDO)
 openModalEdit(item, tipo) {
@@ -593,7 +625,7 @@ openModalEdit(item, tipo) {
   }
 
   UI.openModalEditSemEscopo(item, tipo);
-}
+},
 
 openModalEditSemEscopo(item, tipo) {
   const modal = $(IDS.modalAdd);
@@ -683,14 +715,50 @@ modal.setAttribute("aria-hidden", "false");
 
         // edit?
         const saveBtn = $(IDS.modalSave);
-        if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
-          const editId = saveBtn.dataset.editId;
-          // update the row (simple patch)
-          await LancService.update(tipo, editId, { descricao, valor, data, conta_id: conta_id || null, categoria_id: categoria_id || null });
-          UI.closeAddModal();
-          await App.refreshLancamentos();
-          return;
-        }
+       if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
+
+  const editId = saveBtn.dataset.editId;
+
+  const escopo = saveBtn.dataset.editScope || 'one';
+  const recorrenciaId = saveBtn.dataset.recorrenciaId;
+  const dataBase = saveBtn.dataset.dataBase;
+
+  const patch = {
+    descricao,
+    valor,
+    data,
+    conta_id: conta_id || null,
+    categoria_id: categoria_id || null
+  };
+
+  // 🔹 Apenas este
+  if (escopo === 'one' || !recorrenciaId) {
+    await LancService.update(tipo, editId, patch);
+  }
+
+  // 🔹 Este e os próximos
+  else if (escopo === 'next') {
+    const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
+    await supabase
+      .from(tabela)
+      .update(patch)
+      .eq('recorrencia_id', recorrenciaId)
+      .gte('data', dataBase);
+  }
+
+  // 🔹 Todos
+  else if (escopo === 'all') {
+    const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
+    await supabase
+      .from(tabela)
+      .update(patch)
+      .eq('recorrencia_id', recorrenciaId);
+  }
+
+  UI.closeAddModal();
+  await App.refreshLancamentos();
+  return;
+}
 
         // insert: handle parcelamento
         if (recorrencia !== 'none' && parcelas > 1) {
