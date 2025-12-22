@@ -1418,4 +1418,3 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     }
   })();
 
-})();
