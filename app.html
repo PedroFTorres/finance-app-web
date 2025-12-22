@@ -446,6 +446,35 @@
     </div>
   </div>
 </div>
+    
+    <!-- MODAL — Escopo de exclusão de recorrência -->
+<div id="modal-excluir-recorrencia" class="modal hidden">
+  <div class="modal-content" style="max-width:420px;">
+    <h3>Excluir lançamento recorrente</h3>
+    <p>Este lançamento faz parte de uma recorrência. O que deseja excluir?</p>
+
+    <label>
+      <input type="radio" name="escopo-del" value="one" checked>
+      Apenas este lançamento
+    </label><br>
+
+    <label>
+      <input type="radio" name="escopo-del" value="next">
+      Este e os próximos
+    </label><br>
+
+    <label>
+      <input type="radio" name="escopo-del" value="all">
+      Todos da recorrência
+    </label>
+
+    <div class="actions-row" style="margin-top:16px;">
+      <button id="btn-confirmar-del" class="btn-danger">Excluir</button>
+      <button id="btn-cancelar-del" class="btn-secondary">Cancelar</button>
+    </div>
+  </div>
+</div>
+
   
     
 </body>
