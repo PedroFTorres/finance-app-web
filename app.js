@@ -714,8 +714,8 @@ modal.setAttribute("aria-hidden", "false");
               vParc = Number((vParc + dif).toFixed(2));
             }
             await LancService.insert({tipo,descricao: `${descricao} (${i}/${parcelas})`,valor: vParc,data: dISO,conta_id: conta_id || null,categoria_id: categoria_id || null, recorrencia_id: recorrenciaId});
-
-        } else {
+          }
+          } else {
           await LancService.insert({ tipo, descricao, valor, data, conta_id: conta_id || null, categoria_id: categoria_id || null });
         }
 
