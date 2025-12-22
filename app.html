@@ -418,6 +418,35 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="supabase.js"></script>
   <script src="app.js"></script>
+    
+  <!-- MODAL — Escopo de edição de recorrência -->
+<div id="modal-escopo-recorrencia" class="modal hidden">
+  <div class="modal-content" style="max-width:420px;">
+    <h3>Editar lançamento recorrente</h3>
+    <p>Este lançamento faz parte de uma recorrência. O que deseja editar?</p>
 
+    <label style="display:block;margin-top:10px;">
+      <input type="radio" name="escopo-rec" value="one" checked>
+      Apenas este lançamento
+    </label>
+
+    <label style="display:block;margin-top:6px;">
+      <input type="radio" name="escopo-rec" value="next">
+      Este e os próximos
+    </label>
+
+    <label style="display:block;margin-top:6px;">
+      <input type="radio" name="escopo-rec" value="all">
+      Todos da recorrência
+    </label>
+
+    <div class="actions-row" style="margin-top:16px;">
+      <button id="btn-confirmar-escopo" class="btn-primary">Continuar</button>
+      <button id="btn-cancelar-escopo" class="btn-secondary">Cancelar</button>
+    </div>
+  </div>
+</div>
+  
+    
 </body>
 </html>
