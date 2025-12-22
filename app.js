@@ -507,11 +507,18 @@ const CategoriasService = {
       btnEdit.addEventListener('click', () => UI.openModalEdit(item, tipo));
 
       const btnDelete = document.createElement('button'); btnDelete.textContent = 'Excluir';
-      btnDelete.addEventListener('click', async () => {
-        if (!confirm('Excluir lançamento?')) return;
-        await LancService.delete(tipo, item.id);
-        await App.refreshLancamentos();
-      });
+     btnDelete.addEventListener('click', () => {
+  // lançamento recorrente → escolher escopo
+  if (item.recorrencia_id) {
+    UI.abrirModalExcluirRecorrencia(item, tipo);
+    return;
+  }
+
+  // lançamento simples → comportamento atual
+  if (!confirm('Excluir lançamento?')) return;
+  LancService.delete(tipo, item.id)
+    .then(() => App.refreshLancamentos());
+});
 
       right.appendChild(btnEdit); right.appendChild(btnDelete);
 
@@ -619,6 +626,55 @@ abrirModalEscopo(item, tipo) {
 
     // abrir modal normal (SEM escopo)
     UI.openModalEditSemEscopo(item, tipo);
+  };
+},
+abrirModalExcluirRecorrencia(item, tipo) {
+  const modal = document.getElementById("modal-excluir-recorrencia");
+  if (!modal) return;
+
+  modal.classList.remove("hidden");
+
+  // resetar seleção
+  const radios = modal.querySelectorAll('input[name="escopo-del"]');
+  radios.forEach(r => r.checked = r.value === 'one');
+
+  const btnCancelar = document.getElementById("btn-cancelar-del");
+  const btnConfirmar = document.getElementById("btn-confirmar-del");
+
+  btnCancelar.onclick = () => modal.classList.add("hidden");
+
+  btnConfirmar.onclick = async () => {
+
+    if (item.baixado) {
+      alert('Este lançamento já foi baixado e não pode ser excluído.');
+      return;
+    }
+
+    const escopo =
+      document.querySelector('input[name="escopo-del"]:checked')?.value || "one";
+
+    modal.classList.add("hidden");
+
+    const tabela = tipo === "receita" ? "receitas" : "despesas";
+
+    if (escopo === "one") {
+      await LancService.delete(tipo, item.id);
+    } 
+    else if (escopo === "next") {
+      await supabase
+        .from(tabela)
+        .delete()
+        .eq("recorrencia_id", item.recorrencia_id)
+        .gte("data", item.data);
+    } 
+    else if (escopo === "all") {
+      await supabase
+        .from(tabela)
+        .delete()
+        .eq("recorrencia_id", item.recorrencia_id);
+    }
+
+    await App.refreshLancamentos();
   };
 },
 
