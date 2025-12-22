@@ -1397,24 +1397,25 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
   /* ============================
      BOOTSTRAP / START
   ============================ */
-  (async function bootstrap() {
-    try {
-      await requireSessionOrRedirect(); // redirects if no session
+(async function bootstrap() {
+  try {
+    await requireSessionRedirect();
 
-      // attach UI handlers
-      UI.attachHandlers();
+    UI.attachHandlers();
 
-      // initial load
-      await Promise.all([ CategoriasService.load(), ContasService.load() ]);
-      UI.populateSelects();
-      UI.renderCategorias();
+    await Promise.all([
+      CategoriasService.load(),
+      ContasService.load()
+    ]);
 
-      // start application logic (renders, realtime)
-      await App.init();
+    UI.populateSelects();
+    UI.renderCategorias();
 
-      console.log('app.js carregado — ambiente pronto');
-    } catch (e) {
-      console.error('bootstrap error', e);
-    }
-  })();
+    await App.init();
+
+    console.log('app.js carregado — ambiente pronto');
+  } catch (e) {
+    console.error('bootstrap error', e);
+  }
+})();
 
