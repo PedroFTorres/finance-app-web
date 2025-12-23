@@ -201,27 +201,45 @@
     <h2>Lançamentos</h2>
 
     <!-- FILTROS - topo -->
-    <div class="filtros-top" style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
-      <div style="display:flex;flex-direction:column;">
-        <label>Período</label>
-        <select id="periodo-lanc" style="min-width:160px;">
-          <option value="mes_atual">Mês atual</option>
-          <option value="mes_anterior">Mês anterior</option>
-          <option value="ultimos_30">Últimos 30 dias</option>
-          <option value="personalizado">Personalizado</option>
-        </select>
-      </div>
+   <!-- FILTRO DE PERÍODO (NOVO MODELO) -->
+<div class="filtro-periodo" style="display:flex;gap:14px;align-items:center;">
 
-      <div id="date-range-lanc" style="display:flex;gap:8px;align-items:end;">
-        <div style="display:flex;flex-direction:column;">
-          <label>de</label>
-          <input type="date" id="data-inicio-lanc" class="hidden"/>
-        </div>
-        <div style="display:flex;flex-direction:column;">
-          <label>até</label>
-          <input type="date" id="data-fim-lanc" class="hidden"/>
-        </div>
-      </div>
+  <!-- Navegação por mês -->
+  <div class="mes-nav" style="display:flex;align-items:center;gap:8px;">
+    <button id="lanc-prev" class="btn-secondary">◀</button>
+    <strong id="lanc-mes-label"></strong>
+    <button id="lanc-next" class="btn-secondary">▶</button>
+  </div>
+
+  <!-- Abrir período personalizado -->
+  <button id="btn-periodo-custom" class="btn-secondary">
+    Período personalizado
+  </button>
+
+</div>
+
+<!-- Período personalizado (oculto) -->
+<div id="periodo-custom-box" class="hidden" style="margin-top:10px;display:flex;gap:10px;align-items:end;">
+
+  <div>
+    <label>De</label>
+    <input type="date" id="lanc-inicio">
+  </div>
+
+  <div>
+    <label>Até</label>
+    <input type="date" id="lanc-fim">
+  </div>
+
+  <button id="aplicar-periodo" class="btn-primary">
+    Aplicar
+  </button>
+
+  <button id="cancelar-periodo" class="btn-secondary">
+    Cancelar
+  </button>
+
+</div>
 
       <div style="display:flex;flex-direction:column;">
         <label>Conta</label>
