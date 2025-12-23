@@ -448,7 +448,7 @@ if (selContaLanc) {
 
   // ✔ Popular contas nos filtros normalmente
   (STATE.contas || []).forEach(c => {
-    const label = `${c.nome} (${fmtMoney(c.saldo_atual ?? c.saldo_inicial)})`;
+   const label = c.nome;
     if (selFilter) selFilter.appendChild(new Option(label, c.id));
     if (selExtr) selExtr.appendChild(new Option(c.nome, c.id));
     if (selLista) selLista.appendChild(new Option(c.nome, c.id));
