@@ -1199,20 +1199,20 @@ if (!inicio || !fim) {
         STATE.receitas = r; STATE.despesas = d;
         UI.renderLancamentos({ receitas: r, despesas: d });
 
-// ================================// SALDO DO PERÍODO — LANÇAMENTOS// ================================
-const totalReceitas = (r || []).reduce((s, i) => {
-  const v = Number(i.valor);
-  return s + (isNaN(v) ? 0 : v);
-}, 0);
+// ================================// SALDO DO PERÍODO — SOMENTE BAIXADOS// ================================
+         
+const totalReceitas = (r || [])
+  .filter(i => i.baixado === true)
+  .reduce((s, i) => s + Number(i.valor || 0), 0);
 
-const totalDespesas = (d || []).reduce((s, i) => {
-  const v = Number(i.valor);
-  return s + (isNaN(v) ? 0 : v);
-}, 0);
+const totalDespesas = (d || [])
+  .filter(i => i.baixado === true)
+  .reduce((s, i) => s + Number(i.valor || 0), 0);
 
 const saldoPeriodo = totalReceitas - totalDespesas;
 
 safeText($(IDS.saldoAtual), fmtMoney(saldoPeriodo));
+
 
        } catch (e) {
         console.error('refreshLancamentos', e);
