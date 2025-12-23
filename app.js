@@ -1151,28 +1151,26 @@ if (btnConfirmar) {
     async refreshLancamentos() {
       try {
         const conta_id = $(IDS.selectContas)?.value || 'all';
-        const periodo = $(IDS.periodoLanc)?.value || 'mes_atual';
-        const now = new Date();
         let inicio, fim;
-        if (periodo === 'mes_atual') {
-          inicio = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
-          const last = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-          fim = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${last}`;
-        } else if (periodo === 'mes_anterior') {
-          const ano = now.getFullYear(); const mes = now.getMonth();
-          inicio = `${ano}-${String(mes).padStart(2,'0')}-01`;
-          const last = new Date(ano, mes, 0).getDate();
-          fim = `${ano}-${String(mes).padStart(2,'0')}-${last}`;
-        } else if (periodo === 'ultimos_30') {
-          const past = new Date(now.getTime() - 30 * 86400000);
-          inicio = past.toISOString().slice(0,10);
-          fim = isoToday();
-        } else { // personalizado
-          inicio = $(IDS.dataInicioLanc).value || `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
-          fim = $(IDS.dataFimLanc).value || isoToday();
-        }
+         
+        if (modoPeriodoLanc === "custom") {
+  inicio = document.getElementById("lanc-inicio")?.value;
+  fim = document.getElementById("lanc-fim")?.value;
 
-        const [r, d] = await Promise.all([
+if (!inicio || !fim) {
+  alert("Informe a data inicial e final.");
+  return;
+}
+}
+ else {
+  const ano = mesLancAtual.getFullYear();
+  const mes = mesLancAtual.getMonth();
+  inicio = new Date(ano, mes, 1).toISOString().slice(0,10);
+  fim = new Date(ano, mes + 1, 0).toISOString().slice(0,10);
+}
+
+
+          const [r, d] = await Promise.all([
           LancService.fetch('receita', conta_id, inicio, fim),
           LancService.fetch('despesa', conta_id, inicio, fim)
         ]);
