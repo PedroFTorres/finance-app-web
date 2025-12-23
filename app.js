@@ -336,6 +336,15 @@ const CategoriasService = {
           if (t) App.showScreen(t);
         });
       });
+// ================================
+// LANÇAMENTOS — filtro por conta
+// ================================
+const selContaLanc = $(IDS.selectContas);
+if (selContaLanc) {
+  selContaLanc.addEventListener('change', () => {
+    App.refreshLancamentos();
+  });
+}
 
       // logout
       const btnLogout = $(IDS.logoutBtn);
