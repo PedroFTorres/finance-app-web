@@ -117,6 +117,18 @@ let mesLancAtual = new Date();
   function isoToday() { return new Date().toISOString().slice(0,10); }
   function uid() { return (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'id_' + Math.random().toString(36).slice(2,9); }
   function safeGet(elId) { const e = $(elId); return e ? e.value : null; }
+ function renderMesLanc() {
+  const el = document.getElementById("lanc-mes-label");
+  if (!el) return;
+
+  const meses = [
+    "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+    "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
+  ];
+
+  el.textContent =
+    `${meses[mesLancAtual.getMonth()]} ${mesLancAtual.getFullYear()}`;
+}
 
   /* ============================
      SESSION / AUTH
@@ -354,10 +366,7 @@ const CategoriasService = {
         $(IDS.dataFimLanc).classList.toggle('hidden', !custom);
       });
 
-      // filtro lanc
-      const bFil = $(IDS.btnFiltrarLanc);
-      if (bFil) bFil.addEventListener('click', async (e) => { e.preventDefault(); await App.refreshLancamentos(); });
-
+     
       // open modal add lanc
       const openBtn = $(IDS.btnOpenAdd);
       if (openBtn) openBtn.addEventListener('click', UI.openAddModal);
@@ -1398,7 +1407,45 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     alert("Erro ao realizar a baixa.");
   }
 });
+// ================================
+// LANÇAMENTOS — EVENTOS (DELEGAÇÃO)
+// ================================
+document.addEventListener("click", (e) => {
 
+  if (e.target.closest("#lanc-prev")) {
+    modoPeriodoLanc = "mes";
+    mesLancAtual.setMonth(mesLancAtual.getMonth() - 1);
+    renderMesLanc();
+    App.refreshLancamentos();
+    return;
+  }
+
+  if (e.target.closest("#lanc-next")) {
+    modoPeriodoLanc = "mes";
+    mesLancAtual.setMonth(mesLancAtual.getMonth() + 1);
+    renderMesLanc();
+    App.refreshLancamentos();
+    return;
+  }
+
+  if (e.target.closest("#btn-periodo-custom")) {
+    document.getElementById("periodo-custom-box")?.classList.remove("hidden");
+    return;
+  }
+
+  if (e.target.closest("#cancelar-periodo")) {
+    document.getElementById("periodo-custom-box")?.classList.add("hidden");
+    return;
+  }
+
+  if (e.target.closest("#aplicar-periodo")) {
+    modoPeriodoLanc = "custom";
+    document.getElementById("periodo-custom-box")?.classList.add("hidden");
+    App.refreshLancamentos();
+    return;
+  }
+
+});
 
   /* ============================
      BOOTSTRAP / START
