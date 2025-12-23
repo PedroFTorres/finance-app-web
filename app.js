@@ -1199,12 +1199,22 @@ if (!inicio || !fim) {
         STATE.receitas = r; STATE.despesas = d;
         UI.renderLancamentos({ receitas: r, despesas: d });
 
-        // saldo atual da conta filtro
-        if (conta_id && conta_id !== 'all') {
-          const { data } = await supabase.from('contas_bancarias').select('saldo_atual').eq('id', conta_id).maybeSingle();
-          safeText($(IDS.saldoAtual), fmtMoney(data?.saldo_atual || 0));
-        } else safeText($(IDS.saldoAtual), '—');
-      } catch (e) {
+// ================================// SALDO DO PERÍODO — LANÇAMENTOS// ================================
+const totalReceitas = (r || []).reduce((s, i) => {
+  const v = Number(i.valor);
+  return s + (isNaN(v) ? 0 : v);
+}, 0);
+
+const totalDespesas = (d || []).reduce((s, i) => {
+  const v = Number(i.valor);
+  return s + (isNaN(v) ? 0 : v);
+}, 0);
+
+const saldoPeriodo = totalReceitas - totalDespesas;
+
+safeText($(IDS.saldoAtual), fmtMoney(saldoPeriodo));
+
+       } catch (e) {
         console.error('refreshLancamentos', e);
       }
     },
