@@ -26,7 +26,11 @@
     charts: { recCat: null, desCat: null, resumo: null },
     subs: [] // para armazenar channels se quiser unsub later
   };
+   
    let BAIXA_ATUAL = null;
+   let modoPeriodoLanc = "mes";   // "mes" | "custom"
+let mesLancAtual = new Date();
+
 
 
   const IDS = {
