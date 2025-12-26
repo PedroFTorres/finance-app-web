@@ -31,6 +31,8 @@
    let modoPeriodoLanc = "mes";   // "mes" | "custom"
 let mesLancAtual = new Date();
 
+   let FILTRO_LANCAMENTOS = "pendencias";
+
 
 
   const IDS = {
