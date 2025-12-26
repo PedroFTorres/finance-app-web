@@ -523,7 +523,9 @@ button:hover { opacity: .9; }
   display: grid;
   grid-template-columns: 220px 1fr;
   gap: 18px;
-}
+  align-items: flex-start; 
+  margin-top: 16px;        
+
 
 .lanc-menu {
   background: #fff;
