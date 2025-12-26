@@ -362,7 +362,8 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
     btn.classList.add("active");
 
     // atualiza estado global
-    FILTRO_LANCAMENTOS = btn.dataset.lanc-tab;
+  FILTRO_LANCAMENTOS = btn.dataset.lancTab;
+
 
     // recarrega listas
     App.refreshLancamentos();
