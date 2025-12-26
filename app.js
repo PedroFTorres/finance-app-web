@@ -347,6 +347,27 @@ if (selContaLanc) {
     App.refreshLancamentos();
   });
 }
+// ================================
+// LANÇAMENTOS — MENU LATERAL
+// ================================
+document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
+  btn.addEventListener("click", () => {
+
+    // remove active de todos
+    document
+      .querySelectorAll("[data-lanc-tab]")
+      .forEach(b => b.classList.remove("active"));
+
+    // ativa o clicado
+    btn.classList.add("active");
+
+    // atualiza estado global
+    FILTRO_LANCAMENTOS = btn.dataset.lanc-tab;
+
+    // recarrega listas
+    App.refreshLancamentos();
+  });
+});
 
       // logout
       const btnLogout = $(IDS.logoutBtn);
