@@ -1260,20 +1260,23 @@ UI.renderLancamentos({
 // ================================ VISIBILIDADE DOS BLOCOS (UX) // ================================
 const boxReceitas = document.getElementById("box-receitas");
 const boxDespesas = document.getElementById("box-despesas");
+const listas = document.querySelector(".listas");
 
-// segurança
-if (boxReceitas && boxDespesas) {
+if (boxReceitas && boxDespesas && listas) {
 
-  // reset (mostra ambos)
+  // reset
   boxReceitas.style.display = "";
   boxDespesas.style.display = "";
+  listas.classList.remove("single-column");
 
   if (FILTRO_LANCAMENTOS === "receitas" || FILTRO_LANCAMENTOS === "recebidos") {
     boxDespesas.style.display = "none";
+    listas.classList.add("single-column");
   }
 
   if (FILTRO_LANCAMENTOS === "despesas" || FILTRO_LANCAMENTOS === "pagos") {
     boxReceitas.style.display = "none";
+    listas.classList.add("single-column");
   }
 }
 
