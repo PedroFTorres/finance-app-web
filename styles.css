@@ -519,3 +519,35 @@ button:hover { opacity: .9; }
     transform: scale(1);
   }
 }
+.lanc-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 18px;
+}
+
+.lanc-menu {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lanc-menu button {
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.lanc-menu button.active {
+  background: var(--roxo-claro);
+  color: var(--roxo);
+  font-weight: 600;
+}
+
