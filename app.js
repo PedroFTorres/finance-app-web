@@ -1213,14 +1213,49 @@ if (!inicio || !fim) {
   inicio = new Date(ano, mes, 1).toISOString().slice(0,10);
   fim = new Date(ano, mes + 1, 0).toISOString().slice(0,10);
 }
+         const [r, d] = await Promise.all([
+  LancService.fetch('receita', conta_id, inicio, fim),
+  LancService.fetch('despesa', conta_id, inicio, fim)
+]);
 
+STATE.receitas = r;
+STATE.despesas = d;
 
-          const [r, d] = await Promise.all([
-          LancService.fetch('receita', conta_id, inicio, fim),
-          LancService.fetch('despesa', conta_id, inicio, fim)
-        ]);
-        STATE.receitas = r; STATE.despesas = d;
-        UI.renderLancamentos({ receitas: r, despesas: d });
+// ================================
+// LANÇAMENTOS — FILTRO POR MENU
+// ================================
+const filtrar = (lista, tipo) => {
+  return lista.filter(item => {
+    switch (FILTRO_LANCAMENTOS) {
+
+      case "receitas":
+        return tipo === "receita" && !item.baixado;
+
+      case "despesas":
+        return tipo === "despesa" && !item.baixado;
+
+      case "recebidos":
+        return tipo === "receita" && item.baixado;
+
+      case "pagos":
+        return tipo === "despesa" && item.baixado;
+
+      case "pendencias":
+      default:
+        return !item.baixado; // 🔥 CORREÇÃO AQUI
+    }
+  });
+};
+
+const receitasFiltradas = filtrar(r, "receita");
+const despesasFiltradas = filtrar(d, "despesa");
+
+// ================================// RENDER FINAL// ================================
+         
+UI.renderLancamentos({
+  receitas: receitasFiltradas,
+  despesas: despesasFiltradas
+});
 
 // ================================// SALDO DO PERÍODO — SOMENTE BAIXADOS// ================================
          
