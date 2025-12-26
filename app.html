@@ -251,10 +251,10 @@
         <button id="btn-open-add-lanc" class="btn-primary">Adicionar</button>
       </div>
     </div>
-
-  <!-- MENU LATERAL -->
+<!-- MENU + CONTEÚDO LATERAL -->
 <div class="lanc-layout">
 
+  <!-- MENU LATERAL -->
   <aside class="lanc-menu">
     <button data-lanc-tab="pendencias" class="active">Pendências</button>
     <button data-lanc-tab="receitas">Receitas</button>
@@ -263,24 +263,25 @@
     <button data-lanc-tab="pagos">Pagos</button>
   </aside>
 
+  <!-- CONTEÚDO -->
   <div class="lanc-content">
-    <!-- aqui continuam suas listas -->
-  </div>
 
-</div>
+    <div class="listas">
 
-    <!-- LISTAS -->
-    <div class="listas" style="display:flex;gap:18px;">
-      <div class="box" style="flex:1;">
+      <div class="box">
         <h3>Receitas</h3>
         <ul id="list-receitas"></ul>
       </div>
 
-      <div class="box" style="flex:1;">
+      <div class="box">
         <h3>Despesas</h3>
         <ul id="list-despesas"></ul>
       </div>
+
     </div>
+
+  </div>
+
 
     <!-- TOTAIS -->
     <div class="card-panel card-totais" style="margin-top:18px;">
