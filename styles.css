@@ -552,4 +552,10 @@ button:hover { opacity: .9; }
   color: var(--roxo);
   font-weight: 600;
 }
+/* ================================ LANÇAMENTOS — 1 COLUNA ================================ */
+   
+.listas.single-column {
+  display: grid;
+  grid-template-columns: 1fr;
+}
 
