@@ -1257,6 +1257,25 @@ UI.renderLancamentos({
   receitas: receitasFiltradas,
   despesas: despesasFiltradas
 });
+// ================================ VISIBILIDADE DOS BLOCOS (UX) // ================================
+const boxReceitas = document.getElementById("box-receitas");
+const boxDespesas = document.getElementById("box-despesas");
+
+// segurança
+if (boxReceitas && boxDespesas) {
+
+  // reset (mostra ambos)
+  boxReceitas.style.display = "";
+  boxDespesas.style.display = "";
+
+  if (FILTRO_LANCAMENTOS === "receitas" || FILTRO_LANCAMENTOS === "recebidos") {
+    boxDespesas.style.display = "none";
+  }
+
+  if (FILTRO_LANCAMENTOS === "despesas" || FILTRO_LANCAMENTOS === "pagos") {
+    boxReceitas.style.display = "none";
+  }
+}
 
 // ================================// SALDO DO PERÍODO — SOMENTE BAIXADOS// ================================
          
