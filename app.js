@@ -1223,7 +1223,17 @@ if (btnConfirmar) {
           this.refreshLancamentos();
         }).subscribe();
         const chDespesas = supabase.channel('chan_despesas').on('postgres_changes', { event: '*', schema: 'public', table: 'despesas' }, payload => { console.debug('realtime despesas', payload); this.refreshLancamentos(); }).subscribe();
-        const chMov = supabase.channel('chan_mov').on('postgres_changes', { event: '*', schema: 'public', table: 'movimentacoes' }, payload => { console.debug('realtime mov', payload); this.); }).subscribe();
+      const chMov = supabase.channel('chan_mov')
+  .on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'movimentacoes' },
+    payload => {
+      console.debug('realtime mov', payload);
+      this.refreshLancamentos();
+    }
+  )
+  .subscribe();
+
         const chCats = supabase.channel('chan_cats').on('postgres_changes', { event: '*', schema: 'public', table: 'categorias' }, payload => { console.debug('realtime categorias', payload); this.reloadCatsContas(); }).subscribe();
         const chContas = supabase.channel('chan_contas').on('postgres_changes', { event: '*', schema: 'public', table: 'contas_bancarias' }, payload => { console.debug('realtime contas', payload); this.reloadCatsContas(); }).subscribe();
         STATE.subs.push(chReceitas, chDespesas, chMov, chCats, chContas);
