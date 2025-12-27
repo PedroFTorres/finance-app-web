@@ -1344,16 +1344,11 @@ safeText($(IDS.saldoAtual), fmtMoney(saldoPeriodo));
 async renderExtrato() {
   try {
     const conta_id = document.getElementById("select-contas-extrato")?.value;
+    if (!conta_id || conta_id === "all") return;
 
-    if (!conta_id || conta_id === "all") {
-      document.getElementById("saldo-atual-conta-extrato").textContent = "—";
-      return;
-    }
-
-    const periodo = document.getElementById("periodo-extrato").value;
+    const periodo = document.getElementById("periodo-extrato")?.value;
     const now = new Date();
-    let inicio = null;
-    let fim = null;
+    let inicio, fim;
 
     if (periodo === "mes_atual") {
       inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
@@ -1362,38 +1357,50 @@ async renderExtrato() {
         now.getMonth() + 1,
         0
       ).getDate()}`;
-    } else if (periodo === "ultimos_30") {
-      const past = new Date(now.getTime() - 30 * 86400000);
-      inicio = past.toISOString().slice(0, 10);
-      fim = new Date().toISOString().slice(0, 10);
     } else {
-      inicio = document.getElementById("data-inicio")?.value || null;
-      fim = document.getElementById("data-fim")?.value || null;
+      inicio = document.getElementById("data-inicio")?.value;
+      fim = document.getElementById("data-fim")?.value;
     }
 
-    let query = supabase
+    // =========================// 1️⃣ SALDO DE ABERTURA (ANTES DO PERÍODO)// =========================
+     
+    const { data: movsAntes } = await supabase
+      .from("movimentacoes")
+      .select("tipo, valor")
+      .eq("conta_id", conta_id)
+      .lt("data", inicio);
+
+    let saldo = 0;
+    (movsAntes || []).forEach(m => {
+      saldo += m.tipo === "credito"
+        ? Number(m.valor)
+        : -Number(m.valor);
+    });
+
+    // =========================// 2️⃣ MOVIMENTAÇÕES DO PERÍODO// =========================
+     
+    const { data: movsPeriodo, error } = await supabase
       .from("movimentacoes")
       .select("*")
       .eq("conta_id", conta_id)
+      .gte("data", inicio)
+      .lte("data", fim)
       .order("data", { ascending: true });
 
-    if (inicio) query = query.gte("data", inicio);
-    if (fim) query = query.lte("data", fim);
-
-    const { data: movs, error } = await query;
     if (error) {
-      console.error("Erro ao buscar movimentações:", error);
+      console.error("Erro extrato:", error);
       return;
     }
 
+    // =========================// 3️⃣ RENDER// =========================
+     
     const tbody = document.querySelector("#table-extrato tbody");
     tbody.innerHTML = "";
 
-    let saldo = 0;
     let totalCred = 0;
     let totalDeb = 0;
 
-    (movs || []).forEach(m => {
+    (movsPeriodo || []).forEach(m => {
       if (m.tipo === "credito") {
         saldo += Number(m.valor);
         totalCred += Number(m.valor);
@@ -1402,24 +1409,38 @@ async renderExtrato() {
         totalDeb += Number(m.valor);
       }
 
+      const classeTipo = m.tipo === "credito"
+        ? "extrato-credito"
+        : "extrato-debito";
+
+      const classeSaldo = saldo >= 0
+        ? "extrato-saldo-positivo"
+        : "extrato-saldo-negativo";
+
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR")}</td>
         <td>${m.descricao}</td>
-        <td>${m.tipo === "credito" ? "Crédito" : "Débito"}</td>
-        <td>${Number(m.valor).toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL"
-        })}</td>
-        <td>${saldo.toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL"
-        })}</td>
+        <td class="${classeTipo}">${m.tipo === "credito" ? "Crédito" : "Débito"}</td>
+        <td class="${classeTipo}">
+          ${Number(m.valor).toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+          })}
+        </td>
+        <td class="${classeSaldo}">
+          ${saldo.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+          })}
+        </td>
         <td></td>
       `;
       tbody.appendChild(tr);
     });
 
+    // =========================// 4️⃣ TOTAIS// =========================
+     
     document.getElementById("total-receitas-extrato").textContent =
       totalCred.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
