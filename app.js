@@ -1332,12 +1332,19 @@ async renderExtrato() {
     // Conta
    const { data: conta } = await supabase
   .from("contas_bancarias")
-  .select("saldo_inicial")
+  .select("saldo_inicial, data_saldo")
   .eq("id", conta_id)
   .eq("user_id", STATE.user.id) 
   .single();
 
-    let saldo = Number(conta?.saldo_inicial || 0);
+const dataSaldoConta = conta.data_saldo;
+
+let saldo = 0;
+
+if (dataSaldoConta && inicio <= dataSaldoConta) {
+  saldo = Number(conta.saldo_inicial || 0);
+}
+
 
     // Movimentações
     const { data: movs } = await supabase
