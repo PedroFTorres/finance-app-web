@@ -1078,15 +1078,15 @@ async function transferirEntreContas({
   }]);
 
   // 4️⃣ Atualizar telas
-  await App.);
-  await App.refreshLancamentos();
+   
+await App.reloadAll();
+await App.refreshLancamentos();
 
-  alert("Transferência realizada com sucesso.");
+alert("Transferência realizada com sucesso.");
+
 }
 
-  /* ============================
-     APP CORE
-  ============================ */
+  /* ============================  APP CORE ============================ */
   const App = {
     async reloadAll() {
       await Promise.all([ CategoriasService.load(), ContasService.load() ]);
@@ -1469,9 +1469,8 @@ async renderExtrato() {
       await drawDespesasPorCategoria(inicio, fim);
     }
   };
-   // =========================
-// CONFIRMAR BAIXA
-// =========================
+   // =========================// CONFIRMAR BAIXA// =========================
+   
 document.getElementById("confirmar-baixa")?.addEventListener("click", async () => {
   try {
     if (!BAIXA_ATUAL) {
@@ -1525,9 +1524,8 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     alert("Erro ao realizar a baixa.");
   }
 });
-// ================================
-// LANÇAMENTOS — EVENTOS (DELEGAÇÃO)
-// ================================
+// ================================// LANÇAMENTOS — EVENTOS (DELEGAÇÃO)// ================================
+   
 document.addEventListener("click", (e) => {
 
   if (e.target.closest("#lanc-prev")) {
