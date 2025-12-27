@@ -1347,13 +1347,26 @@ if (dataSaldoConta && inicio <= dataSaldoConta) {
 
 
     // Movimentações
-    const { data: movs } = await supabase
-      .from("movimentacoes")
-      .select("*")
-      .eq("conta_id", conta_id)
-      .gte("data", inicio)
-      .lte("data", fim)
-      .order("data", { ascending: true });
+   let query = supabase
+  .from("movimentacoes")
+  .select("*")
+  .eq("conta_id", conta_id)
+  .order("data", { ascending: true });
+
+if (inicio) {
+  query = query.gte("data", inicio);
+}
+
+if (fim) {
+  query = query.lte("data", fim);
+}
+
+const { data: movs, error } = await query;
+
+if (error) {
+  console.error("Erro ao buscar movimentações:", error);
+  return;
+}
 
     const tbody = document.querySelector("#table-extrato tbody");
     tbody.innerHTML = "";
