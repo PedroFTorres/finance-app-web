@@ -1078,7 +1078,7 @@ async function transferirEntreContas({
   }]);
 
   // 4️⃣ Atualizar telas
-  await App.renderExtrato();
+  await App.);
   await App.refreshLancamentos();
 
   alert("Transferência realizada com sucesso.");
@@ -1223,7 +1223,7 @@ if (btnConfirmar) {
           this.refreshLancamentos();
         }).subscribe();
         const chDespesas = supabase.channel('chan_despesas').on('postgres_changes', { event: '*', schema: 'public', table: 'despesas' }, payload => { console.debug('realtime despesas', payload); this.refreshLancamentos(); }).subscribe();
-        const chMov = supabase.channel('chan_mov').on('postgres_changes', { event: '*', schema: 'public', table: 'movimentacoes' }, payload => { console.debug('realtime mov', payload); this.renderExtrato(); }).subscribe();
+        const chMov = supabase.channel('chan_mov').on('postgres_changes', { event: '*', schema: 'public', table: 'movimentacoes' }, payload => { console.debug('realtime mov', payload); this.); }).subscribe();
         const chCats = supabase.channel('chan_cats').on('postgres_changes', { event: '*', schema: 'public', table: 'categorias' }, payload => { console.debug('realtime categorias', payload); this.reloadCatsContas(); }).subscribe();
         const chContas = supabase.channel('chan_contas').on('postgres_changes', { event: '*', schema: 'public', table: 'contas_bancarias' }, payload => { console.debug('realtime contas', payload); this.reloadCatsContas(); }).subscribe();
         STATE.subs.push(chReceitas, chDespesas, chMov, chCats, chContas);
@@ -1263,9 +1263,8 @@ if (!inicio || !fim) {
 STATE.receitas = r;
 STATE.despesas = d;
 
-// ================================
-// LANÇAMENTOS — FILTRO POR MENU
-// ================================
+// ================================// LANÇAMENTOS — FILTRO POR MENU// ================================
+         
 const filtrar = (lista, tipo) => {
   return lista.filter(item => {
     switch (FILTRO_LANCAMENTOS) {
@@ -1346,9 +1345,13 @@ async renderExtrato() {
     const conta_id = document.getElementById("select-contas-extrato")?.value;
     if (!conta_id || conta_id === "all") return;
 
+    // =========================// DATAS (SEGURAS)// =========================
+     
+    let inicio = null;
+    let fim = null;
+
     const periodo = document.getElementById("periodo-extrato")?.value;
     const now = new Date();
-    let inicio, fim;
 
     if (periodo === "mes_atual") {
       inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
@@ -1358,17 +1361,21 @@ async renderExtrato() {
         0
       ).getDate()}`;
     } else {
-      inicio = document.getElementById("data-inicio")?.value;
-      fim = document.getElementById("data-fim")?.value;
+      const ini = document.getElementById("data-inicio")?.value;
+      const end = document.getElementById("data-fim")?.value;
+      if (ini) inicio = ini;
+      if (end) fim = end;
     }
 
-    // =========================// 1️⃣ SALDO DE ABERTURA (ANTES DO PERÍODO)// =========================
-     
-    const { data: movsAntes } = await supabase
+    // =========================// SALDO ANTES DO PERÍODO // =========================
+    let qAntes = supabase
       .from("movimentacoes")
-      .select("tipo, valor")
-      .eq("conta_id", conta_id)
-      .lt("data", inicio);
+      .select("tipo,valor")
+      .eq("conta_id", conta_id);
+
+    if (inicio) qAntes = qAntes.lt("data", inicio);
+
+    const { data: movsAntes } = await qAntes;
 
     let saldo = 0;
     (movsAntes || []).forEach(m => {
@@ -1377,22 +1384,24 @@ async renderExtrato() {
         : -Number(m.valor);
     });
 
-    // =========================// 2️⃣ MOVIMENTAÇÕES DO PERÍODO// =========================
+    // =========================// MOVIMENTAÇÕES DO PERÍODO// =========================
      
-    const { data: movsPeriodo, error } = await supabase
+    let qPeriodo = supabase
       .from("movimentacoes")
       .select("*")
       .eq("conta_id", conta_id)
-      .gte("data", inicio)
-      .lte("data", fim)
       .order("data", { ascending: true });
 
+    if (inicio) qPeriodo = qPeriodo.gte("data", inicio);
+    if (fim) qPeriodo = qPeriodo.lte("data", fim);
+
+    const { data: movsPeriodo, error } = await qPeriodo;
     if (error) {
       console.error("Erro extrato:", error);
       return;
     }
 
-    // =========================// 3️⃣ RENDER// =========================
+    // =========================// RENDER // =========================
      
     const tbody = document.querySelector("#table-extrato tbody");
     tbody.innerHTML = "";
@@ -1409,38 +1418,24 @@ async renderExtrato() {
         totalDeb += Number(m.valor);
       }
 
-      const classeTipo = m.tipo === "credito"
-        ? "extrato-credito"
-        : "extrato-debito";
-
-      const classeSaldo = saldo >= 0
-        ? "extrato-saldo-positivo"
-        : "extrato-saldo-negativo";
-
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR")}</td>
         <td>${m.descricao}</td>
-        <td class="${classeTipo}">${m.tipo === "credito" ? "Crédito" : "Débito"}</td>
-        <td class="${classeTipo}">
-          ${Number(m.valor).toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL"
-          })}
+        <td class="${m.tipo === "credito" ? "extrato-credito" : "extrato-debito"}">
+          ${m.tipo === "credito" ? "Crédito" : "Débito"}
         </td>
-        <td class="${classeSaldo}">
-          ${saldo.toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL"
-          })}
+        <td class="${m.tipo === "credito" ? "extrato-credito" : "extrato-debito"}">
+          ${Number(m.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+        </td>
+        <td class="${saldo >= 0 ? "extrato-saldo-positivo" : "extrato-saldo-negativo"}">
+          ${saldo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
         </td>
         <td></td>
       `;
       tbody.appendChild(tr);
     });
 
-    // =========================// 4️⃣ TOTAIS// =========================
-     
     document.getElementById("total-receitas-extrato").textContent =
       totalCred.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -1459,8 +1454,8 @@ async renderExtrato() {
         currency: "BRL"
       });
 
-  } catch (err) {
-    console.error("Erro no extrato:", err);
+  } catch (e) {
+    console.error("renderExtrato", e);
   }
 },
 
