@@ -166,15 +166,45 @@ let mesLancAtual = new Date();
         return [];
       }
     },
-    async create({ nome, saldo_inicial, data_saldo }) {
-      try {
-        const item = { id: uid(), nome, saldo_inicial: Number(saldo_inicial||0), saldo_atual: Number(saldo_inicial||0), data_saldo, user_id: STATE.user.id };
-        const { error } = await supabase.from('contas_bancarias').insert([item]);
-        if (error) throw error;
-        await this.load();
-        return item;
-      } catch (e) { console.error('ContasService.create', e); throw e; }
-    },
+   async create({ nome, saldo_inicial, data_saldo }) {
+  try {
+    const item = {
+      id: uid(),
+      nome,
+      saldo_inicial: Number(saldo_inicial||0),
+      saldo_atual: Number(saldo_inicial||0),
+      data_saldo,
+      user_id: STATE.user.id
+    };
+
+    const { error } = await supabase
+      .from('contas_bancarias')
+      .insert([item]);
+
+    if (error) throw error;
+
+    // 🔹 cria lançamento do saldo inicial no extrato
+    if (Number(saldo_inicial) !== 0) {
+      await supabase.from('movimentacoes').insert([{
+        id: uid(),
+        user_id: STATE.user.id,
+        conta_id: item.id,
+        tipo: 'credito',
+        valor: Number(saldo_inicial),
+        data: data_saldo,
+        descricao: 'Saldo inicial'
+      }]);
+    }
+
+    await this.load();
+    return item;
+
+  } catch (e) {
+    console.error('ContasService.create', e);
+    throw e;
+  }
+},
+
     // opcional: recalcula saldo a partir das movimentacoes da conta
     async recalc(conta_id) {
       try {
