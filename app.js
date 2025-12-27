@@ -224,10 +224,21 @@ const CategoriasService = {
       };
 
       const { error } = await supabase
-        .from('categorias')
+        .from('contas_bancarias')
         .insert([item]);
 
       if (error) throw error;
+if (Number(saldo_inicial) !== 0) {
+  await supabase.from('movimentacoes').insert([{
+    id: uid(),
+    user_id: STATE.user.id,
+    conta_id: item.id,
+    tipo: 'credito',
+    valor: Number(saldo_inicial),
+    data: data_saldo,
+    descricao: 'Saldo inicial'
+  }]);
+}
 
       await this.load();
       return item;
