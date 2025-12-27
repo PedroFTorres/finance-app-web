@@ -1332,7 +1332,7 @@ async renderExtrato() {
     // Conta
    const { data: conta } = await supabase
   .from("contas_bancarias")
-  .select("saldo_inicial, data_saldo")
+  .select("saldo_inicial, data_saldo, saldo_atual")
   .eq("id", conta_id)
   .eq("user_id", STATE.user.id) 
   .single();
@@ -1441,7 +1441,10 @@ if (dataSaldoConta && inicio <= dataSaldoConta) {
       });
 
     document.getElementById("saldo-atual-conta-extrato").textContent =
-      saldo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  Number(conta.saldo_atual || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
 
   } catch (err) {
     console.error("Erro no extrato:", err);
