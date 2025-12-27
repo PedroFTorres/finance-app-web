@@ -1311,7 +1311,8 @@ async renderExtrato() {
 
     const periodo = document.getElementById("periodo-extrato").value;
     const now = new Date();
-    let inicio, fim;
+    let inicio = null;
+    let fim = null;
 
     if (periodo === "mes_atual") {
       inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
@@ -1325,57 +1326,33 @@ async renderExtrato() {
       inicio = past.toISOString().slice(0, 10);
       fim = new Date().toISOString().slice(0, 10);
     } else {
-      inicio = document.getElementById("data-inicio").value;
-      fim = document.getElementById("data-fim").value;
+      inicio = document.getElementById("data-inicio")?.value || null;
+      fim = document.getElementById("data-fim")?.value || null;
     }
 
-    // Conta
-   const { data: conta } = await supabase
-  .from("contas_bancarias")
-  .select("saldo_inicial, data_saldo, saldo_atual")
-  .eq("id", conta_id)
-  .eq("user_id", STATE.user.id) 
-  .single();
+    let query = supabase
+      .from("movimentacoes")
+      .select("*")
+      .eq("conta_id", conta_id)
+      .order("data", { ascending: true });
 
-const dataSaldoConta = conta.data_saldo;
+    if (inicio) query = query.gte("data", inicio);
+    if (fim) query = query.lte("data", fim);
 
-let saldo = 0;
-
-if (dataSaldoConta && inicio <= dataSaldoConta) {
-  saldo = Number(conta.saldo_inicial || 0);
-}
-
-
-    // Movimentações
-   let query = supabase
-  .from("movimentacoes")
-  .select("*")
-  .eq("conta_id", conta_id)
-  .order("data", { ascending: true });
-
-if (inicio) {
-  query = query.gte("data", inicio);
-}
-
-if (fim) {
-  query = query.lte("data", fim);
-}
-
-const { data: movs, error } = await query;
-
-if (error) {
-  console.error("Erro ao buscar movimentações:", error);
-  return;
-}
+    const { data: movs, error } = await query;
+    if (error) {
+      console.error("Erro ao buscar movimentações:", error);
+      return;
+    }
 
     const tbody = document.querySelector("#table-extrato tbody");
     tbody.innerHTML = "";
 
+    let saldo = 0;
     let totalCred = 0;
     let totalDeb = 0;
 
     (movs || []).forEach(m => {
-      // cálculo
       if (m.tipo === "credito") {
         saldo += Number(m.valor);
         totalCred += Number(m.valor);
@@ -1384,63 +1361,24 @@ if (error) {
         totalDeb += Number(m.valor);
       }
 
-      // classes visuais
-      const classeTipo = m.tipo === "credito"
-        ? "extrato-credito"
-        : "extrato-debito";
-
-      const classeSaldo = saldo >= 0
-        ? "extrato-saldo-positivo"
-        : "extrato-saldo-negativo";
-
-      // linha
       const tr = document.createElement("tr");
-
       tr.innerHTML = `
         <td>${new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR")}</td>
         <td>${m.descricao}</td>
-        <td class="${classeTipo}">
-          ${m.tipo === "credito" ? "Crédito" : "Débito"}
-        </td>
-        <td class="${classeTipo}">
-          ${Number(m.valor).toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL"
-          })}
-        </td>
-        <td class="${classeSaldo}">
-          ${saldo.toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL"
-          })}
-        </td>
-        <td>
-          <button class="btn-secondary btn-cancelar">Cancelar Baixa</button>
-        </td>
+        <td>${m.tipo === "credito" ? "Crédito" : "Débito"}</td>
+        <td>${Number(m.valor).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL"
+        })}</td>
+        <td>${saldo.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL"
+        })}</td>
+        <td></td>
       `;
-
-      tr.querySelector(".btn-cancelar").onclick = async () => {
-        if (!confirm("Cancelar baixa?")) return;
-
-        await supabase
-          .from("movimentacoes")
-          .delete()
-          .eq("id", m.id);
-
-        const tabela = m.tipo === "credito" ? "receitas" : "despesas";
-        await supabase
-          .from(tabela)
-          .update({ baixado: false, data_baixa: null })
-          .eq("id", m.lancamento_id);
-
-        await this.renderExtrato();
-        await this.refreshLancamentos();
-      };
-
       tbody.appendChild(tr);
     });
 
-    // Totais
     document.getElementById("total-receitas-extrato").textContent =
       totalCred.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -1454,10 +1392,10 @@ if (error) {
       });
 
     document.getElementById("saldo-atual-conta-extrato").textContent =
-  Number(conta.saldo_atual || 0).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL"
-  });
+      saldo.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      });
 
   } catch (err) {
     console.error("Erro no extrato:", err);
