@@ -982,6 +982,7 @@ modal.setAttribute("aria-hidden", "false");
     if (modalLoading) modalLoading.classList.add("hidden");
   }
 },
+  };
 
   /* ============================ CHARTS ============================ */
    
