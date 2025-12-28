@@ -12,10 +12,12 @@
 /* eslint-disable no-unused-vars */
 (() => {
   'use strict';
+   
+   let IS_SAVING_LANCAMENTO = false;
 
-  /* ============================
-     CONFIG & ESTADO GLOBAL
-  ============================ */
+
+  /* ============================ CONFIG & ESTADO GLOBAL ============================ */
+   
   const STATE = {
     user: null,
     contas: [],
@@ -845,130 +847,144 @@ modal.style.zIndex = "1200";
 modal.setAttribute("aria-hidden", "false");
 
 },
+     async handleSaveModal() {
 
+  // 🔒 trava contra clique duplo
+  if (IS_SAVING_LANCAMENTO) return;
+  IS_SAVING_LANCAMENTO = true;
 
-    async handleSaveModal() {
-      // called when user clicks save
-      try {
-        const tipo = $(IDS.modalTipo).value;
-        const descricao = $(IDS.modalDesc).value.trim();
-        const valor = Number($(IDS.modalValor).value || 0);
-        const data = $(IDS.modalData).value || isoToday();
-        const conta_id = $(IDS.modalConta).value || null;
-        const categoria_id = $(IDS.modalCategoria).value || null;
-        const recorrencia = $(IDS.modalRecorrencia).value;
-        const parcelas = Number($(IDS.modalParcelas).value || 1);
+  const btnSave = document.getElementById(IDS.modalSave);
+  const modalLoading = document.getElementById("modal-loading");
 
-        if (!descricao || !valor || !data) return alert('Preencha descrição, valor e data.');
+  try {
+    // 🔒 UI bloqueada + loading
+    if (btnSave) btnSave.disabled = true;
+    if (modalLoading) modalLoading.classList.remove("hidden");
 
-        // edit?
-        const saveBtn = $(IDS.modalSave);
-       if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
+    const tipo = $(IDS.modalTipo).value;
+    const descricao = $(IDS.modalDesc).value.trim();
+    const valor = Number($(IDS.modalValor).value || 0);
+    const data = $(IDS.modalData).value || isoToday();
+    const conta_id = $(IDS.modalConta).value || null;
+    const categoria_id = $(IDS.modalCategoria).value || null;
+    const recorrencia = $(IDS.modalRecorrencia).value;
+    const parcelas = Number($(IDS.modalParcelas).value || 1);
 
-  const editId = saveBtn.dataset.editId;
-
-  const escopo = saveBtn.dataset.editScope || 'one';
-  const recorrenciaId = saveBtn.dataset.recorrenciaId;
-  const dataBase = saveBtn.dataset.dataBase;
-
-  const patchBase = {
-  descricao,
-  valor,
-  conta_id: conta_id || null,
-  categoria_id: categoria_id || null
-};
-
-const patch =
-  escopo === 'one'
-    ? { ...patchBase, data }
-    : patchBase;
-
-
-  // 🔹 Apenas este
-  if (escopo === 'one' || !recorrenciaId) {
-    await LancService.update(tipo, editId, patch);
-  }
-
-  // 🔹 Este e os próximos
-  else if (escopo === 'next') {
-    const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
-    await supabase
-      .from(tabela)
-      .update(patch)
-      .eq('recorrencia_id', recorrenciaId)
-      .gte('data', dataBase);
-  }
-
-  // 🔹 Todos
-  else if (escopo === 'all') {
-    const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
-    await supabase
-      .from(tabela)
-      .update(patch)
-      .eq('recorrencia_id', recorrenciaId);
-  }
-
-  UI.closeAddModal();
-  await App.refreshLancamentos();
-  return;
-}
-
-// RECORRÊNCIA (valor inteiro, repetido)
-if (recorrencia !== 'none' && parcelas > 1) {
-
-  const recorrenciaId = crypto.randomUUID();
-  const base = new Date(data + 'T00:00:00');
-
-  for (let i = 1; i <= parcelas; i++) {
-    const dt = new Date(base);
-
-    if (i > 1) {
-      if (recorrencia === 'monthly') dt.setMonth(dt.getMonth() + (i - 1));
-      else if (recorrencia === 'weekly') dt.setDate(dt.getDate() + 7 * (i - 1));
-      else if (recorrencia === 'fortnight') dt.setDate(dt.getDate() + 15 * (i - 1));
-      else if (recorrencia === 'annual') dt.setFullYear(dt.getFullYear() + (i - 1));
+    if (!descricao || !valor || !data) {
+      alert('Preencha descrição, valor e data.');
+      return;
     }
 
-    const dISO = dt.toISOString().slice(0, 10);
+    // =========================// EDIÇÃO // =========================
+     
+    const saveBtn = $(IDS.modalSave);
 
+    if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
+
+      const editId = saveBtn.dataset.editId;
+      const escopo = saveBtn.dataset.editScope || 'one';
+      const recorrenciaId = saveBtn.dataset.recorrenciaId;
+      const dataBase = saveBtn.dataset.dataBase;
+
+      const patchBase = {
+        descricao,
+        valor,
+        conta_id: conta_id || null,
+        categoria_id: categoria_id || null
+      };
+
+      const patch =
+        escopo === 'one'
+          ? { ...patchBase, data }
+          : patchBase;
+
+      if (escopo === 'one' || !recorrenciaId) {
+        await LancService.update(tipo, editId, patch);
+      }
+      else if (escopo === 'next') {
+        const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
+        await supabase
+          .from(tabela)
+          .update(patch)
+          .eq('recorrencia_id', recorrenciaId)
+          .gte('data', dataBase);
+      }
+      else if (escopo === 'all') {
+        const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
+        await supabase
+          .from(tabela)
+          .update(patch)
+          .eq('recorrencia_id', recorrenciaId);
+      }
+
+      UI.closeAddModal();
+      await App.refreshLancamentos();
+      return;
+    }
+
+    // ========================= // RECORRÊNCIA// =========================
+     
+    if (recorrencia !== 'none' && parcelas > 1) {
+
+      const recorrenciaId = crypto.randomUUID();
+      const base = new Date(data + 'T00:00:00');
+
+      for (let i = 1; i <= parcelas; i++) {
+        const dt = new Date(base);
+
+        if (i > 1) {
+          if (recorrencia === 'monthly') dt.setMonth(dt.getMonth() + (i - 1));
+          else if (recorrencia === 'weekly') dt.setDate(dt.getDate() + 7 * (i - 1));
+          else if (recorrencia === 'fortnight') dt.setDate(dt.getDate() + 15 * (i - 1));
+          else if (recorrencia === 'annual') dt.setFullYear(dt.getFullYear() + (i - 1));
+        }
+
+        const dISO = dt.toISOString().slice(0, 10);
+
+        await LancService.insert({
+          tipo,
+          descricao: `${descricao} (${i}/${parcelas})`,
+          valor: Number(valor),
+          data: dISO,
+          conta_id: conta_id || null,
+          categoria_id: categoria_id || null,
+          recorrencia_id: recorrenciaId
+        });
+      }
+
+      UI.closeAddModal();
+      await App.refreshLancamentos();
+      return;
+    }
+
+    // ========================= // LANÇAMENTO SIMPLES // =========================
+     
     await LancService.insert({
       tipo,
-      descricao: `${descricao} (${i}/${parcelas})`,
-      valor: Number(valor), // 🔥 VALOR INTEIRO
-      data: dISO,
+      descricao,
+      valor,
+      data,
       conta_id: conta_id || null,
-      categoria_id: categoria_id || null,
-      recorrencia_id: recorrenciaId
+      categoria_id: categoria_id || null
     });
+
+    UI.closeAddModal();
+    await App.refreshLancamentos();
+
+  } catch (e) {
+    console.error('handleSaveModal', e);
+    alert('Erro ao salvar lançamento. Veja console.');
+
+  } finally {
+    // 🔓 sempre libera (mesmo com erro ou return)
+    IS_SAVING_LANCAMENTO = false;
+    if (btnSave) btnSave.disabled = false;
+    if (modalLoading) modalLoading.classList.add("hidden");
   }
+},
 
-  UI.closeAddModal();
-  await App.refreshLancamentos();
-  return;
-}
-
-// LANÇAMENTO SIMPLES (não recorrente)
-await LancService.insert({
-  tipo,
-  descricao,
-  valor,
-  data,
-  conta_id: conta_id || null,
-  categoria_id: categoria_id || null
-});
-
-        UI.closeAddModal();
-        await App.refreshLancamentos();
-   } catch (e) {
-  console.error('handleSaveModal', e);
-  alert('Erro ao salvar lançamento. Veja console.');
-}
-}
-};
+  /* ============================ CHARTS ============================ */
    
-  /* ============================
-     CHARTS
-  ============================ */
   async function drawReceitasPorCategoria(inicio, fim) {
     try {
       const { data } = await supabase.from('receitas').select('*').eq('user_id', STATE.user.id).gte('data', inicio).lte('data', fim);
