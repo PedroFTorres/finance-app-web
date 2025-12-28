@@ -14,7 +14,7 @@
   'use strict';
    
    let IS_SAVING_LANCAMENTO = false;
-
+   let IS_CREATING_CONTA = false;
 
   /* ============================ CONFIG & ESTADO GLOBAL ============================ */
    
@@ -462,15 +462,51 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
       if (btnFE) btnFE.addEventListener('click', (e) => { e.preventDefault(); App.renderExtrato(); });
 
       // add conta / categoria in tabs
-      const btnAddConta = $(IDS.btnAddConta);
       if (btnAddConta) btnAddConta.addEventListener('click', async () => {
-        const nome = $(IDS.contaNome).value?.trim();
-        const saldo = $(IDS.contaSaldo).value;
-        const data_saldo = $(IDS.contaDataSaldo).value;
-        if (!nome || !data_saldo) return alert('Preencha nome e data do saldo.');
-        await ContasService.create({ nome, saldo_inicial: Number(saldo||0), data_saldo });
-        await App.reloadAll();
-      });
+
+  if (IS_CREATING_CONTA) return;
+  IS_CREATING_CONTA = true;
+
+  const modalLoading = document.getElementById("modal-loading");
+  btnAddConta.disabled = true;
+
+  try {
+    if (modalLoading) modalLoading.classList.remove("hidden");
+
+    const nome = $(IDS.contaNome).value?.trim();
+    const saldo = $(IDS.contaSaldo).value;
+    const data_saldo = $(IDS.contaDataSaldo).value;
+
+    if (!nome || !data_saldo) {
+      alert('Preencha nome e data do saldo.');
+      return;
+    }
+
+    await ContasService.create({
+      nome,
+      saldo_inicial: Number(saldo || 0),
+      data_saldo
+    });
+
+    alert('Conta criada com sucesso.');
+
+    // limpa campos (feedback visual)
+    $(IDS.contaNome).value = '';
+    $(IDS.contaSaldo).value = '';
+    $(IDS.contaDataSaldo).value = '';
+
+    await App.reloadAll();
+
+  } catch (e) {
+    console.error('Erro ao criar conta', e);
+    alert('Erro ao criar conta. Veja o console.');
+
+  } finally {
+    IS_CREATING_CONTA = false;
+    btnAddConta.disabled = false;
+    if (modalLoading) modalLoading.classList.add("hidden");
+  }
+});
 
       const btnAddCat = $(IDS.btnAddCategoria);
       if (btnAddCat) btnAddCat.addEventListener('click', async () => {
