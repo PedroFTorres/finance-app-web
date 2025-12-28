@@ -462,6 +462,7 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
       if (btnFE) btnFE.addEventListener('click', (e) => { e.preventDefault(); App.renderExtrato(); });
 
       // add conta / categoria in tabs
+      const btnAddConta = $(IDS.btnAddConta);
       if (btnAddConta) btnAddConta.addEventListener('click', async () => {
 
   if (IS_CREATING_CONTA) return;
