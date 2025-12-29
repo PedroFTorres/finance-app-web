@@ -912,6 +912,34 @@ modal.setAttribute("aria-hidden", "false");
       return;
     }
 
+     // ========================= // UX — aviso se lançamento já foi baixado // =========================
+     
+let avisoBaixado = false;
+
+if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
+  const tabelaLanc = tipo === 'receita' ? 'receitas' : 'despesas';
+
+  const { data: lancCheck } = await supabase
+    .from(tabelaLanc)
+    .select('baixado')
+    .eq('id', saveBtn.dataset.editId)
+    .maybeSingle();
+
+  avisoBaixado = lancCheck?.baixado === true;
+}
+  // ⚠️ UX — confirmar edição de lançamento já baixado
+if (avisoBaixado) {
+  const ok = confirm(
+    "⚠️ Este lançamento já foi baixado.\n\n" +
+    "Qualquer alteração será refletida diretamente no extrato.\n\n" +
+    "Deseja continuar?"
+  );
+
+  if (!ok) {
+    return;
+  }
+}
+   
    // ========================= // EDIÇÃO DE LANÇAMENTO // =========================
      
 if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
