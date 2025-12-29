@@ -305,6 +305,7 @@
 </section>
 
 <!-- ========================= MODAL ADICIONAR LANÇAMENTO (PROFISSIONAL) ========================= -->
+    
 <div id="modal-add-lanc" class="modal hidden" aria-hidden="true" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1200;">
   <div class="modal-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.45);" onclick="document.getElementById('modal-add-lanc').classList.add('hidden')"></div>
 
@@ -363,6 +364,11 @@
         <label>Parcelas</label>
         <input id="modal-parcelas" type="number" min="1" value="1" />
       </div>
+    </div>
+      <!-- AVISO: LANÇAMENTO JÁ BAIXADO -->
+    <div id="aviso-baixado" class="alert-warning hidden" style="margin-top:14px;">
+      <strong>⚠️ Lançamento já baixado</strong><br>
+      Alterações feitas aqui serão refletidas automaticamente no extrato da conta.
     </div>
 
     <footer style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
