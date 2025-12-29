@@ -912,52 +912,82 @@ modal.setAttribute("aria-hidden", "false");
       return;
     }
 
-    // =========================// EDIÇÃO // =========================
+   // ========================= // EDIÇÃO DE LANÇAMENTO // =========================
      
-    const saveBtn = $(IDS.modalSave);
+if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
 
-    if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
+  const editId = saveBtn.dataset.editId;
+  const escopo = saveBtn.dataset.editScope || 'one';
+  const recorrenciaId = saveBtn.dataset.recorrenciaId;
+  const dataBase = saveBtn.dataset.dataBase;
 
-      const editId = saveBtn.dataset.editId;
-      const escopo = saveBtn.dataset.editScope || 'one';
-      const recorrenciaId = saveBtn.dataset.recorrenciaId;
-      const dataBase = saveBtn.dataset.dataBase;
+  const patchBase = {
+    descricao,
+    valor,
+    conta_id: conta_id || null,
+    categoria_id: categoria_id || null
+  };
 
-      const patchBase = {
-        descricao,
-        valor,
-        conta_id: conta_id || null,
-        categoria_id: categoria_id || null
-      };
+  const patch =
+    escopo === 'one'
+      ? { ...patchBase, data }
+      : patchBase;
 
-      const patch =
-        escopo === 'one'
-          ? { ...patchBase, data }
-          : patchBase;
+  const tabelaLanc = tipo === 'receita' ? 'receitas' : 'despesas';
 
-      if (escopo === 'one' || !recorrenciaId) {
-        await LancService.update(tipo, editId, patch);
-      }
-      else if (escopo === 'next') {
-        const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
+  // 1️⃣ Atualiza lançamento(s)
+  if (escopo === 'one' || !recorrenciaId) {
+    await LancService.update(tipo, editId, patch);
+  }
+  else if (escopo === 'next') {
+    await supabase
+      .from(tabelaLanc)
+      .update(patch)
+      .eq('recorrencia_id', recorrenciaId)
+      .gte('data', dataBase);
+  }
+  else if (escopo === 'all') {
+    await supabase
+      .from(tabelaLanc)
+      .update(patch)
+      .eq('recorrencia_id', recorrenciaId);
+  }
+
+  // 2️⃣ SINCRONIZA EXTRATO (SOMENTE escopo ONE)
+  if (escopo === 'one') {
+
+    const { data: lancAtual } = await supabase
+      .from(tabelaLanc)
+      .select('baixado')
+      .eq('id', editId)
+      .maybeSingle();
+
+    if (lancAtual && lancAtual.baixado === true) {
+
+      const { data: mov } = await supabase
+        .from('movimentacoes')
+        .select('*')
+        .eq('lancamento_id', editId)
+        .maybeSingle();
+
+      if (mov) {
         await supabase
-          .from(tabela)
-          .update(patch)
-          .eq('recorrencia_id', recorrenciaId)
-          .gte('data', dataBase);
+          .from('movimentacoes')
+          .update({
+            data: patch.data ?? mov.data,
+            descricao: patch.descricao ?? mov.descricao,
+            valor: patch.valor ?? mov.valor
+          })
+          .eq('id', mov.id);
       }
-      else if (escopo === 'all') {
-        const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
-        await supabase
-          .from(tabela)
-          .update(patch)
-          .eq('recorrencia_id', recorrenciaId);
-      }
-
-      UI.closeAddModal();
-      await App.refreshLancamentos();
-      return;
     }
+  }
+
+  UI.closeAddModal();
+  await App.refreshLancamentos();
+  await App.renderExtrato();
+  return;
+}
 
     // ========================= // RECORRÊNCIA// =========================
      
