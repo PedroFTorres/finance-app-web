@@ -895,7 +895,7 @@ modal.setAttribute("aria-hidden", "false");
 
   try {
     // 🔒 UI bloqueada + loading
-    if (btnSave) btnSave.disabled = true;
+    if (saveBtn) saveBtn.disabled = true;
     if (modalLoading) modalLoading.classList.remove("hidden");
 
     const tipo = $(IDS.modalTipo).value;
@@ -1045,7 +1045,7 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
   } finally {
     // 🔓 sempre libera (mesmo com erro ou return)
     IS_SAVING_LANCAMENTO = false;
-    if (btnSave) btnSave.disabled = false;
+    if (saveBtn) saveBtn.disabled = false;
     if (modalLoading) modalLoading.classList.add("hidden");
   }
 },
