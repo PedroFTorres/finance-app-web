@@ -890,7 +890,7 @@ modal.setAttribute("aria-hidden", "false");
   if (IS_SAVING_LANCAMENTO) return;
   IS_SAVING_LANCAMENTO = true;
 
-  const btnSave = document.getElementById(IDS.modalSave);
+  const saveBtn = document.getElementById(IDS.modalSave); 
   const modalLoading = document.getElementById("modal-loading");
 
   try {
