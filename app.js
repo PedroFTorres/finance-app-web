@@ -927,18 +927,17 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
 
   avisoBaixado = lancCheck?.baixado === true;
 }
-  // ⚠️ UX — confirmar edição de lançamento já baixado
-if (avisoBaixado) {
-  const ok = confirm(
-    "⚠️ Este lançamento já foi baixado.\n\n" +
-    "Qualquer alteração será refletida diretamente no extrato.\n\n" +
-    "Deseja continuar?"
-  );
+// 🔔 UX — mostrar / esconder aviso visual no modal
+const avisoBox = document.getElementById("aviso-baixado");
 
-  if (!ok) {
-    return;
+if (avisoBox) {
+  if (avisoBaixado) {
+    avisoBox.classList.remove("hidden");
+  } else {
+    avisoBox.classList.add("hidden");
   }
 }
+
    
    // ========================= // EDIÇÃO DE LANÇAMENTO // =========================
      
@@ -1075,6 +1074,9 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
     IS_SAVING_LANCAMENTO = false;
     if (saveBtn) saveBtn.disabled = false;
     if (modalLoading) modalLoading.classList.add("hidden");
+   const avisoBox = document.getElementById("aviso-baixado");
+if (avisoBox) avisoBox.classList.add("hidden");
+
   }
 },
   };
