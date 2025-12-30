@@ -29,13 +29,18 @@
     subs: [] // para armazenar channels se quiser unsub later
   };
    
-   let BAIXA_ATUAL = null;
-   let modoPeriodoLanc = "mes";   // "mes" | "custom"
+  let BAIXA_ATUAL = null;
+
+// ================================ // CONTROLE DE PERÍODO — LANÇAMENTOS // ================================
+let modoPeriodoLanc = "mes";   // "mes" | "custom"
 let mesLancAtual = new Date();
 
-   let FILTRO_LANCAMENTOS = "pendencias";
+// ================================ // CONTROLE DE PERÍODO — EXTRATO // ================================
+let modoPeriodoExtrato = "mes"; // "mes" | "custom"
+let mesExtratoAtual = new Date();
 
-
+// ================================ // FILTRO DE LANÇAMENTOS // ================================
+let FILTRO_LANCAMENTOS = "pendencias";
 
   const IDS = {
     // header / auth
@@ -133,10 +138,22 @@ let mesLancAtual = new Date();
   el.textContent =
     `${meses[mesLancAtual.getMonth()]} ${mesLancAtual.getFullYear()}`;
 }
+   
+function renderMesExtrato() {
+  const el = document.getElementById("extrato-mes-label");
+  if (!el) return;
 
-  /* ============================
-     SESSION / AUTH
-  ============================ */
+  const meses = [
+    "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+    "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
+  ];
+
+  el.textContent =
+    `${meses[mesExtratoAtual.getMonth()]} ${mesExtratoAtual.getFullYear()}`;
+}
+
+  /* ============================ SESSION / AUTH ============================ */
+   
   async function requireSessionOrRedirect() {
     try {
       if (!window.supabase) { console.error('Supabase client não encontrado'); return window.location.href = 'login.html'; }
