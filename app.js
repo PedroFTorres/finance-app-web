@@ -115,9 +115,8 @@ let FILTRO_LANCAMENTOS = "pendencias";
     listaCategorias: 'lista-categorias'
   };
 
-  /* ============================
-     HELPERS
-  ============================ */
+  /* ============================ HELPERS  ============================ */
+   
   const $ = id => document.getElementById(id);
   const $all = sel => Array.from(document.querySelectorAll(sel || ''));
   function safeText(el, txt) { if (!el) return; el.textContent = txt; }
@@ -168,9 +167,7 @@ function renderMesExtrato() {
     }
   }
 
-  /* ============================
-     SERVIÇOS (Supabase)
-  ============================ */
+  /* ============================ SERVIÇOS (Supabase) ============================ */
 
   const ContasService = {
     async load() {
@@ -1765,6 +1762,14 @@ document.addEventListener("click", (e) => {
     console.error('bootstrap error', e);
   }
 })();
+// ================================ // EXTRATO — ATUALIZAR AO TROCAR CONTA // ================================
+   
+document.getElementById("select-contas-extrato")
+  ?.addEventListener("change", () => {
+    modoPeriodoExtrato = "mes";
+    renderMesExtrato();
+    App.renderExtrato();
+  });
 
-})();
+
 
