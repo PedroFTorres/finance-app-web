@@ -1770,6 +1770,6 @@ document.getElementById("select-contas-extrato")
     renderMesExtrato();
     App.renderExtrato();
   });
-
+})();
 
 
