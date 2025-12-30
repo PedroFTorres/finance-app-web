@@ -1700,12 +1700,49 @@ document.addEventListener("click", (e) => {
     App.refreshLancamentos();
     return;
   }
+   if (e.target.closest("#extrato-prev")) {
+    modoPeriodoExtrato = "mes";
+    mesExtratoAtual.setMonth(mesExtratoAtual.getMonth() - 1);
+    renderMesExtrato();
+    App.renderExtrato();
+    return;
+  }
+
+  if (e.target.closest("#extrato-next")) {
+    modoPeriodoExtrato = "mes";
+    mesExtratoAtual.setMonth(mesExtratoAtual.getMonth() + 1);
+    renderMesExtrato();
+    App.renderExtrato();
+    return;
+  }
+
+  if (e.target.closest("#btn-extrato-periodo-custom")) {
+    document
+      .getElementById("extrato-periodo-custom-box")
+      ?.classList.remove("hidden");
+    return;
+  }
+
+  if (e.target.closest("#extrato-cancelar-periodo")) {
+    document
+      .getElementById("extrato-periodo-custom-box")
+      ?.classList.add("hidden");
+    return;
+  }
+
+  if (e.target.closest("#extrato-aplicar-periodo")) {
+    modoPeriodoExtrato = "custom";
+    document
+      .getElementById("extrato-periodo-custom-box")
+      ?.classList.add("hidden");
+    App.renderExtrato();
+    return;
+  }
 
 });
 
-  /* ============================
-     BOOTSTRAP / START
-  ============================ */
+  /* ============================ BOOTSTRAP / START ============================ */
+   
 (async function bootstrap() {
   try {
     await requireSessionOrRedirect();
