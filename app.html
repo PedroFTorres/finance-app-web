@@ -126,20 +126,48 @@
           <label>Selecionar conta</label>
           <select id="select-contas-extrato"></select>
 
-          <div class="filtros">
-            <label>Período</label>
-            <select id="periodo-extrato">
-              <option value="mes_atual">Mês atual</option>
-              <option value="mes_anterior">Mês anterior</option>
-              <option value="ultimos_30">Últimos 30 dias</option>
-              <option value="personalizado">Personalizado</option>
-            </select>
+         <!-- ========================= EXTRATO — FILTRO DE PERÍODO ========================== -->
+          
+<div class="filtro-periodo" style="display:flex;gap:14px;align-items:center;">
 
-            <input type="date" id="data-inicio" class="hidden"/>
-            <input type="date" id="data-fim" class="hidden"/>
+  <!-- Navegação por mês -->
+  <div class="mes-nav" style="display:flex;align-items:center;gap:8px;">
+    <button id="extrato-prev" class="btn-secondary">◀</button>
+    <strong id="extrato-mes-label"></strong>
+    <button id="extrato-next" class="btn-secondary">▶</button>
+  </div>
 
-            <button id="btn-filtrar-extrato" class="btn-primary">Filtrar</button>
-          </div>
+  <!-- Abrir período personalizado -->
+  <button id="btn-extrato-periodo-custom" class="btn-secondary">
+    Período personalizado
+  </button>
+
+</div>
+
+<!-- Período personalizado -->
+<div id="extrato-periodo-custom-box"
+     class="hidden"
+     style="margin-top:10px;display:flex;gap:10px;align-items:end;">
+
+  <div>
+    <label>De</label>
+    <input type="date" id="extrato-inicio">
+  </div>
+
+  <div>
+    <label>Até</label>
+    <input type="date" id="extrato-fim">
+  </div>
+
+  <button id="extrato-aplicar-periodo" class="btn-primary">
+    Aplicar
+  </button>
+
+  <button id="extrato-cancelar-periodo" class="btn-secondary">
+    Cancelar
+  </button>
+
+</div>
 
           <div class="table-wrap">
             <table id="table-extrato">
