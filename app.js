@@ -1486,27 +1486,26 @@ async renderExtrato() {
     const conta_id = document.getElementById("select-contas-extrato")?.value;
     if (!conta_id || conta_id === "all") return;
 
-    // =========================// DATAS (SEGURAS)// =========================
-     
-    let inicio = null;
-    let fim = null;
 
-    const periodo = document.getElementById("periodo-extrato")?.value;
-    const now = new Date();
+    // =========================// EXTRATO — DEFINIÇÃO DE DATAS // =========================
+let inicio, fim;
 
-    if (periodo === "mes_atual") {
-      inicio = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-      fim = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${new Date(
-        now.getFullYear(),
-        now.getMonth() + 1,
-        0
-      ).getDate()}`;
-    } else {
-      const ini = document.getElementById("data-inicio")?.value;
-      const end = document.getElementById("data-fim")?.value;
-      if (ini) inicio = ini;
-      if (end) fim = end;
-    }
+if (modoPeriodoExtrato === "custom") {
+  inicio = document.getElementById("extrato-inicio")?.value;
+  fim = document.getElementById("extrato-fim")?.value;
+
+  if (!inicio || !fim) {
+    alert("Informe a data inicial e final.");
+    return;
+  }
+} else {
+  const ano = mesExtratoAtual.getFullYear();
+  const mes = mesExtratoAtual.getMonth();
+
+  inicio = new Date(ano, mes, 1).toISOString().slice(0, 10);
+  fim = new Date(ano, mes + 1, 0).toISOString().slice(0, 10);
+}
+
 
     // =========================// SALDO ANTES DO PERÍODO // =========================
     let qAntes = supabase
