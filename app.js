@@ -151,21 +151,68 @@ function renderMesExtrato() {
     `${meses[mesExtratoAtual.getMonth()]} ${mesExtratoAtual.getFullYear()}`;
 }
 
-  /* ============================ SESSION / AUTH ============================ */
-   
-  async function requireSessionOrRedirect() {
-    try {
-      if (!window.supabase) { console.error('Supabase client não encontrado'); return window.location.href = 'login.html'; }
-      const { data } = await supabase.auth.getSession();
-      if (!data || !data.session) return window.location.href = 'login.html';
-      STATE.user = data.session.user;
-      const emailEl = $(IDS.userEmail); if (emailEl) emailEl.textContent = STATE.user.email;
-      return true;
-    } catch (e) {
-      console.error('requireSessionOrRedirect', e);
-      return window.location.href = 'login.html';
+ // ============================ // SESSION / AUTH + PROFILE // ============================
+
+async function loadUserProfile() {
+  try {
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("*")
+      .eq("id", STATE.user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Erro ao carregar user_profiles", error);
+      return null;
     }
+
+    return data;
+  } catch (e) {
+    console.error("loadUserProfile error", e);
+    return null;
   }
+}
+
+async function requireSessionOrRedirect() {
+  try {
+    if (!window.supabase) {
+      console.error("Supabase client não encontrado");
+      window.location.href = "login.html";
+      return false;
+    }
+
+    const { data } = await supabase.auth.getSession();
+
+    if (!data || !data.session) {
+      window.location.href = "login.html";
+      return false;
+    }
+
+    // ✅ usuário autenticado
+    STATE.user = data.session.user;
+
+    // ✅ carrega perfil (upgrade)
+    STATE.profile = await loadUserProfile();
+
+    // fallback de segurança
+    if (!STATE.profile) {
+      STATE.profile = {
+        plan: "free",
+        onboarding_completed: false
+      };
+    }
+
+    // email no topo
+    const emailEl = document.getElementById(IDS.userEmail);
+    if (emailEl) emailEl.textContent = STATE.user.email;
+
+    return true;
+  } catch (e) {
+    console.error("requireSessionOrRedirect error", e);
+    window.location.href = "login.html";
+    return false;
+  }
+}
 
   /* ============================ SERVIÇOS (Supabase) ============================ */
 
