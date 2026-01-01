@@ -209,15 +209,10 @@ async function requireSessionOrRedirect() {
     return true;
   } catch (e) {
     console.error("requireSessionOrRedirect error", e);
-     
-     console.log("USER", STATE.user);
-console.log("PROFILE", STATE.profile);
-
-    window.location.href = "login.html";
+     window.location.href = "login.html";
     return false;
   }
 }
-
   /* ============================ SERVIÇOS (Supabase) ============================ */
 
   const ContasService = {
@@ -1809,6 +1804,9 @@ document.addEventListener("click", (e) => {
     await App.init();
 
     console.log('app.js carregado — ambiente pronto');
+     console.log("USER FINAL:", STATE.user);
+     console.log("PROFILE FINAL:", STATE.profile);
+
   } catch (e) {
     console.error('bootstrap error', e);
   }
