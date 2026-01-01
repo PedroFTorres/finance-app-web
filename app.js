@@ -153,19 +153,60 @@ function renderMesExtrato() {
 
   /* ============================ SESSION / AUTH ============================ */
    
-  async function requireSessionOrRedirect() {
-    try {
-      if (!window.supabase) { console.error('Supabase client não encontrado'); return window.location.href = 'login.html'; }
-      const { data } = await supabase.auth.getSession();
-      if (!data || !data.session) return window.location.href = 'login.html';
-      STATE.user = data.session.user;
-      const emailEl = $(IDS.userEmail); if (emailEl) emailEl.textContent = STATE.user.email;
-      return true;
-    } catch (e) {
-      console.error('requireSessionOrRedirect', e);
-      return window.location.href = 'login.html';
-    }
+  async function ensureUserProfile(user) {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  // perfil não existe → cria
+  if (error && error.code === 'PGRST116') {
+    const { data: created, error: insertError } = await supabase
+      .from('user_profiles')
+      .insert({ id: user.id })
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+    return created;
   }
+
+  if (error) throw error;
+
+  return data;
+}
+async function requireSessionOrRedirect() {
+  try {
+    if (!window.supabase) {
+      console.error('Supabase client não encontrado');
+      window.location.href = 'login.html';
+      return false;
+    }
+
+    const { data } = await supabase.auth.getSession();
+    if (!data || !data.session) {
+      window.location.href = 'login.html';
+      return false;
+    }
+
+    // usuário autenticado
+    STATE.user = data.session.user;
+
+    // 🔥 AQUI ESTÁ O PASSO 3 (sem confusão)
+    STATE.profile = await ensureUserProfile(STATE.user);
+
+    // email no topo
+    const emailEl = $(IDS.userEmail);
+    if (emailEl) emailEl.textContent = STATE.user.email;
+
+    return true;
+  } catch (e) {
+    console.error('requireSessionOrRedirect', e);
+    window.location.href = 'login.html';
+    return false;
+  }
+}
 
   /* ============================ SERVIÇOS (Supabase) ============================ */
 
