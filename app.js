@@ -797,8 +797,6 @@ modal.style.inset = "0";
 modal.style.zIndex = "1200";
 modal.setAttribute("aria-hidden", "false");
 },
-     };
-
      async handleSaveModal() {
 
   // 🔒 trava contra clique duplo
