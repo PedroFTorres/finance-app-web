@@ -191,13 +191,14 @@ async function requireSessionOrRedirect() {
       return false;
     }
 
-    // usuário autenticado
+    
     STATE.user = data.session.user;
-
-    // 🔥 AQUI ESTÁ O PASSO 3 (sem confusão)
     STATE.profile = await ensureUserProfile(STATE.user);
+     if (!STATE.profile.onboarding_completed) {
+        UI.esconderMenu();
+  document.getElementById('onboarding-welcome')?.classList.remove('hidden');
+}
 
-    // email no topo
     const emailEl = $(IDS.userEmail);
     if (emailEl) emailEl.textContent = STATE.user.email;
 
@@ -425,21 +426,29 @@ if (Number(saldo_inicial) !== 0) {
     }
   };
 
-  /* ============================
-     UI FUNCTIONS
-  ============================ */
-  const UI = {
-    attachHandlers() {
-      // menu buttons
-      $all(IDS.menuBtns).forEach(b => {
-        b.addEventListener('click', () => {
-          const t = b.dataset.target;
-          if (t) App.showScreen(t);
-        });
+  /* ============================ UI FUNCTIONS ============================ */
+const UI = {
+  attachHandlers() {
+    $all(IDS.menuBtns).forEach(b => {
+      b.addEventListener('click', () => {
+        const t = b.dataset.target;
+        if (t) App.showScreen(t);
       });
-// ================================
-// LANÇAMENTOS — filtro por conta
-// ================================
+    });
+  },
+
+  esconderMenu() {
+    const header = document.querySelector('.top-header');
+    if (header) header.style.display = 'none';
+  },
+
+  mostrarMenu() {
+    const header = document.querySelector('.top-header');
+    if (header) header.style.display = '';
+  }
+};
+      
+// ================================// LANÇAMENTOS — filtro por conta // ================================
 const selContaLanc = $(IDS.selectContas);
 if (selContaLanc) {
   selContaLanc.addEventListener('change', () => {
