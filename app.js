@@ -1702,29 +1702,39 @@ $all(IDS.tabBtns).forEach(b => {
     if (tab === 'categorias') UI.renderCategorias();
   });
 });
+   /* ============================BOOTSTRAP / START============================ */
+(async function bootstrap() {
+  try {
+    // 🔐 sessão
+    await requireSessionOrRedirect();
 
+    // 🎛️ handlers globais
+    UI.attachHandlers();
 
+    // 📦 dados base
     await Promise.all([
       CategoriasService.load(),
       ContasService.load()
     ]);
 
+    // 🎨 UI inicial
     UI.populateSelects();
     UI.renderCategorias();
 
+    // 🚀 inicializa app
     await App.init();
 
-    console.log('app.js carregado — ambiente pronto');
+    // =========================// EXTRATO — atualizar ao trocar conta// =========================
+    document
+      .getElementById("select-contas-extrato")
+      ?.addEventListener("change", () => {
+        modoPeriodoExtrato = "mes";
+        renderMesExtrato();
+        App.renderExtrato();
+      });
+
   } catch (e) {
     console.error('bootstrap error', e);
   }
 })();
 
-// ================================ // EXTRATO — ATUALIZAR AO TROCAR CONTA // ================================
-   
-document.getElementById("select-contas-extrato")
-  ?.addEventListener("change", () => {
-    modoPeriodoExtrato = "mes";
-    renderMesExtrato();
-    App.renderExtrato();
-  });
