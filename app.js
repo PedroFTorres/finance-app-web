@@ -426,9 +426,9 @@ if (Number(saldo_inicial) !== 0) {
     }
   };
 
-  /* ============================ UI FUNCTIONS ============================ */
-const UI = {
+  const UI = {
   attachHandlers() {
+    // menu superior
     $all(IDS.menuBtns).forEach(b => {
       b.addEventListener('click', () => {
         const t = b.dataset.target;
@@ -446,121 +446,51 @@ const UI = {
     const header = document.querySelector('.top-header');
     if (header) header.style.display = '';
   },
-    
-      // periodo lanc change
-      const pL = $(IDS.periodoLanc);
-      if (pL) pL.addEventListener('change', () => {
-        const custom = pL.value === 'personalizado';
-        $(IDS.dataInicioLanc).classList.toggle('hidden', !custom);
-        $(IDS.dataFimLanc).classList.toggle('hidden', !custom);
+
+  populateSelects() {
+    const selFilter = $(IDS.selectContas);
+    const selModalConta = $(IDS.modalConta);
+    const selModalCat = $(IDS.modalCategoria);
+    const selExtr = $(IDS.selectExtrato);
+    const selLista = $(IDS.selectContasLista);
+
+    // Limpar selects
+    [selFilter, selModalConta, selModalCat, selExtr, selLista].forEach(el => {
+      if (el) el.innerHTML = '';
+    });
+
+    const addAllOpt = el => {
+      if (!el) return;
+      el.appendChild(new Option('Todas as Contas', 'all'));
+    };
+
+    addAllOpt(selFilter);
+    addAllOpt(selExtr);
+    addAllOpt(selLista);
+
+    if (selModalConta) {
+      (STATE.contas || []).forEach(c => {
+        selModalConta.appendChild(new Option(c.nome, c.id));
       });
-
-     
-      // open modal add lanc
-      const openBtn = $(IDS.btnOpenAdd);
-      if (openBtn) openBtn.addEventListener('click', UI.openAddModal);
-
-      // modal close / cancel
-      const modalClose = $(IDS.modalClose);
-      if (modalClose) modalClose.addEventListener('click', UI.closeAddModal);
-      const modalCancel = $(IDS.modalCancel);
-      if (modalCancel) modalCancel.addEventListener('click', UI.closeAddModal);
-
-      // modal save
-      const modalSave = $(IDS.modalSave);
-      if (modalSave) modalSave.addEventListener('click', UI.handleSaveModal);
-
-      // filtrar extrato
-      const btnFE = $(IDS.btnFiltrarExtrato);
-      if (btnFE) btnFE.addEventListener('click', (e) => { e.preventDefault(); App.renderExtrato(); });
-
-      // add conta / categoria in tabs
-      const btnAddConta = $(IDS.btnAddConta);
-      if (btnAddConta) btnAddConta.addEventListener('click', async () => {
-
-  if (IS_CREATING_CONTA) return;
-  IS_CREATING_CONTA = true;
-
-  const modalLoading = document.getElementById("modal-loading");
-  btnAddConta.disabled = true;
-
-  try {
-    if (modalLoading) modalLoading.classList.remove("hidden");
-
-    const nome = $(IDS.contaNome).value?.trim();
-    const saldo = $(IDS.contaSaldo).value;
-    const data_saldo = $(IDS.contaDataSaldo).value;
-
-    if (!nome || !data_saldo) {
-      alert('Preencha nome e data do saldo.');
-      return;
     }
 
-    await ContasService.create({
-      nome,
-      saldo_inicial: Number(saldo || 0),
-      data_saldo
-    });
-
-    alert('Conta criada com sucesso.');
-
-    // limpa campos (feedback visual)
-    $(IDS.contaNome).value = '';
-    $(IDS.contaSaldo).value = '';
-    $(IDS.contaDataSaldo).value = '';
-
-    await App.reloadAll();
-
-  } catch (e) {
-    console.error('Erro ao criar conta', e);
-    alert('Erro ao criar conta. Veja o console.');
-
-  } finally {
-    IS_CREATING_CONTA = false;
-    btnAddConta.disabled = false;
-    if (modalLoading) modalLoading.classList.add("hidden");
-  }
-});
-
-      const btnAddCat = $(IDS.btnAddCategoria);
-      if (btnAddCat) btnAddCat.addEventListener('click', async () => {
-        const nome = $(IDS.categoriaNome).value?.trim();
-        if (!nome) return alert('Informe o nome da categoria.');
-        await CategoriasService.add(nome);
-        $(IDS.categoriaNome).value = '';
-        await App.reloadAll();
-      });
-    },
-
-   populateSelects() {
-  const selFilter = $(IDS.selectContas);
-  const selModalConta = $(IDS.modalConta);
-  const selModalCat = $(IDS.modalCategoria);
-  const selExtr = $(IDS.selectExtrato);
-  const selLista = $(IDS.selectContasLista);
-
-  // Limpar selects
-  [selFilter, selModalConta, selModalCat, selExtr, selLista].forEach(el => {
-    if (el) el.innerHTML = '';
-  });
-
-  const addAllOpt = el => {
-    if (!el) return;
-    el.appendChild(new Option('Todas as Contas', 'all'));
-  };
-
-  // ✔ Só Filtros recebem "Todas as Contas"
-  addAllOpt(selFilter);
-  addAllOpt(selExtr);
-  addAllOpt(selLista);
-
-  // ✔ Modal NÃO recebe "Todas as Contas", apenas contas reais
-  if (selModalConta) {
-    selModalConta.innerHTML = '';
     (STATE.contas || []).forEach(c => {
-      selModalConta.appendChild(new Option(c.nome, c.id));
+      if (selFilter) selFilter.appendChild(new Option(c.nome, c.id));
+      if (selExtr) selExtr.appendChild(new Option(c.nome, c.id));
+      if (selLista) selLista.appendChild(new Option(c.nome, c.id));
     });
+
+    if (selModalCat) {
+      selModalCat.appendChild(new Option('Sem categoria', ''));
+      (STATE.categorias || []).forEach(cat => {
+        selModalCat.appendChild(new Option(cat.nome, cat.id));
+      });
+    }
+
+    if (selFilter && !selFilter.value) selFilter.value = 'all';
+    if (selExtr && !selExtr.value) selExtr.value = 'all';
   }
+};
 
   // ✔ Popular contas nos filtros normalmente
   (STATE.contas || []).forEach(c => {
@@ -1741,9 +1671,15 @@ document.addEventListener("click", (e) => {
 (async function bootstrap() {
   try {
     await requireSessionOrRedirect();
-
-
     UI.attachHandlers();
+     const pL = $(IDS.periodoLanc);
+if (pL) {
+  pL.addEventListener('change', () => {
+    const custom = pL.value === 'personalizado';
+    $(IDS.dataInicioLanc)?.classList.toggle('hidden', !custom);
+    $(IDS.dataFimLanc)?.classList.toggle('hidden', !custom);
+  });
+}
      // ================================// LANÇAMENTOS — filtro por conta// ================================
 const selContaLanc = $(IDS.selectContas);
 if (selContaLanc) {
