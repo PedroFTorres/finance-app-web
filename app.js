@@ -489,9 +489,7 @@ if (Number(saldo_inicial) !== 0) {
 
     if (selFilter && !selFilter.value) selFilter.value = 'all';
     if (selExtr && !selExtr.value) selExtr.value = 'all';
-  }
-};
-
+  },
     renderCategorias() {
       const ul = $(IDS.listaCategorias);
       if (!ul) return;
