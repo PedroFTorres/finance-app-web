@@ -447,56 +447,6 @@ const UI = {
     if (header) header.style.display = '';
   },
     
-// ================================// LANÇAMENTOS — filtro por conta // ================================
-const selContaLanc = $(IDS.selectContas);
-if (selContaLanc) {
-  selContaLanc.addEventListener('change', () => {
-    App.refreshLancamentos();
-  });
-}
-// ================================// LANÇAMENTOS — MENU LATERAL // ================================
-   
-document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
-  btn.addEventListener("click", () => {
-
-    // remove active de todos
-    document
-      .querySelectorAll("[data-lanc-tab]")
-      .forEach(b => b.classList.remove("active"));
-
-    // ativa o clicado
-    btn.classList.add("active");
-
-    // atualiza estado global
-  FILTRO_LANCAMENTOS = btn.dataset.lancTab;
-
-
-    // recarrega listas
-    App.refreshLancamentos();
-  });
-});
-
-      // logout
-      const btnLogout = $(IDS.logoutBtn);
-      if (btnLogout) btnLogout.addEventListener('click', async () => {
-        await supabase.auth.signOut();
-        window.location.href = 'login.html';
-      });
-
-      // tabs conts
-      $all(IDS.tabBtns).forEach(b => {
-        b.addEventListener('click', () => {
-          $all(IDS.tabBtns).forEach(x => x.classList.remove('active'));
-          b.classList.add('active');
-          const tab = b.dataset.tab;
-          ['tab-cadastro','tab-extrato','tab-categorias'].forEach(id=>{ const el = document.getElementById(id); if(el) el.classList.add('hidden'); });
-          const show = document.getElementById('tab-' + tab);
-          if (show) show.classList.remove('hidden');
-          if (tab === 'extrato') App.renderExtrato();
-          if (tab === 'categorias') UI.renderCategorias();
-        });
-      });
-
       // periodo lanc change
       const pL = $(IDS.periodoLanc);
       if (pL) pL.addEventListener('change', () => {
@@ -1794,6 +1744,58 @@ document.addEventListener("click", (e) => {
 
 
     UI.attachHandlers();
+     // ================================// LANÇAMENTOS — filtro por conta// ================================
+const selContaLanc = $(IDS.selectContas);
+if (selContaLanc) {
+  selContaLanc.addEventListener('change', () => {
+    App.refreshLancamentos();
+  });
+}
+
+// ================================// LANÇAMENTOS — MENU LATERAL// ================================
+document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
+  btn.addEventListener("click", () => {
+
+    document
+      .querySelectorAll("[data-lanc-tab]")
+      .forEach(b => b.classList.remove("active"));
+
+    btn.classList.add("active");
+    FILTRO_LANCAMENTOS = btn.dataset.lancTab;
+    App.refreshLancamentos();
+  });
+});
+
+// ================================// LOGOUT// ================================
+const btnLogout = $(IDS.logoutBtn);
+if (btnLogout) {
+  btnLogout.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+}
+
+// ================================// TABS CONTAS// ================================
+     
+$all(IDS.tabBtns).forEach(b => {
+  b.addEventListener('click', () => {
+    $all(IDS.tabBtns).forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+
+    const tab = b.dataset.tab;
+    ['tab-cadastro','tab-extrato','tab-categorias'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    });
+
+    const show = document.getElementById('tab-' + tab);
+    if (show) show.classList.remove('hidden');
+
+    if (tab === 'extrato') App.renderExtrato();
+    if (tab === 'categorias') UI.renderCategorias();
+  });
+});
+
 
     await Promise.all([
       CategoriasService.load(),
@@ -1810,6 +1812,7 @@ document.addEventListener("click", (e) => {
     console.error('bootstrap error', e);
   }
 })();
+
 // ================================ // EXTRATO — ATUALIZAR AO TROCAR CONTA // ================================
    
 document.getElementById("select-contas-extrato")
@@ -1818,6 +1821,5 @@ document.getElementById("select-contas-extrato")
     renderMesExtrato();
     App.renderExtrato();
   });
-})();
 
 
