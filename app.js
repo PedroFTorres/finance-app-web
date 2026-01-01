@@ -153,15 +153,15 @@ function renderMesExtrato() {
 
   /* ============================ SESSION / AUTH ============================ */
    
-  async function ensureUserProfile(user) {
+async function ensureUserProfile(user) {
   const { data, error } = await supabase
     .from('user_profiles')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .maybeSingle(); 
 
-  // perfil não existe → cria
-  if (error && error.code === 'PGRST116') {
+  // se não existe perfil → cria
+  if (!data) {
     const { data: created, error: insertError } = await supabase
       .from('user_profiles')
       .insert({ id: user.id })
@@ -176,6 +176,7 @@ function renderMesExtrato() {
 
   return data;
 }
+
 async function requireSessionOrRedirect() {
   try {
     if (!window.supabase) {
