@@ -1802,11 +1802,6 @@ document.addEventListener("click", (e) => {
     UI.renderCategorias();
 
     await App.init();
-
-    console.log('app.js carregado — ambiente pronto');
-     console.log("USER FINAL:", STATE.user);
-     console.log("PROFILE FINAL:", STATE.profile);
-
   } catch (e) {
     console.error('bootstrap error', e);
   }
