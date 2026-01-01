@@ -599,8 +599,6 @@ btnBaixar.addEventListener('click', () => {
   UI.abrirModalBaixa(tipo, item);
 });
 
-
-
   right.appendChild(btnBaixar);
 
 } else {
