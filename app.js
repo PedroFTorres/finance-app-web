@@ -1636,21 +1636,6 @@ document.addEventListener("click", (e) => {
   }
 
 });
-
-  /* ============================ BOOTSTRAP / START ============================ */
-   
-(async function bootstrap() {
-  try {
-    await requireSessionOrRedirect();
-    UI.attachHandlers();
-     const pL = $(IDS.periodoLanc);
-if (pL) {
-  pL.addEventListener('change', () => {
-    const custom = pL.value === 'personalizado';
-    $(IDS.dataInicioLanc)?.classList.toggle('hidden', !custom);
-    $(IDS.dataFimLanc)?.classList.toggle('hidden', !custom);
-  });
-}
      // ================================// LANÇAMENTOS — filtro por conta// ================================
 const selContaLanc = $(IDS.selectContas);
 if (selContaLanc) {
@@ -1681,50 +1666,61 @@ if (btnLogout) {
     window.location.href = 'login.html';
   });
 }
+/* ============================ BOOTSTRAP / START ============================ */
 
-// ================================// TABS CONTAS// ================================
-     
-$all(IDS.tabBtns).forEach(b => {
-  b.addEventListener('click', () => {
-    $all(IDS.tabBtns).forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-
-    const tab = b.dataset.tab;
-    ['tab-cadastro','tab-extrato','tab-categorias'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.add('hidden');
-    });
-
-    const show = document.getElementById('tab-' + tab);
-    if (show) show.classList.remove('hidden');
-
-    if (tab === 'extrato') App.renderExtrato();
-    if (tab === 'categorias') UI.renderCategorias();
-  });
-});
-   /* ============================BOOTSTRAP / START============================ */
 (async function bootstrap() {
   try {
     // 🔐 sessão
     await requireSessionOrRedirect();
 
-    // 🎛️ handlers globais
+    // 🎛️ handlers globais (menus, botões, etc)
     UI.attachHandlers();
 
-    // 📦 dados base
+    // ========================= // PERÍODO — LANÇAMENTOS // =========================
+    const pL = $(IDS.periodoLanc);
+    if (pL) {
+      pL.addEventListener('change', () => {
+        const custom = pL.value === 'personalizado';
+        $(IDS.dataInicioLanc)?.classList.toggle('hidden', !custom);
+        $(IDS.dataFimLanc)?.classList.toggle('hidden', !custom);
+      });
+    }
+
+    // ========================= // TABS CONTAS // =========================
+    $all(IDS.tabBtns).forEach(b => {
+      b.addEventListener('click', () => {
+        $all(IDS.tabBtns).forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+
+        const tab = b.dataset.tab;
+
+        ['tab-cadastro', 'tab-extrato', 'tab-categorias'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.classList.add('hidden');
+        });
+
+        const show = document.getElementById('tab-' + tab);
+        if (show) show.classList.remove('hidden');
+
+        if (tab === 'extrato') App.renderExtrato();
+        if (tab === 'categorias') UI.renderCategorias();
+      });
+    });
+
+    // ========================= // DADOS BASE// =========================
     await Promise.all([
       CategoriasService.load(),
       ContasService.load()
     ]);
 
-    // 🎨 UI inicial
+    // =========================// UI INICIAL // =========================
     UI.populateSelects();
     UI.renderCategorias();
 
-    // 🚀 inicializa app
+    // =========================// INICIALIZA APP // =========================
     await App.init();
 
-    // =========================// EXTRATO — atualizar ao trocar conta// =========================
+    // ========================= // EXTRATO — atualizar ao trocar conta // =========================
     document
       .getElementById("select-contas-extrato")
       ?.addEventListener("change", () => {
@@ -1737,4 +1733,3 @@ $all(IDS.tabBtns).forEach(b => {
     console.error('bootstrap error', e);
   }
 })();
-
