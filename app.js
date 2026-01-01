@@ -445,9 +445,8 @@ const UI = {
   mostrarMenu() {
     const header = document.querySelector('.top-header');
     if (header) header.style.display = '';
-  }
-};
-      
+  },
+    
 // ================================// LANÇAMENTOS — filtro por conta // ================================
 const selContaLanc = $(IDS.selectContas);
 if (selContaLanc) {
@@ -455,9 +454,8 @@ if (selContaLanc) {
     App.refreshLancamentos();
   });
 }
-// ================================
-// LANÇAMENTOS — MENU LATERAL
-// ================================
+// ================================// LANÇAMENTOS — MENU LATERAL // ================================
+   
 document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
   btn.addEventListener("click", () => {
 
@@ -584,7 +582,6 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
       });
     },
 
-    // populate all relevant selects with contas and categorias
    populateSelects() {
   const selFilter = $(IDS.selectContas);
   const selModalConta = $(IDS.modalConta);
