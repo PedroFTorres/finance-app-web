@@ -492,30 +492,6 @@ if (Number(saldo_inicial) !== 0) {
   }
 };
 
-  // ✔ Popular contas nos filtros normalmente
-  (STATE.contas || []).forEach(c => {
-   const label = c.nome;
-    if (selFilter) selFilter.appendChild(new Option(label, c.id));
-    if (selExtr) selExtr.appendChild(new Option(c.nome, c.id));
-    if (selLista) selLista.appendChild(new Option(c.nome, c.id));
-  });
-
-  // ✔ Categorias no modal
-  if (selModalCat) {
-    selModalCat.innerHTML = '';
-    selModalCat.appendChild(new Option('Sem categoria', ''));
-    (STATE.categorias || []).forEach(cat => {
-      selModalCat.appendChild(new Option(cat.nome, cat.id));
-    });
-  }
-
-  // Defaults
-  if (selFilter && (!selFilter.value || selFilter.value.trim() === ''))
-    selFilter.value = 'all';
-
-  if (selExtr && (!selExtr.value || selExtr.value.trim() === ''))
-    selExtr.value = 'all';
-},
     renderCategorias() {
       const ul = $(IDS.listaCategorias);
       if (!ul) return;
