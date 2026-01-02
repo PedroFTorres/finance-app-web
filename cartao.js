@@ -48,6 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const boxPagAntecipado = document.getElementById("box-pag-antecipado");
   const viewEditarCompra = document.getElementById("view-editar-compra");
   let viewEditarAvista = document.getElementById("view-editar-avista"); // pode ser criado dinamicamente
+  let activeCardId = null;
 
   const btnSaveCard = document.getElementById("btn-save-card");
   const btnCancelCard = document.getElementById("btn-cancel-card");
@@ -190,9 +191,8 @@ if (btnVoltarEdicao) {
   };
 }
 
-  // ===========================
-  // CARDS — carregar / renderizar / excluir
-  // ===========================
+  // =========================== // CARDS — carregar / renderizar / excluir// ===========================
+  
   async function loadCards() {
     const { data } = await supabase.from("cartoes_credito")
       .select("*")
@@ -204,52 +204,82 @@ if (btnVoltarEdicao) {
     populateCardSelects();
   }
 
-  function renderCards() {
-    if (!cardsList) return;
-    cardsList.innerHTML = "";
-    (state.cards || []).forEach((c) => {
-      const el = document.createElement("div");
-      el.className = "card-item";
-      el.innerHTML = `
-        <div class="card-meta">
-          <div class="card-name">${c.nome}</div>
-          <div class="card-balance">Limite: ${formatReal(c.limite)}</div>
-          <div class="card-balance">Fecha dia: ${c.dia_fechamento} • Venc: ${c.dia_vencimento}</div>
-        </div>
-        <div class="card-actions">
-          <button class="btn-view-faturas" data-id="${c.id}">Faturas</button>
-          <button class="btn-lancar" data-id="${c.id}">Lançar</button>
-          <button class="btn-delete" data-id="${c.id}">Excluir</button>
-        </div>`;
-      cardsList.appendChild(el);
-    });
+function renderCards() {
+  if (!cardsList) return;
 
-    document.querySelectorAll(".btn-view-faturas").forEach((btn) => {
-      btn.onclick = () => {
-        if (selectCartaoFaturas) selectCartaoFaturas.value = btn.dataset.id;
-        loadFaturasSelect();
-        showView(viewFaturas);
-      };
-    });
+  cardsList.classList.add("cards-stack");
+  cardsList.innerHTML = "";
 
-    document.querySelectorAll(".btn-lancar").forEach((btn) => {
-      btn.onclick = () => {
-        if (selectCartaoLanc) selectCartaoLanc.value = btn.dataset.id;
-        loadSelectsForLanc();
-        popularFaturasLancamento();
-        showView(viewLancamento);
-      };
-    });
+  if (!state.cards || state.cards.length === 0) return;
 
-    document.querySelectorAll(".btn-delete").forEach((btn) => {
-      btn.onclick = async () => {
-        if (!confirm("Excluir este cartão?")) return;
-        await supabase.from("cartoes_credito").delete().eq("id", btn.dataset.id);
-        await loadCards();
-        showToast("Cartão excluído.");
-      };
-    });
+  // se ainda não houver ativo, pega o primeiro
+  if (!activeCardId) {
+    activeCardId = state.cards[0].id;
   }
+
+  state.cards.forEach((c, index) => {
+    const el = document.createElement("div");
+
+    const isActive = c.id === activeCardId;
+
+    el.className = "card-item " + (isActive ? "active" : "inactive");
+
+    // empilhamento visual
+    el.style.top = `${index * 14}px`;
+    el.style.zIndex = state.cards.length - index;
+
+    el.onclick = () => {
+      activeCardId = c.id;
+      renderCards();
+    };
+
+    el.innerHTML = `
+      <div class="card-name">${c.nome}</div>
+      <div class="card-meta">Limite: ${formatReal(c.limite)}</div>
+      <div class="card-meta">
+        Fecha dia ${c.dia_fechamento} • Venc ${c.dia_vencimento}
+      </div>
+
+      <div class="card-actions" style="margin-top:12px;">
+        <button class="btn-view-faturas" data-id="${c.id}">Faturas</button>
+        <button class="btn-lancar" data-id="${c.id}">Lançar</button>
+        <button class="btn-delete" data-id="${c.id}">Excluir</button>
+      </div>
+    `;
+
+    cardsList.appendChild(el);
+  });
+
+  // manter seus handlers originais
+  document.querySelectorAll(".btn-view-faturas").forEach((btn) => {
+    btn.onclick = () => {
+      selectCartaoFaturas.value = btn.dataset.id;
+      activeCardId = btn.dataset.id;
+      loadFaturasSelect();
+      showView(viewFaturas);
+    };
+  });
+
+  document.querySelectorAll(".btn-lancar").forEach((btn) => {
+    btn.onclick = () => {
+      selectCartaoLanc.value = btn.dataset.id;
+      activeCardId = btn.dataset.id;
+      loadSelectsForLanc();
+      popularFaturasLancamento();
+      showView(viewLancamento);
+    };
+  });
+
+  document.querySelectorAll(".btn-delete").forEach((btn) => {
+    btn.onclick = async () => {
+      if (!confirm("Excluir este cartão?")) return;
+      await supabase.from("cartoes_credito").delete().eq("id", btn.dataset.id);
+      if (activeCardId === btn.dataset.id) activeCardId = null;
+      await loadCards();
+      showToast("Cartão excluído.");
+    };
+  });
+}
 
   function populateCardSelects() {
     if (!selectCartaoFaturas || !selectCartaoLanc) return;
