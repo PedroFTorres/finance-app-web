@@ -292,7 +292,7 @@ const CategoriasService = {
       const { data, error } = await supabase
         .from('categorias')
         .select('*')
-        .eq('user_id', STATE.user.id)   // 🔐 FILTRO POR USUÁRIO
+        .eq('user_id', STATE.user.id)
         .order('nome');
 
       if (error) throw error;
@@ -312,25 +312,14 @@ const CategoriasService = {
       const item = {
         id: uid(),
         nome,
-        user_id: STATE.user.id   // 🔐 ISOLAMENTO POR USUÁRIO
+        user_id: STATE.user.id
       };
 
       const { error } = await supabase
-        .from('contas_bancarias')
+        .from('categorias')   // ✅ TABELA CORRETA
         .insert([item]);
 
       if (error) throw error;
-if (Number(saldo_inicial) !== 0) {
-  await supabase.from('movimentacoes').insert([{
-    id: uid(),
-    user_id: STATE.user.id,
-    conta_id: item.id,
-    tipo: 'credito',
-    valor: Number(saldo_inicial),
-    data: data_saldo,
-    descricao: 'Saldo inicial'
-  }]);
-}
 
       await this.load();
       return item;
@@ -341,7 +330,6 @@ if (Number(saldo_inicial) !== 0) {
     }
   }
 };
-
 
   const LancService = {
     async fetch(tipo, conta_id='all', inicio, fim) {
