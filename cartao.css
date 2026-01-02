@@ -284,8 +284,8 @@ body {
 
 .cards-stack {
   position: relative;
-  height: 260px;
   margin-top: 20px;
+  min-height: 220px;
 }
 
 .card-item {
