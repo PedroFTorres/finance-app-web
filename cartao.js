@@ -1182,8 +1182,6 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
       listaFaturasHistorico.appendChild(li);
     });
   }
-
-  // =========================== // INICIALIZAÇÃO FINAL (garante tudo carregado)// ===========================
   
 // ===========================// NOVO CARTÃO — abrir formulário// ===========================
 if (btnNewCard) {
@@ -1196,6 +1194,52 @@ if (btnNewCard) {
 
     // abrir tela de novo cartão
     showView(viewNewCard);
+  };
+}
+// =========================== // NOVO CARTÃO — salvar// ===========================
+if (btnSaveCard) {
+  btnSaveCard.onclick = async () => {
+    try {
+      const nome = cardNome.value.trim();
+      const limite = Number(cardLimite.value || 0);
+      const diaFechamento = Number(cardDiaFechamento.value);
+      const diaVencimento = Number(cardDiaVencimento.value);
+
+      if (!nome || !limite || !diaFechamento || !diaVencimento) {
+        showToast("Preencha todos os campos.", "error");
+        return;
+      }
+
+      if (diaFechamento < 1 || diaFechamento > 31 ||
+          diaVencimento < 1 || diaVencimento > 31) {
+        showToast("Dias devem estar entre 1 e 31.", "error");
+        return;
+      }
+
+      await supabase.from("cartoes_credito").insert([{
+        id: crypto.randomUUID(),
+        user_id: state.user.id,
+        nome,
+        limite,
+        dia_fechamento: diaFechamento,
+        dia_vencimento: diaVencimento
+      }]);
+
+      showToast("Cartão criado com sucesso!");
+      await loadCards();
+      showView(viewFaturas);
+
+    } catch (err) {
+      console.error(err);
+      showToast("Erro ao salvar cartão.", "error");
+    }
+  };
+}
+
+// ===========================// NOVO CARTÃO — cancelar// ===========================
+if (btnCancelCard) {
+  btnCancelCard.onclick = () => {
+    showView(viewFaturas);
   };
 }
  
