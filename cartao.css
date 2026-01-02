@@ -280,47 +280,31 @@ body {
   from { opacity: 1; transform: translateX(0); }
   to   { opacity: 0; transform: translateX(30px); }
 }
-/* ============================= *//* CARTÕES — STACK VISUAL *//* ============================= */
+/* ============================= *//* CARTÕES — STACK LIMPO *//* ============================= */
 
 .cards-stack {
-  position: relative;
-  height: 230px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   margin-top: 16px;
 }
 
 .card-item {
-  position: absolute;
-  width: 100%;
-  max-width: 420px;
   border-radius: 18px;
   padding: 18px;
   color: #fff;
   background: linear-gradient(135deg, #6a5cff, #8f7bff);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.18);
-  transition: all 0.35s ease;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.16);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
   cursor: pointer;
 }
 
 .card-item.inactive {
-  transform: scale(0.94) translateY(18px);
-  opacity: 0.85;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.12);
-}
-
-.card-item.active {
-  transform: scale(1) translateY(0);
-  z-index: 10;
-}
-
-.card-item .card-name {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.card-item .card-meta {
-  font-size: 14px;
+  transform: scale(0.96);
   opacity: 0.95;
 }
 
-
+.card-item.active {
+  transform: scale(1.02);
+  box-shadow: 0 16px 34px rgba(0,0,0,0.22);
+}
