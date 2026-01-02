@@ -6,9 +6,7 @@
 
 document.addEventListener("DOMContentLoaded", () => {
 
-  // ===========================
-  // TOAST SIMPLES
-  // ===========================
+  // ===========================// TOAST SIMPLES // ===========================
   function showToast(message, type = "success") {
     const container = document.getElementById("toast-container");
     if (!container) { alert(message); return; }
@@ -25,9 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 3500);
   }
 
-  // ===========================
-  // ESTADO
-  // ===========================
+  // ===========================// ESTADO // ===========================
   const state = {
     user: null,
     cards: [],
@@ -37,9 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
     faturaAtual: null,
   };
 
-  // ===========================
-  // ELEMENTOS DO DOM
-  // ===========================
+  // ===========================// ELEMENTOS DO DOM // ===========================
   const btnBack = document.getElementById("btn-back");
   const btnLogout = document.getElementById("btn-logout");
   const userEmail = document.getElementById("user-email");
@@ -117,9 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let mesFatura = new Date();
   let mesLanc = new Date();
 
-  // ===========================
-  // HELPERS
-  // ===========================
+  // =========================== // HELPERS // ===========================
   function formatReal(v) {
     return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
@@ -149,9 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
     v?.classList.remove("hidden");
   }
 
-  // ===========================
-  // SESSÃO
-  // ===========================
+  // ===========================// SESSÃO // ===========================
   (async () => {
     const sessionResp = await supabase.auth.getSession();
     if (!sessionResp.data.session) {
@@ -174,9 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   })();
 
-  // ===========================
-  // NAV / BOTÕES - Back e Logout
-  // ===========================
+  // ===========================// NAV / BOTÕES - Back e Logout // ===========================
   if (btnBack) btnBack.onclick = () => {
     if (history.length > 1) history.back();
     else window.location.href = "app.html";
@@ -272,9 +260,7 @@ if (btnVoltarEdicao) {
     });
   }
 
-  // ===========================
-  // CATEGORIAS
-  // ===========================
+  // ===========================// CATEGORIAS // ===========================
   async function loadCategorias() {
     const { data } = await supabase.from("categorias").select("*").order("nome");
     state.categories = data || [];
@@ -284,9 +270,7 @@ if (btnVoltarEdicao) {
     }
   }
 
-  // ===========================
-  // MES NAV
-  // ===========================
+  // =========================== // MES NAV // ===========================
   function displayMes(dateObj) {
     const meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
     return `${meses[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
@@ -307,9 +291,7 @@ if (btnVoltarEdicao) {
   if (btnFatPrev) btnFatPrev.onclick = () => { mesLanc.setMonth(mesLanc.getMonth()-1); popularFaturasLancamento(); };
   if (btnFatNext) btnFatNext.onclick = () => { mesLanc.setMonth(mesLanc.getMonth()+1); popularFaturasLancamento(); };
 
-  // ===========================
-  // CARREGAR FATURA / RENDER (USANDO data_fatura)
-  // ===========================
+  // =========================== // CARREGAR FATURA / RENDER (USANDO data_fatura) // ===========================
   async function loadFaturaForSelected() {
     if (!selectCartaoFaturas || !selectMesFaturas) return;
     const cartao_id = selectCartaoFaturas.value;
@@ -412,9 +394,7 @@ if (btnVoltarEdicao) {
     }
   }
 
-  // ===========================
-  // UPDATE BUTTONS FOR FATURA
-  // ===========================
+  // ===========================// UPDATE BUTTONS FOR FATURA // ===========================
   function updateButtonsForFatura() {
     const existingReabrir = document.getElementById("btn-reabrir-fatura");
     if (existingReabrir) existingReabrir.remove();
@@ -448,9 +428,7 @@ if (btnVoltarEdicao) {
     }
   }
 
-  // ===========================
-  // Funções auxiliares para modal de escolha de conta ao fechar fatura (OPÇÃO B)
-  // ===========================
+  // ===========================// Funções auxiliares para modal de escolha de conta ao fechar fatura (OPÇÃO B) // ===========================
   async function carregarContasModal() {
     if (!contaFaturaSelect) return;
     const { data: contas } = await supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id);
@@ -581,9 +559,7 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
     }
   };
 
-  // ===========================
-  // PAGAR FATURA → baixa a despesa vinculada, cria movimentação e atualiza saldo
-  // ===========================
+  // ===========================// PAGAR FATURA → baixa a despesa vinculada, cria movimentação e atualiza saldo// ===========================
   if (btnPagarFatura) btnPagarFatura.onclick = async () => {
     try {
       if (!state.faturaAtual) return showToast("Feche a fatura antes de pagar.", "error");
@@ -651,9 +627,7 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
     }
   };
 
-  // ===========================
-  // REABRIR FATURA
-  // ===========================
+  // ===========================// REABRIR FATURA// ===========================
   async function reabrirFatura() {
     if (!state.faturaAtual) return showToast("Nenhuma fatura selecionada.", "error");
     if (state.faturaAtual.pago) return showToast("Não é possível reabrir fatura paga.", "error");
@@ -763,9 +737,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     showView(viewFaturas);
   };
 
-  // ===========================
-  // PAGAMENTO ANTECIPADO
-  // ===========================
+  // ===========================// PAGAMENTO ANTECIPADO// ===========================
   if (btnPagamentoAntecipado) btnPagamentoAntecipado.onclick = async () => {
     await loadSelectsForLanc();
     contaPagAntecipado.innerHTML = selectContaPagamento.innerHTML;
@@ -800,9 +772,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     await loadFaturaForSelected();
   };
 
-  // ===========================
-  // HISTÓRICO DE FATURAS
-  // ===========================
+  // ===========================// HISTÓRICO DE FATURAS// ===========================
   async function loadHistoricoFaturas() {
     const { data } = await supabase.from("cartao_faturas").select("*, cartoes_credito(nome)").eq("user_id", state.user.id).order("created_at", { ascending: false });
     listaFaturasHistorico.innerHTML = "";
@@ -813,9 +783,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     });
   }
 
-  // ===========================
-  // SELECTS AUXILIARES
-  // ===========================
+  // ===========================// SELECTS AUXILIARES// ===========================
   async function loadSelectsForLanc() {
     await loadCategorias();
     const { data: contas } = await supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id);
@@ -826,9 +794,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     );
   }
 
-  // ===========================
-  // EDIÇÃO À VISTA DINÂMICA
-  // ===========================
+  // ===========================// EDIÇÃO À VISTA DINÂMICA// ===========================
   function ensureAvistaViewExists() {
     if (viewEditarAvista) return;
     const right = document.querySelector(".right-column") || document.body;
@@ -940,9 +906,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     showView(viewFaturas);
   }
 
-  // ===========================
-  // EDIÇÃO PARCELADA
-  // ===========================
+  // ===========================// EDIÇÃO PARCELADA // ===========================
   async function abrirEdicaoCompraParcelada(c) {
     try {
       const base = (c.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
@@ -1011,9 +975,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     });
   }
 
-  // ===========================
-  // MODAL EDITAR PARCELA
-  // ===========================
+  // ===========================// MODAL EDITAR PARCELA// ===========================
   let parcelaEditandoId = null;
 
   function abrirModalEditarParcela(parcela) {
@@ -1052,9 +1014,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     showToast("Parcela atualizada.");
   };
 
-  // ===========================
-  // EXCLUIR PARCELA
-  // ===========================
+  // ===========================// EXCLUIR PARCELA// ===========================
   async function excluirParcela(id) {
     if (!confirm("Excluir somente esta parcela?")) return;
 
@@ -1069,9 +1029,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     showToast("Parcela excluída.");
   }
 
-  // ===========================
-  // ANTECIPAR PARCELA
-  // ===========================
+  // ===========================// ANTECIPAR PARCELA// ===========================
   async function anteciparParcela(id) {
     const parcela = state.editingPurchaseParcels.find((p) => p.id === id);
     if (!parcela)
@@ -1100,9 +1058,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     await loadFaturaForSelected();
   }
 
-  // ===========================
-  // POPULAR SELECTS PARA EDIÇÃO
-  // ===========================
+  // ===========================// POPULAR SELECTS PARA EDIÇÃO// ===========================
   async function popularSelectCategoriaEdicao(id) {
     const { data } = await supabase.from("categorias").select("*").order("nome");
     const sel = document.getElementById("edit-categoria");
@@ -1125,9 +1081,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     });
   }
 
-  // ===========================
-  // SALVAR/EXCLUIR EDIÇÃO PARCELADA
-  // ===========================
+  // ===========================// SALVAR/EXCLUIR EDIÇÃO PARCELADA// ===========================
   if (document.getElementById("btn-salvar-edicao"))
     document.getElementById("btn-salvar-edicao").onclick = async () => {
       try {
@@ -1185,15 +1139,12 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
       }
     };
 
-  // ===========================
-  // SELECT CHANGES
-  // ===========================
+  // ===========================// SELECT CHANGES// ===========================
+  
   if (selectMesFaturas) selectMesFaturas.addEventListener("change", loadFaturaForSelected);
   if (selectCartaoFaturas) selectCartaoFaturas.addEventListener("change", loadFaturaForSelected);
 
-  // ===========================
-  // LOAD SELECTS FOR LANCAMENTO
-  // ===========================
+  // ===========================// LOAD SELECTS FOR LANCAMENTO // ===========================
   async function loadSelectsForLanc() {
     await loadCategorias();
     const { data: contas } = await supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id);
@@ -1221,9 +1172,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     }
   }
 
-  // ===========================
-  // HISTÓRICO & LOADS INICIAIS
-  // ===========================
+  // ===========================// HISTÓRICO & LOADS INICIAIS// ===========================
   async function loadHistoricoFaturas() {
     const { data } = await supabase.from("cartao_faturas").select("*, cartoes_credito(nome)").eq("user_id", state.user.id).order("created_at", { ascending: false });
     listaFaturasHistorico.innerHTML = "";
@@ -1234,13 +1183,23 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     });
   }
 
-  // ===========================
-  // INICIALIZAÇÃO FINAL (garante tudo carregado)
-  // ===========================
-  // (já feita no início do script via IIFE de sessão)
+  // =========================== // INICIALIZAÇÃO FINAL (garante tudo carregado)// ===========================
+  
+// ===========================// NOVO CARTÃO — abrir formulário// ===========================
+if (btnNewCard) {
+  btnNewCard.onclick = () => {
+    // limpar campos
+    cardNome.value = "";
+    cardLimite.value = "";
+    cardDiaFechamento.value = "";
+    cardDiaVencimento.value = "";
+
+    // abrir tela de novo cartão
+    showView(viewNewCard);
+  };
+}
+ 
 
 }); // fim DOMContentLoaded
 
-// ==================================================================================
-// FIM do arquivo cartao.js
-// ==================================================================================
+// ==================================================================================// FIM do arquivo cartao.js// ==================================================================================
