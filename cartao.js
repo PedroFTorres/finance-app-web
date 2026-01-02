@@ -39,6 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const userEmail = document.getElementById("user-email");
   const cardsList = document.getElementById("cards-list");
   const btnNewCard = document.getElementById("btn-new-card");
+  let IS_SAVING_CARD = false;
 
   const viewNewCard = document.getElementById("view-new-card");
   const viewFaturas = document.getElementById("view-faturas");
@@ -1196,9 +1197,20 @@ if (btnNewCard) {
     showView(viewNewCard);
   };
 }
-// =========================== // NOVO CARTÃO — salvar// ===========================
+
+// ===========================// NOVO CARTÃO — salvar (com trava)// ===========================
+
 if (btnSaveCard) {
   btnSaveCard.onclick = async () => {
+
+    // 🔒 trava contra clique duplo
+    if (IS_SAVING_CARD) return;
+    IS_SAVING_CARD = true;
+
+    const originalText = btnSaveCard.textContent;
+    btnSaveCard.disabled = true;
+    btnSaveCard.textContent = "Salvando...";
+
     try {
       const nome = cardNome.value.trim();
       const limite = Number(cardLimite.value || 0);
@@ -1210,8 +1222,10 @@ if (btnSaveCard) {
         return;
       }
 
-      if (diaFechamento < 1 || diaFechamento > 31 ||
-          diaVencimento < 1 || diaVencimento > 31) {
+      if (
+        diaFechamento < 1 || diaFechamento > 31 ||
+        diaVencimento < 1 || diaVencimento > 31
+      ) {
         showToast("Dias devem estar entre 1 e 31.", "error");
         return;
       }
@@ -1232,6 +1246,12 @@ if (btnSaveCard) {
     } catch (err) {
       console.error(err);
       showToast("Erro ao salvar cartão.", "error");
+
+    } finally {
+      // 🔓 sempre libera
+      IS_SAVING_CARD = false;
+      btnSaveCard.disabled = false;
+      btnSaveCard.textContent = originalText;
     }
   };
 }
