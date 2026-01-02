@@ -219,6 +219,8 @@ function renderCards() {
 
   cardsList.className = "cards-stack";
   cardsList.innerHTML = "";
+  cardsList.style.minHeight = `${(state.cards.length * 30) + 180}px`;
+
 
   if (!state.cards || state.cards.length === 0) return;
 
@@ -238,7 +240,7 @@ function renderCards() {
     const el = document.createElement("div");
 
     el.className = "card-item " + (isActive ? "active" : "inactive");
-    el.style.setProperty("--offset", `${index * 22}px`);
+    el.style.setProperty("--offset", `${index * 30}px`);
     el.style.background = getCardGradient(index);
 
     el.onclick = () => {
