@@ -121,6 +121,16 @@ document.addEventListener("DOMContentLoaded", () => {
   function formatISO(d) {
     return new Date(d).toISOString().slice(0,10);
   }
+  function getCardGradient(index) {
+  const gradients = [
+    "linear-gradient(135deg, #6a5cff, #8f7bff)",
+    "linear-gradient(135deg, #ff7a18, #ffb347)",
+    "linear-gradient(135deg, #00b09b, #96c93d)",
+    "linear-gradient(135deg, #2193b0, #6dd5ed)",
+    "linear-gradient(135deg, #cc2b5e, #753a88)"
+  ];
+  return gradients[index % gradients.length];
+}
 
   // get or create categoria helper
   async function getOrCreateCategoria(nome) {
