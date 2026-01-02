@@ -207,26 +207,29 @@ if (btnVoltarEdicao) {
 function renderCards() {
   if (!cardsList) return;
 
-  cardsList.classList.add("cards-stack");
+  cardsList.className = "cards-stack";
   cardsList.innerHTML = "";
 
   if (!state.cards || state.cards.length === 0) return;
 
-  // se ainda não houver ativo, pega o primeiro
+  // define ativo inicial
   if (!activeCardId) {
     activeCardId = state.cards[0].id;
   }
 
-  state.cards.forEach((c, index) => {
+  // reordena: inativos primeiro, ativo por último
+  const ordered = [
+    ...state.cards.filter(c => c.id !== activeCardId),
+    state.cards.find(c => c.id === activeCardId)
+  ].filter(Boolean);
+
+  ordered.forEach((c, index) => {
+    const isActive = c.id === activeCardId;
     const el = document.createElement("div");
 
-    const isActive = c.id === activeCardId;
-
     el.className = "card-item " + (isActive ? "active" : "inactive");
-
-    // empilhamento visual
-    el.style.top = `${index * 14}px`;
-    el.style.zIndex = state.cards.length - index;
+    el.style.setProperty("--offset", `${index * 22}px`);
+    el.style.background = getCardGradient(index);
 
     el.onclick = () => {
       activeCardId = c.id;
@@ -250,27 +253,27 @@ function renderCards() {
     cardsList.appendChild(el);
   });
 
-  // manter seus handlers originais
-  document.querySelectorAll(".btn-view-faturas").forEach((btn) => {
+  // handlers originais
+  document.querySelectorAll(".btn-view-faturas").forEach(btn => {
     btn.onclick = () => {
-      selectCartaoFaturas.value = btn.dataset.id;
       activeCardId = btn.dataset.id;
+      selectCartaoFaturas.value = btn.dataset.id;
       loadFaturasSelect();
       showView(viewFaturas);
     };
   });
 
-  document.querySelectorAll(".btn-lancar").forEach((btn) => {
+  document.querySelectorAll(".btn-lancar").forEach(btn => {
     btn.onclick = () => {
-      selectCartaoLanc.value = btn.dataset.id;
       activeCardId = btn.dataset.id;
+      selectCartaoLanc.value = btn.dataset.id;
       loadSelectsForLanc();
       popularFaturasLancamento();
       showView(viewLancamento);
     };
   });
 
-  document.querySelectorAll(".btn-delete").forEach((btn) => {
+  document.querySelectorAll(".btn-delete").forEach(btn => {
     btn.onclick = async () => {
       if (!confirm("Excluir este cartão?")) return;
       await supabase.from("cartoes_credito").delete().eq("id", btn.dataset.id);
