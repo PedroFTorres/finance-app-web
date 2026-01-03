@@ -210,7 +210,7 @@ if (btnVoltarEdicao) {
       .order("created_at", { ascending: false });
 
     state.cards = data || [];
-    ();
+    
     populateCardSelects();
   }
 
@@ -221,7 +221,7 @@ function renderCards() {
 
   cardsList.className = "cards-stack";
   cardsList.innerHTML = "";
-  cardsList.style.minHeight = `${(state.cards.length * 30) + 180}px`;
+ cardsList.style.minHeight = `${(state.cards.length * 30) + 180}px`;
 
 
   if (!state.cards || state.cards.length === 0) return;
