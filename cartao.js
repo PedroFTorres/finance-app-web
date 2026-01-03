@@ -215,8 +215,9 @@ if (btnVoltarEdicao) {
   }
 
 function renderCards() {
+  console.log("RENDER STACK NOVO", state.cards.length);
+
   if (!cardsList) return;
-console.log("RENDER STACK NOVO", state.cards.length);
 
   cardsList.className = "cards-stack";
   cardsList.innerHTML = "";
