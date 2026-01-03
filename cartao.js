@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const cardDiaFechamento = document.getElementById("card-dia-fechamento");
   const cardDiaVencimento = document.getElementById("card-dia-vencimento");
 
-  const selectCartaoFaturas = document.getElementById("select-cartao-faturas");
+ 
   const selectMesFaturas = document.getElementById("select-mes-faturas");
   const mesDisplay = document.getElementById("mes-display");
   const btnMesPrev = document.getElementById("mes-prev");
@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const faturaSummary = document.getElementById("fatura-summary");
   const listaComprasFatura = document.getElementById("lista-compras-fatura");
 
-  const selectCartaoLanc = document.getElementById("select-cartao-lanc");
+
   const selectCategoriaLancCartao = document.getElementById("select-categoria-lanc-cartao");
   const cartDesc = document.getElementById("cart-desc");
   const cartValor = document.getElementById("cart-valor");
@@ -340,106 +340,66 @@ function renderCards() {
 
   // =========================== // CARREGAR FATURA / RENDER (USANDO data_fatura) // ===========================
   async function loadFaturaForSelected() {
-    if (!selectCartaoFaturas || !selectMesFaturas) return;
-    const cartao_id = selectCartaoFaturas.value;
-    const ym = selectMesFaturas.value;
-    if (!cartao_id || !ym) {
-      if (faturaSummary) faturaSummary.innerHTML = "<div>Nenhum cartão/mês selecionado.</div>";
-      if (listaComprasFatura) listaComprasFatura.innerHTML = "";
-      state.faturaAtual = null;
-      updateButtonsForFatura();
-      return;
-    }
-
-    const [anoNum, mesNum] = ym.split("-").map(Number);
-    const ano = anoNum; const mes = mesNum;
-    const inicio = `${ano}-${String(mes).padStart(2,"0")}-01`;
-    const last = new Date(ano, mes, 0).getDate();
-    const fim = `${ano}-${String(mes).padStart(2,"0")}-${last}`;
-
-    const { data: compras, error: errCompras } = await supabase
-      .from("cartao_lancamentos")
-      .select("*")
-      .eq("cartao_id", cartao_id)
-      .gte("data_fatura", inicio)
-      .lte("data_fatura", fim)
-      .order("data_fatura");
-
-    if (errCompras) {
-      console.error("Erro ao carregar fatura:", errCompras);
-      if (listaComprasFatura) listaComprasFatura.innerHTML = "<li>Erro ao carregar fatura.</li>";
-      showToast("Erro ao carregar fatura.", "error");
-      return;
-    }
-
-    const total = (compras || []).reduce((s, c) => s + Number(c.valor || 0), 0);
-    const card = state.cards.find(x => x.id === cartao_id);
-
-    if (faturaSummary) {
-      faturaSummary.innerHTML = `<div class="big">${card?.nome || "Cartão"}</div><div>${ym}</div><div class="big">${formatReal(total)}</div>
-        <div id="status-fatura" style="margin-top:8px;"></div>`;
-    }
-
-    if (listaComprasFatura) {
-  listaComprasFatura.innerHTML = "";
-
-  (compras || []).forEach((c) => {
-    const li = document.createElement("li");
-    const descr = (c.descricao || "").trim();
-
-    // ✔️ EXIBIR SEMPRE A DATA DA COMPRA (data_compra)
-    const dataExibida = c.data_compra
-      ? new Date(c.data_compra + "T00:00:00").toLocaleDateString("pt-BR")
-      : "";
-
-    li.innerHTML = `
-      <span>${dataExibida} — ${descr}</span>
-      <span>${formatReal(c.valor)}</span>
-    `;
-
-    li.style.cursor = "pointer";
-    li.onclick = () => {
-      if (Number(c.parcelas || 0) === 1) abrirEdicaoAvista(c);
-      else abrirEdicaoCompraParcelada(c);
-    };
-
-    listaComprasFatura.appendChild(li);
-  });
-}
-
-    const { data: faturaDB } = await supabase
-      .from("cartao_faturas")
-      .select("*")
-      .eq("user_id", state.user.id)
-      .eq("cartao_id", cartao_id)
-      .eq("ano", ano)
-      .eq("mes", mes)
-      .maybeSingle();
-
-    state.faturaAtual = faturaDB || null;
-
-    if (card && dataVencimentoFatura && !state.faturaAtual) {
-      const venc = new Date(ano, mes - 1, card.dia_vencimento);
-      dataVencimentoFatura.value = formatISO(venc);
-    } else if (state.faturaAtual && dataVencimentoFatura) {
-      if (state.faturaAtual.data_vencimento) dataVencimentoFatura.value = state.faturaAtual.data_vencimento;
-    }
-
+  if (!activeCardId) {
+    state.faturaAtual = null;
+    if (faturaSummary) faturaSummary.innerHTML = "<div>Nenhum cartão selecionado.</div>";
+    if (listaComprasFatura) listaComprasFatura.innerHTML = "";
     updateButtonsForFatura();
+    return;
   }
 
-  async function loadFaturasSelect() {
-    await loadCards();
-    await loadCategorias();
-    popularMesFatura();
-    await loadSelectsForLanc();
+  const cartao_id = activeCardId;
+  const ano = mesFatura.getFullYear();
+  const mes = mesFatura.getMonth() + 1;
 
-    if (selectCartaoFaturas && selectCartaoFaturas.options.length > 0) {
-      await loadFaturaForSelected();
-    } else {
-      showView(viewNewCard);
-    }
+  const inicio = `${ano}-${String(mes).padStart(2,"0")}-01`;
+  const last = new Date(ano, mes, 0).getDate();
+  const fim = `${ano}-${String(mes).padStart(2,"0")}-${last}`;
+
+  const { data: compras } = await supabase
+    .from("cartao_lancamentos")
+    .select("*")
+    .eq("cartao_id", cartao_id)
+    .gte("data_fatura", inicio)
+    .lte("data_fatura", fim)
+    .order("data_fatura");
+
+  const total = (compras || []).reduce((s, c) => s + Number(c.valor || 0), 0);
+  const card = state.cards.find(c => c.id === cartao_id);
+
+  if (faturaSummary) {
+    faturaSummary.innerHTML = `
+      <div class="big">${card?.nome || "Cartão"}</div>
+      <div>${mes}/${ano}</div>
+      <div class="big">${formatReal(total)}</div>
+      <div id="status-fatura"></div>
+    `;
   }
+
+  if (listaComprasFatura) {
+    listaComprasFatura.innerHTML = "";
+    (compras || []).forEach(c => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <span>${new Date(c.data_compra+"T00:00:00").toLocaleDateString("pt-BR")} — ${c.descricao}</span>
+        <span>${formatReal(c.valor)}</span>
+      `;
+      listaComprasFatura.appendChild(li);
+    });
+  }
+
+  const { data: faturaDB } = await supabase
+    .from("cartao_faturas")
+    .select("*")
+    .eq("user_id", state.user.id)
+    .eq("cartao_id", cartao_id)
+    .eq("ano", ano)
+    .eq("mes", mes)
+    .maybeSingle();
+
+  state.faturaAtual = faturaDB || null;
+  updateButtonsForFatura();
+}
 
   // ===========================// UPDATE BUTTONS FOR FATURA // ===========================
   function updateButtonsForFatura() {
@@ -1189,7 +1149,6 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
   // ===========================// SELECT CHANGES// ===========================
   
   if (selectMesFaturas) selectMesFaturas.addEventListener("change", loadFaturaForSelected);
-  if (selectCartaoFaturas) selectCartaoFaturas.addEventListener("change", loadFaturaForSelected);
 
   // ===========================// LOAD SELECTS FOR LANCAMENTO // ===========================
   async function loadSelectsForLanc() {
