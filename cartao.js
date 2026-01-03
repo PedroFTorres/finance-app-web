@@ -210,12 +210,13 @@ if (btnVoltarEdicao) {
       .order("created_at", { ascending: false });
 
     state.cards = data || [];
-    renderCards();
+    ();
     populateCardSelects();
   }
 
 function renderCards() {
   if (!cardsList) return;
+console.log("RENDER STACK NOVO", state.cards.length);
 
   cardsList.className = "cards-stack";
   cardsList.innerHTML = "";
