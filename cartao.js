@@ -211,7 +211,6 @@ if (btnVoltarEdicao) {
 
     state.cards = data || [];
     
-    populateCardSelects();
   }
 
 function renderCards() {
@@ -270,7 +269,6 @@ function renderCards() {
   document.querySelectorAll(".btn-view-faturas").forEach(btn => {
     btn.onclick = () => {
       activeCardId = btn.dataset.id;
-      selectCartaoFaturas.value = btn.dataset.id;
       loadFaturasSelect();
       showView(viewFaturas);
     };
@@ -279,7 +277,6 @@ function renderCards() {
   document.querySelectorAll(".btn-lancar").forEach(btn => {
     btn.onclick = () => {
       activeCardId = btn.dataset.id;
-      selectCartaoLanc.value = btn.dataset.id;
       loadSelectsForLanc();
       popularFaturasLancamento();
       showView(viewLancamento);
@@ -296,16 +293,6 @@ function renderCards() {
     };
   });
 }
-
-  function populateCardSelects() {
-    if (!selectCartaoFaturas || !selectCartaoLanc) return;
-    selectCartaoFaturas.innerHTML = "";
-    selectCartaoLanc.innerHTML = "";
-    (state.cards || []).forEach((card) => {
-      selectCartaoFaturas.appendChild(new Option(card.nome, card.id));
-      selectCartaoLanc.appendChild(new Option(card.nome, card.id));
-    });
-  }
 
   // ===========================// CATEGORIAS // ===========================
   async function loadCategorias() {
@@ -453,7 +440,6 @@ function renderCards() {
 
   async function fecharFaturaComConta(conta_id) {
     try {
-      const cartaoId = selectCartaoFaturas.value;
       const venc = dataVencimentoFatura.value;
       const ym = selectMesFaturas.value;
 
@@ -533,7 +519,6 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
   // ===========================
   if (btnFecharFatura) btnFecharFatura.onclick = async () => {
     try {
-      const cartaoId = selectCartaoFaturas.value;
       const venc = dataVencimentoFatura.value;
       const ym = selectMesFaturas.value;
 
@@ -660,7 +645,6 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
  // ====================== LANÇAR COMPRA (PARCELADA) ======================
 if (btnAddPurchase) btnAddPurchase.onclick = async () => {
   try {
-    const cartao_id = selectCartaoLanc.value;
     const descricao = cartDesc.value.trim();
     const valor = Number(cartValor.value || 0);
     let parcelas = Number(cartParcelas.value || 1);
@@ -757,7 +741,6 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     const conta = contaPagAntecipado.value;
     const valor = Number(valorPagAntecipado.value || 0);
     const data = dataPagAntecipado.value;
-    const cartaoId = selectCartaoFaturas.value;
 
     if (!conta || !valor || !data) return showToast("Preencha todos os campos.", "error");
 
