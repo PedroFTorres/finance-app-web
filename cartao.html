@@ -24,68 +24,56 @@
   </header>
 
   <!-- CONTEÚDO -->
-  <main>
+ <main class="cartoes-page">
 
-    <div class="cartoes-layout">
+  <div class="cartoes-layout">
 
-      <!-- COLUNA ESQUERDA — CARTÕES -->
-      <aside class="cartoes-sidebar">
+    <!-- SIDEBAR CARTÕES -->
+    <aside class="cartoes-sidebar">
 
-        <div class="sidebar-header">
-          <h3>Meus Cartões</h3>
-          <button id="btn-new-card" class="btn-primary">Novo</button>
+      <div class="sidebar-header">
+        <h3>Meus Cartões</h3>
+        <button id="btn-new-card" class="btn-primary">Novo</button>
+      </div>
+
+      <div id="cards-list" class="cards-list">
+        <!-- cartões renderizados via JS -->
+      </div>
+
+    </aside>
+
+    <!-- CONTEÚDO FATURA -->
+    <section class="cartoes-conteudo">
+
+      <h3 id="fatura-titulo"></h3>
+      <p id="fatura-periodo"></p>
+      <p id="fatura-total" style="font-size:22px;font-weight:600"></p>
+
+      <ul id="lista-fatura" class="lista-fatura"></ul>
+
+      <div class="box" style="margin-top:24px">
+        <label>Conta para pagamento</label>
+        <select id="conta-pagamento"></select>
+
+        <label style="margin-top:10px">Vencimento</label>
+        <input type="date" id="fatura-vencimento" />
+
+        <div style="display:flex;gap:12px;margin-top:16px">
+          <button id="btn-fechar-fatura" class="btn-danger">
+            Fechar Fatura
+          </button>
+
+          <button id="btn-gerar-despesa" class="btn-primary">
+            Gerar Despesa
+          </button>
         </div>
+      </div>
 
-        <div id="cards-list" class="cards-list">
-          <!-- cartões renderizados via JS -->
-        </div>
+    </section>
 
-      </aside>
+  </div>
 
-      <!-- COLUNA DIREITA — FATURA -->
-      <section class="cartoes-conteudo">
-
-        <!-- ⚠️ A PARTIR DAQUI É SUA FATURA EXISTENTE -->
-        <!-- NÃO MEXA NO cartao.js, ELE JÁ CONTROLA ISSO -->
-
-        <div id="view-faturas">
-
-          <h3 id="fatura-titulo">Fatura</h3>
-
-          <div id="fatura-info">
-            <p id="fatura-periodo"></p>
-            <p id="fatura-total" style="font-size:22px;font-weight:600"></p>
-          </div>
-
-          <div id="lista-fatura">
-            <!-- compras da fatura -->
-          </div>
-
-          <div class="box" style="margin-top:20px">
-            <label>Conta para pagamento</label>
-            <select id="conta-pagamento"></select>
-
-            <label style="margin-top:10px">Vencimento</label>
-            <input type="date" id="fatura-vencimento" />
-
-            <div style="display:flex;gap:10px;margin-top:16px">
-              <button id="btn-fechar-fatura" class="btn-danger">
-                Fechar Fatura
-              </button>
-
-              <button id="btn-gerar-despesa" class="btn-primary">
-                Gerar Despesa
-              </button>
-            </div>
-          </div>
-
-        </div>
-
-      </section>
-
-    </div>
-
-  </main>
+</main>
 
   <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
