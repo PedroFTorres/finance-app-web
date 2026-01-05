@@ -165,11 +165,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (userEmail) userEmail.textContent = state.user.email;
 
     try {
-      await loadCards();
-      await loadCategorias();
-      popularMesFatura();
-      popularFaturasLancamento();
-      showView(viewFaturas);
+     await loadCards();
+renderCardsSidebar();
+
+await loadCategorias();
+
+popularMesFatura();
+popularFaturasLancamento();
+
+await loadFaturaForSelected();
+showView(viewFaturas);
+
     } catch (err) {
       console.error(err);
       showToast("Erro ao carregar dados.", "error");
@@ -191,7 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const navLancamento = document.getElementById("nav-lancamento");
   const navHistorico = document.getElementById("nav-historico");
 
-  if (navFatura) navFatura.onclick = async () => { await loadFaturasSelect(); showView(viewFaturas); };
+  if (navFatura) navFatura.onclick = async () => { await loadFaturaForSelected(); showView(viewFaturas); };
   if (navLancamento) navLancamento.onclick = async () => { await loadSelectsForLanc(); popularFaturasLancamento(); showView(viewLancamento); };
   if (navHistorico) navHistorico.onclick = async () => { await loadHistoricoFaturas(); showView(viewHistorico); };
   const btnVoltarEdicao = document.getElementById("btn-voltar-edicao");
@@ -213,84 +219,39 @@ if (btnVoltarEdicao) {
     
   }
 
-function renderCards() {
-  console.log("RENDER STACK NOVO", state.cards.length);
-
+function renderCardsSidebar() {
   if (!cardsList) return;
 
-  cardsList.className = "cards-stack";
   cardsList.innerHTML = "";
-  cardsList.style.minHeight = (state.cards.length * 30 + 180) + "px";
 
-  if (!state.cards || state.cards.length === 0) return;
+  if (!state.cards || state.cards.length === 0) {
+    cardsList.innerHTML = "<p>Nenhum cartão cadastrado</p>";
+    return;
+  }
 
-  // define ativo inicial
   if (!activeCardId) {
     activeCardId = state.cards[0].id;
   }
 
-  // reordena: inativos primeiro, ativo por último
-  const ordered = [
-    ...state.cards.filter(c => c.id !== activeCardId),
-    state.cards.find(c => c.id === activeCardId)
-  ].filter(Boolean);
-
-  ordered.forEach((c, index) => {
-    const isActive = c.id === activeCardId;
+  state.cards.forEach((c, i) => {
     const el = document.createElement("div");
-
-    el.className = "card-item " + (isActive ? "active" : "inactive");
-    el.style.setProperty("--offset", `${index * 30}px`);
-    el.style.background = getCardGradient(index);
-
-    el.onclick = () => {
-      activeCardId = c.id;
-      renderCards();
-    };
+    el.className = "card-tile" + (c.id === activeCardId ? " active" : "");
+    el.style.background = getCardGradient(i);
 
     el.innerHTML = `
-      <div class="card-name">${c.nome}</div>
-      <div class="card-meta">Limite: ${formatReal(c.limite)}</div>
-      <div class="card-meta">
-        Fecha dia ${c.dia_fechamento} • Venc ${c.dia_vencimento}
-      </div>
-
-      <div class="card-actions" style="margin-top:12px;">
-        <button class="btn-view-faturas" data-id="${c.id}">Faturas</button>
-        <button class="btn-lancar" data-id="${c.id}">Lançar</button>
-        <button class="btn-delete" data-id="${c.id}">Excluir</button>
-      </div>
+      <div class="nome">${c.nome}</div>
+      <div class="info">Limite: ${formatReal(c.limite)}</div>
+      <div class="info">Fecha ${c.dia_fechamento} • Venc ${c.dia_vencimento}</div>
     `;
 
-    cardsList.appendChild(el);
-  });
-
-  // handlers originais
-  document.querySelectorAll(".btn-view-faturas").forEach(btn => {
-    btn.onclick = () => {
-      activeCardId = btn.dataset.id;
-      loadFaturasSelect();
+    el.onclick = async () => {
+      activeCardId = c.id;
+      renderCardsSidebar();
+      await loadFaturaForSelected();
       showView(viewFaturas);
     };
-  });
 
-  document.querySelectorAll(".btn-lancar").forEach(btn => {
-    btn.onclick = () => {
-      activeCardId = btn.dataset.id;
-      loadSelectsForLanc();
-      popularFaturasLancamento();
-      showView(viewLancamento);
-    };
-  });
-
-  document.querySelectorAll(".btn-delete").forEach(btn => {
-    btn.onclick = async () => {
-      if (!confirm("Excluir este cartão?")) return;
-      await supabase.from("cartoes_credito").delete().eq("id", btn.dataset.id);
-      if (activeCardId === btn.dataset.id) activeCardId = null;
-      await loadCards();
-      showToast("Cartão excluído.");
-    };
+    cardsList.appendChild(el);
   });
 }
 
@@ -1228,8 +1189,10 @@ if (btnSaveCard) {
       }]);
 
       showToast("Cartão criado com sucesso!");
-      await loadCards();
-      showView(viewFaturas);
+     await loadCards();
+renderCardsSidebar();
+await loadFaturaForSelected();
+showView(viewFaturas);
 
     } catch (err) {
       console.error(err);
