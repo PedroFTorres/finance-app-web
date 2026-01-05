@@ -64,6 +64,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnMesPrev = document.getElementById("mes-prev");
   const btnMesNext = document.getElementById("mes-next");
 
+  const faturaTitulo = document.getElementById("fatura-titulo");
+const faturaPeriodo = document.getElementById("fatura-periodo");
+const faturaTotal = document.getElementById("fatura-total");
+const listaComprasFatura = document.getElementById("lista-fatura");
+
   const selectCategoriaLancCartao = document.getElementById("select-categoria-lanc-cartao");
   const cartDesc = document.getElementById("cart-desc");
   const cartValor = document.getElementById("cart-valor");
@@ -283,14 +288,9 @@ function renderCardsSidebar() {
 
   // =========================== // CARREGAR FATURA / RENDER (USANDO data_fatura) // ===========================
   async function loadFaturaForSelected() {
-  if (!activeCardId) {
-    state.faturaAtual = null;
-    if (faturaSummary) faturaSummary.innerHTML = "<div>Nenhum cartão selecionado.</div>";
-    if (listaComprasFatura) listaComprasFatura.innerHTML = "";
-    updateButtonsForFatura();
-    return;
-  }
-
+  if (!activeCardId && state.cards && state.cards.length > 0) {
+  activeCardId = state.cards[0].id;
+}
   const cartao_id = activeCardId;
   const ano = mesFatura.getFullYear();
   const mes = mesFatura.getMonth() + 1;
@@ -310,26 +310,43 @@ function renderCardsSidebar() {
   const total = (compras || []).reduce((s, c) => s + Number(c.valor || 0), 0);
   const card = state.cards.find(c => c.id === cartao_id);
 
-  if (faturaSummary) {
-    faturaSummary.innerHTML = `
-      <div class="big">${card?.nome || "Cartão"}</div>
-      <div>${mes}/${ano}</div>
-      <div class="big">${formatReal(total)}</div>
-      <div id="status-fatura"></div>
-    `;
-  }
+ if (faturaTitulo) {
+  faturaTitulo.textContent = card?.nome || "Cartão";
+}
+
+if (faturaPeriodo) {
+  faturaPeriodo.textContent = `${String(mes).padStart(2, "0")}/${ano}`;
+}
+
+if (faturaTotal) {
+  faturaTotal.textContent = formatReal(total);
+}
 
   if (listaComprasFatura) {
-    listaComprasFatura.innerHTML = "";
-    (compras || []).forEach(c => {
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <span>${new Date(c.data_compra+"T00:00:00").toLocaleDateString("pt-BR")} — ${c.descricao}</span>
-        <span>${formatReal(c.valor)}</span>
-      `;
-      listaComprasFatura.appendChild(li);
-    });
-  }
+  listaComprasFatura.innerHTML = "";
+
+  (compras || []).forEach((c) => {
+    const li = document.createElement("li");
+
+    const dataExibida = c.data_compra
+      ? new Date(c.data_compra + "T00:00:00").toLocaleDateString("pt-BR")
+      : "";
+
+    li.innerHTML = `
+      <span>${dataExibida} — ${c.descricao}</span>
+      <span>${formatReal(c.valor)}</span>
+    `;
+
+    li.style.cursor = "pointer";
+    li.onclick = () => {
+      if (Number(c.parcelas || 0) === 1) abrirEdicaoAvista(c);
+      else abrirEdicaoCompraParcelada(c);
+    };
+
+    listaComprasFatura.appendChild(li);
+  });
+}
+
 
   const { data: faturaDB } = await supabase
     .from("cartao_faturas")
