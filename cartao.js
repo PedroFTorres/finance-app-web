@@ -174,7 +174,7 @@ popularMesFatura();
 popularFaturasLancamento();
 
 await loadFaturaForSelected();
-showView(viewFaturas);
+
 
     } catch (err) {
       console.error(err);
@@ -197,13 +197,12 @@ showView(viewFaturas);
   const navLancamento = document.getElementById("nav-lancamento");
   const navHistorico = document.getElementById("nav-historico");
 
-  if (navFatura) navFatura.onclick = async () => { await loadFaturaForSelected(); showView(viewFaturas); };
+  if (navFatura) navFatura.onclick = async () => { await loadFaturaForSelected(); };
   if (navLancamento) navLancamento.onclick = async () => { await loadSelectsForLanc(); popularFaturasLancamento(); showView(viewLancamento); };
   if (navHistorico) navHistorico.onclick = async () => { await loadHistoricoFaturas(); showView(viewHistorico); };
   const btnVoltarEdicao = document.getElementById("btn-voltar-edicao");
 if (btnVoltarEdicao) {
   btnVoltarEdicao.onclick = () => {
-    showView(viewFaturas);
   };
 }
 
@@ -245,11 +244,11 @@ function renderCardsSidebar() {
     `;
 
     el.onclick = async () => {
-      activeCardId = c.id;
-      renderCardsSidebar();
-      await loadFaturaForSelected();
-      showView(viewFaturas);
-    };
+  activeCardId = c.id;
+  renderCardsSidebar();
+  await loadFaturaForSelected();
+};
+
 
     cardsList.appendChild(el);
   });
@@ -686,7 +685,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     cartValor.value = "";
     cartParcelas.value = 1;
     cartData.value = "";
-    showView(viewFaturas);
+    
   };
 
   // ===========================// PAGAMENTO ANTECIPADO// ===========================
@@ -719,7 +718,6 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     }]);
 
     showToast("Pagamento antecipado registrado.");
-    showView(viewFaturas);
     await loadFaturaForSelected();
   };
 
@@ -773,7 +771,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     right.appendChild(div);
     viewEditarAvista = div;
 
-    document.getElementById("btn-avista-voltar").onclick = () => showView(viewFaturas);
+   
     document.getElementById("btn-avista-salvar").onclick = salvarEdicaoAvista;
     document.getElementById("btn-avista-excluir").onclick = excluirCompraAvista;
   }
@@ -843,7 +841,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
 
     showToast("Compra salva!");
     await loadFaturaForSelected();
-    showView(viewFaturas);
+    
   }
 
   async function excluirCompraAvista() {
@@ -854,7 +852,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
 
     showToast("Compra excluída.");
     await loadFaturaForSelected();
-    showView(viewFaturas);
+ 
   }
 
   // ===========================// EDIÇÃO PARCELADA // ===========================
@@ -1064,7 +1062,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
 
         showToast("Alterações aplicadas (parcial). Atualize valores individuais se necessário.");
         await loadFaturaForSelected();
-        showView(viewFaturas);
+       
 
       } catch (err) {
         console.error(err);
@@ -1083,7 +1081,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
 
         showToast("Compra parcelada excluída.");
         await loadFaturaForSelected();
-        showView(viewFaturas);
+        
       } catch (err) {
         console.error(err);
         showToast("Erro ao excluir compra.", "error");
@@ -1192,7 +1190,7 @@ if (btnSaveCard) {
      await loadCards();
 renderCardsSidebar();
 await loadFaturaForSelected();
-showView(viewFaturas);
+
 
     } catch (err) {
       console.error(err);
@@ -1210,7 +1208,7 @@ showView(viewFaturas);
 // ===========================// NOVO CARTÃO — cancelar// ===========================
 if (btnCancelCard) {
   btnCancelCard.onclick = () => {
-    showView(viewFaturas);
+   
   };
 }
  
