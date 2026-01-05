@@ -64,10 +64,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnMesPrev = document.getElementById("mes-prev");
   const btnMesNext = document.getElementById("mes-next");
 
-  const faturaSummary = document.getElementById("fatura-summary");
-  const listaComprasFatura = document.getElementById("lista-compras-fatura");
-
-
   const selectCategoriaLancCartao = document.getElementById("select-categoria-lanc-cartao");
   const cartDesc = document.getElementById("cart-desc");
   const cartValor = document.getElementById("cart-valor");
