@@ -122,15 +122,22 @@ const listaComprasFatura = document.getElementById("lista-fatura");
   function formatISO(d) {
     return new Date(d).toISOString().slice(0,10);
   }
-  function getCardGradient(index) {
+  function getCardGradient(i) {
   const gradients = [
-    "linear-gradient(135deg, #6a5cff, #8f7bff)",
-    "linear-gradient(135deg, #ff7a18, #ffb347)",
-    "linear-gradient(135deg, #00b09b, #96c93d)",
-    "linear-gradient(135deg, #2193b0, #6dd5ed)",
-    "linear-gradient(135deg, #cc2b5e, #753a88)"
+    // roxo premium (principal)
+    "linear-gradient(135deg, #5f4dff, #7b6dff)",
+
+    // azul escuro elegante
+    "linear-gradient(135deg, #1f3c88, #3a6df0)",
+
+    // cinza grafite (corporativo)
+    "linear-gradient(135deg, #2c2c2c, #4b4b4b)",
+
+    // verde escuro discreto
+    "linear-gradient(135deg, #1f7a63, #2ea98c)"
   ];
-  return gradients[index % gradients.length];
+
+  return gradients[i % gradients.length];
 }
 
   // get or create categoria helper
