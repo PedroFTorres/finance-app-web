@@ -31,40 +31,9 @@
   margin-top: 12px;
 }
 
-/* ===========================
-   CARTÃO INDIVIDUAL
-=========================== */
+/* =========================== CARTÃO INDIVIDUAL=========================== */
 
-.card-item {
-  position: relative;
-  background: linear-gradient(135deg, #6f5cff, #8b7cff);
-  color: #fff;
-  border-radius: 14px;
-  padding: 14px 16px;
-  cursor: pointer;
 
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    opacity 0.18s ease;
-}
-
-/* hover = ação clara */
-.card-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 14px 30px rgba(0,0,0,0.25);
-  opacity: 0.95;
-}
-
-/* cartão ativo */
-.card-item.active {
-  outline: 3px solid #ffb347;
-  box-shadow: 0 16px 36px rgba(0,0,0,0.35);
-}
 
 /* título */
 .card-item strong {
@@ -179,105 +148,7 @@
 .box button {
   margin-top: 14px;
 }
-/* =========================== WALLET STYLE (EMPILHADO) =========================== */
 
-.cards-list {
-  position: relative;
-  height: 220px;
-}
-
-/* cartão base */
-.card-item {
-  position: absolute;
-  left: 0;
-  right: 0;
-  margin: auto;
-
-  width: 100%;
-  height: 170px;
-
-  border-radius: 20px;
-  padding: 16px 18px;
-  color: #fff;
-  cursor: pointer;
-
-  background: linear-gradient(135deg, #5f4dff, #8b7cff);
-  box-shadow: 0 18px 35px rgba(0,0,0,0.25);
-
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-
-  transition:
-    transform .25s ease,
-    box-shadow .25s ease,
-    opacity .25s ease;
-}
-
-/* cartões atrás */
-.card-item.wallet-1 {
-  transform: translateY(14px) scale(0.95);
-  opacity: 0.7;
-  z-index: 1;
-}
-
-.card-item.wallet-2 {
-  transform: translateY(28px) scale(0.9);
-  opacity: 0.5;
-  z-index: 0;
-}
-
-/* cartão ativo */
-.card-item.active {
-  transform: translateY(0) scale(1);
-  opacity: 1;
-  z-index: 3;
-  box-shadow: 0 25px 45px rgba(0,0,0,0.4);
-  outline: 3px solid rgba(255,255,255,0.7);
-}
-
-/* topo */
-.card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.card-brand {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-/* chip fake */
-.card-chip {
-  width: 38px;
-  height: 28px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #e6c77a, #bfa24d);
-}
-
-/* número */
-.card-number {
-  font-size: 16px;
-  letter-spacing: 2px;
-  margin: 8px 0;
-}
-
-/* rodapé */
-.card-bottom {
-  display: flex;
-  justify-content: space-between;
-}
-
-.card-bottom small {
-  font-size: 10px;
-  opacity: 0.8;
-}
-
-.card-bottom strong {
-  font-size: 13px;
-  font-weight: 600;
-}
 /* ============================
    CARTÕES – VISUAL TIPO CRÉDITO
 ============================ */
