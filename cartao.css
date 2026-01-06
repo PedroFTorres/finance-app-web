@@ -20,17 +20,6 @@
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
 
-/* ===========================
-   LISTA DE CARTÕES
-=========================== */
-
-.cards-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 12px;
-}
-
 /* =========================== CARTÃO INDIVIDUAL=========================== */
 
 
