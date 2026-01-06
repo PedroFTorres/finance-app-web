@@ -1166,7 +1166,23 @@ if (btnNewCard) {
     showView(viewNewCard);
   };
 }
-// ================================// GERAR DESPESA = LANÇAR COMPRA// ================================
+  // ================================//  LANÇAR COMPRA// ================================
+  if (btnLancarCompra) {
+  btnLancarCompra.onclick = () => {
+    if (!activeCardId) {
+      showToast("Selecione um cartão primeiro.", "warning");
+      return;
+    }
+
+    // guarda o cartão ativo para o lançamento
+    state.cartaoLancamentoAtual = activeCardId;
+
+    // abre a tela de lançamento
+    showView(viewLancamento);
+  };
+}
+
+// ================================// GERAR DESPESA // ================================
 const btnGerarDespesa = document.getElementById("btn-gerar-despesa");
 
 if (btnGerarDespesa) {
