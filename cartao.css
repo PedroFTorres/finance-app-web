@@ -278,3 +278,68 @@
   font-size: 13px;
   font-weight: 600;
 }
+/* ============================
+   CARTÕES – VISUAL TIPO CRÉDITO
+============================ */
+
+.cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card-tile {
+  position: relative;
+  height: 140px;
+  border-radius: 16px;
+  padding: 16px;
+  color: #fff;
+  cursor: pointer;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-tile:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(0,0,0,0.22);
+}
+
+.card-tile.active {
+  outline: 3px solid rgba(255,255,255,0.85);
+}
+
+/* Nome do cartão */
+.card-tile .nome {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* Infos menores */
+.card-tile .info {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* Simula chip do cartão */
+.card-tile::before {
+  content: "";
+  width: 42px;
+  height: 30px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #d9d9d9, #b0b0b0);
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  opacity: 0.9;
+}
+
+/* Botão novo cartão separado */
+#btn-new-card {
+  margin-top: 16px;
+}
