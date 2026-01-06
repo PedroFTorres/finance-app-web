@@ -1,408 +1,181 @@
-:root {
-  --roxo:#7a4dff;
-  --roxo-claro:#efe9ff;
-  --text:#333;
-  --muted:#7b7f86;
-  --bg:#f7f7fb;
-  --panel:#ffffff;
-  --radius:14px;
-  --shadow:0 6px 18px rgba(0,0,0,0.06);
-  font-family: "Inter", sans-serif;
-}
+/* ===========================
+   LAYOUT GERAL
+=========================== */
 
-body {
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-}
-
-.top {
-  background:#7a4dff;
-  color:#fff;
-  padding:14px 20px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.nav {
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.nav-btn {
-  background:rgba(255,255,255,0.2);
-  border:none;
-  padding:6px 12px;
-  border-radius:8px;
-  color:#fff;
-  cursor:pointer;
-}
-
-.container {
-  display:flex;
-  gap:22px;
-  padding:22px;
-  max-width:1300px;
-  margin:auto;
-}
-
-.left-column {
-  width:36%;
-  display:flex;
-  flex-direction:column;
-  gap:20px;
-}
-
-.right-column {
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  gap:20px;
-}
-
-.panel {
-  background:var(--panel);
-  padding:20px;
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-}
-
-.panel-header {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:14px;
-}
-
-.btn-primary {
-  background:var(--roxo);
-  border:none;
-  padding:10px 16px;
-  color:#fff;
-  border-radius:10px;
-  cursor:pointer;
-}
-
-.btn-secondary {
-  background:#fff;
-  border:1px solid #ddd;
-  padding:10px 16px;
-  border-radius:10px;
-  cursor:pointer;
-}
-
-.btn-danger {
-  background:#e83f5b;
-  border:none;
-  color:#fff;
-  padding:10px 16px;
-  border-radius:10px;
-  cursor:pointer;
-}
-
-.action-btn {
-  background:#fff;
-  border:1px solid #e8e6f3;
-  padding:12px;
-  border-radius:12px;
-  cursor:pointer;
-  flex:1;
-  text-align:center;
-}
-
-.actions-grid {
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-}
-
-.cards-list {
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-}
-
-.card-item {
-  background:linear-gradient(180deg,#fff,#f8f5ff);
-  border-radius:var(--radius);
-  padding:14px;
-  display:flex;
-  justify-content:space-between;
-  box-shadow:var(--shadow);
-}
-
-.card-actions {
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-.form {
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-
-.form input,
-.form select {
-  padding:10px;
-  border-radius:10px;
-  border:1px solid #ddd;
-}
-
-.actions-row {
-  display:flex;
-  gap:14px;
-  margin-top:10px;
-}
-
-.hidden { display:none; }
-
-.mes-navegacao {
-  display:flex;
-  align-items:center;
-  gap:12px;
-  background:#f3f0ff;
-  padding:8px 12px;
-  border-radius:10px;
-}
-
-.mes-btn {
-  background:#fff;
-  border:1px solid #ddd;
-  padding:6px 12px;
-  cursor:pointer;
-  border-radius:8px;
-}
-
-.fatura-summary {
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  margin-bottom:14px;
-}
-
-.fatura-summary .big {
-  font-size:22px;
-  font-weight:700;
-}
-
-.fatura-transactions ul {
-  list-style:none;
-  margin:0;
-  padding:0;
-}
-
-.fatura-transactions li {
-  display:flex;
-  justify-content:space-between;
-  padding:10px 0;
-  border-bottom:1px solid #eee;
-}
-
-.faturas-list li {
-  padding:10px 0;
-  border-bottom:1px solid #eee;
-}
-
-@media(max-width:900px){
-  .container { flex-direction:column; }
-  .left-column { width:100%; }
-}
-/* MODAL PADRÃO */
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.45);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-}
-
-.modal.hidden {
-  display: none;
-}
-
-.modal-content {
-  background: white;
-  padding: 25px;
-  border-radius: 14px;
-  width: 320px;
-  box-shadow: var(--shadow);
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.modal-content h3 {
-  margin-bottom: 6px;
-}
-/* ===========================TOAST NOTIFICATIONS=========================== */
-#toast-container {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 999999;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.toast {
-  background: var(--roxo);
-  color: white;
-  padding: 12px 18px;
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  font-size: 15px;
-  font-weight: 600;
-  max-width: 320px;
-  opacity: 0;
-  transform: translateX(30px);
-  animation: toastIn 0.3s forwards, toastOut 0.3s forwards 3.2s;
-}
-
-.toast.error {
-  background: #e83f5b; /* vermelho usado no tema */
-}
-
-@keyframes toastIn {
-  from { opacity: 0; transform: translateX(30px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes toastOut {
-  from { opacity: 1; transform: translateX(0); }
-  to   { opacity: 0; transform: translateX(30px); }
-}
-.cards-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.card-item {
-  background: linear-gradient(135deg, #7a4dff, #9b7bff);
-  border-radius: 16px;
-  padding: 16px;
-  color: #fff;
-  box-shadow: var(--shadow);
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 22px rgba(0,0,0,0.18);
-}
-
-.card-item.active {
-  outline: 3px solid rgba(255,255,255,0.6);
-}
 .cartoes-layout {
   display: grid;
   grid-template-columns: 320px 1fr;
-  gap: 24px;
+  gap: 32px;
   align-items: flex-start;
 }
 
-.cartoes-sidebar {
+/* ===========================
+   CARD CONTAINER
+=========================== */
+
+.card-box {
   background: #fff;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
+
+/* ===========================
+   LISTA DE CARTÕES
+=========================== */
 
 .cards-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-top: 12px;
 }
+
+/* ===========================
+   CARTÃO INDIVIDUAL
+=========================== */
 
 .card-item {
-  border-radius: 14px;
-  padding: 14px;
+  position: relative;
+  background: linear-gradient(135deg, #6f5cff, #8b7cff);
   color: #fff;
+  border-radius: 14px;
+  padding: 14px 16px;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.18s ease;
 }
 
+/* hover = ação clara */
 .card-item:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.25);
+  opacity: 0.95;
 }
 
+/* cartão ativo */
 .card-item.active {
-  outline: 3px solid rgba(255,255,255,0.7);
+  outline: 3px solid #ffb347;
+  box-shadow: 0 16px 36px rgba(0,0,0,0.35);
 }
 
-.cartoes-conteudo {
-  background: #fff;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
-}
-.card-item {
-  border-radius: 14px;
-  padding: 14px;
-  color: #fff;
-  cursor: pointer;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.12);
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-
+/* título */
 .card-item strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* detalhes */
+.card-item small {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* dica visual */
+.card-item::after {
+  content: "Ver fatura →";
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.card-item:hover::after {
+  opacity: 1;
+}
+
+/* ===========================
+   BOTÃO NOVO CARTÃO
+=========================== */
+
+.btn-novo-cartao {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f2f1ff;
+  border: 1px dashed #6f5cff;
+  color: #6f5cff;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.18s ease;
+}
+
+.btn-novo-cartao:hover {
+  background: #e7e5ff;
+}
+
+/* ===========================
+   FATURA
+=========================== */
+
+.fatura-box {
+  background: #fff;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.fatura-box h3 {
+  margin: 0;
+  color: #6f5cff;
+}
+
+.fatura-total {
+  font-size: 26px;
+  font-weight: 600;
+  margin: 12px 0;
+}
+
+.lista-fatura {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+}
+
+.lista-fatura li {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.lista-fatura li:hover {
+  background: #f8f7ff;
+}
+
+/* ===========================
+   FORM PAGAMENTO
+=========================== */
+
+.box {
+  margin-top: 20px;
+}
+
+.box label {
   display: block;
-  font-size: 15px;
+  font-size: 13px;
   margin-bottom: 6px;
 }
-/* Cartões - comportamento e clareza */
 
-.card-item {
-  background: #f4f4f8;        /* neutro */
-  color: #333;
-  border-radius: 12px;
-  padding: 12px;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: background .15s ease, border .15s ease;
+.box select,
+.box input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
 }
 
-.card-item:hover {
-  background: #ececff;
-}
-
-.card-item.active {
-  background: #6f5cff;       /* destaque */
-  color: #fff;
-  border-color: #6f5cff;
-}
-
-
-.card-item small {
-  opacity: .9;
-  display: block;
-  line-height: 1.4;
-}
-
-.card-item.active {
-  outline: 3px solid rgba(255,255,255,.7);
-}
-/* ============================= *//* AJUSTES VISUAIS DA FATURA *//* ============================= */
-
-.cartoes-conteudo h3 {
-  margin-bottom: 4px;
-}
-
-.cartoes-conteudo p {
-  margin-top: 0;
-  color: #666;
-}
-
-.cartoes-conteudo .valor-fatura {
-  font-size: 24px;
-  font-weight: 600;
-  margin: 10px 0 16px;
+.box button {
+  margin-top: 14px;
 }
