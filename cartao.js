@@ -50,8 +50,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let viewEditarAvista = document.getElementById("view-editar-avista"); // pode ser criado dinamicamente
   let activeCardId = null;
 
+  const btnNewCard = document.getElementById("btn-new-card");
   const btnSaveCard = document.getElementById("btn-save-card");
   const btnCancelCard = document.getElementById("btn-cancel-card");
+  const btnLancarCompra = document.getElementById("btn-lancar-compra");
 
   const cardNome = document.getElementById("card-nome");
   const cardLimite = document.getElementById("card-limite");
