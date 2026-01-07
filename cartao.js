@@ -1170,6 +1170,8 @@ if (btnNewCard) {
 
   showView(viewNewCard);
 };
+  }
+
 
   // ================================//  LANÇAR COMPRA// ================================
 btnLancarCompra.onclick = async () => {
