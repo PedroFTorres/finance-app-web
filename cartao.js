@@ -1119,10 +1119,15 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     await loadCategorias();
     const { data: contas } = await supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id);
 
-    selectContaPagamento.innerHTML = "";
-    (contas || []).forEach((c) => {
-      selectContaPagamento.appendChild(new Option(`${c.nome} (${formatReal(c.saldo_atual)})`, c.id));
-    });
+   if (selectContaPagamento) {
+  selectContaPagamento.innerHTML = "";
+
+  (contas || []).forEach((c) =>
+    selectContaPagamento.appendChild(
+      new Option(`${c.nome} (${formatReal(c.saldo_atual)})`, c.id)
+    )
+  );
+}
 
     // popular selectFaturaInicial com base no mesLanc atual e próximos 24 meses (exemplo)
     if (selectFaturaInicial) {
