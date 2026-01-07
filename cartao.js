@@ -1167,20 +1167,24 @@ if (btnNewCard) {
   };
 }
   // ================================//  LANÇAR COMPRA// ================================
-  if (btnLancarCompra) {
-  btnLancarCompra.onclick = () => {
-    if (!activeCardId) {
-      showToast("Selecione um cartão primeiro.", "warning");
-      return;
-    }
+ btnLancarCompra.onclick = async () => {
 
-    // guarda o cartão ativo para o lançamento
-    state.cartaoLancamentoAtual = activeCardId;
+  if (!activeCardId) {
+    showToast("Selecione um cartão primeiro.", "warning");
+    return;
+  }
 
-    // abre a tela de lançamento
-    showView(viewLancamento);
-  };
-}
+  // guarda o cartão ativo para o lançamento
+  state.cartaoLancamentoAtual = activeCardId;
+
+  // 🔥 ESSENCIAL — reidrata contexto da tela
+  await loadSelectsForLanc();
+  popularFaturasLancamento();
+
+  // abre a tela de lançamento
+  showView(viewLancamento);
+};
+
 
 // ================================// GERAR DESPESA // ================================
 const btnGerarDespesa = document.getElementById("btn-gerar-despesa");
