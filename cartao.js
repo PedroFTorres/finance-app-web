@@ -932,6 +932,14 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
 
     renderParcelasEdicao();
     showView(viewEditarCompra);
+    // botão voltar da edição parcelada
+const btnVoltar = document.getElementById("btn-voltar-edicao");
+if (btnVoltar) {
+  btnVoltar.onclick = async () => {
+    await loadFaturaForSelected();
+    showView(viewFaturas);
+  };
+}
 
   } catch (err) {
     console.error(err);
