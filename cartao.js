@@ -1167,24 +1167,20 @@ if (btnNewCard) {
   };
 }
   // ================================//  LANÇAR COMPRA// ================================
- btnLancarCompra.onclick = async () => {
+btnLancarCompra.onclick = async () => {
 
   if (!activeCardId) {
     showToast("Selecione um cartão primeiro.", "warning");
     return;
   }
 
-  // guarda o cartão ativo para o lançamento
   state.cartaoLancamentoAtual = activeCardId;
 
-  // 🔥 ESSENCIAL — reidrata contexto da tela
   await loadSelectsForLanc();
-  popularFaturasLancamento();
+  popularFaturasLancamento(); 
 
-  // abre a tela de lançamento
   showView(viewLancamento);
 };
-
 
 // ================================// GERAR DESPESA // ================================
 const btnGerarDespesa = document.getElementById("btn-gerar-despesa");
