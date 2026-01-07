@@ -625,96 +625,98 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
   }
 
  // ====================== LANÇAR COMPRA (PARCELADA) ======================
-if (btnAddPurchase) btnAddPurchase.onclick = async () => {
-  try {
-    const descricao = cartDesc.value.trim();
-    const valor = Number(cartValor.value || 0);
-    let parcelas = Number(cartParcelas.value || 1);
-    const dataCompra = cartData.value; // será exibida ao usuário
-    const categoriaSelecionada = selectCategoriaLancCartao.value;
+let IS_SAVING_PURCHASE = false;
 
- if (!state.cartaoLancamentoAtual || !descricao || !valor || !dataCompra)
-  return showToast("Preencha todos os campos.", "error");
+if (btnAddPurchase) {
+  btnAddPurchase.onclick = async () => {
 
+    // evita duplo clique
+    if (IS_SAVING_PURCHASE) return;
+    IS_SAVING_PURCHASE = true;
 
-    if (!selectFaturaInicial.value)
-      return showToast("Selecione a fatura inicial.", "error");
+    const originalText = btnAddPurchase.textContent;
+    btnAddPurchase.textContent = "Processando...";
+    btnAddPurchase.disabled = true;
 
-    if (parcelas < 1) parcelas = 1;
-
-    // ---- PARCELAMENTO CORRIGIDO ----
-    const [fatAno, fatMes] = selectFaturaInicial.value.split("-").map(Number);
-
-    // corrigir centavos
-    const valorParcelaBase = Number((valor / parcelas).toFixed(2));
-    const somaBase = Number((valorParcelaBase * parcelas).toFixed(2));
-    const diferenca = Number((valor - somaBase).toFixed(2));
-
-    for (let p = 1; p <= parcelas; p++) {
-
-      // mês da parcela
-      const mesOffset = p - 1;
-
-      // data_fatura será sempre dia 1
-      const dataFatura = new Date(fatAno, (fatMes - 1) + mesOffset, 1);
-      const dataFaturaISO = formatISO(dataFatura);
-
-      // monta descrição com parcela
-      const descricaoFinal = parcelas === 1
-        ? descricao
-        : `${descricao} (${p}/${parcelas})`;
-
-      // acerta centavos na primeira parcela
-      let valorParcela = valorParcelaBase;
-      if (p === 1 && diferenca !== 0) {
-        valorParcela = Number((valorParcelaBase + diferenca).toFixed(2));
+    try {
+      // ================= VALIDAÇÕES =================
+      if (!state.cartaoLancamentoAtual) {
+        showToast("Selecione um cartão primeiro.", "warning");
+        return;
       }
 
-      // insere no banco
-      await supabase.from("cartao_lancamentos").insert([{
-        id: crypto.randomUUID(),
-        user_id: state.user.id,
-        cartao_id: state.cartaoLancamentoAtual,
-        descricao: descricaoFinal,
-        valor: Number(valorParcela.toFixed(2)),
-        data_compra: dataCompra,          // EXIBIDA AO USUÁRIO
-        data_fatura: dataFaturaISO,       // USADA NO CÁLCULO
-        parcelas,
-        parcela_atual: p,
-        categoria_id: categoriaSelecionada || null,
-        tipo: "compra",
-        billed: false
-      }], { returning: "minimal" });
+      const descricao = cartDesc?.value?.trim();
+      const valor = Number(cartValor?.value);
+      const dataCompra = cartData?.value;
+      const parcelas = Number(cartParcelas?.value || 1);
+      const categoriaId = selectCategoriaLancCartao?.value || null;
+      const faturaInicial = selectFaturaInicial?.value;
+
+      if (!descricao || !valor || !dataCompra) {
+        showToast("Preencha todos os campos obrigatórios.", "warning");
+        return;
+      }
+
+      if (valor <= 0) {
+        showToast("O valor deve ser maior que zero.", "warning");
+        return;
+      }
+
+      // ================= CÁLCULOS =================
+      const valorParcela = Number((valor / parcelas).toFixed(2));
+      let dataBase = new Date(dataCompra);
+
+      // ================= INSERT =================
+      for (let p = 1; p <= parcelas; p++) {
+        const dataFaturaISO = new Date(
+          dataBase.getFullYear(),
+          dataBase.getMonth() + (p - 1),
+          1
+        ).toISOString().slice(0, 10);
+
+        await supabase.from("cartao_lancamentos").insert([{
+          id: crypto.randomUUID(),
+          user_id: state.user.id,
+          cartao_id: state.cartaoLancamentoAtual,
+          descricao: parcelas > 1 ? `${descricao} (${p}/${parcelas})` : descricao,
+          valor: valorParcela,
+          data_compra: dataCompra,
+          data_fatura: dataFaturaISO,
+          parcelas,
+          parcela_atual: parcelas > 1 ? p : 0,
+          categoria_id: categoriaId,
+          tipo: "compra",
+          billed: false
+        }]);
+      }
+
+      // ================= LIMPEZA =================
+      if (cartDesc) cartDesc.value = "";
+      if (cartValor) cartValor.value = "";
+      if (cartParcelas) cartParcelas.value = 1;
+      if (cartData) cartData.value = "";
+
+      showToast("Compra lançada com sucesso!");
+
+      // fecha modal
+      document
+        .getElementById("modal-lancamento")
+        .classList.add("hidden");
+
+      // recarrega fatura
+      await loadFaturaForSelected();
+
+    } catch (err) {
+      console.error(err);
+      showToast("Erro ao lançar compra.", "error");
+
+    } finally {
+      IS_SAVING_PURCHASE = false;
+      btnAddPurchase.disabled = false;
+      btnAddPurchase.textContent = originalText;
     }
-
-    // limpar campos
-    cartDesc.value = "";
-    cartValor.value = "";
-    cartParcelas.value = 1;
-    cartData.value = "";
-
-    await loadFaturaForSelected();
-    showToast("Compra lançada com sucesso!");
-
-  } catch (err) {
-    console.error(err);
-    showToast("Erro ao lançar compra.", "error");
-  }
-};
-
-if (btnCancelPurchase) btnCancelPurchase.onclick = async () => {
-
-  // limpar campos
-  if (cartDesc) cartDesc.value = "";
-  if (cartValor) cartValor.value = "";
-  if (cartParcelas) cartParcelas.value = 1;
-  if (cartData) cartData.value = "";
-
-  // fechar modal
-  document
-    .getElementById("modal-lancamento")
-    .classList.add("hidden");
-};
+  };
+}
 
   // ===========================// PAGAMENTO ANTECIPADO// ===========================
   if (btnPagamentoAntecipado) btnPagamentoAntecipado.onclick = async () => {
