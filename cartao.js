@@ -702,16 +702,18 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
   }
 };
 
- if (btnCancelPurchase) btnCancelPurchase.onclick = async () => {
+if (btnCancelPurchase) btnCancelPurchase.onclick = async () => {
+
   // limpar campos
   if (cartDesc) cartDesc.value = "";
   if (cartValor) cartValor.value = "";
   if (cartParcelas) cartParcelas.value = 1;
   if (cartData) cartData.value = "";
 
-  // voltar para a fatura do cartão ativo
-  await loadFaturaForSelected();
-  showView(viewFaturas);
+  // fechar modal
+  document
+    .getElementById("modal-lancamento")
+    .classList.add("hidden");
 };
 
   // ===========================// PAGAMENTO ANTECIPADO// ===========================
