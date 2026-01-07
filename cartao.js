@@ -633,8 +633,9 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     const dataCompra = cartData.value; // será exibida ao usuário
     const categoriaSelecionada = selectCategoriaLancCartao.value;
 
-    if (!cartao_id || !descricao || !valor || !dataCompra)
-      return showToast("Preencha todos os campos.", "error");
+ if (!state.cartaoLancamentoAtual || !descricao || !valor || !dataCompra)
+  return showToast("Preencha todos os campos.", "error");
+
 
     if (!selectFaturaInicial.value)
       return showToast("Selecione a fatura inicial.", "error");
@@ -673,7 +674,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
       await supabase.from("cartao_lancamentos").insert([{
         id: crypto.randomUUID(),
         user_id: state.user.id,
-        cartao_id,
+        cartao_id: state.cartaoLancamentoAtual,
         descricao: descricaoFinal,
         valor: Number(valorParcela.toFixed(2)),
         data_compra: dataCompra,          // EXIBIDA AO USUÁRIO
@@ -1160,17 +1161,16 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
   
 // ===========================// NOVO CARTÃO — abrir formulário// ===========================
 if (btnNewCard) {
-  btnNewCard.onclick = () => {
-    // limpar campos
-    cardNome.value = "";
-    cardLimite.value = "";
-    cardDiaFechamento.value = "";
-    cardDiaVencimento.value = "";
+ btnNewCard.onclick = () => {
 
-    // abrir tela de novo cartão
-    showView(viewNewCard);
-  };
-}
+  if (cardNome) cardNome.value = "";
+  if (cardLimite) cardLimite.value = "";
+  if (cardDiaFechamento) cardDiaFechamento.value = "";
+  if (cardDiaVencimento) cardDiaVencimento.value = "";
+
+  showView(viewNewCard);
+};
+
   // ================================//  LANÇAR COMPRA// ================================
 btnLancarCompra.onclick = async () => {
 
