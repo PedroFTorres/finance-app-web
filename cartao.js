@@ -882,42 +882,62 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
   }
 
   // ===========================// EDIÇÃO PARCELADA // ===========================
+  
   async function abrirEdicaoCompraParcelada(c) {
-    try {
-      const base = (c.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
-
-      const q = await supabase
-        .from("cartao_lancamentos")
-        .select("*")
-        .eq("cartao_id", c.cartao_id)
-        .ilike("descricao", `${base}%`)
-        .order("parcela_atual", { ascending: true });
-
-      if (!q.data || q.data.length === 0)
-        return showToast("Não foi possível carregar parcelas.", "error");
-
-      state.editingPurchaseParcels = q.data;
-      state.editingPurchaseFull = q.data[0];
-
-      document.getElementById("edit-desc").value = base;
-
-      const soma = q.data.reduce((s, p) => s + Number(p.valor), 0);
-      document.getElementById("edit-valor-total").value = soma;
-
-      document.getElementById("edit-data-inicial").value = q.data[0].data_compra;
-      document.getElementById("edit-total-parcelas").value = q.data.length;
-
-      await popularSelectCategoriaEdicao(state.editingPurchaseFull.categoria_id);
-      await popularSelectCartaoEdicao(state.editingPurchaseFull.cartao_id);
-
-      renderParcelasEdicao();
-      showView(viewEditarCompra);
-
-    } catch (err) {
-      console.error(err);
-      showToast("Erro ao abrir edição.", "error");
+  try {
+    // 🔒 garante que a view existe
+    if (!viewEditarCompra) {
+      showToast("Tela de edição parcelada não disponível.", "error");
+      return;
     }
+
+    // 🔒 garante que os campos existem
+    const elDesc = document.getElementById("edit-desc");
+    const elValor = document.getElementById("edit-valor-total");
+    const elData = document.getElementById("edit-data-inicial");
+    const elParcelas = document.getElementById("edit-total-parcelas");
+
+    if (!elDesc || !elValor || !elData || !elParcelas) {
+      showToast("Campos da edição parcelada não encontrados.", "error");
+      return;
+    }
+
+    const base = (c.descricao || "")
+      .replace(/\s*\(\d+\/\d+\)\s*$/, "")
+      .trim();
+
+    const q = await supabase
+      .from("cartao_lancamentos")
+      .select("*")
+      .eq("cartao_id", c.cartao_id)
+      .ilike("descricao", `${base}%`)
+      .order("parcela_atual", { ascending: true });
+
+    if (!q.data || q.data.length === 0) {
+      showToast("Não foi possível carregar parcelas.", "error");
+      return;
+    }
+
+    state.editingPurchaseParcels = q.data;
+    state.editingPurchaseFull = q.data[0];
+
+    // preencher campos com segurança
+    elDesc.value = base;
+    elValor.value = q.data.reduce((s, p) => s + Number(p.valor), 0);
+    elData.value = q.data[0].data_compra || "";
+    elParcelas.value = q.data.length;
+
+    await popularSelectCategoriaEdicao(state.editingPurchaseFull.categoria_id);
+    await popularSelectCartaoEdicao(state.editingPurchaseFull.cartao_id);
+
+    renderParcelasEdicao();
+    showView(viewEditarCompra);
+
+  } catch (err) {
+    console.error(err);
+    showToast("Erro ao abrir edição parcelada.", "error");
   }
+}
 
   function renderParcelasEdicao() {
     const lista = document.getElementById("lista-parcelas-editar");
