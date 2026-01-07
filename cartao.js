@@ -425,7 +425,7 @@ if (faturaTotal) {
       const venc = dataVencimentoFatura.value;
       const ym = selectMesFaturas.value;
 
-      if (!cartaoId) return showToast("Selecione um cartão.", "error");
+      if (!activeCardId) return showToast("Selecione um cartão.", "error");
       if (!venc) return showToast("Informe o vencimento.", "error");
 
       const [ano, mes] = ym.split("-").map(Number);
@@ -436,7 +436,7 @@ if (faturaTotal) {
       const { data: compras } = await supabase
         .from("cartao_lancamentos")
         .select("*")
-        .eq("cartao_id", cartaoId)
+        .eq("cartao_id", activeCardId)
         .gte("data_fatura", inicio)
         .lte("data_fatura", fim);
 
@@ -445,7 +445,7 @@ if (faturaTotal) {
       const { data: fData, error: errF } = await supabase.from("cartao_faturas").insert([{
         id: crypto.randomUUID(),
         user_id: state.user.id,
-        cartao_id: cartaoId,
+        cartao_id: activeCardId,
         ano,
         mes,
         valor_total: total,
@@ -463,7 +463,7 @@ if (faturaTotal) {
 const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
 
 // pegar nome do cartão para a descrição
-const card = state.cards.find(c => c.id === cartaoId) || { nome: "Cartão" };
+const card = state.cards.find(c => c.id === activeCardId) || { nome: "Cartão" };
 
 const { error: errDesp } = await supabase.from("despesas").insert([{
   id: crypto.randomUUID(),
@@ -504,7 +504,7 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
       const venc = dataVencimentoFatura.value;
       const ym = selectMesFaturas.value;
 
-      if (!cartaoId) return showToast("Selecione um cartão.", "error");
+      if (!activeCardId) return showToast("Selecione um cartão.", "error");
       if (!venc) return showToast("Informe o vencimento.", "error");
       if (state.faturaAtual) return showToast("Esta fatura já está fechada.", "error");
 
@@ -730,7 +730,7 @@ if (btnAddPurchase) btnAddPurchase.onclick = async () => {
     await supabase.from("cartao_lancamentos").insert([{
       id: crypto.randomUUID(),
       user_id: state.user.id,
-      cartao_id: cartaoId,
+      cartao_id: state.cartaoLancamentoAtual || activeCardId,
       tipo: "pagamento",
       descricao: "Pagamento antecipado",
       valor: -Math.abs(valor),
