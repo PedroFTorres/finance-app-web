@@ -1217,7 +1217,10 @@ btnLancarCompra.onclick = async () => {
   await loadSelectsForLanc();
   popularFaturasLancamento(); 
 
-  showView(viewLancamento);
+ document
+  .getElementById("modal-lancamento")
+  .classList.remove("hidden");
+
 };
 
 // ================================// GERAR DESPESA // ================================
