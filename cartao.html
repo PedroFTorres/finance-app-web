@@ -56,6 +56,41 @@
       <p id="fatura-total" class="valor-fatura"></p>
 
       <ul id="lista-fatura" class="lista-fatura"></ul>
+      <!-- ========================= VIEW — LANÇAR COMPRA ========================= -->
+<section id="view-lancamento" class="panel hidden">
+
+  <h3>Lançar compra no cartão</h3>
+
+  <label>Descrição</label>
+  <input id="cart-desc" type="text" />
+
+  <label>Valor</label>
+  <input id="cart-valor" type="number" step="0.01" />
+
+  <label>Data da compra</label>
+  <input id="cart-data" type="date" />
+
+  <label>Parcelas</label>
+  <input id="cart-parcelas" type="number" min="1" value="1" />
+
+  <label>Categoria</label>
+  <select id="select-categoria-lanc-cartao"></select>
+
+  <label>Fatura inicial</label>
+  <select id="select-fatura-inicial"></select>
+
+  <div style="display:flex;gap:10px;margin-top:16px">
+    <button id="btn-add-purchase" class="btn-primary">
+      Salvar compra
+    </button>
+
+    <button id="btn-cancel-purchase" class="btn-secondary">
+      Cancelar
+    </button>
+  </div>
+
+</section>
+
       <div class="fatura-actions">
   <button id="btn-lancar-compra" class="btn-outline">
     ➕ Lançar compra
