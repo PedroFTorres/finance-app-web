@@ -1203,10 +1203,9 @@ if (btnVoltar) {
   selectContaPagamento.innerHTML = "";
 
   (contas || []).forEach((c) =>
-    selectContaPagamento.appendChild(
-      new Option(`${c.nome} (${formatReal(c.saldo_atual)})`, c.id)
-    )
-  );
+   selectContaPagamento.appendChild(
+  new Option(c.nome, c.id)
+);
 }
 
     // popular selectFaturaInicial com base no mesLanc atual e próximos 24 meses (exemplo)
