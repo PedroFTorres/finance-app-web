@@ -1205,6 +1205,7 @@ if (btnVoltar) {
   (contas || []).forEach((c) =>
    selectContaPagamento.appendChild(
   new Option(c.nome, c.id)
+     )
 );
 }
 
