@@ -540,52 +540,26 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
     }
   }
 
-  // =========================== // FECHAR FATURA → abre modal para escolher conta (valida campos primeiro) - fluxo B// ===========================
-  if (btnFecharFatura) btnFecharFatura.onclick = async () => {
+ // ===========================// FECHAR FATURA → abre modal para escolher conta // ===========================
+  
+if (btnFecharFatura)
+  btnFecharFatura.onclick = async () => {
     try {
       const venc = dataVencimentoFatura.value;
-      const ym = selectMesFaturas.value;
 
-      if (!activeCardId) return showToast("Selecione um cartão.", "error");
-      if (!venc) return showToast("Informe o vencimento.", "error");
-      if (state.faturaAtual?.status === "fechada") {
-  return showToast("Esta fatura já está fechada.", "error");
-}
+      if (!activeCardId)
+        return showToast("Selecione um cartão.", "error");
 
-      // carregar contas no modal e abrir modal
+      if (!venc)
+        return showToast("Informe o vencimento.", "error");
+
+      if (state.faturaAtual?.status === "fechada")
+        return showToast("Esta fatura já está fechada.", "error");
+
       await carregarContasModal();
-      if (modalContaFatura) modalContaFatura.classList.remove("hidden");
-
-      // configurar botões do modal (evitar bind múltiplo: limpar antes)
-     if (contaFaturaConfirmar) {
-  contaFaturaConfirmar.onclick = async () => {
-    try {
-      const contaEscolhida = contaFaturaSelect?.value;
-
-      if (!contaEscolhida) {
-        showToast("Selecione uma conta.", "error");
-        return;
-      }
-
-      await fecharFaturaComConta(contaEscolhida);
 
       if (modalContaFatura)
-        modalContaFatura.classList.add("hidden");
-
-    } catch (e) {
-      console.error("Erro confirmar fechamento:", e);
-      showToast("Erro ao confirmar fechamento.", "error");
-    }
-  };
-}
-
-      }
-
-      if (contaFaturaCancelar) {
-        contaFaturaCancelar.onclick = () => {
-          if (modalContaFatura) modalContaFatura.classList.add("hidden");
-        };
-      }
+        modalContaFatura.classList.remove("hidden");
 
     } catch (err) {
       console.error(err);
@@ -760,7 +734,7 @@ if (btnAddPurchase) {
 
       // fecha modal
       document
-        .getElementById("modal-lancamento")
+        .("modal-lancamento")
         .classList.add("hidden");
 
       // recarrega fatura
@@ -862,16 +836,16 @@ if (btnAddPurchase) {
     viewEditarAvista = div;
 
    
-    document.getElementById("btn-avista-salvar").onclick = salvarEdicaoAvista;
-    document.getElementById("btn-avista-excluir").onclick = excluirCompraAvista;
+    document.("btn-avista-salvar").onclick = salvarEdicaoAvista;
+    document.("btn-avista-excluir").onclick = excluirCompraAvista;
   }
 
   async function abrirEdicaoAvista(l) {
     ensureAvistaViewExists();
-    document.getElementById("avista-desc").value =
+    document.("avista-desc").value =
       (l.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
-    document.getElementById("avista-valor").value = Number(l.valor);
-    document.getElementById("avista-data").value =
+    document.("avista-valor").value = Number(l.valor);
+    document.("avista-data").value =
       l.data_compra || l.data || "";
 
     await popularSelectCategoriaAvista(l.categoria_id);
@@ -883,7 +857,7 @@ if (btnAddPurchase) {
 
   async function popularSelectCategoriaAvista(id) {
     const { data } = await supabase.from("categorias").select("*").order("nome");
-    const sel = document.getElementById("avista-categoria");
+    const sel = document.("avista-categoria");
     sel.innerHTML = "";
     (data || []).forEach((c) => {
       const op = new Option(c.nome, c.id);
@@ -894,7 +868,7 @@ if (btnAddPurchase) {
 
   async function popularSelectCartaoAvista(id) {
     const { data } = await supabase.from("cartoes_credito").select("*").eq("user_id", state.user.id);
-    const sel = document.getElementById("avista-cartao");
+    const sel = document.("avista-cartao");
     sel.innerHTML = "";
     (data || []).forEach((c) => {
       const op = new Option(c.nome, c.id);
@@ -905,7 +879,7 @@ if (btnAddPurchase) {
 
   async function salvarEdicaoAvista() {
     const id = viewEditarAvista.dataset.lancId;
-    const desc = document.getElementById("avista-desc").value.trim();
+    const desc = document.("avista-desc").value.trim();
     const valor = Number(document.getElementById("avista-valor").value || 0);
     const data = document.getElementById("avista-data").value;
     const cat = document.getElementById("avista-categoria").value;
