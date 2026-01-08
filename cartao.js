@@ -835,23 +835,28 @@ if (btnAddPurchase) {
 
    
     document.getElementById("btn-avista-salvar").onclick = salvarEdicaoAvista;
-    document.("btn-avista-excluir").onclick = excluirCompraAvista;
-  }
-
-  async function abrirEdicaoAvista(l) {
-    ensureAvistaViewExists();
     document.getElementById("btn-avista-excluir").onclick = excluirCompraAvista;
-      (l.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
-    document.("avista-valor").value = Number(l.valor);
-    document.("avista-data").value =
-      l.data_compra || l.data || "";
+     }
 
-    await popularSelectCategoriaAvista(l.categoria_id);
-    await popularSelectCartaoAvista(l.cartao_id);
+ async function abrirEdicaoAvista(l) {
+  ensureAvistaViewExists();
 
-    viewEditarAvista.dataset.lancId = l.id;
-    showView(viewEditarAvista);
-  }
+  document.getElementById("btn-avista-excluir").onclick = excluirCompraAvista;
+
+  document.getElementById("avista-desc").value =
+    (l.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
+
+  document.getElementById("avista-valor").value = Number(l.valor);
+
+  document.getElementById("avista-data").value =
+    l.data_compra || l.data || "";
+
+  await popularSelectCategoriaAvista(l.categoria_id);
+  await popularSelectCartaoAvista(l.cartao_id);
+
+  viewEditarAvista.dataset.lancId = l.id;
+  showView(viewEditarAvista);
+}
 
   async function popularSelectCategoriaAvista(id) {
     const { data } = await supabase.from("categorias").select("*").order("nome");
