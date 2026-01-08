@@ -412,7 +412,6 @@ if (faturaTotal) {
   updateButtonsForFatura();
     
   await loadSelectsForLanc();
-    console.log("contas carregadas no pagamento:", contas);
 }
 
   // ===========================// UPDATE BUTTONS FOR FATURA // ===========================
