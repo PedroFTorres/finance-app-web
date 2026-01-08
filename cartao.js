@@ -124,6 +124,28 @@ const listaComprasFatura = document.getElementById("lista-fatura");
   const modalContaFatura = document.getElementById("modal-conta-fatura");
   const contaFaturaSelect = document.getElementById("conta-fatura-select");
   const contaFaturaCancelar = document.getElementById("conta-fatura-cancelar");
+  const contaFaturaConfirmar = document.getElementById("conta-fatura-confirmar");
+
+if (contaFaturaCancelar) {
+  contaFaturaCancelar.onclick = () => {
+    modalContaFatura.classList.add("hidden");
+  };
+}
+
+if (contaFaturaConfirmar) {
+  contaFaturaConfirmar.onclick = async () => {
+    const contaId = contaFaturaSelect.value;
+
+    if (!contaId) {
+      showToast("Selecione uma conta.", "error");
+      return;
+    }
+
+    modalContaFatura.classList.add("hidden");
+    await fecharFaturaComConta(contaId);
+  };
+}
+
 
   const toastContainer = document.getElementById("toast-container");
 
