@@ -747,10 +747,7 @@ await supabase
 await App.refreshLancamentos();
 await App.renderExtrato();
 
-
-    const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
-
-    await supabase
+   await supabase
       .from(tabela)
       .update({ baixado: false, data_baixa: null })
       .eq('id', item.id);
