@@ -470,19 +470,29 @@ if (faturaTotal) {
 
   // ===========================// Funções auxiliares para modal de escolha de conta ao fechar fatura (OPÇÃO B) // ===========================
   async function carregarContasModal() {
-    if (!contaFaturaSelect) return;
-    const { data: contas } = await supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id);
+  if (!contaFaturaSelect) return;
 
-    contaFaturaSelect.innerHTML = "";
-    (contas || []).forEach(c => {
-      contaFaturaSelect.appendChild(new Option(`${c.nome} (${formatReal(c.saldo_atual)})`, c.id));
-    });
+  const { data: contas } = await supabase
+    .from("contas_bancarias")
+    .select("id, nome")
+    .eq("user_id", state.user.id)
+    .order("nome");
 
-    // se não houver opções, cria uma opção vazia
-    if ((contas || []).length === 0) {
-      contaFaturaSelect.appendChild(new Option("Nenhuma conta disponível", ""));
-    }
+  contaFaturaSelect.innerHTML = "";
+
+  (contas || []).forEach(c => {
+    contaFaturaSelect.appendChild(
+      new Option(c.nome, c.id)
+    );
+  });
+
+  if ((contas || []).length === 0) {
+    contaFaturaSelect.appendChild(
+      new Option("Nenhuma conta disponível", "")
+    );
   }
+}
+
 
   async function fecharFaturaComConta(conta_id) {
     try {
