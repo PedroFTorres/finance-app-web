@@ -730,10 +730,10 @@ if (btnAddPurchase) {
 
       showToast("Compra lançada com sucesso!");
 
-      // fecha modal
-      document
-        .("modal-lancamento")
-        .classList.add("hidden");
+   document
+  .getElementById("modal-lancamento")
+  .classList.add("hidden");
+
 
       // recarrega fatura
       await loadFaturaForSelected();
@@ -834,13 +834,13 @@ if (btnAddPurchase) {
     viewEditarAvista = div;
 
    
-    document.("btn-avista-salvar").onclick = salvarEdicaoAvista;
+    document.getElementById("btn-avista-salvar").onclick = salvarEdicaoAvista;
     document.("btn-avista-excluir").onclick = excluirCompraAvista;
   }
 
   async function abrirEdicaoAvista(l) {
     ensureAvistaViewExists();
-    document.("avista-desc").value =
+    document.getElementById("btn-avista-excluir").onclick = excluirCompraAvista;
       (l.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
     document.("avista-valor").value = Number(l.valor);
     document.("avista-data").value =
@@ -855,7 +855,7 @@ if (btnAddPurchase) {
 
   async function popularSelectCategoriaAvista(id) {
     const { data } = await supabase.from("categorias").select("*").order("nome");
-    const sel = document.("avista-categoria");
+    const sel = document.getElementById("avista-categoria");
     sel.innerHTML = "";
     (data || []).forEach((c) => {
       const op = new Option(c.nome, c.id);
@@ -866,7 +866,7 @@ if (btnAddPurchase) {
 
   async function popularSelectCartaoAvista(id) {
     const { data } = await supabase.from("cartoes_credito").select("*").eq("user_id", state.user.id);
-    const sel = document.("avista-cartao");
+    const sel = document.getElementById("avista-cartao");
     sel.innerHTML = "";
     (data || []).forEach((c) => {
       const op = new Option(c.nome, c.id);
@@ -877,7 +877,7 @@ if (btnAddPurchase) {
 
   async function salvarEdicaoAvista() {
     const id = viewEditarAvista.dataset.lancId;
-    const desc = document.("avista-desc").value.trim();
+    const desc = document.getElementById("avista-desc").value.trim();
     const valor = Number(document.getElementById("avista-valor").value || 0);
     const data = document.getElementById("avista-data").value;
     const cat = document.getElementById("avista-categoria").value;
