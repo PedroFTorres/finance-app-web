@@ -164,11 +164,34 @@
   </div>
 
 </main>
+    </section>
 
-  <!-- SCRIPTS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js"></script>
-  <script src="cartao.js"></script>
+  </div>
+
+</main>
+
+<!-- MODAL CONTA PARA FECHAR FATURA -->
+<div id="modal-conta-fatura" class="modal hidden">
+  <div class="modal-content">
+    <h3>Conta para pagamento</h3>
+
+    <select id="conta-fatura-select"></select>
+
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button id="conta-fatura-confirmar" class="btn-primary">
+        Confirmar
+      </button>
+      <button id="conta-fatura-cancelar" class="btn-secondary">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="cartao.js"></script>
 
 </body>
 </html>
