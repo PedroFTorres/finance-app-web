@@ -714,36 +714,40 @@ btnBaixar.addEventListener('click', () => {
   const btnCancel = document.createElement('button');
   btnCancel.textContent = 'Cancelar Baixa';
 
-  btnCancel.addEventListener('click', async () => {
-    if (!confirm('Cancelar baixa?')) return;
+btnCancel.addEventListener("click", async () => {
+  if (!confirm("Cancelar baixa?")) return;
 
-    // localizar movimentação vinculada ao lançamento
-    const { data: mv } = await supabase
-      .from('movimentacoes')
-      .select('*')
-      .eq('lancamento_id', item.id)
-      .maybeSingle();
+  // buscar TODAS as movimentações do lançamento
+  const { data: movs } = await supabase
+    .from("movimentacoes")
+    .select("id")
+    .eq("lancamento_id", item.id);
 
-    if (!mv) {
-      alert('Movimentação não encontrada.');
-      return;
-    }
+  if (!movs || movs.length === 0) {
+    alert("Nenhuma movimentação encontrada.");
+    return;
+  }
 
+  // remover TODAS as movimentações
+  for (const m of movs) {
     await supabase
-      .from('movimentacoes')
+      .from("movimentacoes")
       .delete()
-      .eq('id', mv.id);
+      .eq("id", m.id);
+  }
 
-    const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
+  // atualizar lançamento
+  await supabase
+    .from(tipo === "receita" ? "receitas" : "despesas")
+    .update({
+      baixado: false,
+      data_baixa: null
+    })
+    .eq("id", item.id);
 
-    await supabase
-      .from(tabela)
-      .update({ baixado: false, data_baixa: null })
-      .eq('id', item.id);
-
-    await App.refreshLancamentos();
-    await App.renderExtrato();
-  });
+  await App.refreshLancamentos();
+  await App.renderExtrato();
+});
 
   right.appendChild(btnCancel);
 }
@@ -1668,6 +1672,16 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
 
     const valorOriginal = Number(lancamento.valor);
     const valorFinal = valorOriginal + juros - desconto;
+     // 🔒 bloqueia baixa duplicada no banco
+const { data: jaBaixado } = await supabase
+  .from("movimentacoes")
+  .select("id")
+  .eq("lancamento_id", lancamento.id);
+
+if (jaBaixado && jaBaixado.length > 0) {
+  alert("Este lançamento já foi baixado.");
+  return;
+}
 
     // 🔹 cria movimentação (extrato)
     await supabase.from("movimentacoes").insert([{
