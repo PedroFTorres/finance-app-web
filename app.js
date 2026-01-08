@@ -15,6 +15,7 @@
    
    let IS_SAVING_LANCAMENTO = false;
    let IS_CREATING_CONTA = false;
+   let IS_BAIXANDO = false;
 
   /* ============================ CONFIG & ESTADO GLOBAL ============================ */
    
@@ -1643,6 +1644,10 @@ if (modoPeriodoExtrato === "custom") {
    // =========================// CONFIRMAR BAIXA// =========================
    
 document.getElementById("confirmar-baixa")?.addEventListener("click", async () => {
+  // 🔒 trava clique duplo
+  if (IS_BAIXANDO) return;
+  IS_BAIXANDO = true;
+
   try {
     if (!BAIXA_ATUAL) {
       alert("Nenhum lançamento selecionado para baixa.");
@@ -1664,6 +1669,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     const valorOriginal = Number(lancamento.valor);
     const valorFinal = valorOriginal + juros - desconto;
 
+    // 🔹 cria movimentação (extrato)
     await supabase.from("movimentacoes").insert([{
       id: crypto.randomUUID(),
       user_id: STATE.user.id,
@@ -1678,23 +1684,32 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
       lancamento_id: lancamento.id
     }]);
 
-    const tabela = tipo === "receita" ? "receitas" : "despesas";
-    await supabase.from(tabela).update({
-      baixado: true,
-      data_baixa: dataBaixa
-    }).eq("id", lancamento.id);
+    // 🔹 marca lançamento como baixado
+    await supabase
+      .from(tipo === "receita" ? "receitas" : "despesas")
+      .update({
+        baixado: true,
+        data_baixa: dataBaixa
+      })
+      .eq("id", lancamento.id);
 
+    // 🔹 fecha modal e limpa estado
     document.getElementById("modal-baixa").classList.add("hidden");
     BAIXA_ATUAL = null;
 
+    // 🔹 atualiza telas
     await App.refreshLancamentos();
     await App.renderExtrato();
 
   } catch (err) {
     console.error("Erro ao confirmar baixa:", err);
     alert("Erro ao realizar a baixa.");
+  } finally {
+    // 🔓 libera trava SEMPRE
+    IS_BAIXANDO = false;
   }
 });
+
 // ================================// LANÇAMENTOS — EVENTOS (DELEGAÇÃO)// ================================
    
 document.addEventListener("click", (e) => {
