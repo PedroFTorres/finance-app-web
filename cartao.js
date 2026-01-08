@@ -1267,6 +1267,7 @@ btnLancarCompra.onclick = async () => {
   document
     .getElementById("modal-lancamento")
     .classList.remove("hidden");
+  console.log("selectContaPagamento:", selectContaPagamento);
 };
 
 // ================================// GERAR DESPESA // ================================
