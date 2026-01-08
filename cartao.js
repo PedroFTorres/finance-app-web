@@ -123,7 +123,6 @@ const listaComprasFatura = document.getElementById("lista-fatura");
   // Modal de escolha de conta para fechar fatura (assumindo que você adicionou no HTML)
   const modalContaFatura = document.getElementById("modal-conta-fatura");
   const contaFaturaSelect = document.getElementById("conta-fatura-select");
-  const contaFaturaConfirmar = document.getElementById("conta-fatura-confirmar");
   const contaFaturaCancelar = document.getElementById("conta-fatura-cancelar");
 
   const toastContainer = document.getElementById("toast-container");
@@ -421,7 +420,7 @@ if (faturaTotal) {
     const statusEl = document.getElementById("status-fatura");
 
     if (state.faturaAtual) {
-      if (btnFecharFatura) { btnFecharFatura.disabled = true; btnFecharFatura.textContent = "Fatura Fechada"; }
+     
       if (state.faturaAtual.pago) {
         if (btnPagarFatura) { btnPagarFatura.disabled = true; btnPagarFatura.textContent = "Fatura Paga"; }
         if (statusEl) statusEl.textContent = "FATURA PAGA";
@@ -442,7 +441,6 @@ if (faturaTotal) {
       }
 
     } else {
-      if (btnFecharFatura) { btnFecharFatura.disabled = false; btnFecharFatura.textContent = "Fechar Fatura"; }
       if (btnPagarFatura) { btnPagarFatura.disabled = false; btnPagarFatura.textContent = "Gerar Despesa"; }
       if (statusEl) statusEl.textContent = "";
     }
@@ -540,7 +538,7 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
     }
   }
 
- // ===========================// FECHAR FATURA → abre modal para escolher conta // ===========================
+ // ===========================// FECHAR FATURA → apenas abre o modal// ===========================
   
 if (btnFecharFatura)
   btnFecharFatura.onclick = async () => {
