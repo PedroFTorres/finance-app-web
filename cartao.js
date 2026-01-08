@@ -540,9 +540,7 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
     }
   }
 
-  // ===========================
-  // FECHAR FATURA → abre modal para escolher conta (valida campos primeiro) - fluxo B
-  // ===========================
+  // =========================== // FECHAR FATURA → abre modal para escolher conta (valida campos primeiro) - fluxo B// ===========================
   if (btnFecharFatura) btnFecharFatura.onclick = async () => {
     try {
       const venc = dataVencimentoFatura.value;
@@ -550,19 +548,37 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
 
       if (!activeCardId) return showToast("Selecione um cartão.", "error");
       if (!venc) return showToast("Informe o vencimento.", "error");
-      if (state.faturaAtual) return showToast("Esta fatura já está fechada.", "error");
+      if (state.faturaAtual?.status === "fechada") {
+  return showToast("Esta fatura já está fechada.", "error");
+}
 
       // carregar contas no modal e abrir modal
       await carregarContasModal();
       if (modalContaFatura) modalContaFatura.classList.remove("hidden");
 
       // configurar botões do modal (evitar bind múltiplo: limpar antes)
-      if (contaFaturaConfirmar) {
-        contaFaturaConfirmar.onclick = async () => {
-          const contaEscolhida = contaFaturaSelect ? contaFaturaSelect.value : null;
-          if (!contaEscolhida) return showToast("Selecione uma conta.", "error");
-          await fecharFaturaComConta(contaEscolhida);
-        };
+     if (contaFaturaConfirmar) {
+  contaFaturaConfirmar.onclick = async () => {
+    try {
+      const contaEscolhida = contaFaturaSelect?.value;
+
+      if (!contaEscolhida) {
+        showToast("Selecione uma conta.", "error");
+        return;
+      }
+
+      await fecharFaturaComConta(contaEscolhida);
+
+      if (modalContaFatura)
+        modalContaFatura.classList.add("hidden");
+
+    } catch (e) {
+      console.error("Erro confirmar fechamento:", e);
+      showToast("Erro ao confirmar fechamento.", "error");
+    }
+  };
+}
+
       }
 
       if (contaFaturaCancelar) {
