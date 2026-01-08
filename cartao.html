@@ -176,23 +176,30 @@
 
 </main>
 
-<!-- MODAL CONTA PARA FECHAR FATURA -->
+<!-- MODAL FECHAR FATURA -->
 <div id="modal-conta-fatura" class="modal hidden">
   <div class="modal-content">
-    <h3>Conta para pagamento</h3>
 
+    <h3>Fechar fatura</h3>
+
+    <label>Conta para pagamento</label>
     <select id="conta-fatura-select"></select>
 
-    <div style="margin-top:16px;display:flex;gap:8px">
-      <button id="conta-fatura-confirmar" class="btn-primary">
-        Confirmar
-      </button>
+    <label style="margin-top:10px">Vencimento</label>
+    <input type="date" id="conta-fatura-vencimento" />
+
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
       <button id="conta-fatura-cancelar" class="btn-secondary">
         Cancelar
       </button>
+      <button id="conta-fatura-confirmar" class="btn-primary">
+        Confirmar
+      </button>
     </div>
+
   </div>
 </div>
+
 
 <!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
