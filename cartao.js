@@ -542,6 +542,7 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
   
 if (btnFecharFatura)
   btnFecharFatura.onclick = async () => {
+    console.log("CLICOU EM FECHAR FATURA");
     try {
 
       // ✅ garante que o input existe
