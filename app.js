@@ -1698,9 +1698,7 @@ document.getElementById("confirmar-baixa")
       lancamento_id: lancamento.id
     }]);
 
-    const tabela = tipo === "receita" ? "receitas" : "despesas";
-
-    await supabase
+  await supabase
       .from(tabela)
       .update({ baixado: true, data_baixa: dataBaixa })
       .eq("id", lancamento.id);
