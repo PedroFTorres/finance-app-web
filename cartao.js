@@ -1249,7 +1249,6 @@ if (btnNewCard) {
 };
   }
 
-
   // ================================//  LANÇAR COMPRA// ================================
 btnLancarCompra.onclick = async () => {
 
@@ -1260,13 +1259,14 @@ btnLancarCompra.onclick = async () => {
 
   state.cartaoLancamentoAtual = activeCardId;
 
+  // 👇 ISSO É O QUE FAZ O SELECT FUNCIONAR
   await loadSelectsForLanc();
-  popularFaturasLancamento(); 
 
- document
-  .getElementById("modal-lancamento")
-  .classList.remove("hidden");
+  popularFaturasLancamento();
 
+  document
+    .getElementById("modal-lancamento")
+    .classList.remove("hidden");
 };
 
 // ================================// GERAR DESPESA // ================================
