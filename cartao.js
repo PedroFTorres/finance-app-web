@@ -90,6 +90,21 @@ const listaComprasFatura = document.getElementById("lista-fatura");
 
   const btnAddPurchase = document.getElementById("btn-add-purchase");
   const btnCancelPurchase = document.getElementById("btn-cancel-purchase");
+ if (btnCancelPurchase) {
+  btnCancelPurchase.onclick = () => {
+
+    // limpar campos
+    if (cartDesc) cartDesc.value = "";
+    if (cartValor) cartValor.value = "";
+    if (cartParcelas) cartParcelas.value = 1;
+    if (cartData) cartData.value = "";
+
+    // fechar modal
+    document
+      .getElementById("modal-lancamento")
+      .classList.add("hidden");
+  };
+}
 
   const btnPagamentoAntecipado = document.getElementById("btn-pagamento-antecipado");
   const contaPagAntecipado = document.getElementById("conta-pag-antecipado");
