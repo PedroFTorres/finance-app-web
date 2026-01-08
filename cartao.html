@@ -140,24 +140,30 @@
 </div>
 
 
-      <div class="box" style="margin-top:24px">
-        <label>Conta para pagamento</label>
-        <select id="conta-pagamento"></select>
+     <!-- MODAL FECHAR FATURA -->
+<div id="modal-conta-fatura" class="modal hidden">
+  <div class="modal-content">
 
-        <label style="margin-top:10px">Vencimento</label>
-        <input type="date" id="fatura-vencimento" />
+    <h3>Fechar fatura</h3>
 
-        <div style="display:flex;gap:12px;margin-top:16px">
-          <button id="btn-fechar-fatura" class="btn-danger">
-            Fechar Fatura
-          </button>
+    <label>Conta para pagamento</label>
+    <select id="conta-fatura-select"></select>
 
-          <button id="btn-gerar-despesa" class="btn-primary">
-            Gerar Despesa
-          </button>
-        </div>
-      
-      </div>
+    <label style="margin-top:10px">Vencimento</label>
+    <input type="date" id="conta-fatura-vencimento" />
+
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+      <button id="conta-fatura-cancelar" class="btn-secondary">
+        Cancelar
+      </button>
+      <button id="conta-fatura-confirmar" class="btn-primary">
+        Confirmar
+      </button>
+    </div>
+
+  </div>
+</div>
+
 
     </section>
 
