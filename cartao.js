@@ -543,24 +543,40 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
 if (btnFecharFatura)
   btnFecharFatura.onclick = async () => {
     try {
+
+      // ✅ garante que o input existe
+      if (!dataVencimentoFatura) {
+        console.error("Input fatura-vencimento não encontrado");
+        showToast("Erro interno: campo de vencimento não encontrado.", "error");
+        return;
+      }
+
       const venc = dataVencimentoFatura.value;
 
-      if (!activeCardId)
-        return showToast("Selecione um cartão.", "error");
+      if (!activeCardId) {
+        showToast("Selecione um cartão.", "error");
+        return;
+      }
 
-      if (!venc)
-        return showToast("Informe o vencimento.", "error");
+      if (!venc) {
+        showToast("Informe o vencimento.", "error");
+        return;
+      }
 
-      if (state.faturaAtual?.status === "fechada")
-        return showToast("Esta fatura já está fechada.", "error");
+      if (state.faturaAtual?.status === "fechada") {
+        showToast("Esta fatura já está fechada.", "error");
+        return;
+      }
 
+      // 🔽 carregar contas para o modal
       await carregarContasModal();
 
+      // 🔽 abrir modal de escolha da conta
       if (modalContaFatura)
         modalContaFatura.classList.remove("hidden");
 
     } catch (err) {
-      console.error(err);
+      console.error("Erro ao fechar fatura:", err);
       showToast("Erro ao processar fechamento.", "error");
     }
   };
