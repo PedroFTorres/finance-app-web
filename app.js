@@ -15,6 +15,8 @@
    
    let IS_SAVING_LANCAMENTO = false;
    let IS_CREATING_CONTA = false;
+   let IS_BAIXANDO = false;
+
 
   /* ============================ CONFIG & ESTADO GLOBAL ============================ */
    
@@ -717,21 +719,34 @@ btnBaixar.addEventListener('click', () => {
     if (!confirm('Cancelar baixa?')) return;
 
     // localizar movimentação vinculada ao lançamento
-    const { data: mv } = await supabase
-      .from('movimentacoes')
-      .select('*')
-      .eq('lancamento_id', item.id)
-      .maybeSingle();
+  const { data: movs } = await supabase
+  .from("movimentacoes")
+  .select("id")
+  .eq("lancamento_id", item.id);
 
-    if (!mv) {
-      alert('Movimentação não encontrada.');
-      return;
-    }
+if (!movs || movs.length === 0) {
+  alert("Nenhuma movimentação encontrada.");
+  return;
+}
 
-    await supabase
-      .from('movimentacoes')
-      .delete()
-      .eq('id', mv.id);
+// remove TODAS as movimentações do lançamento
+for (const m of movs) {
+  await supabase
+    .from("movimentacoes")
+    .delete()
+    .eq("id", m.id);
+}
+
+const tabela = tipo === "receita" ? "receitas" : "despesas";
+
+await supabase
+  .from(tabela)
+  .update({ baixado: false, data_baixa: null })
+  .eq("id", item.id);
+
+await App.refreshLancamentos();
+await App.renderExtrato();
+
 
     const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
 
@@ -1642,7 +1657,15 @@ if (modoPeriodoExtrato === "custom") {
   };
    // =========================// CONFIRMAR BAIXA// =========================
    
-document.getElementById("confirmar-baixa")?.addEventListener("click", async () => {
+document.getElementById("confirmar-baixa")
+  ?.addEventListener("click", async () => {
+
+  if (IS_BAIXANDO) return;
+  IS_BAIXANDO = true;
+
+  const btn = document.getElementById("confirmar-baixa");
+  btn.disabled = true;
+
   try {
     if (!BAIXA_ATUAL) {
       alert("Nenhum lançamento selecionado para baixa.");
@@ -1670,19 +1693,17 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
       conta_id: contaId,
       tipo: tipo === "receita" ? "credito" : "debito",
       valor: valorFinal,
-      descricao:
-        lancamento.descricao +
-        (juros ? ` (+Juros ${fmtMoney(juros)})` : "") +
-        (desconto ? ` (-Desc ${fmtMoney(desconto)})` : ""),
+      descricao: lancamento.descricao,
       data: dataBaixa,
       lancamento_id: lancamento.id
     }]);
 
     const tabela = tipo === "receita" ? "receitas" : "despesas";
-    await supabase.from(tabela).update({
-      baixado: true,
-      data_baixa: dataBaixa
-    }).eq("id", lancamento.id);
+
+    await supabase
+      .from(tabela)
+      .update({ baixado: true, data_baixa: dataBaixa })
+      .eq("id", lancamento.id);
 
     document.getElementById("modal-baixa").classList.add("hidden");
     BAIXA_ATUAL = null;
@@ -1691,10 +1712,14 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     await App.renderExtrato();
 
   } catch (err) {
-    console.error("Erro ao confirmar baixa:", err);
+    console.error(err);
     alert("Erro ao realizar a baixa.");
+  } finally {
+    IS_BAIXANDO = false;
+    btn.disabled = false;
   }
 });
+   
 // ================================// LANÇAMENTOS — EVENTOS (DELEGAÇÃO)// ================================
    
 document.addEventListener("click", (e) => {
