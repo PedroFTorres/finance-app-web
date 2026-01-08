@@ -143,13 +143,30 @@ const listaComprasFatura = document.getElementById("lista-fatura");
 }
 
   // get or create categoria helper
-  async function getOrCreateCategoria(nome) {
-    const { data } = await supabase.from("categorias").select("*").eq("nome", nome).maybeSingle();
-    if (data) return data.id;
+ async function getOrCreateCategoria(nome) {
+  const { data } = await supabase
+    .from("categorias")
+    .select("id")
+    .eq("nome", nome)
+    .eq("user_id", state.user.id)
+    .maybeSingle();
 
-    const created = await supabase.from("categorias").insert([{ id: crypto.randomUUID(), nome }]).select().maybeSingle();
-    return created?.data?.id || created?.id;
-  }
+  if (data) return data.id;
+
+  const { data: created, error } = await supabase
+    .from("categorias")
+    .insert([{
+      id: crypto.randomUUID(),
+      nome,
+      user_id: state.user.id
+    }])
+    .select("id")
+    .single();
+
+  if (error) throw error;
+
+  return created.id;
+}
 
   function hideAllViews() {
     [
@@ -265,14 +282,24 @@ function renderCardsSidebar() {
 }
 
   // ===========================// CATEGORIAS // ===========================
-  async function loadCategorias() {
-    const { data } = await supabase.from("categorias").select("*").order("nome");
-    state.categories = data || [];
-    if (selectCategoriaLancCartao) {
-      selectCategoriaLancCartao.innerHTML = "";
-      (state.categories || []).forEach((cat) => selectCategoriaLancCartao.appendChild(new Option(cat.nome, cat.id)));
-    }
+async function loadCategorias() {
+  const { data } = await supabase
+    .from("categorias")
+    .select("*")
+    .eq("user_id", state.user.id)
+    .order("nome");
+
+  state.categories = data || [];
+
+  if (selectCategoriaLancCartao) {
+    selectCategoriaLancCartao.innerHTML = "";
+    state.categories.forEach(cat => {
+      selectCategoriaLancCartao.appendChild(
+        new Option(cat.nome, cat.id)
+      );
+    });
   }
+}
 
   // =========================== // MES NAV // ===========================
   function displayMes(dateObj) {
