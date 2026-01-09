@@ -364,17 +364,19 @@ async function loadCategorias() {
   if (btnFatNext) btnFatNext.onclick = () => { mesLanc.setMonth(mesLanc.getMonth()+1); popularFaturasLancamento(); };
 
   // =========================== // CARREGAR FATURA / RENDER (USANDO data_fatura) // ===========================
-  async function loadFaturaForSelected() {
+ async function loadFaturaForSelected() {
   if (!activeCardId && state.cards && state.cards.length > 0) {
-  activeCardId = state.cards[0].id;
-}
+    activeCardId = state.cards[0].id;
+  }
+  if (!activeCardId) return;
+
   const cartao_id = activeCardId;
   const ano = mesFatura.getFullYear();
   const mes = mesFatura.getMonth() + 1;
 
-  const inicio = `${ano}-${String(mes).padStart(2,"0")}-01`;
+  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
   const last = new Date(ano, mes, 0).getDate();
-  const fim = `${ano}-${String(mes).padStart(2,"0")}-${last}`;
+  const fim = `${ano}-${String(mes).padStart(2, "0")}-${last}`;
 
   const { data: compras } = await supabase
     .from("cartao_lancamentos")
@@ -384,46 +386,49 @@ async function loadCategorias() {
     .lte("data_fatura", fim)
     .order("data_fatura");
 
-  const total = (compras || []).reduce((s, c) => s + Number(c.valor || 0), 0);
+  const total = (compras || []).reduce(
+    (s, c) => s + Number(c.valor || 0),
+    0
+  );
+
   const card = state.cards.find(c => c.id === cartao_id);
 
- if (faturaTitulo) {
-  faturaTitulo.textContent = card?.nome || "Cartão";
-}
+  if (faturaTitulo) {
+    faturaTitulo.textContent = card?.nome || "Cartão";
+  }
 
-if (faturaPeriodo) {
-  faturaPeriodo.textContent = `${String(mes).padStart(2, "0")}/${ano}`;
-}
+  if (faturaPeriodo) {
+    faturaPeriodo.textContent = `${String(mes).padStart(2, "0")}/${ano}`;
+  }
 
-if (faturaTotal) {
-  faturaTotal.textContent = formatReal(total);
-}
+  if (faturaTotal) {
+    faturaTotal.textContent = formatReal(total);
+  }
 
   if (listaComprasFatura) {
-  listaComprasFatura.innerHTML = "";
+    listaComprasFatura.innerHTML = "";
 
-  (compras || []).forEach((c) => {
-    const li = document.createElement("li");
+    (compras || []).forEach((c) => {
+      const li = document.createElement("li");
 
-    const dataExibida = c.data_compra
-      ? new Date(c.data_compra + "T00:00:00").toLocaleDateString("pt-BR")
-      : "";
+      const dataExibida = c.data_compra
+        ? new Date(c.data_compra + "T00:00:00").toLocaleDateString("pt-BR")
+        : "";
 
-    li.innerHTML = `
-      <span>${dataExibida} — ${c.descricao}</span>
-      <span>${formatReal(c.valor)}</span>
-    `;
+      li.innerHTML = `
+        <span>${dataExibida} — ${c.descricao}</span>
+        <span>${formatReal(c.valor)}</span>
+      `;
 
-    li.style.cursor = "pointer";
-    li.onclick = () => {
-      if (Number(c.parcelas || 0) === 1) abrirEdicaoAvista(c);
-      else abrirEdicaoCompraParcelada(c);
-    };
+      li.style.cursor = "pointer";
+      li.onclick = () => {
+        if (Number(c.parcelas || 0) === 1) abrirEdicaoAvista(c);
+        else abrirEdicaoCompraParcelada(c);
+      };
 
-    listaComprasFatura.appendChild(li);
-  });
-}
-
+      listaComprasFatura.appendChild(li);
+    });
+  }
 
   const { data: faturaDB } = await supabase
     .from("cartao_faturas")
@@ -434,9 +439,15 @@ if (faturaTotal) {
     .eq("mes", mes)
     .maybeSingle();
 
-  state.faturaAtual = faturaDB || null;
+  state.faturaAtual = faturaDB || {
+    inicio,
+    fim,
+    mes,
+    ano,
+    status: "aberta"
+  };
+
   updateButtonsForFatura();
-    
   await loadSelectsForLanc();
 }
 
@@ -474,6 +485,7 @@ if (faturaTotal) {
   }
 
   // ===========================// Funções auxiliares para modal de escolha de conta ao fechar fatura (OPÇÃO B) // ===========================
+  
   async function carregarContasModal() {
   if (!contaFaturaSelect) return;
 
