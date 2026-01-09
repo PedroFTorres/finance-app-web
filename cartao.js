@@ -550,15 +550,12 @@ const { data: fData, error: errFatura } = await supabase
     cartao_id: activeCardId,
     mes,
     ano,
-    vencimento: venc,
-    total,
-    status: "fechada"
+    vencimento: venc
   }])
   .select()
   .single();
 
 if (errFatura) throw errFatura;
-
 
     // categoria Cartão
     const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
