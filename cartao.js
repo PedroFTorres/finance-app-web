@@ -498,45 +498,58 @@ if (faturaTotal) {
   }
 }
 
-
   async function fecharFaturaComConta(conta_id) {
-    try {
-      const venc = dataVencimentoFatura.value;
-      const ym = selectMesFaturas.value;
+  try {
+    if (!activeCardId)
+      return showToast("Selecione um cartão.", "error");
 
-      if (!activeCardId) return showToast("Selecione um cartão.", "error");
-      if (!venc) return showToast("Informe o vencimento.", "error");
+    if (!state.faturaAtual)
+      return showToast("Fatura não encontrada.", "error");
 
-      const [ano, mes] = ym.split("-").map(Number);
-      const inicio = `${ano}-${String(mes).padStart(2,"0")}-01`;
-      const last = new Date(ano, mes, 0).getDate();
-      const fim = `${ano}-${String(mes).padStart(2,"0")}-${last}`;
+    const venc = document.getElementById("conta-fatura-vencimento")?.value;
+    if (!venc)
+      return showToast("Informe o vencimento.", "error");
 
-      const { data: compras } = await supabase
-        .from("cartao_lancamentos")
-        .select("*")
-        .eq("cartao_id", activeCardId)
-        .gte("data_fatura", inicio)
-        .lte("data_fatura", fim);
+    const inicio = state.faturaAtual.inicio;
+    const fim = state.faturaAtual.fim;
 
-      const total = (compras || []).reduce((s, c) => s + Number(c.valor || 0), 0);
+    const { data: compras } = await supabase
+      .from("cartao_lancamentos")
+      .select("*")
+      .eq("cartao_id", activeCardId)
+      .gte("data_fatura", inicio)
+      .lte("data_fatura", fim);
 
-      const { data: fData, error: errF } = await supabase.from("cartao_faturas").insert([{
+    const total = (compras || []).reduce(
+      (s, c) => s + Number(c.valor || 0),
+      0
+    );
+
+    const { error } = await supabase
+      .from("cartao_faturas")
+      .insert([{
         id: crypto.randomUUID(),
         user_id: state.user.id,
         cartao_id: activeCardId,
-        ano,
-        mes,
-        valor_total: total,
-        data_vencimento: venc,
-        pago: false,
-        status: "fechada"
-      }]).select().maybeSingle();
+        inicio,
+        fim,
+        vencimento: venc,
+        total,
+        status: "fechada",
+        conta_pagamento_id: conta_id
+      }]);
 
-      if (errF || !fData) {
-        console.error("Erro ao inserir fatura:", errF);
-        return showToast("Erro ao fechar fatura.", "error");
-      }
+    if (error) throw error;
+
+    showToast("Fatura fechada com sucesso.", "success");
+
+    state.faturaAtual.status = "fechada";
+
+  } catch (err) {
+    console.error("Erro ao fechar fatura:", err);
+    showToast("Erro ao fechar fatura.", "error");
+  }
+}
 
      // criar categoria "Cartão de Crédito"
 const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
