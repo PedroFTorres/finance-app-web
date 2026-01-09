@@ -84,7 +84,7 @@ const listaComprasFatura = document.getElementById("lista-fatura");
   const selectFaturaInicial = document.getElementById("select-fatura-inicial");
 
   const selectContaPagamento = document.getElementById("conta-pagamento");
-  const dataVencimentoFatura = document.getElementById("fatura-vencimento");
+  const dataVencimentoFatura = document.getElementById("conta-fatura-vencimento");
   const btnFecharFatura = document.getElementById("btn-fechar-fatura");
   if (btnFecharFatura) {
   btnFecharFatura.onclick = () => {
