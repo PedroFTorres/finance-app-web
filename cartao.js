@@ -549,7 +549,6 @@ if (faturaTotal) {
     console.error("Erro ao fechar fatura:", err);
     showToast("Erro ao fechar fatura.", "error");
   }
-}
 
      // criar categoria "Cartão de Crédito"
 const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
