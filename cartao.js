@@ -498,7 +498,7 @@ if (faturaTotal) {
   }
 }
 
-  async function fecharFaturaComConta(conta_id) {
+ async function fecharFaturaComConta(conta_id) {
   try {
     if (!activeCardId)
       return showToast("Selecione um cartão.", "error");
@@ -512,20 +512,26 @@ if (faturaTotal) {
 
     const inicio = state.faturaAtual.inicio;
     const fim = state.faturaAtual.fim;
+    const mes = state.faturaAtual.mes;
+    const ano = state.faturaAtual.ano;
 
-    const { data: compras } = await supabase
+    // buscar compras
+    const { data: compras, error: errCompras } = await supabase
       .from("cartao_lancamentos")
       .select("*")
       .eq("cartao_id", activeCardId)
       .gte("data_fatura", inicio)
       .lte("data_fatura", fim);
 
+    if (errCompras) throw errCompras;
+
     const total = (compras || []).reduce(
       (s, c) => s + Number(c.valor || 0),
       0
     );
 
-    const { error } = await supabase
+    // criar fatura
+    const { data: fData, error: errFatura } = await supabase
       .from("cartao_faturas")
       .insert([{
         id: crypto.randomUUID(),
@@ -533,60 +539,54 @@ if (faturaTotal) {
         cartao_id: activeCardId,
         inicio,
         fim,
+        mes,
+        ano,
         vencimento: venc,
         total,
         status: "fechada",
         conta_pagamento_id: conta_id
-      }]);
+      }])
+      .select()
+      .single();
 
-    if (error) throw error;
+    if (errFatura) throw errFatura;
 
-    showToast("Fatura fechada com sucesso.", "success");
+    // categoria Cartão
+    const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
+
+    const card =
+      state.cards.find(c => c.id === activeCardId) || { nome: "Cartão" };
+
+    // criar despesa
+    const { error: errDesp } = await supabase.from("despesas").insert([{
+      id: crypto.randomUUID(),
+      user_id: state.user.id,
+      conta_id: conta_id,
+      descricao: `Fatura ${card.nome} — ${String(mes).padStart(2,"0")}/${ano}`,
+      valor: total,
+      data: venc,
+      categoria_id: categoriaId,
+      baixado: false,
+      cartao_fatura_id: fData.id
+    }]);
+
+    if (errDesp)
+      showToast("Fatura criada, mas erro ao criar despesa.", "error");
+    else
+      showToast("Fatura fechada e despesa criada.", "success");
 
     state.faturaAtual.status = "fechada";
+
+    if (modalContaFatura)
+      modalContaFatura.classList.add("hidden");
+
+    await loadFaturaForSelected();
 
   } catch (err) {
     console.error("Erro ao fechar fatura:", err);
     showToast("Erro ao fechar fatura.", "error");
   }
-  }
-
-     // criar categoria "Cartão de Crédito"
-const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
-
-// pegar nome do cartão para a descrição
-const card = state.cards.find(c => c.id === activeCardId) || { nome: "Cartão" };
-
-const { error: errDesp } = await supabase.from("despesas").insert([{
-  id: crypto.randomUUID(),
-  user_id: state.user.id,
-  conta_id: conta_id || null,
-  descricao: `Fatura ${card.nome} — ${String(mes).padStart(2,"0")}/${ano}`,
-  valor: total,
-  data: venc,
-  categoria_id: categoriaId,
-  baixado: false,
-  cartao_fatura_id: fData.id
-}]);
-
-
-      if (errDesp) {
-        console.error("Erro ao criar despesa vinculada:", errDesp);
-        showToast("Fatura criada, mas erro ao criar despesa vinculada.", "error");
-      } else {
-        showToast("Fatura fechada e despesa criada (a pagar).");
-      }
-
-      // fechar modal se estiver aberto
-      if (modalContaFatura) modalContaFatura.classList.add("hidden");
-
-      await loadFaturaForSelected();
-
-    } catch (err) {
-      console.error(err);
-      showToast("Erro ao fechar fatura.", "error");
-    }
-  }
+}
 
  // ===========================// FECHAR FATURA → apenas abre o modal// ===========================
   
