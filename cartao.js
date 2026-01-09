@@ -542,15 +542,12 @@ async function loadCategorias() {
       0
     );
 
-   // criar fatura
 const { data: fData, error: errFatura } = await supabase
   .from("cartao_faturas")
   .insert([{
     id: crypto.randomUUID(),
     user_id: state.user.id,
     cartao_id: activeCardId,
-    inicio,
-    fim,
     mes,
     ano,
     vencimento: venc,
