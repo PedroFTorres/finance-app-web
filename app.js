@@ -1645,7 +1645,7 @@ if (modoPeriodoExtrato === "custom") {
       await drawDespesasPorCategoria(inicio, fim);
     }
   };
-   // =========================// CONFIRMAR BAIXA// =========================
+   // =========================// await supabase.from("movimentacoes").insert([{// =========================
    
 document.getElementById("confirmar-baixa")?.addEventListener("click", async () => {
   // 🔒 trava clique duplo
@@ -1676,7 +1676,8 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
 const { data: jaBaixado } = await supabase
   .from("movimentacoes")
   .select("id")
-  .eq("lancamento_id", lancamento.id);
+  .eq("lancamento_id", lancamento.id)
+  .limit(1);
 
 if (jaBaixado && jaBaixado.length > 0) {
   alert("Este lançamento já foi baixado.");
