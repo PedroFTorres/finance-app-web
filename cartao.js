@@ -577,47 +577,27 @@ const { error: errDesp } = await supabase.from("despesas").insert([{
 
  // ===========================// FECHAR FATURA → apenas abre o modal// ===========================
   
-if (btnFecharFatura)
+if (btnFecharFatura) {
   btnFecharFatura.onclick = async () => {
     console.log("CLICOU EM FECHAR FATURA");
-    try {
 
-      // ✅ garante que o input existe
-      if (!dataVencimentoFatura) {
-        console.error("Input fatura-vencimento não encontrado");
-        showToast("Erro interno: campo de vencimento não encontrado.", "error");
-        return;
-      }
-
-      const venc = dataVencimentoFatura.value;
-
-      if (!activeCardId) {
-        showToast("Selecione um cartão.", "error");
-        return;
-      }
-
-      if (!venc) {
-        showToast("Informe o vencimento.", "error");
-        return;
-      }
-
-      if (state.faturaAtual?.status === "fechada") {
-        showToast("Esta fatura já está fechada.", "error");
-        return;
-      }
-
-      // 🔽 carregar contas para o modal
-      await carregarContasModal();
-
-      // 🔽 abrir modal de escolha da conta
-      if (modalContaFatura)
-        modalContaFatura.classList.remove("hidden");
-
-    } catch (err) {
-      console.error("Erro ao fechar fatura:", err);
-      showToast("Erro ao processar fechamento.", "error");
+    if (!activeCardId) {
+      showToast("Selecione um cartão.", "error");
+      return;
     }
+
+    if (state.faturaAtual?.status === "fechada") {
+      showToast("Esta fatura já está fechada.", "error");
+      return;
+    }
+
+    // 🔽 carrega contas no select do modal
+    await carregarContasModal();
+
+    // 🔽 abre o modal (SEM validar vencimento aqui)
+    modalContaFatura.classList.remove("hidden");
   };
+}
 
   // ===========================// PAGAR FATURA → baixa a despesa vinculada, cria movimentação e atualiza saldo// ===========================
   if (btnPagarFatura) btnPagarFatura.onclick = async () => {
