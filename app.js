@@ -1685,19 +1685,30 @@ if (jaBaixado && jaBaixado.length > 0) {
 }
 
     // 🔹 cria movimentação (extrato)
-    await supabase.from("movimentacoes").insert([{
-      id: crypto.randomUUID(),
-      user_id: STATE.user.id,
-      conta_id: contaId,
-      tipo: tipo === "receita" ? "credito" : "debito",
-      valor: valorFinal,
-      descricao:
-        lancamento.descricao +
-        (juros ? ` (+Juros ${fmtMoney(juros)})` : "") +
-        (desconto ? ` (-Desc ${fmtMoney(desconto)})` : ""),
-      data: dataBaixa,
-      lancamento_id: lancamento.id
-    }]);
+const { error: insertErr } = await supabase
+  .from("movimentacoes")
+  .insert([{
+    id: crypto.randomUUID(),
+    user_id: STATE.user.id,
+    conta_id: contaId,
+    tipo: tipo === "receita" ? "credito" : "debito",
+    valor: valorFinal,
+    descricao:
+      lancamento.descricao +
+      (juros ? ` (+Juros ${fmtMoney(juros)})` : "") +
+      (desconto ? ` (-Desc ${fmtMoney(desconto)})` : ""),
+    data: dataBaixa,
+    lancamento_id: lancamento.id
+  }]);
+
+// 🔒 trata erro de duplicidade do UNIQUE no banco
+if (insertErr) {
+  if (insertErr.code === "23505") {
+    alert("Este lançamento já foi baixado.");
+    return;
+  }
+  throw insertErr;
+}
 
     // 🔹 marca lançamento como baixado
     await supabase
