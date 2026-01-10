@@ -116,8 +116,8 @@
    FORM PAGAMENTO
 =========================== */
 
-.box {
-  margin-top: 20px;
+.cartoes-conteudo .box {
+  background: #fafafa;
 }
 
 .box label {
