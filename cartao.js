@@ -156,6 +156,26 @@ if (contaFaturaConfirmar) {
 
   let mesFatura = new Date();
   let mesLanc = new Date();
+  // =========================// FATURA — CONTROLE POR MÊS// =========================
+
+function atualizarFaturaPorMes() {
+  popularMesFatura();
+  loadFaturaForSelected();
+}
+
+if (btnFatPrev) {
+  btnFatPrev.onclick = () => {
+    mesFatura.setMonth(mesFatura.getMonth() - 1);
+    atualizarFaturaPorMes();
+  };
+}
+
+if (btnFatNext) {
+  btnFatNext.onclick = () => {
+    mesFatura.setMonth(mesFatura.getMonth() + 1);
+    atualizarFaturaPorMes();
+  };
+}
 
   // =========================== // HELPERS // ===========================
   function formatReal(v) {
@@ -240,9 +260,7 @@ await loadCategorias();
 
 popularMesFatura();
 popularFaturasLancamento();
-
 await loadFaturaForSelected();
-
 
     } catch (err) {
       console.error(err);
