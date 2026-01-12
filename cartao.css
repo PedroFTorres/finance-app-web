@@ -226,4 +226,20 @@
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
+.filtro-periodo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.fatura-actions {
+  margin: 16px 0;
+}
+
+.acoes-fatura {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 
