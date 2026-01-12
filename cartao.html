@@ -48,44 +48,44 @@
 
     </aside>
    
-<div class="filtro-periodo" style="display:flex;gap:12px;align-items:center;">
-  <button id="fat-prev" class="btn-secondary">◀</button>
-  <strong id="fat-display"></strong>
-  <button id="fat-next" class="btn-secondary">▶</button>
-</div>
-
     <!-- CONTEÚDO FATURA -->
-    <section class="cartoes-conteudo">
+  <section class="cartoes-conteudo">
 
-      <h3 id="fatura-titulo"></h3>
-      <p id="fatura-periodo"></p>
-      <p id="fatura-total" class="valor-fatura"></p>
-
-      <ul id="lista-fatura" class="lista-fatura"></ul>
-      
-    <!-- AÇÃO PRINCIPAL -->
-<div class="fatura-actions" style="margin-bottom:16px">
-  <button id="btn-lancar-compra" class="btn-outline">
-    ➕ Lançar compra
-  </button>
-</div>
-
-      <!-- AÇÕES DA FATURA -->
-<div class="box" style="margin-top:12px;padding:12px 16px">
-
-  <div style="display:flex;gap:12px;flex-wrap:wrap">
-    
-    <button id="btn-fechar-fatura" class="btn-danger">
-      Fechar Fatura
-    </button>
-
-    <button id="btn-gerar-despesa" class="btn-primary">
-      Gerar Despesa
-    </button>
-
+  <!-- FILTRO DE MÊS -->
+  <div class="filtro-periodo" style="display:flex;gap:12px;align-items:center;margin-bottom:16px;">
+    <button id="fat-prev" class="btn-secondary">◀</button>
+    <strong id="fat-display"></strong>
+    <button id="fat-next" class="btn-secondary">▶</button>
   </div>
 
-</div>
+  <!-- FATURA -->
+  <h3 id="fatura-titulo"></h3>
+  <p id="fatura-periodo"></p>
+  <p id="fatura-total" class="valor-fatura"></p>
+
+  <ul id="lista-fatura" class="lista-fatura"></ul>
+
+  <!-- AÇÃO PRINCIPAL -->
+  <div class="fatura-actions" style="margin-bottom:16px">
+    <button id="btn-lancar-compra" class="btn-outline">
+      ➕ Lançar compra
+    </button>
+  </div>
+
+  <!-- AÇÕES DA FATURA -->
+  <div class="box" style="margin-top:12px;padding:12px 16px">
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button id="btn-fechar-fatura" class="btn-danger">
+        Fechar Fatura
+      </button>
+
+      <button id="btn-gerar-despesa" class="btn-primary">
+        Gerar Despesa
+      </button>
+    </div>
+  </div>
+
+</section>
 
       <!-- ===================== EDIÇÃO COMPRA PARCELADA ===================== -->
 <section id="view-editar-compra" class="panel hidden">
