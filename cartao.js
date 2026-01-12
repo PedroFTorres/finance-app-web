@@ -156,27 +156,7 @@ if (contaFaturaConfirmar) {
 
   let mesFatura = new Date();
   let mesLanc = new Date();
-  // =========================// FATURA — CONTROLE POR MÊS// =========================
-
-function atualizarFaturaPorMes() {
-  popularMesFatura();
-  loadFaturaForSelected();
-}
-
-if (btnFatPrev) {
-  btnFatPrev.onclick = () => {
-    mesFatura.setMonth(mesFatura.getMonth() - 1);
-    atualizarFaturaPorMes();
-  };
-}
-
-if (btnFatNext) {
-  btnFatNext.onclick = () => {
-    mesFatura.setMonth(mesFatura.getMonth() + 1);
-    atualizarFaturaPorMes();
-  };
-}
-
+ 
   // =========================== // HELPERS // ===========================
   function formatReal(v) {
     return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -241,32 +221,37 @@ if (btnFatNext) {
     v?.classList.remove("hidden");
   }
 
-  // ===========================// SESSÃO // ===========================
-  (async () => {
-    const sessionResp = await supabase.auth.getSession();
-    if (!sessionResp.data.session) {
-      window.location.href = "login.html";
-      return;
-    }
+  // =========================== // SESSÃO // ===========================
+(async () => {
+  const sessionResp = await supabase.auth.getSession();
 
-    state.user = sessionResp.data.session.user;
-    if (userEmail) userEmail.textContent = state.user.email;
+  if (!sessionResp.data.session) {
+    window.location.href = "login.html";
+    return;
+  }
 
-    try {
-     await loadCards();
-renderCardsSidebar();
+  state.user = sessionResp.data.session.user;
 
-await loadCategorias();
+  if (userEmail)
+    userEmail.textContent = state.user.email;
 
-popularMesFatura();
-popularFaturasLancamento();
-await loadFaturaForSelected();
+  try {
+    // 🔹 carregar dados básicos
+    await loadCards();
+    renderCardsSidebar();
+    await loadCategorias();
 
-    } catch (err) {
-      console.error(err);
-      showToast("Erro ao carregar dados.", "error");
-    }
-  })();
+    // 🔹 inicialização da fatura (UMA ÚNICA VEZ)
+    popularMesFatura();              // mostra o mês no topo
+    atualizarEstadoBotoesMes();      // bloqueia meses futuros
+    await loadFaturaForSelected();   // carrega a fatura correta
+
+  } catch (err) {
+    console.error(err);
+    showToast("Erro ao carregar dados.", "error");
+  }
+})();
+
 
   // ===========================// NAV / BOTÕES - Back e Logout // ===========================
   if (btnBack) btnBack.onclick = () => {
@@ -360,26 +345,60 @@ async function loadCategorias() {
   }
 }
 
-  // =========================== // MES NAV // ===========================
-  function displayMes(dateObj) {
-    const meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
-    return `${meses[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-  }
+// ========================= // MES NAV // =========================
 
-  function popularMesFatura() {
-    if (mesDisplay) mesDisplay.textContent = displayMes(mesFatura);
-    if (selectMesFaturas) selectMesFaturas.value = `${mesFatura.getFullYear()}-${String(mesFatura.getMonth()+1).padStart(2,"0")}`;
-  }
+function displayMes(dateObj) {
+  const meses = [
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
+  ];
+  return `${meses[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+}
 
-  if (btnMesPrev) btnMesPrev.onclick = () => { mesFatura.setMonth(mesFatura.getMonth()-1); popularMesFatura(); loadFaturaForSelected(); };
-  if (btnMesNext) btnMesNext.onclick = () => { mesFatura.setMonth(mesFatura.getMonth()+1); popularMesFatura(); loadFaturaForSelected(); };
+function popularMesFatura() {
+  if (mesDisplay)
+    mesDisplay.textContent = displayMes(mesFatura);
 
-  function popularFaturasLancamento() {
-    if (fatDisplay) fatDisplay.textContent = displayMes(mesLanc);
-    if (selectFaturaInicial) selectFaturaInicial.value = `${mesLanc.getFullYear()}-${String(mesLanc.getMonth()+1).padStart(2,"0")}`;
-  }
-  if (btnFatPrev) btnFatPrev.onclick = () => { mesLanc.setMonth(mesLanc.getMonth()-1); popularFaturasLancamento(); };
-  if (btnFatNext) btnFatNext.onclick = () => { mesLanc.setMonth(mesLanc.getMonth()+1); popularFaturasLancamento(); };
+  if (selectMesFaturas)
+    selectMesFaturas.value =
+      `${mesFatura.getFullYear()}-${String(mesFatura.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// 🔒 controla habilitação dos botões (bloqueia meses futuros)
+function atualizarEstadoBotoesMes() {
+  const hoje = new Date();
+  const mesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const mesExibido = new Date(
+    mesFatura.getFullYear(),
+    mesFatura.getMonth(),
+    1
+  );
+
+  // botão anterior sempre ativo
+  if (btnMesPrev) btnMesPrev.disabled = false;
+
+  // bloqueia avanço para mês futuro
+  if (btnMesNext)
+    btnMesNext.disabled = mesExibido >= mesAtual;
+}
+
+// ◀ mês anterior
+if (btnMesPrev)
+  btnMesPrev.onclick = () => {
+    mesFatura.setMonth(mesFatura.getMonth() - 1);
+    popularMesFatura();
+    atualizarEstadoBotoesMes();
+    loadFaturaForSelected();
+  };
+
+// ▶ próximo mês
+if (btnMesNext)
+  btnMesNext.onclick = () => {
+    mesFatura.setMonth(mesFatura.getMonth() + 1);
+    popularMesFatura();
+    atualizarEstadoBotoesMes();
+    loadFaturaForSelected();
+  };
 
   // =========================== // CARREGAR FATURA / RENDER (USANDO data_fatura) // ===========================
  async function loadFaturaForSelected() {
