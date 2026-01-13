@@ -459,9 +459,8 @@ if (btnMesNext)
 
       li.style.cursor = "pointer";
       li.onclick = () => {
-        if (Number(c.parcelas || 0) === 1) abrirEdicaoAvista(c);
-        else abrirEdicaoCompraParcelada(c);
-      };
+  abrirModalEditarParcela(c);
+};
 
       listaComprasFatura.appendChild(li);
     });
