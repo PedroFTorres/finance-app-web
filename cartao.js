@@ -789,31 +789,40 @@ if (btnAddPurchase) {
 
       // ================= CÁLCULOS =================
       const valorParcela = Number((valor / parcelas).toFixed(2));
-      let dataBase = new Date(dataCompra);
+      // fatura inicial vem no formato YYYY-MM
+const [anoFatura, mesFatura] = faturaInicial.split("-").map(Number);
+
+// base da fatura (sempre dia 01)
+let dataBase = new Date(anoFatura, mesFatura - 1, 1);
 
       // ================= INSERT =================
-      for (let p = 1; p <= parcelas; p++) {
-        const dataFaturaISO = new Date(
-          dataBase.getFullYear(),
-          dataBase.getMonth() + (p - 1),
-          1
-        ).toISOString().slice(0, 10);
+    for (let p = 1; p <= parcelas; p++) {
 
-        await supabase.from("cartao_lancamentos").insert([{
-          id: crypto.randomUUID(),
-          user_id: state.user.id,
-          cartao_id: state.cartaoLancamentoAtual,
-          descricao: parcelas > 1 ? `${descricao} (${p}/${parcelas})` : descricao,
-          valor: valorParcela,
-          data_compra: dataCompra,
-          data_fatura: dataFaturaISO,
-          parcelas,
-          parcela_atual: parcelas > 1 ? p : 0,
-          categoria_id: categoriaId,
-          tipo: "compra",
-          billed: false
-        }]);
-      }
+  const dataFatura = new Date(
+    dataBase.getFullYear(),
+    dataBase.getMonth() + (p - 1),
+    1
+  );
+
+  const dataFaturaISO = dataFatura.toISOString().slice(0, 10);
+
+  await supabase.from("cartao_lancamentos").insert([{
+    id: crypto.randomUUID(),
+    user_id: state.user.id,
+    cartao_id: state.cartaoLancamentoAtual,
+    descricao: parcelas > 1
+      ? `${descricao} (${p}/${parcelas})`
+      : descricao,
+    valor: valorParcela,
+    data_compra: dataCompra,
+    data_fatura: dataFaturaISO, // ✅ AGORA CORRETO
+    parcelas,
+    parcela_atual: parcelas > 1 ? p : 0,
+    categoria_id: categoriaId,
+    tipo: "compra",
+    billed: false
+  }]);
+}
 
       // ================= LIMPEZA =================
       if (cartDesc) cartDesc.value = "";
