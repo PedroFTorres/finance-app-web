@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const viewLancamento = document.getElementById("view-lancamento");
   const viewHistorico = document.getElementById("view-historico");
   const boxPagAntecipado = document.getElementById("box-pag-antecipado");
-  const viewEditarCompra = document.getElementById("view-editar-compra");
+  const modalEditarCompra = document.getElementById("modal-editar-compra");
   let viewEditarAvista = document.getElementById("view-editar-avista"); // pode ser criado dinamicamente
   let activeCardId = null;
 
@@ -211,16 +211,31 @@ if (contaFaturaConfirmar) {
 }
 
   function hideAllViews() {
-    [
-      viewNewCard, viewFaturas, viewLancamento, viewHistorico,
-      boxPagAntecipado, viewEditarCompra, viewEditarAvista
-    ].forEach((v) => v?.classList.add("hidden"));
-  }
+  [
+    viewNewCard,
+    viewFaturas,
+    viewLancamento,
+    viewHistorico,
+    boxPagAntecipado,
+    viewEditarAvista
+  ].forEach(v => v?.classList.add("hidden"));
+}
 
-  function showView(v) {
-    hideAllViews();
-    v?.classList.remove("hidden");
-  }
+function abrirModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+}
+function fecharModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+}
+
 
   // =========================== // SESSÃO // ===========================
 (async () => {
@@ -1102,7 +1117,7 @@ function popularFaturasLancamento() {
     await popularSelectCartaoEdicao(state.editingPurchaseFull.cartao_id);
 
     renderParcelasEdicao();
-    showView(viewEditarCompra);
+    modalEditarCompra.classList.remove("hidden");
     // botão voltar da edição parcelada
 const btnVoltar = document.getElementById("btn-voltar-edicao");
 if (btnVoltar) {
@@ -1508,7 +1523,13 @@ if (btnCancelCard) {
   // Compra parcelada → abrir edição completa (JÁ EXISTENTE)
   await abrirEdicaoCompraParcelada(c);
 }
+const btnFecharEdicao = document.getElementById("btn-fechar-edicao-compra");
 
+if (btnFecharEdicao) {
+  btnFecharEdicao.onclick = () => {
+    modalEditarCompra.classList.add("hidden");
+  };
+}
 
 }); // fim DOMContentLoaded
 
