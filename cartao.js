@@ -886,6 +886,34 @@ if (btnAddPurchase) {
       listaFaturasHistorico.appendChild(li);
     });
   }
+  
+  // ===========================// FATURAS — SELECT DO LANÇAMENTO// ===========================
+  
+function popularFaturasLancamento() {
+  if (!selectFaturaInicial) return;
+
+  selectFaturaInicial.innerHTML = "";
+
+  const base = new Date();
+
+  // gera faturas do mês atual + próximos 24 meses
+  for (let i = 0; i < 24; i++) {
+    const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
+
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("pt-BR", {
+      month: "long",
+      year: "numeric"
+    });
+
+    const opt = new Option(label, value);
+
+    // seleciona automaticamente a fatura atual
+    if (i === 0) opt.selected = true;
+
+    selectFaturaInicial.appendChild(opt);
+  }
+}
 
   // ===========================// SELECTS AUXILIARES// ===========================
   async function loadSelectsForLanc() {
