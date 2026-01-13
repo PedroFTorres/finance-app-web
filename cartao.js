@@ -459,8 +459,8 @@ if (btnMesNext)
       `;
 
       li.style.cursor = "pointer";
-      li.onclick = () => {
-  abrirModalEditarParcela(c);
+      li.onclick = async () => {
+  await abrirFluxoEdicaoCompra(c);
 };
 
       listaComprasFatura.appendChild(li);
@@ -1495,7 +1495,20 @@ if (btnCancelCard) {
    
   };
 }
- 
+
+  // -----------------------------------------------------------------------------------
+  
+  async function abrirFluxoEdicaoCompra(c) {
+  // Se não for parcelada, usa o modal simples (JÁ EXISTENTE)
+  if (!c.parcelas || c.parcelas <= 1) {
+    abrirModalEditarParcela(c);
+    return;
+  }
+
+  // Compra parcelada → abrir edição completa (JÁ EXISTENTE)
+  await abrirEdicaoCompraParcelada(c);
+}
+
 
 }); // fim DOMContentLoaded
 
