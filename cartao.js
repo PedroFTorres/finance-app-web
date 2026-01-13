@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // ===========================// ELEMENTOS DO DOM // ===========================
+  
   const btnBack = document.getElementById("btn-back");
   const btnLogout = document.getElementById("btn-logout");
   const userEmail = document.getElementById("user-email");
@@ -67,9 +68,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnMesNext = document.getElementById("mes-next");
 
   const faturaTitulo = document.getElementById("fatura-titulo");
-const faturaPeriodo = document.getElementById("fatura-periodo");
-const faturaTotal = document.getElementById("fatura-total");
-const listaComprasFatura = document.getElementById("lista-fatura");
+  const faturaPeriodo = document.getElementById("fatura-periodo");
+  const faturaTotal = document.getElementById("fatura-total");
+  const listaComprasFatura = document.getElementById("lista-fatura");
 
   const selectCategoriaLancCartao = document.getElementById("select-categoria-lanc-cartao");
   const cartDesc = document.getElementById("cart-desc");
@@ -1151,19 +1152,36 @@ if (btnVoltar) {
   // ===========================// MODAL EDITAR PARCELA// ===========================
   let parcelaEditandoId = null;
 
-  function abrirModalEditarParcela(parcela) {
-    parcelaEditandoId = parcela.id;
-    modalParcelaValor.value = parcela.valor;
-    modalParcelaData.value = parcela.data_fatura || parcela.data_compra || "";
-    modalEditarParcela.classList.remove("hidden");
+ function abrirModalEditarParcela(c) {
+  if (!modalEditarParcela || !modalParcelaValor || !modalParcelaData) {
+    console.error("Modal de edição de parcela não encontrado no DOM");
+    showToast("Erro interno ao editar parcela.", "error");
+    return;
   }
+
+  parcelaEditandoId = c.id;
+
+  modalParcelaValor.value = Number(c.valor || 0);
+  modalParcelaData.value =
+    c.data_fatura ||
+    c.data_compra ||
+    new Date().toISOString().slice(0, 10);
+
+  modalEditarParcela.classList.remove("hidden");
+}
+
 
   function fecharModalEditarParcela() {
     parcelaEditandoId = null;
     modalEditarParcela.classList.add("hidden");
   }
 
-  if (modalParcelaCancelar) modalParcelaCancelar.onclick = fecharModalEditarParcela;
+if (modalParcelaCancelar) {
+  modalParcelaCancelar.onclick = () => {
+    modalEditarParcela.classList.add("hidden");
+    parcelaEditandoId = null;
+  };
+}
 
   if (modalParcelaSalvar) modalParcelaSalvar.onclick = async () => {
     const novoValor = Number(modalParcelaValor.value);
