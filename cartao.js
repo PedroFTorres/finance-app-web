@@ -983,24 +983,48 @@ function popularFaturasLancamento() {
     document.getElementById("btn-avista-excluir").onclick = excluirCompraAvista;
      }
 
- async function abrirEdicaoAvista(l) {
-  ensureAvistaViewExists();
+async function abrirEdicaoAvista(l) {
+  try {
+    const modal = document.getElementById("modal-editar-compra");
+    if (!modal) {
+      showToast("Modal de edição não encontrado.", "error");
+      return;
+    }
 
-  document.getElementById("btn-avista-excluir").onclick = excluirCompraAvista;
+    // descrição
+    document.getElementById("edit-desc").value =
+      (l.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
 
-  document.getElementById("avista-desc").value =
-    (l.descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
+    // valor
+    document.getElementById("edit-valor-total").value = Number(l.valor);
 
-  document.getElementById("avista-valor").value = Number(l.valor);
+    // data da compra
+    document.getElementById("edit-data-inicial").value =
+      l.data_compra || l.data || "";
 
-  document.getElementById("avista-data").value =
-    l.data_compra || l.data || "";
+    // compra à vista = 1 parcela
+    document.getElementById("edit-total-parcelas").value = 1;
 
-  await popularSelectCategoriaAvista(l.categoria_id);
-  await popularSelectCartaoAvista(l.cartao_id);
+    // selects
+    await popularSelectCategoriaEdicao(l.categoria_id);
+    await popularSelectCartaoEdicao(l.cartao_id);
 
-  viewEditarAvista.dataset.lancId = l.id;
-  showView(viewEditarAvista);
+    // limpa lista de parcelas (não existe para compra à vista)
+    const listaParcelas = document.getElementById("lista-parcelas-editar");
+    if (listaParcelas) listaParcelas.innerHTML = "";
+
+    // guarda estado
+    state.editingPurchaseFull = l;
+    state.editingPurchaseParcels = [l];
+
+    // abre modal
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+
+  } catch (err) {
+    console.error(err);
+    showToast("Erro ao abrir edição da compra.", "error");
+  }
 }
 
   async function popularSelectCategoriaAvista(id) {
