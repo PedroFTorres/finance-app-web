@@ -277,3 +277,41 @@
   border-bottom: 1px solid #eee;
 }
 
+/* =========================
+   ALINHAMENTO DAS PARCELAS
+========================= */
+
+.parcela-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;     /* topo alinhado */
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+/* texto da parcela */
+.parcela-item span {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* coluna de botões */
+.parcela-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  min-width: 96px;
+}
+
+/* botões padronizados */
+.parcela-actions button {
+  width: 100%;
+  height: 32px;
+  font-size: 13px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
