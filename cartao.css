@@ -240,4 +240,40 @@
   gap: 12px;
   flex-wrap: wrap;
 }
+/* =========================
+   SCROLL NA LISTA DE PARCELAS
+========================= */
+
+.lista-parcelas {
+  max-height: 320px;        /* altura máxima visível */
+  overflow-y: auto;         /* ativa rolagem vertical */
+  padding-right: 6px;       /* espaço p/ scrollbar */
+  margin-top: 8px;
+}
+
+/* melhora visual da scrollbar (Chrome / Edge) */
+
+.lista-parcelas::-webkit-scrollbar {
+  width: 6px;
+}
+
+.lista-parcelas::-webkit-scrollbar-track {
+  background: #f0f0f5;
+  border-radius: 10px;
+}
+
+.lista-parcelas::-webkit-scrollbar-thumb {
+  background: #7a4dff;
+  border-radius: 10px;
+}
+
+/* cada parcela */
+.parcela-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
 
