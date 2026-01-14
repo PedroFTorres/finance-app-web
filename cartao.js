@@ -1069,15 +1069,14 @@ function popularFaturasLancamento() {
 
   // ===========================// EDIÇÃO PARCELADA // ===========================
   
-  async function abrirEdicaoCompraParcelada(c) {
+ async function abrirEdicaoCompraParcelada(c) {
   try {
-    // 🔒 garante que a view existe
-    if (!viewEditarCompra) {
-      showToast("Tela de edição parcelada não disponível.", "error");
+    const modal = document.getElementById("modal-editar-compra");
+    if (!modal) {
+      showToast("Modal de edição não encontrado.", "error");
       return;
     }
 
-    // 🔒 garante que os campos existem
     const elDesc = document.getElementById("edit-desc");
     const elValor = document.getElementById("edit-valor-total");
     const elData = document.getElementById("edit-data-inicial");
@@ -1092,40 +1091,34 @@ function popularFaturasLancamento() {
       .replace(/\s*\(\d+\/\d+\)\s*$/, "")
       .trim();
 
-    const q = await supabase
+    const { data } = await supabase
       .from("cartao_lancamentos")
       .select("*")
       .eq("cartao_id", c.cartao_id)
       .ilike("descricao", `${base}%`)
       .order("parcela_atual", { ascending: true });
 
-    if (!q.data || q.data.length === 0) {
+    if (!data || data.length === 0) {
       showToast("Não foi possível carregar parcelas.", "error");
       return;
     }
 
-    state.editingPurchaseParcels = q.data;
-    state.editingPurchaseFull = q.data[0];
+    state.editingPurchaseParcels = data;
+    state.editingPurchaseFull = data[0];
 
-    // preencher campos com segurança
     elDesc.value = base;
-    elValor.value = q.data.reduce((s, p) => s + Number(p.valor), 0);
-    elData.value = q.data[0].data_compra || "";
-    elParcelas.value = q.data.length;
+    elValor.value = data.reduce((s, p) => s + Number(p.valor), 0);
+    elData.value = data[0].data_compra || "";
+    elParcelas.value = data.length;
 
-    await popularSelectCategoriaEdicao(state.editingPurchaseFull.categoria_id);
-    await popularSelectCartaoEdicao(state.editingPurchaseFull.cartao_id);
+    await popularSelectCategoriaEdicao(data[0].categoria_id);
+    await popularSelectCartaoEdicao(data[0].cartao_id);
 
     renderParcelasEdicao();
-    modalEditarCompra.classList.remove("hidden");
-    // botão voltar da edição parcelada
-const btnVoltar = document.getElementById("btn-voltar-edicao");
-if (btnVoltar) {
-  btnVoltar.onclick = async () => {
-    await loadFaturaForSelected();
-    showView(viewFaturas);
-  };
-}
+
+    // ✅ ABRE O MODAL
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
 
   } catch (err) {
     console.error(err);
@@ -1133,36 +1126,57 @@ if (btnVoltar) {
   }
 }
 
-  function renderParcelasEdicao() {
-    const lista = document.getElementById("lista-parcelas-editar");
-    lista.innerHTML = "";
 
-    const parcelas = state.editingPurchaseParcels || [];
-    const total = parcelas.length;
+ function renderParcelasEdicao() {
+  const lista = document.getElementById("lista-parcelas-editar");
+  if (!lista) return;
 
-    parcelas.forEach((p) => {
-      const li = document.createElement("li");
-      li.className = "parcela-item";
-      li.dataset.parcelaId = p.id;
+  lista.innerHTML = "";
 
-      li.innerHTML = `
-        <span>(${p.parcela_atual}/${total}) — 
-          ${new Date(p.data_fatura + "T00:00:00").toLocaleDateString("pt-BR")} —
-          ${formatReal(p.valor)}
-        </span>
-        <div class="parcela-actions">
-          <button class="btn-secondary btn-edit">Editar</button>
-          <button class="btn-danger btn-del">Excluir</button>
-          <button class="btn-primary btn-ant">Antecipar</button>
-        </div>`;
+  const parcelas = state.editingPurchaseParcels || [];
+  const total = parcelas.length;
 
-      li.querySelector(".btn-edit").onclick = () => abrirModalEditarParcela(p);
-      li.querySelector(".btn-del").onclick = () => excluirParcela(p.id);
-      li.querySelector(".btn-ant").onclick = () => anteciparParcela(p.id);
+  parcelas.forEach((p) => {
+    const li = document.createElement("li");
+    li.className = "parcela-item";
+    li.dataset.parcelaId = p.id;
 
-      lista.appendChild(li);
-    });
-  }
+    const dataCompra = p.data_compra
+      ? new Date(p.data_compra + "T00:00:00").toLocaleDateString("pt-BR")
+      : "-";
+
+    const dataFatura = p.data_fatura
+      ? new Date(p.data_fatura + "T00:00:00").toLocaleDateString("pt-BR")
+      : "-";
+
+    li.innerHTML = `
+      <span>
+        (${p.parcela_atual}/${total}) —
+        Compra: ${dataCompra} —
+        Fatura: ${dataFatura} —
+        ${formatReal(p.valor)}
+      </span>
+
+      <div class="parcela-actions">
+        <button class="btn-secondary btn-edit">Editar</button>
+        <button class="btn-danger btn-del">Excluir</button>
+        <button class="btn-primary btn-ant">Antecipar</button>
+      </div>
+    `;
+
+    li.querySelector(".btn-edit").onclick = () =>
+      abrirModalEditarParcela(p);
+
+    li.querySelector(".btn-del").onclick = () =>
+      excluirParcela(p.id);
+
+    li.querySelector(".btn-ant").onclick = () =>
+      anteciparParcela(p.id);
+
+    lista.appendChild(li);
+  });
+}
+
 
   // ===========================// MODAL EDITAR PARCELA// ===========================
   let parcelaEditandoId = null;
@@ -1515,10 +1529,10 @@ if (btnCancelCard) {
   
   async function abrirFluxoEdicaoCompra(c) {
   // Se não for parcelada, usa o modal simples (JÁ EXISTENTE)
-  if (!c.parcelas || c.parcelas <= 1) {
-    abrirModalEditarParcela(c);
-    return;
-  }
+if (!c.parcelas || c.parcelas <= 1) {
+  await abrirEdicaoAvista(c);
+  return;
+}
 
   // Compra parcelada → abrir edição completa (JÁ EXISTENTE)
   await abrirEdicaoCompraParcelada(c);
