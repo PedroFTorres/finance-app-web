@@ -277,16 +277,14 @@
   border-bottom: 1px solid #eee;
 }
 
-/* =========================
-   ALINHAMENTO DAS PARCELAS
-========================= */
+/* ========================= PARCELAS — LAYOUT COMPACTO ========================= */
 
 .parcela-item {
   display: flex;
+  align-items: center;          /* tudo alinhado no meio */
   justify-content: space-between;
-  align-items: flex-start;     /* topo alinhado */
-  gap: 16px;
-  padding: 10px 0;
+  gap: 12px;
+  padding: 6px 0;               /* ↓ menos altura */
   border-bottom: 1px solid #eee;
 }
 
@@ -294,24 +292,24 @@
 .parcela-item span {
   flex: 1;
   font-size: 14px;
-  line-height: 1.4;
-  word-break: break-word;
+  line-height: 1.3;             /* ↓ menos espaçamento */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;      /* evita quebrar linha */
 }
 
-/* coluna de botões */
+/* botões lado a lado */
 .parcela-actions {
   display: flex;
-  flex-direction: column;
   gap: 6px;
-  align-items: stretch;
-  min-width: 96px;
+  flex-shrink: 0;
 }
 
-/* botões padronizados */
+/* botões compactos */
 .parcela-actions button {
-  width: 100%;
-  height: 32px;
-  font-size: 13px;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
   border-radius: 10px;
   white-space: nowrap;
 }
