@@ -63,9 +63,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
  
   const selectMesFaturas = document.getElementById("select-mes-faturas");
-  const btnMesPrev = document.getElementById("mes-prev");
-  const btnMesNext = document.getElementById("mes-next");
-
   const faturaTitulo = document.getElementById("fatura-titulo");
   const faturaPeriodo = document.getElementById("fatura-periodo");
   const faturaTotal = document.getElementById("fatura-total");
@@ -362,14 +359,6 @@ async function loadCategorias() {
 
 // ========================= // MES NAV // =========================
 
-function displayMes(dateObj) {
-  const meses = [
-    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
-  ];
-  return `${meses[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-}
-
 function popularMesFatura() {
   if (!fatDisplay) return;
 
@@ -382,7 +371,6 @@ function popularMesFatura() {
     `${meses[mesFatura.getMonth()]} ${mesFatura.getFullYear()}`;
 }
 
-// 🔒 controla habilitação dos botões (bloqueia meses futuros)
 function atualizarEstadoBotoesMes() {
   const hoje = new Date();
   const mesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -392,31 +380,39 @@ function atualizarEstadoBotoesMes() {
     1
   );
 
-  // botão anterior sempre ativo
-  if (btnMesPrev) btnMesPrev.disabled = false;
+  // ◀ nunca bloqueia voltar
+  if (btnFatPrev) btnFatPrev.disabled = false;
 
-  // bloqueia avanço para mês futuro
-  if (btnMesNext)
-    btnMesNext.disabled = mesExibido >= mesAtual;
+  // ▶ bloqueia mês futuro
+  if (btnFatNext) {
+    btnFatNext.disabled = mesExibido >= mesAtual;
+  }
 }
 
+// =========================// NAVEGAÇÃO DE FATURA (MÊS)// =========================
+  
+const btnFatPrev = document.getElementById("fat-prev");
+const btnFatNext = document.getElementById("fat-next");
+
 // ◀ mês anterior
-if (btnMesPrev)
-  btnMesPrev.onclick = () => {
+if (btnFatPrev) {
+  btnFatPrev.onclick = async () => {
     mesFatura.setMonth(mesFatura.getMonth() - 1);
     popularMesFatura();
     atualizarEstadoBotoesMes();
-    loadFaturaForSelected();
+    await loadFaturaForSelected();
   };
+}
 
 // ▶ próximo mês
-if (btnMesNext)
-  btnMesNext.onclick = () => {
+if (btnFatNext) {
+  btnFatNext.onclick = async () => {
     mesFatura.setMonth(mesFatura.getMonth() + 1);
     popularMesFatura();
     atualizarEstadoBotoesMes();
-    loadFaturaForSelected();
+    await loadFaturaForSelected();
   };
+}
 
   // =========================== // CARREGAR FATURA / RENDER (USANDO data_fatura) // ===========================
   
