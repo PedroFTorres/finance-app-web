@@ -419,7 +419,8 @@ if (btnMesNext)
   };
 
   // =========================== // CARREGAR FATURA / RENDER (USANDO data_fatura) // ===========================
- async function loadFaturaForSelected() {
+  
+async function loadFaturaForSelected() {
   if (!activeCardId && state.cards && state.cards.length > 0) {
     activeCardId = state.cards[0].id;
   }
@@ -430,10 +431,10 @@ if (btnMesNext)
   const mes = mesFatura.getMonth() + 1;
 
   const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
-  const last = new Date(ano, mes, 0).getDate();
-  const fim = `${ano}-${String(mes).padStart(2, "0")}-${last}`;
+  const lastDay = new Date(ano, mes, 0).getDate();
+  const fim = `${ano}-${String(mes).padStart(2, "0")}-${lastDay}`;
 
-  const { data: compras } = await supabase
+  const { data: compras, error } = await supabase
     .from("cartao_lancamentos")
     .select("*")
     .eq("cartao_id", cartao_id)
@@ -441,29 +442,70 @@ if (btnMesNext)
     .lte("data_fatura", fim)
     .order("data_fatura");
 
-  const total = (compras || []).reduce(
+  if (error) {
+    console.error("Erro ao carregar fatura:", error);
+    return;
+  }
+
+  const card = state.cards.find(c => c.id === cartao_id);
+
+  // =========================// 👉 FATURA VAZIA (UX CORRETA) // =========================
+  
+  if (!compras || compras.length === 0) {
+
+    if (faturaTitulo)
+      faturaTitulo.textContent = card?.nome || "Cartão";
+
+    if (faturaPeriodo)
+      faturaPeriodo.textContent = `${String(mes).padStart(2, "0")}/${ano}`;
+
+    if (faturaTotal)
+      faturaTotal.textContent = "R$ 0,00";
+
+    if (listaComprasFatura) {
+      listaComprasFatura.innerHTML = `
+        <li style="opacity:.7;font-style:italic">
+          Nenhuma compra lançada nesta fatura
+        </li>
+      `;
+    }
+
+    state.faturaAtual = {
+      inicio,
+      fim,
+      mes,
+      ano,
+      status: "aberta",
+      pago: false
+    };
+
+    updateButtonsForFatura();
+    return;
+  }
+
+  // =========================// 👉 FATURA COM COMPRAS // =========================
+  const total = compras.reduce(
     (s, c) => s + Number(c.valor || 0),
     0
   );
 
-  const card = state.cards.find(c => c.id === cartao_id);
-
-  if (faturaTitulo) {
+  if (faturaTitulo)
     faturaTitulo.textContent = card?.nome || "Cartão";
-  }
 
-  if (faturaPeriodo) {
+  if (faturaPeriodo)
     faturaPeriodo.textContent = `${String(mes).padStart(2, "0")}/${ano}`;
-  }
 
-  if (faturaTotal) {
-    faturaTotal.textContent = formatReal(total);
-  }
+  if (faturaTotal)
+    faturaTotal.textContent =
+      total.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      });
 
   if (listaComprasFatura) {
     listaComprasFatura.innerHTML = "";
 
-    (compras || []).forEach((c) => {
+    compras.forEach(c => {
       const li = document.createElement("li");
 
       const dataExibida = c.data_compra
@@ -472,13 +514,14 @@ if (btnMesNext)
 
       li.innerHTML = `
         <span>${dataExibida} — ${c.descricao}</span>
-        <span>${formatReal(c.valor)}</span>
+        <span>${Number(c.valor).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL"
+        })}</span>
       `;
 
       li.style.cursor = "pointer";
-      li.onclick = async () => {
-  await abrirFluxoEdicaoCompra(c);
-};
+      li.onclick = () => abrirFluxoEdicaoCompra(c);
 
       listaComprasFatura.appendChild(li);
     });
@@ -498,11 +541,11 @@ if (btnMesNext)
     fim,
     mes,
     ano,
-    status: "aberta"
+    status: "aberta",
+    pago: false
   };
 
   updateButtonsForFatura();
-  await loadSelectsForLanc();
 }
 
   // ===========================// UPDATE BUTTONS FOR FATURA // ===========================
