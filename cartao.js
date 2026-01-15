@@ -74,9 +74,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const cartData = document.getElementById("cart-data");
   const cartParcelas = document.getElementById("cart-parcelas");
 
-  const fatDisplay = document.getElementById("fat-display");
+  
   const btnFatPrev = document.getElementById("fat-prev");
   const btnFatNext = document.getElementById("fat-next");
+  const fatDisplay = document.getElementById("fat-display");
 
   const selectFaturaInicial = document.getElementById("select-fatura-inicial");
 
@@ -391,9 +392,6 @@ function atualizarEstadoBotoesMes() {
 
 // =========================// NAVEGAÇÃO DE FATURA (MÊS)// =========================
   
-const btnFatPrev = document.getElementById("fat-prev");
-const btnFatNext = document.getElementById("fat-next");
-
 // ◀ mês anterior
 if (btnFatPrev) {
   btnFatPrev.onclick = async () => {
