@@ -63,7 +63,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
  
   const selectMesFaturas = document.getElementById("select-mes-faturas");
-  const mesDisplay = document.getElementById("mes-display");
   const btnMesPrev = document.getElementById("mes-prev");
   const btnMesNext = document.getElementById("mes-next");
 
@@ -372,12 +371,15 @@ function displayMes(dateObj) {
 }
 
 function popularMesFatura() {
-  if (mesDisplay)
-    mesDisplay.textContent = displayMes(mesFatura);
+  if (!fatDisplay) return;
 
-  if (selectMesFaturas)
-    selectMesFaturas.value =
-      `${mesFatura.getFullYear()}-${String(mesFatura.getMonth() + 1).padStart(2, "0")}`;
+  const meses = [
+    "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+    "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
+  ];
+
+  fatDisplay.textContent =
+    `${meses[mesFatura.getMonth()]} ${mesFatura.getFullYear()}`;
 }
 
 // 🔒 controla habilitação dos botões (bloqueia meses futuros)
