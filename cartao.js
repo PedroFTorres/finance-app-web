@@ -526,51 +526,6 @@ async function loadFaturaForSelected() {
   updateButtonsForFatura();
 }
 
-  // =========================// 👉 FATURA COM COMPRAS // =========================
-  const total = compras.reduce(
-    (s, c) => s + Number(c.valor || 0),
-    0
-  );
-
-  if (faturaTitulo)
-    faturaTitulo.textContent = card?.nome || "Cartão";
-
-  if (faturaPeriodo)
-    faturaPeriodo.textContent = `${String(mes).padStart(2, "0")}/${ano}`;
-
-  if (faturaTotal)
-    faturaTotal.textContent =
-      total.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL"
-      });
-
-  if (listaComprasFatura) {
-    listaComprasFatura.innerHTML = "";
-
-    compras.forEach(c => {
-      const li = document.createElement("li");
-
-      const dataExibida = c.data_compra
-        ? new Date(c.data_compra + "T00:00:00").toLocaleDateString("pt-BR")
-        : "";
-
-      li.innerHTML = `
-        <span>${dataExibida} — ${c.descricao}</span>
-        <span>${Number(c.valor).toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL"
-        })}</span>
-      `;
-
-      li.style.cursor = "pointer";
-      li.onclick = () => abrirFluxoEdicaoCompra(c);
-
-      listaComprasFatura.appendChild(li);
-    });
-  updateButtonsForFatura();
-}
-
   // ===========================// UPDATE BUTTONS FOR FATURA // ===========================
   function updateButtonsForFatura() {
     const existingReabrir = document.getElementById("btn-reabrir-fatura");
