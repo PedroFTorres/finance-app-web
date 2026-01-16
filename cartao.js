@@ -1125,12 +1125,13 @@ async function abrirEdicaoAvista(l) {
       .replace(/\s*\(\d+\/\d+\)\s*$/, "")
       .trim();
 
-    const { data } = await supabase
-      .from("cartao_lancamentos")
-      .select("*")
-      .eq("cartao_id", c.cartao_id)
-      .ilike("descricao", `${base}%`)
-      .order("parcela_atual", { ascending: true });
+   const { data } = await supabase
+  .from("cartao_lancamentos")
+  .select("*")
+  .eq("cartao_id", c.cartao_id)
+  .ilike("descricao", `${base}%`)
+  .gte("data_fatura", state.faturaAtual.inicio)
+  .order("data_fatura", { ascending: true });
 
     if (!data || data.length === 0) {
       showToast("Não foi possível carregar parcelas.", "error");
