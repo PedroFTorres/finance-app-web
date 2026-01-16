@@ -373,21 +373,8 @@ function popularMesFatura() {
 }
 
 function atualizarEstadoBotoesMes() {
-  const hoje = new Date();
-  const mesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  const mesExibido = new Date(
-    mesFatura.getFullYear(),
-    mesFatura.getMonth(),
-    1
-  );
-
-  // ◀ nunca bloqueia voltar
   if (btnFatPrev) btnFatPrev.disabled = false;
-
-  // ▶ bloqueia mês futuro
-  if (btnFatNext) {
-    btnFatNext.disabled = mesExibido >= mesAtual;
-  }
+  if (btnFatNext) btnFatNext.disabled = false;
 }
 
 // =========================// NAVEGAÇÃO DE FATURA (MÊS)// =========================
