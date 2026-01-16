@@ -1102,8 +1102,7 @@ async function abrirEdicaoAvista(l) {
   }
 
   // ===========================// EDIÇÃO PARCELADA // ===========================
-  
- async function abrirEdicaoCompraParcelada(c) {
+   async function abrirEdicaoCompraParcelada(c) {
   try {
     const modal = document.getElementById("modal-editar-compra");
     if (!modal) {
@@ -1121,37 +1120,52 @@ async function abrirEdicaoAvista(l) {
       return;
     }
 
+    // descrição base (remove "(x/y)")
     const base = (c.descricao || "")
       .replace(/\s*\(\d+\/\d+\)\s*$/, "")
       .trim();
 
-   const { data } = await supabase
-  .from("cartao_lancamentos")
-  .select("*")
-  .eq("cartao_id", c.cartao_id)
-  .ilike("descricao", `${base}%`)
-  .gte("data_fatura", state.faturaAtual.inicio)
-  .order("data_fatura", { ascending: true });
+    // 🔒 data mínima para edição:
+    // usa fatura atual se existir, senão usa a data da parcela clicada
+    const dataInicioEdicao = state.faturaAtual?.inicio || c.data_fatura;
 
-    if (!data || data.length === 0) {
-      showToast("Não foi possível carregar parcelas.", "error");
+    const { data: parcelas, error } = await supabase
+      .from("cartao_lancamentos")
+      .select("*")
+      .eq("cartao_id", c.cartao_id)
+      .ilike("descricao", `${base}%`)
+      .gte("data_fatura", dataInicioEdicao)
+      .order("data_fatura", { ascending: true });
+
+    if (error) {
+      console.error(error);
+      showToast("Erro ao carregar parcelas.", "error");
       return;
     }
 
-    state.editingPurchaseParcels = data;
-    state.editingPurchaseFull = data[0];
+    if (!parcelas || parcelas.length === 0) {
+      showToast("Nenhuma parcela disponível para edição.", "warning");
+      return;
+    }
 
+    // estado global
+    state.editingPurchaseParcels = parcelas;
+    state.editingPurchaseFull = parcelas[0];
+
+    // preencher campos principais
     elDesc.value = base;
-    elValor.value = data.reduce((s, p) => s + Number(p.valor), 0);
-    elData.value = data[0].data_compra || "";
-    elParcelas.value = data.length;
+    elValor.value = parcelas.reduce((s, p) => s + Number(p.valor || 0), 0);
+    elData.value = parcelas[0].data_compra || "";
+    elParcelas.value = parcelas.length;
 
-    await popularSelectCategoriaEdicao(data[0].categoria_id);
-    await popularSelectCartaoEdicao(data[0].cartao_id);
+    // popular selects
+    await popularSelectCategoriaEdicao(parcelas[0].categoria_id);
+    await popularSelectCartaoEdicao(parcelas[0].cartao_id);
 
+    // renderizar parcelas (somente atuais + futuras)
     renderParcelasEdicao();
 
-    // ✅ ABRE O MODAL
+    // abrir modal
     modal.classList.remove("hidden");
     modal.setAttribute("aria-hidden", "false");
 
