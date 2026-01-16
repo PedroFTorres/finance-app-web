@@ -568,7 +568,6 @@ async function loadFaturaForSelected() {
 
       listaComprasFatura.appendChild(li);
     });
-  }
   updateButtonsForFatura();
 }
 
