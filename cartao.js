@@ -413,7 +413,6 @@ if (btnFatNext) {
 }
 
   // =========================== // CARREGAR FATURA / RENDER (USANDO data_fatura) // ===========================
-  
 async function loadFaturaForSelected() {
   if (!activeCardId && state.cards && state.cards.length > 0) {
     activeCardId = state.cards[0].id;
@@ -421,12 +420,17 @@ async function loadFaturaForSelected() {
   if (!activeCardId) return;
 
   const cartao_id = activeCardId;
-  const ano = mesFatura.getFullYear();
-  const mes = mesFatura.getMonth() + 1;
 
-  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
-  const lastDay = new Date(ano, mes, 0).getDate();
-  const fim = `${ano}-${String(mes).padStart(2, "0")}-${lastDay}`;
+  const ano = mesFatura.getFullYear();
+  const mes = mesFatura.getMonth(); // ⚠️ mês ZERO-BASED
+
+  const inicio = new Date(ano, mes, 1)
+    .toISOString()
+    .slice(0, 10);
+
+  const fim = new Date(ano, mes + 1, 0)
+    .toISOString()
+    .slice(0, 10);
 
   const { data: compras, error } = await supabase
     .from("cartao_lancamentos")
@@ -443,18 +447,11 @@ async function loadFaturaForSelected() {
 
   const card = state.cards.find(c => c.id === cartao_id);
 
-  // =========================// 👉 FATURA VAZIA (UX CORRETA) // =========================
-  
   if (!compras || compras.length === 0) {
-
-    if (faturaTitulo)
-      faturaTitulo.textContent = card?.nome || "Cartão";
-
+    if (faturaTitulo) faturaTitulo.textContent = card?.nome || "Cartão";
     if (faturaPeriodo)
-      faturaPeriodo.textContent = `${String(mes).padStart(2, "0")}/${ano}`;
-
-    if (faturaTotal)
-      faturaTotal.textContent = "R$ 0,00";
+      faturaPeriodo.textContent = `${String(mes + 1).padStart(2, "0")}/${ano}`;
+    if (faturaTotal) faturaTotal.textContent = "R$ 0,00";
 
     if (listaComprasFatura) {
       listaComprasFatura.innerHTML = `
@@ -467,7 +464,7 @@ async function loadFaturaForSelected() {
     state.faturaAtual = {
       inicio,
       fim,
-      mes,
+      mes: mes + 1,
       ano,
       status: "aberta",
       pago: false
@@ -476,6 +473,58 @@ async function loadFaturaForSelected() {
     updateButtonsForFatura();
     return;
   }
+
+  const total = compras.reduce((s, c) => s + Number(c.valor || 0), 0);
+
+  if (faturaTitulo) faturaTitulo.textContent = card?.nome || "Cartão";
+  if (faturaPeriodo)
+    faturaPeriodo.textContent = `${String(mes + 1).padStart(2, "0")}/${ano}`;
+  if (faturaTotal)
+    faturaTotal.textContent = total.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    });
+
+  listaComprasFatura.innerHTML = "";
+  compras.forEach(c => {
+    const li = document.createElement("li");
+    const dataExibida = c.data_compra
+      ? new Date(c.data_compra + "T00:00:00").toLocaleDateString("pt-BR")
+      : "";
+
+    li.innerHTML = `
+      <span>${dataExibida} — ${c.descricao}</span>
+      <span>${Number(c.valor).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      })}</span>
+    `;
+
+    li.onclick = () => abrirFluxoEdicaoCompra(c);
+    listaComprasFatura.appendChild(li);
+  });
+
+  const { data: faturaDB } = await supabase
+    .from("cartao_faturas")
+    .select("*")
+    .eq("user_id", state.user.id)
+    .eq("cartao_id", cartao_id)
+    .eq("ano", ano)
+    .eq("mes", mes + 1)
+    .maybeSingle();
+
+  state.faturaAtual = faturaDB || {
+    inicio,
+    fim,
+    mes: mes + 1,
+    ano,
+    status: "aberta",
+    pago: false
+  };
+
+  updateButtonsForFatura();
+}
+
 
   // =========================// 👉 FATURA COM COMPRAS // =========================
   const total = compras.reduce(
