@@ -413,6 +413,7 @@ if (btnFatNext) {
 }
 
   // =========================== // CARREGAR FATURA / RENDER (USANDO data_fatura) // ===========================
+  
 async function loadFaturaForSelected() {
   if (!activeCardId && state.cards && state.cards.length > 0) {
     activeCardId = state.cards[0].id;
@@ -525,7 +526,6 @@ async function loadFaturaForSelected() {
   updateButtonsForFatura();
 }
 
-
   // =========================// 👉 FATURA COM COMPRAS // =========================
   const total = compras.reduce(
     (s, c) => s + Number(c.valor || 0),
@@ -569,25 +569,6 @@ async function loadFaturaForSelected() {
       listaComprasFatura.appendChild(li);
     });
   }
-
-  const { data: faturaDB } = await supabase
-    .from("cartao_faturas")
-    .select("*")
-    .eq("user_id", state.user.id)
-    .eq("cartao_id", cartao_id)
-    .eq("ano", ano)
-    .eq("mes", mes)
-    .maybeSingle();
-
-  state.faturaAtual = faturaDB || {
-    inicio,
-    fim,
-    mes,
-    ano,
-    status: "aberta",
-    pago: false
-  };
-
   updateButtonsForFatura();
 }
 
