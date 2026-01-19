@@ -572,24 +572,30 @@ async function loadFaturaForSelected() {
   }
 }
 
- async function fecharFaturaComConta(conta_id) {
+async function fecharFaturaComConta(conta_id) {
   try {
-    if (!activeCardId)
-      return showToast("Selecione um cartão.", "error");
+    if (!activeCardId) {
+      showToast("Selecione um cartão.", "error");
+      return;
+    }
 
-    if (!state.faturaAtual)
-      return showToast("Fatura não encontrada.", "error");
+    if (!state.faturaAtual) {
+      showToast("Fatura não encontrada.", "error");
+      return;
+    }
 
     const venc = document.getElementById("conta-fatura-vencimento")?.value;
-    if (!venc)
-      return showToast("Informe o vencimento.", "error");
+    if (!venc) {
+      showToast("Informe o vencimento.", "error");
+      return;
+    }
 
     const inicio = state.faturaAtual.inicio;
     const fim = state.faturaAtual.fim;
     const mes = state.faturaAtual.mes;
     const ano = state.faturaAtual.ano;
 
-    // buscar compras
+    // 🔹 buscar compras da fatura atual
     const { data: compras, error: errCompras } = await supabase
       .from("cartao_lancamentos")
       .select("*")
@@ -604,36 +610,36 @@ async function loadFaturaForSelected() {
       0
     );
 
-const { data: fData, error: errFatura } = await supabase
-  .from("cartao_faturas")
-  .insert([{
-    id: crypto.randomUUID(),
-    user_id: state.user.id,
-    cartao_id: activeCardId,
-    mes,
-    ano,
-    data_vencimento: venc,   // ✅ NOME CORRETO DA COLUNA
-    valor_total: total,      // ✅ salva o total da fatura
-    status: "fechada"
-  }])
-  .select()
-  .single();
+    // 🔹 cria registro da fatura (FECHAR)
+    const { data: fData, error: errFatura } = await supabase
+      .from("cartao_faturas")
+      .insert([{
+        id: crypto.randomUUID(),
+        user_id: state.user.id,
+        cartao_id: activeCardId,
+        mes,
+        ano,
+        data_vencimento: venc,
+        valor_total: total,
+        status: "fechada"
+      }])
+      .select()
+      .single();
 
-if (errFatura) throw errFatura;
+    if (errFatura) throw errFatura;
 
-
-    // categoria Cartão
+    // 🔹 categoria padrão
     const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
 
     const card =
       state.cards.find(c => c.id === activeCardId) || { nome: "Cartão" };
 
-    // criar despesa
-    const { error: errDesp } = await supabase.from("despesas").insert([{
+    // 🔹 cria a DESPESA (AQUI É O PONTO-CHAVE)
+    await supabase.from("despesas").insert([{
       id: crypto.randomUUID(),
       user_id: state.user.id,
       conta_id: conta_id,
-      descricao: `Fatura ${card.nome} — ${String(mes).padStart(2,"0")}/${ano}`,
+      descricao: `Fatura ${card.nome} — ${String(mes).padStart(2, "0")}/${ano}`,
       valor: total,
       data: venc,
       categoria_id: categoriaId,
@@ -641,16 +647,14 @@ if (errFatura) throw errFatura;
       cartao_fatura_id: fData.id
     }]);
 
-    if (errDesp)
-      showToast("Fatura criada, mas erro ao criar despesa.", "error");
-    else
-      showToast("Fatura fechada e despesa criada.", "success");
+    showToast("Fatura fechada e despesa criada.", "success");
 
-    state.faturaAtual.status = "fechada";
-
-    if (modalContaFatura)
-      modalContaFatura.classList.add("hidden");
-
+    // ==================================================
+    // 🔥 REGRA DEFINITIVA:
+    // SÓ AGORA AVANÇA PARA O PRÓXIMO MÊS
+    // ==================================================
+    mesFatura.setMonth(mesFatura.getMonth() + 1);
+    popularMesFatura();
     await loadFaturaForSelected();
 
   } catch (err) {
