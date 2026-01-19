@@ -650,9 +650,7 @@ async function fecharFaturaComConta(conta_id) {
     showToast("Fatura fechada e despesa criada.", "success");
 
     // ==================================================
-    // 🔥 REGRA DEFINITIVA:
-    // SÓ AGORA AVANÇA PARA O PRÓXIMO MÊS
-    // ==================================================
+    // 🔥 REGRA DEFINITIVA: // SÓ AGORA AVANÇA PARA O PRÓXIMO MÊS // ==================================================
     mesFatura.setMonth(mesFatura.getMonth() + 1);
     popularMesFatura();
     await loadFaturaForSelected();
@@ -1497,17 +1495,79 @@ btnLancarCompra.onclick = async () => {
 const btnGerarDespesa = document.getElementById("btn-gerar-despesa");
 
 if (btnGerarDespesa) {
-  btnGerarDespesa.onclick = () => {
-    if (!activeCardId) {
-      showToast("Selecione um cartão primeiro.", "warning");
-      return;
+  btnGerarDespesa.onclick = async () => {
+    try {
+      if (!activeCardId) {
+        showToast("Selecione um cartão.", "error");
+        return;
+      }
+
+      if (!state.faturaAtual) {
+        showToast("Fatura não encontrada.", "error");
+        return;
+      }
+
+      if (state.faturaAtual.status !== "fechada") {
+        showToast("Feche a fatura antes de gerar a despesa.", "error");
+        return;
+      }
+
+      // 🔹 evita gerar despesa duas vezes
+      const { data: despExistente } = await supabase
+        .from("despesas")
+        .select("id")
+        .eq("cartao_fatura_id", state.faturaAtual.id)
+        .maybeSingle();
+
+      if (despExistente) {
+        showToast("Despesa já foi gerada para esta fatura.", "warning");
+        return;
+      }
+
+      // 🔹 dados da fatura
+      const { mes, ano, valor_total, id: faturaId } = state.faturaAtual;
+
+      // 🔹 conta escolhida no fechamento
+      const contaId = document.getElementById("conta-fatura-select")?.value;
+      const venc = document.getElementById("conta-fatura-vencimento")?.value;
+
+      if (!contaId || !venc) {
+        showToast("Conta ou vencimento não informado.", "error");
+        return;
+      }
+
+      // 🔹 categoria padrão
+      const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
+
+      const card =
+        state.cards.find(c => c.id === activeCardId) || { nome: "Cartão" };
+
+      // 🔹 CRIA A DESPESA (AQUI ENCERRA O CICLO)
+      await supabase.from("despesas").insert([{
+        id: crypto.randomUUID(),
+        user_id: state.user.id,
+        conta_id: contaId,
+        descricao: `Fatura ${card.nome} — ${String(mes).padStart(2, "0")}/${ano}`,
+        valor: valor_total,
+        data: venc,
+        categoria_id: categoriaId,
+        baixado: false,
+        cartao_fatura_id: faturaId
+      }]);
+
+      showToast("Despesa gerada com sucesso.", "success");
+
+      // ==================================================
+      // 🔥 ÚNICO LUGAR ONDE O MÊS AVANÇA
+      // ==================================================
+      mesFatura.setMonth(mesFatura.getMonth() + 1);
+      popularMesFatura();
+      await loadFaturaForSelected();
+
+    } catch (err) {
+      console.error(err);
+      showToast("Erro ao gerar despesa.", "error");
     }
-
-    // guarda o cartão ativo
-    state.cartaoSelecionado = activeCardId;
-
-    // abre a tela de lançamento
-    showView(viewLancamento);
   };
 }
 
