@@ -402,7 +402,7 @@ if (btnFatNext) {
   // =========================== // CARREGAR FATURA / RENDER (USANDO data_fatura) // ===========================
   
 async function loadFaturaForSelected() {
-  if (!activeCardId && state.cards.length > 0) {
+  if (!activeCardId && state.cards?.length) {
     activeCardId = state.cards[0].id;
   }
   if (!activeCardId) return;
@@ -411,34 +411,42 @@ async function loadFaturaForSelected() {
 
   while (true) {
     const ano = mesFatura.getFullYear();
-    const mes = mesFatura.getMonth() + 1;
+    const mesZero = mesFatura.getMonth();
+    const mes = mesZero + 1;
 
-    // 🔹 verifica se a fatura já está FECHADA
-    const { data: faturaFechada } = await supabase
+    // 🔹 1. BUSCA A FATURA NO BANCO (FONTE DA VERDADE)
+    const { data: faturaDB } = await supabase
       .from("cartao_faturas")
-      .select("id")
+      .select("*")
       .eq("user_id", state.user.id)
       .eq("cartao_id", cartao_id)
       .eq("ano", ano)
       .eq("mes", mes)
-      .eq("status", "fechada")
       .maybeSingle();
 
-    // 🔥 SE JÁ ESTIVER FECHADA → PULA PARA O PRÓXIMO MÊS
-    if (faturaFechada) {
+    // 🔥 2. SE EXISTE E ESTÁ FECHADA → PULA MÊS
+    if (faturaDB && faturaDB.status === "fechada") {
       mesFatura.setMonth(mesFatura.getMonth() + 1);
       continue;
     }
 
-    // 👉 achou uma fatura válida (aberta)
+    // 👉 encontrou mês válido
+    state.faturaAtual = faturaDB || {
+      ano,
+      mes,
+      status: "aberta",
+      pago: false
+    };
+
     break;
   }
 
   const ano = mesFatura.getFullYear();
-  const mes = mesFatura.getMonth();
+  const mesZero = mesFatura.getMonth();
+  const mes = mesZero + 1;
 
-  const inicio = new Date(ano, mes, 1).toISOString().slice(0, 10);
-  const fim = new Date(ano, mes + 1, 0).toISOString().slice(0, 10);
+  const inicio = new Date(ano, mesZero, 1).toISOString().slice(0, 10);
+  const fim = new Date(ano, mesZero + 1, 0).toISOString().slice(0, 10);
 
   const { data: compras } = await supabase
     .from("cartao_lancamentos")
@@ -450,13 +458,10 @@ async function loadFaturaForSelected() {
 
   const card = state.cards.find(c => c.id === cartao_id);
 
-  const total = (compras || []).reduce(
-    (s, c) => s + Number(c.valor || 0),
-    0
-  );
+  const total = (compras || []).reduce((s, c) => s + Number(c.valor || 0), 0);
 
   faturaTitulo.textContent = card?.nome || "Cartão";
-  faturaPeriodo.textContent = `${String(mes + 1).padStart(2, "0")}/${ano}`;
+  faturaPeriodo.textContent = `${String(mes).padStart(2, "0")}/${ano}`;
   faturaTotal.textContent = total.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL"
@@ -480,17 +485,12 @@ async function loadFaturaForSelected() {
           currency: "BRL"
         })}</span>
       `;
+      li.onclick = () => abrirFluxoEdicaoCompra(c);
       listaComprasFatura.appendChild(li);
     });
   }
 
-  state.faturaAtual = {
-    inicio,
-    fim,
-    mes: mes + 1,
-    ano,
-    status: "aberta"
-  };
+  updateButtonsForFatura();
 }
 
   // ===========================// UPDATE BUTTONS FOR FATURA // ===========================
