@@ -402,25 +402,45 @@ if (btnFatNext) {
   // =========================== // CARREGAR FATURA / RENDER (USANDO data_fatura) // ===========================
   
 async function loadFaturaForSelected() {
-  if (!activeCardId && state.cards && state.cards.length > 0) {
+  if (!activeCardId && state.cards.length > 0) {
     activeCardId = state.cards[0].id;
   }
   if (!activeCardId) return;
 
   const cartao_id = activeCardId;
 
+  while (true) {
+    const ano = mesFatura.getFullYear();
+    const mes = mesFatura.getMonth() + 1;
+
+    // 🔹 verifica se a fatura já está FECHADA
+    const { data: faturaFechada } = await supabase
+      .from("cartao_faturas")
+      .select("id")
+      .eq("user_id", state.user.id)
+      .eq("cartao_id", cartao_id)
+      .eq("ano", ano)
+      .eq("mes", mes)
+      .eq("status", "fechada")
+      .maybeSingle();
+
+    // 🔥 SE JÁ ESTIVER FECHADA → PULA PARA O PRÓXIMO MÊS
+    if (faturaFechada) {
+      mesFatura.setMonth(mesFatura.getMonth() + 1);
+      continue;
+    }
+
+    // 👉 achou uma fatura válida (aberta)
+    break;
+  }
+
   const ano = mesFatura.getFullYear();
-  const mes = mesFatura.getMonth(); // ⚠️ mês ZERO-BASED
+  const mes = mesFatura.getMonth();
 
-  const inicio = new Date(ano, mes, 1)
-    .toISOString()
-    .slice(0, 10);
+  const inicio = new Date(ano, mes, 1).toISOString().slice(0, 10);
+  const fim = new Date(ano, mes + 1, 0).toISOString().slice(0, 10);
 
-  const fim = new Date(ano, mes + 1, 0)
-    .toISOString()
-    .slice(0, 10);
-
-  const { data: compras, error } = await supabase
+  const { data: compras } = await supabase
     .from("cartao_lancamentos")
     .select("*")
     .eq("cartao_id", cartao_id)
@@ -428,89 +448,49 @@ async function loadFaturaForSelected() {
     .lte("data_fatura", fim)
     .order("data_fatura");
 
-  if (error) {
-    console.error("Erro ao carregar fatura:", error);
-    return;
-  }
-
   const card = state.cards.find(c => c.id === cartao_id);
 
-  if (!compras || compras.length === 0) {
-    if (faturaTitulo) faturaTitulo.textContent = card?.nome || "Cartão";
-    if (faturaPeriodo)
-      faturaPeriodo.textContent = `${String(mes + 1).padStart(2, "0")}/${ano}`;
-    if (faturaTotal) faturaTotal.textContent = "R$ 0,00";
+  const total = (compras || []).reduce(
+    (s, c) => s + Number(c.valor || 0),
+    0
+  );
 
-    if (listaComprasFatura) {
-      listaComprasFatura.innerHTML = `
-        <li style="opacity:.7;font-style:italic">
-          Nenhuma compra lançada nesta fatura
-        </li>
-      `;
-    }
-
-    state.faturaAtual = {
-      inicio,
-      fim,
-      mes: mes + 1,
-      ano,
-      status: "aberta",
-      pago: false
-    };
-
-    updateButtonsForFatura();
-    return;
-  }
-
-  const total = compras.reduce((s, c) => s + Number(c.valor || 0), 0);
-
-  if (faturaTitulo) faturaTitulo.textContent = card?.nome || "Cartão";
-  if (faturaPeriodo)
-    faturaPeriodo.textContent = `${String(mes + 1).padStart(2, "0")}/${ano}`;
-  if (faturaTotal)
-    faturaTotal.textContent = total.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL"
-    });
-
-  listaComprasFatura.innerHTML = "";
-  compras.forEach(c => {
-    const li = document.createElement("li");
-    const dataExibida = c.data_compra
-      ? new Date(c.data_compra + "T00:00:00").toLocaleDateString("pt-BR")
-      : "";
-
-    li.innerHTML = `
-      <span>${dataExibida} — ${c.descricao}</span>
-      <span>${Number(c.valor).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL"
-      })}</span>
-    `;
-
-    li.onclick = () => abrirFluxoEdicaoCompra(c);
-    listaComprasFatura.appendChild(li);
+  faturaTitulo.textContent = card?.nome || "Cartão";
+  faturaPeriodo.textContent = `${String(mes + 1).padStart(2, "0")}/${ano}`;
+  faturaTotal.textContent = total.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
   });
 
-  const { data: faturaDB } = await supabase
-    .from("cartao_faturas")
-    .select("*")
-    .eq("user_id", state.user.id)
-    .eq("cartao_id", cartao_id)
-    .eq("ano", ano)
-    .eq("mes", mes + 1)
-    .maybeSingle();
+  listaComprasFatura.innerHTML = "";
 
-  state.faturaAtual = faturaDB || {
+  if (!compras || compras.length === 0) {
+    listaComprasFatura.innerHTML = `
+      <li style="opacity:.7;font-style:italic">
+        Nenhuma compra lançada nesta fatura
+      </li>
+    `;
+  } else {
+    compras.forEach(c => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <span>${c.descricao}</span>
+        <span>${Number(c.valor).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL"
+        })}</span>
+      `;
+      listaComprasFatura.appendChild(li);
+    });
+  }
+
+  state.faturaAtual = {
     inicio,
     fim,
     mes: mes + 1,
     ano,
-    status: "aberta",
-    pago: false
+    status: "aberta"
   };
-
-  updateButtonsForFatura();
 }
 
   // ===========================// UPDATE BUTTONS FOR FATURA // ===========================
