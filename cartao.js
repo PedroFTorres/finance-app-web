@@ -424,12 +424,6 @@ async function loadFaturaForSelected() {
       .eq("mes", mes)
       .maybeSingle();
 
-    // 🔥 2. SE EXISTE E ESTÁ FECHADA → PULA MÊS
-    if (faturaDB && faturaDB.status === "fechada") {
-      mesFatura.setMonth(mesFatura.getMonth() + 1);
-      continue;
-    }
-
     // 👉 encontrou mês válido
     state.faturaAtual = faturaDB || {
       ano,
