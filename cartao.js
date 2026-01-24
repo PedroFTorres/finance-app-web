@@ -1547,11 +1547,11 @@ if (btnGerarDespesa) {
           .eq("mes", m)
           .maybeSingle();
 
-        // se NÃO existir ou NÃO estiver fechada → usar esse mês
-        if (!fatura || fatura.status !== "fechada") {
-          mesFatura = new Date(a, m - 1, 1);
-          break;
-        }
+       // se NÃO existir OU estiver ABERTA → usar esse mês
+if (!fatura || fatura.status === "aberta") {
+  mesFatura = new Date(a, m - 1, 1);
+  break;
+}
 
         // senão, pula para o próximo
         proximo.setMonth(proximo.getMonth() + 1);
