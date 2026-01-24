@@ -1498,10 +1498,9 @@ if (btnGerarDespesa) {
         return;
       }
 
-      // 🔹 dados da fatura
+      // 🔹 dados da fatura atual (janeiro, por exemplo)
       const { mes, ano, valor_total, id: faturaId } = state.faturaAtual;
 
-      // 🔹 conta escolhida no fechamento
       const contaId = document.getElementById("conta-fatura-select")?.value;
       const venc = document.getElementById("conta-fatura-vencimento")?.value;
 
@@ -1516,7 +1515,7 @@ if (btnGerarDespesa) {
       const card =
         state.cards.find(c => c.id === activeCardId) || { nome: "Cartão" };
 
-      // 🔹 CRIA A DESPESA (AQUI ENCERRA O CICLO)
+      // 🔹 cria a despesa
       await supabase.from("despesas").insert([{
         id: crypto.randomUUID(),
         user_id: state.user.id,
@@ -1531,10 +1530,33 @@ if (btnGerarDespesa) {
 
       showToast("Despesa gerada com sucesso.", "success");
 
-      // ==================================================
-      // 🔥 ÚNICO LUGAR ONDE O MÊS AVANÇA
-      // ==================================================
-      mesFatura.setMonth(mesFatura.getMonth() + 1);
+      // ======================================================// 🔥 REGRA PRINCIPAL (A QUE VOCÊ PEDIU)// depois de janeiro acabar, mostrar a PRÓXIMA fatura aberta// ======================================================
+
+      let proximo = new Date(ano, mes, 1); // começa no mês seguinte
+
+      while (true) {
+        const a = proximo.getFullYear();
+        const m = proximo.getMonth() + 1;
+
+        const { data: fatura } = await supabase
+          .from("cartao_faturas")
+          .select("id, status")
+          .eq("user_id", state.user.id)
+          .eq("cartao_id", activeCardId)
+          .eq("ano", a)
+          .eq("mes", m)
+          .maybeSingle();
+
+        // se NÃO existir ou NÃO estiver fechada → usar esse mês
+        if (!fatura || fatura.status !== "fechada") {
+          mesFatura = new Date(a, m - 1, 1);
+          break;
+        }
+
+        // senão, pula para o próximo
+        proximo.setMonth(proximo.getMonth() + 1);
+      }
+
       popularMesFatura();
       await loadFaturaForSelected();
 
