@@ -409,12 +409,13 @@ async function loadFaturaForSelected() {
 
   const cartao_id = activeCardId;
 
+  // 🔥 REGRA: se a fatura do mês atual estiver PAGA,
+  // pula automaticamente para a próxima ABERTA
   while (true) {
     const ano = mesFatura.getFullYear();
     const mesZero = mesFatura.getMonth();
     const mes = mesZero + 1;
 
-    // 🔹 1. BUSCA A FATURA NO BANCO (FONTE DA VERDADE)
     const { data: faturaDB } = await supabase
       .from("cartao_faturas")
       .select("*")
@@ -424,15 +425,19 @@ async function loadFaturaForSelected() {
       .eq("mes", mes)
       .maybeSingle();
 
-    // 👉 encontrou mês válido
-    state.faturaAtual = faturaDB || {
-      ano,
-      mes,
-      status: "aberta",
-      pago: false
-    };
+    // 👉 se NÃO existe fatura ou ela NÃO está paga → usar esse mês
+    if (!faturaDB || !faturaDB.pago) {
+      state.faturaAtual = faturaDB || {
+        ano,
+        mes,
+        status: "aberta",
+        pago: false
+      };
+      break;
+    }
 
-    break;
+    // 👉 se está PAGA, pula para o próximo mês
+    mesFatura.setMonth(mesFatura.getMonth() + 1);
   }
 
   const ano = mesFatura.getFullYear();
@@ -484,9 +489,9 @@ async function loadFaturaForSelected() {
     });
   }
 
+  popularMesFatura();
   updateButtonsForFatura();
 }
-
   // ===========================// UPDATE BUTTONS FOR FATURA // ===========================
   function updateButtonsForFatura() {
     const existingReabrir = document.getElementById("btn-reabrir-fatura");
