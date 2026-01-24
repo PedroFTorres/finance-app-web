@@ -660,65 +660,126 @@ if (btnFecharFatura) {
 }
 
   // ===========================// PAGAR FATURA → baixa a despesa vinculada, cria movimentação e atualiza saldo// ===========================
-  if (btnPagarFatura) btnPagarFatura.onclick = async () => {
+if (btnPagarFatura) {
+  btnPagarFatura.onclick = async () => {
     try {
-      if (!state.faturaAtual) return showToast("Feche a fatura antes de pagar.", "error");
-      if (state.faturaAtual.pago) return showToast("Esta fatura já foi paga.", "error");
+      if (!state.faturaAtual) {
+        showToast("Nenhuma fatura selecionada.", "error");
+        return;
+      }
+
+      if (state.faturaAtual.pago) {
+        showToast("Esta fatura já está paga.", "warning");
+        return;
+      }
 
       const contaId = selectContaPagamento.value;
       const venc = dataVencimentoFatura.value;
 
-      if (!contaId) return showToast("Selecione a conta para pagamento.", "error");
-
-      const total = Number(state.faturaAtual.valor_total || 0);
-      if (total <= 0) return showToast("Fatura sem valor.", "error");
-
-      // localizar despesa vinculada
-      const { data: desp } = await supabase.from("despesas").select("*").eq("cartao_fatura_id", state.faturaAtual.id).maybeSingle();
-
-      let despId;
-      if (!desp) {
-        // cria despesa já baixada
-        despId = crypto.randomUUID();
-        const { error: err } = await supabase.from("despesas").insert([{
-          id: despId,
-          user_id: state.user.id,
-          conta_id: contaId,
-          descricao: `Pagamento fatura ${state.faturaAtual.id}`,
-          valor: total,
-          data: venc,
-          categoria_id: null,
-          baixado: true,
-          data_baixa: venc,
-          cartao_fatura_id: state.faturaAtual.id
-        }]);
-        if (err) { console.error(err); return showToast("Erro ao gerar despesa.", "error"); }
-      } else {
-        despId = desp.id;
-        await supabase.from("despesas").update({ baixado: true, conta_id: contaId, data_baixa: venc }).eq("id", despId);
+      if (!contaId || !venc) {
+        showToast("Informe conta e data.", "error");
+        return;
       }
 
-      // criar movimentação
+      const total = Number(state.faturaAtual.valor_total || 0);
+      if (total <= 0) {
+        showToast("Fatura sem valor.", "error");
+        return;
+      }
+
+      // 🔹 localizar despesa vinculada
+      const { data: desp } = await supabase
+        .from("despesas")
+        .select("*")
+        .eq("cartao_fatura_id", state.faturaAtual.id)
+        .maybeSingle();
+
+      if (!desp) {
+        showToast("Despesa da fatura não encontrada.", "error");
+        return;
+      }
+
+      // 🔹 baixa despesa
+      await supabase
+        .from("despesas")
+        .update({
+          baixado: true,
+          conta_id: contaId,
+          data_baixa: venc
+        })
+        .eq("id", desp.id);
+
+      // 🔹 movimentação
       await supabase.from("movimentacoes").insert([{
         id: crypto.randomUUID(),
         user_id: state.user.id,
         conta_id: contaId,
         tipo: "debito",
         valor: total,
-        descricao: `Pagamento fatura ${state.faturaAtual.id}`,
+        descricao: `Pagamento fatura ${state.faturaAtual.mes}/${state.faturaAtual.ano}`,
         data: venc,
-        lancamento_id: despId
+        lancamento_id: desp.id
       }]);
 
-      // atualizar saldo
-      const { data: conta } = await supabase.from("contas_bancarias").select("*").eq("id", contaId).single();
+      // 🔹 atualizar saldo
+      const { data: conta } = await supabase
+        .from("contas_bancarias")
+        .select("*")
+        .eq("id", contaId)
+        .single();
+
       const novoSaldo = Number(conta.saldo_atual || 0) - total;
-      await supabase.from("contas_bancarias").update({ saldo_atual: novoSaldo }).eq("id", contaId);
 
-      // marcar fatura como paga
-      await supabase.from("cartao_faturas").update({ pago: true, status: "paga", data_vencimento: venc }).eq("id", state.faturaAtual.id);
+      await supabase
+        .from("contas_bancarias")
+        .update({ saldo_atual: novoSaldo })
+        .eq("id", contaId);
 
-      showToast("Fatura paga com sucesso!");
+      // 🔹 marcar fatura como PAGA
+      await supabase
+        .from("cartao_faturas")
+        .update({
+          pago: true,
+          status: "paga"
+        })
+        .eq("id", state.faturaAtual.id);
+
+      showToast("Fatura paga com sucesso!", "success");
+
+      // ======================================================
+      // 🔥 REGRA PRINCIPAL (FINAL)
+      // após PAGAR, mostrar a próxima fatura ABERTA
+      // ======================================================
+
+      let proximo = new Date(
+        state.faturaAtual.ano,
+        state.faturaAtual.mes,
+        1
+      );
+
+      while (true) {
+        const a = proximo.getFullYear();
+        const m = proximo.getMonth() + 1;
+
+        const { data: fatura } = await supabase
+          .from("cartao_faturas")
+          .select("status")
+          .eq("user_id", state.user.id)
+          .eq("cartao_id", activeCardId)
+          .eq("ano", a)
+          .eq("mes", m)
+          .maybeSingle();
+
+        // só para quando achar ABERTA ou inexistente
+        if (!fatura || fatura.status === "aberta") {
+          mesFatura = new Date(a, m - 1, 1);
+          break;
+        }
+
+        proximo.setMonth(proximo.getMonth() + 1);
+      }
+
+      popularMesFatura();
       await loadFaturaForSelected();
 
     } catch (err) {
@@ -726,6 +787,7 @@ if (btnFecharFatura) {
       showToast("Erro ao pagar fatura.", "error");
     }
   };
+}
 
   // ===========================// REABRIR FATURA// ===========================
   async function reabrirFatura() {
