@@ -1725,42 +1725,56 @@ if (btnFecharEdicao) {
 // =====================================================// FUNÇÃO PARA DEFINIR A FATURA PRINCIPAL (ABERTA)// =====================================================
 
 async function definirMesInicialAberto() {
-  if (!activeCardId && state.cards?.length) {
-    activeCardId = state.cards[0].id;
-  }
-  if (!activeCardId) return;
-
-  // começa no mês atual
-  let cursor = new Date(
-    mesFatura.getFullYear(),
-    mesFatura.getMonth(),
-    1
-  );
-
-  // segurança: evita loop infinito
-  for (let i = 0; i < 24; i++) {
-    const ano = cursor.getFullYear();
-    const mes = cursor.getMonth() + 1;
-
-    const { data: fatura } = await supabase
-      .from("cartao_faturas")
-      .select("status, pago")
-      .eq("user_id", state.user.id)
-      .eq("cartao_id", activeCardId)
-      .eq("ano", ano)
-      .eq("mes", mes)
-      .maybeSingle();
-
-    // 👉 se NÃO existir fatura OU se NÃO estiver paga → usar este mês
-    if (!fatura || !fatura.pago) {
-      mesFatura = new Date(ano, mes - 1, 1);
-      popularMesFatura();
-      atualizarEstadoBotoesMes();
-      await loadFaturaForSelected();
-      return;
+  try {
+    // 🔹 garante que existe cartão ativo
+    if (!activeCardId) {
+      if (state.cards && state.cards.length > 0) {
+        activeCardId = state.cards[0].id;
+      } else {
+        return;
+      }
     }
 
-    // se estiver paga, pula para o próximo mês
-    cursor.setMonth(cursor.getMonth() + 1);
+    // 🔹 começa pelo mês atual exibido
+    let cursor = new Date(
+      mesFatura.getFullYear(),
+      mesFatura.getMonth(),
+      1
+    );
+
+    // 🔹 segurança: evita loop infinito (até 24 meses)
+    for (let i = 0; i < 24; i++) {
+      const ano = cursor.getFullYear();
+      const mes = cursor.getMonth() + 1;
+
+      const { data: fatura, error } = await supabase
+        .from("cartao_faturas")
+        .select("status, pago")
+        .eq("user_id", state.user.id)
+        .eq("cartao_id", activeCardId)
+        .eq("ano", ano)
+        .eq("mes", mes)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Erro ao buscar fatura:", error);
+        break;
+      }
+
+      // 👉 REGRA PRINCIPAL:
+      // usar o primeiro mês que NÃO esteja PAGO
+      if (!fatura || fatura.pago !== true) {
+        mesFatura = new Date(ano, mes - 1, 1);
+        popularMesFatura();
+        await loadFaturaForSelected();
+        return;
+      }
+
+      // 🔁 se estiver paga, avança para o próximo mês
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+  } catch (err) {
+    console.error("Erro em definirMesInicialAberto:", err);
+    showToast("Erro ao definir fatura inicial.", "error");
   }
 }
