@@ -255,9 +255,7 @@ function fecharModal(modalId) {
     await loadCategorias();
 
     // 🔹 inicialização da fatura (UMA ÚNICA VEZ)
-    popularMesFatura();              // mostra o mês no topo
-    atualizarEstadoBotoesMes();      // bloqueia meses futuros
-    await loadFaturaForSelected();   // carrega a fatura correta
+   await definirMesInicialAberto();
 
   } catch (err) {
     console.error(err);
@@ -1724,3 +1722,45 @@ if (btnFecharEdicao) {
 }); // fim DOMContentLoaded
 
 // ==================================================================================// FIM do arquivo cartao.js// ==================================================================================
+// =====================================================// FUNÇÃO PARA DEFINIR A FATURA PRINCIPAL (ABERTA)// =====================================================
+
+async function definirMesInicialAberto() {
+  if (!activeCardId && state.cards?.length) {
+    activeCardId = state.cards[0].id;
+  }
+  if (!activeCardId) return;
+
+  // começa no mês atual
+  let cursor = new Date(
+    mesFatura.getFullYear(),
+    mesFatura.getMonth(),
+    1
+  );
+
+  // segurança: evita loop infinito
+  for (let i = 0; i < 24; i++) {
+    const ano = cursor.getFullYear();
+    const mes = cursor.getMonth() + 1;
+
+    const { data: fatura } = await supabase
+      .from("cartao_faturas")
+      .select("status, pago")
+      .eq("user_id", state.user.id)
+      .eq("cartao_id", activeCardId)
+      .eq("ano", ano)
+      .eq("mes", mes)
+      .maybeSingle();
+
+    // 👉 se NÃO existir fatura OU se NÃO estiver paga → usar este mês
+    if (!fatura || !fatura.pago) {
+      mesFatura = new Date(ano, mes - 1, 1);
+      popularMesFatura();
+      atualizarEstadoBotoesMes();
+      await loadFaturaForSelected();
+      return;
+    }
+
+    // se estiver paga, pula para o próximo mês
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+}
