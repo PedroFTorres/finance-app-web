@@ -254,8 +254,9 @@ function fecharModal(modalId) {
     renderCardsSidebar();
     await loadCategorias();
 
-    // 🔹 inicialização da fatura (UMA ÚNICA VEZ)
-   await definirMesInicialAberto();
+  // 🔹 inicialização da fatura (UMA ÚNICA VEZ)
+mesFatura = new Date();   // 🔥 GARANTE base válida
+await definirMesInicialAberto();
 
   } catch (err) {
     console.error(err);
@@ -374,7 +375,46 @@ function atualizarEstadoBotoesMes() {
   if (btnFatPrev) btnFatPrev.disabled = false;
   if (btnFatNext) btnFatNext.disabled = false;
 }
+async function definirMesInicialAberto() {
+  // garante cartão ativo
+  if (!activeCardId) {
+    if (state.cards && state.cards.length > 0) {
+      activeCardId = state.cards[0].id;
+    } else {
+      return;
+    }
+  }
 
+  let cursor = new Date(
+    mesFatura.getFullYear(),
+    mesFatura.getMonth(),
+    1
+  );
+
+  for (let i = 0; i < 24; i++) {
+    const ano = cursor.getFullYear();
+    const mes = cursor.getMonth() + 1;
+
+    const { data: fatura } = await supabase
+      .from("cartao_faturas")
+      .select("status, pago")
+      .eq("user_id", state.user.id)
+      .eq("cartao_id", activeCardId)
+      .eq("ano", ano)
+      .eq("mes", mes)
+      .maybeSingle();
+
+    // 👉 só aceita fatura NÃO paga
+    if (!fatura || fatura.pago !== true) {
+      mesFatura = new Date(ano, mes - 1, 1);
+      popularMesFatura();
+      await loadFaturaForSelected();
+      return;
+    }
+
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+}
 // =========================// NAVEGAÇÃO DE FATURA (MÊS)// =========================
   
 // ◀ mês anterior
@@ -1722,59 +1762,4 @@ if (btnFecharEdicao) {
 }); // fim DOMContentLoaded
 
 // ==================================================================================// FIM do arquivo cartao.js// ==================================================================================
-// =====================================================// FUNÇÃO PARA DEFINIR A FATURA PRINCIPAL (ABERTA)// =====================================================
 
-async function definirMesInicialAberto() {
-  try {
-    // 🔹 garante que existe cartão ativo
-    if (!activeCardId) {
-      if (state.cards && state.cards.length > 0) {
-        activeCardId = state.cards[0].id;
-      } else {
-        return;
-      }
-    }
-
-    // 🔹 começa pelo mês atual exibido
-    let cursor = new Date(
-      mesFatura.getFullYear(),
-      mesFatura.getMonth(),
-      1
-    );
-
-    // 🔹 segurança: evita loop infinito (até 24 meses)
-    for (let i = 0; i < 24; i++) {
-      const ano = cursor.getFullYear();
-      const mes = cursor.getMonth() + 1;
-
-      const { data: fatura, error } = await supabase
-        .from("cartao_faturas")
-        .select("status, pago")
-        .eq("user_id", state.user.id)
-        .eq("cartao_id", activeCardId)
-        .eq("ano", ano)
-        .eq("mes", mes)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Erro ao buscar fatura:", error);
-        break;
-      }
-
-      // 👉 REGRA PRINCIPAL:
-      // usar o primeiro mês que NÃO esteja PAGO
-      if (!fatura || fatura.pago !== true) {
-        mesFatura = new Date(ano, mes - 1, 1);
-        popularMesFatura();
-        await loadFaturaForSelected();
-        return;
-      }
-
-      // 🔁 se estiver paga, avança para o próximo mês
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
-  } catch (err) {
-    console.error("Erro em definirMesInicialAberto:", err);
-    showToast("Erro ao definir fatura inicial.", "error");
-  }
-}
