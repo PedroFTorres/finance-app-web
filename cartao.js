@@ -1562,16 +1562,20 @@ if (modalParcelaCancelar) {
   
 // ===========================// NOVO CARTÃO — abrir formulário// ===========================
 if (btnNewCard) {
- btnNewCard.onclick = () => {
+  btnNewCard.onclick = () => {
 
-  if (cardNome) cardNome.value = "";
-  if (cardLimite) cardLimite.value = "";
-  if (cardDiaFechamento) cardDiaFechamento.value = "";
-  if (cardDiaVencimento) cardDiaVencimento.value = "";
+    // limpa campos
+    document.getElementById("card-nome").value = "";
+    document.getElementById("card-limite").value = "";
+    document.getElementById("card-dia-fechamento").value = "";
+    document.getElementById("card-dia-vencimento").value = "";
 
-  showView(viewNewCard);
-};
-  }
+    // abre modal
+    document
+      .getElementById("modal-new-card")
+      .classList.remove("hidden");
+  };
+}
 
   // ================================//  LANÇAR COMPRA// ================================
 btnLancarCompra.onclick = async () => {
