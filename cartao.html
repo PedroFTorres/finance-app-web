@@ -230,6 +230,32 @@
 
   </div>
 </div>
+<!-- ===================== MODAL NOVO CARTÃO ===================== -->
+  
+<div id="modal-new-card" class="modal hidden">
+  <div class="modal-content">
+
+    <h3>Novo cartão</h3>
+
+    <label>Nome do cartão</label>
+    <input id="card-nome" type="text" placeholder="Ex: Nubank, Itaú…" />
+
+    <label>Limite</label>
+    <input id="card-limite" type="number" step="0.01" />
+
+    <label>Dia de fechamento</label>
+    <input id="card-dia-fechamento" type="number" min="1" max="31" />
+
+    <label>Dia de vencimento</label>
+    <input id="card-dia-vencimento" type="number" min="1" max="31" />
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+      <button id="btn-cancel-card" class="btn-secondary">Cancelar</button>
+      <button id="btn-save-card" class="btn-primary">Salvar</button>
+    </div>
+
+  </div>
+</div>
 
 </body>
 </html>
