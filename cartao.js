@@ -1762,7 +1762,9 @@ await loadFaturaForSelected();
 // ===========================// NOVO CARTÃO — cancelar// ===========================
 if (btnCancelCard) {
   btnCancelCard.onclick = () => {
-   
+    document
+      .getElementById("modal-new-card")
+      .classList.add("hidden");
   };
 }
 
