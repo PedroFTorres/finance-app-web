@@ -16,6 +16,7 @@
    let IS_SAVING_LANCAMENTO = false;
    let IS_CREATING_CONTA = false;
    let IS_BAIXANDO = false;
+   let IS_TRANSFERINDO = false;
 
   /* ============================ CONFIG & ESTADO GLOBAL ============================ */
    
@@ -1266,9 +1267,8 @@ alert("Transferência realizada com sucesso.");
   await this.reloadAll();
   this.showScreen('dashboard');
 
-  // ================================
-// TRANSFERÊNCIA — abrir modal
-// ================================
+  // ================================// TRANSFERÊNCIA — abrir modal // ================================
+     
 const btnTransferir = document.getElementById("btn-transferir");
 
 if (btnTransferir) {
@@ -1296,13 +1296,17 @@ if (btnTransferir) {
   };
 }
 
-// ================================
-// TRANSFERÊNCIA — confirmar
-// ================================
+// ================================// TRANSFERÊNCIA — confirmar// ================================
+     
 const btnConfirmar = document.getElementById("btn-confirmar-transf");
 
 if (btnConfirmar) {
   btnConfirmar.onclick = async () => {
+
+    // 🔒 trava contra clique duplo / lag
+    if (IS_TRANSFERINDO) return;
+    IS_TRANSFERINDO = true;
+
     try {
       const contaOrigem = document.getElementById("transf-origem").value;
       const contaDestino = document.getElementById("transf-destino").value;
@@ -1344,10 +1348,12 @@ if (btnConfirmar) {
     } catch (err) {
       console.error("Erro ao confirmar transferência:", err);
       alert("Erro ao realizar a transferência. Veja o console.");
+    } finally {
+      // 🔓 libera a trava SEMPRE
+      IS_TRANSFERINDO = false;
     }
   };
 }
-
 
   // ================================
   // REALTIME
