@@ -397,11 +397,28 @@
       <strong>⚠️ Lançamento já baixado</strong><br>
       Alterações feitas aqui serão refletidas automaticamente no extrato da conta.
     </div>
+<footer style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;">
 
-    <footer style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
-      <button id="modal-cancel-lanc" class="btn-secondary">Cancelar</button>
-      <button id="modal-save-lanc" class="btn-primary">Salvar</button>
-    </footer>
+  <!-- AÇÃO DESTRUTIVA (só aparece em edição) -->
+  <button
+    id="btn-excluir-lancamento"
+    class="btn-danger hidden"
+  >
+    Excluir lançamento
+  </button>
+
+  <!-- AÇÕES NORMAIS -->
+  <div style="display:flex;gap:8px;">
+    <button id="modal-cancel-lanc" class="btn-secondary">
+      Cancelar
+    </button>
+    <button id="modal-save-lanc" class="btn-primary">
+      Salvar
+    </button>
+  </div>
+
+</footer>
+
   </div>
 </div>
  
