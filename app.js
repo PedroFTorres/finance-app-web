@@ -750,7 +750,7 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
   li.appendChild(left);
   li.appendChild(right);
   return li;
-}
+},
     // open add modal (clean)
     openAddModal() {
       const modal = $(IDS.modalAdd);
