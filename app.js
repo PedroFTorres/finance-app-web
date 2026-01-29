@@ -669,94 +669,88 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
       if (td) td.textContent = fmtMoney(totalD);
     },
 
-    _createLancItem(item, tipo) {
-      const li = document.createElement('li');
-      li.style.display = 'flex'; li.style.justifyContent = 'space-between'; li.style.padding = '6px 0';
+   _createLancItem(item, tipo) {
+  const li = document.createElement("li");
+  li.style.display = "flex";
+  li.style.justifyContent = "space-between";
+  li.style.padding = "6px 0";
 
-      const left = document.createElement('div');
-      left.textContent = `${fmtDateBR(item.data)} — ${item.descricao} — ${fmtMoney(item.valor)}${item.baixado ? ' (BAIXADO)' : ''}`;
+  // =========================
+  // TEXTO DO LANÇAMENTO
+  // =========================
+  const left = document.createElement("div");
+  left.textContent =
+    `${fmtDateBR(item.data)} — ${item.descricao} — ${fmtMoney(item.valor)}` +
+    (item.baixado ? " (BAIXADO)" : "");
 
-      const right = document.createElement('div');
-      right.style.display = 'flex'; right.style.gap = '6px';
+  // =========================
+  // AÇÕES (SEM EXCLUIR)
+  // =========================
+  const right = document.createElement("div");
+  right.style.display = "flex";
+  right.style.gap = "6px";
 
-      const btnEdit = document.createElement('button'); btnEdit.textContent = 'Editar';
-      btnEdit.addEventListener('click', () => UI.openModalEdit(item, tipo));
+  // ✏️ EDITAR
+  const btnEdit = document.createElement("button");
+  btnEdit.textContent = "Editar";
+  btnEdit.classList.add("edit");
+  btnEdit.addEventListener("click", () => {
+    UI.openModalEdit(item, tipo);
+  });
+  right.appendChild(btnEdit);
 
-     btnDelete.addEventListener('click', () => {
-  // lançamento recorrente → escolher escopo
-  if (item.recorrencia_id) {
-    UI.abrirModalExcluirRecorrencia(item, tipo);
-    return;
+  // =========================
+  // BAIXAR / CANCELAR BAIXA
+  // =========================
+  if (!item.baixado) {
+    const btnBaixar = document.createElement("button");
+    btnBaixar.textContent = "Baixar";
+    btnBaixar.classList.add("download");
+    btnBaixar.addEventListener("click", () => {
+      UI.abrirModalBaixa(tipo, item);
+    });
+    right.appendChild(btnBaixar);
+  } else {
+    const btnCancelar = document.createElement("button");
+    btnCancelar.textContent = "Cancelar Baixa";
+    btnCancelar.addEventListener("click", async () => {
+      if (!confirm("Cancelar baixa?")) return;
+
+      const { data: movs } = await supabase
+        .from("movimentacoes")
+        .select("id")
+        .eq("lancamento_id", item.id);
+
+      if (!movs || movs.length === 0) {
+        alert("Nenhuma movimentação encontrada.");
+        return;
+      }
+
+      for (const m of movs) {
+        await supabase
+          .from("movimentacoes")
+          .delete()
+          .eq("id", m.id);
+      }
+
+      await supabase
+        .from(tipo === "receita" ? "receitas" : "despesas")
+        .update({
+          baixado: false,
+          data_baixa: null
+        })
+        .eq("id", item.id);
+
+      await App.refreshLancamentos();
+      await App.renderExtrato();
+    });
+    right.appendChild(btnCancelar);
   }
 
-  // lançamento simples → comportamento atual
-  if (!confirm('Excluir lançamento?')) return;
-  LancService.delete(tipo, item.id)
-    .then(() => App.refreshLancamentos());
-});
-
-      right.appendChild(btnEdit); right.appendChild(btnDelete);
-
-    if (!item.baixado) {
-  const btnBaixar = document.createElement('button');
-  btnBaixar.textContent = 'Baixar';
-       
-btnBaixar.addEventListener('click', () => {
-  console.log('CLICK BAIXAR', tipo, item);
-  UI.abrirModalBaixa(tipo, item);
-});
-
-
-
-  right.appendChild(btnBaixar);
-
-} else {
-  const btnCancel = document.createElement('button');
-  btnCancel.textContent = 'Cancelar Baixa';
-
-btnCancel.addEventListener("click", async () => {
-  if (!confirm("Cancelar baixa?")) return;
-
-  // buscar TODAS as movimentações do lançamento
-  const { data: movs } = await supabase
-    .from("movimentacoes")
-    .select("id")
-    .eq("lancamento_id", item.id);
-
-  if (!movs || movs.length === 0) {
-    alert("Nenhuma movimentação encontrada.");
-    return;
-  }
-
-  // remover TODAS as movimentações
-  for (const m of movs) {
-    await supabase
-      .from("movimentacoes")
-      .delete()
-      .eq("id", m.id);
-  }
-
-  // atualizar lançamento
-  await supabase
-    .from(tipo === "receita" ? "receitas" : "despesas")
-    .update({
-      baixado: false,
-      data_baixa: null
-    })
-    .eq("id", item.id);
-
-  await App.refreshLancamentos();
-  await App.renderExtrato();
-});
-
-  right.appendChild(btnCancel);
+  li.appendChild(left);
+  li.appendChild(right);
+  return li;
 }
-
-
-      li.appendChild(left); li.appendChild(right);
-      return li;
-    },
-
     // open add modal (clean)
     openAddModal() {
       const modal = $(IDS.modalAdd);
