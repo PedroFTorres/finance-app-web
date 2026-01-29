@@ -504,15 +504,25 @@ button:hover { opacity: .9; }
 
 .lanc-layout {
   display: grid;
-  grid-template-columns: 220px 1fr 320px; /* menu | listas | totais */
+  grid-template-columns: 220px 1fr 320px;
   gap: 18px;
-  align-items: flex-start;
   margin-top: 16px;
+
+  /* 🔥 altura visível da tela */
+  height: calc(100vh - 180px);
+  align-items: stretch;
 }
-/* Totais sempre no topo */
+
+/* Área central com scroll próprio */
+.lanc-content {
+  overflow-y: auto;
+  padding-right: 6px;
+}
+/* Totais fixos */
 .card-totais {
   position: sticky;
-  top: 20px;
+  top: 0;
+  align-self: flex-start;
 }
 
 .lanc-menu {
