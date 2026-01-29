@@ -1480,26 +1480,41 @@ UI.renderLancamentos({
   despesas: despesasFiltradas
 });
 // ================================ VISIBILIDADE DOS BLOCOS (UX) // ================================
+
 const boxReceitas = document.getElementById("box-receitas");
 const boxDespesas = document.getElementById("box-despesas");
 const listas = document.querySelector(".listas");
 
 if (boxReceitas && boxDespesas && listas) {
 
-  // reset
+  // RESET GERAL (sempre começa limpo)
   boxReceitas.style.display = "";
   boxDespesas.style.display = "";
   listas.classList.remove("single-column");
 
-  if (FILTRO_LANCAMENTOS === "receitas" || FILTRO_LANCAMENTOS === "recebidos") {
+  // ================================
+  // FILTROS QUE MOSTRAM APENAS UM TIPO
+  // ================================
+
+  // Receitas / Recebidos → mostra só receitas
+  if (
+    FILTRO_LANCAMENTOS === "receitas" ||
+    FILTRO_LANCAMENTOS === "recebidos"
+  ) {
     boxDespesas.style.display = "none";
     listas.classList.add("single-column");
   }
 
-  if (FILTRO_LANCAMENTOS === "despesas" || FILTRO_LANCAMENTOS === "pagos") {
+  // Despesas / Pagos → mostra só despesas
+  if (
+    FILTRO_LANCAMENTOS === "despesas" ||
+    FILTRO_LANCAMENTOS === "pagos"
+  ) {
     boxReceitas.style.display = "none";
     listas.classList.add("single-column");
   }
+
+  // Pendências → mostra os dois (layout padrão)
 }
 
 // ================================// SALDO DO PERÍODO — SOMENTE BAIXADOS// ================================
