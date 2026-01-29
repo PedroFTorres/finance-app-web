@@ -682,7 +682,6 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
       const btnEdit = document.createElement('button'); btnEdit.textContent = 'Editar';
       btnEdit.addEventListener('click', () => UI.openModalEdit(item, tipo));
 
-      const btnDelete = document.createElement('button'); btnDelete.textContent = 'Excluir';
      btnDelete.addEventListener('click', () => {
   // lançamento recorrente → escolher escopo
   if (item.recorrencia_id) {
