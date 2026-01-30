@@ -1427,15 +1427,34 @@ if (btnConfirmar) {
   await drawDespesasPorCategoria(inicio, fim);
 },
 
+showScreen(name) {
+  // Esconde todas as telas
+  document.querySelectorAll(IDS.screens)
+    .forEach(s => s.classList.add('hidden'));
 
-    showScreen(name) {
-      document.querySelectorAll(IDS.screens).forEach(s => s.classList.add('hidden'));
-      const target = document.querySelector(`[data-screen="${name}"]`);
-      if (target) target.classList.remove('hidden');
-      $all(IDS.menuBtns).forEach(b => b.classList.toggle('active', b.dataset.target === name));
-      if (name === 'lanc') this.refreshLancamentos();
-      if (name === 'contas') UI.populateSelects();
-    },
+  // Mostra a tela solicitada
+  const target = document.querySelector(`[data-screen="${name}"]`);
+  if (target) target.classList.remove('hidden');
+
+  // Menu ativo
+  $all(IDS.menuBtns).forEach(b =>
+    b.classList.toggle('active', b.dataset.target === name)
+  );
+
+  // =========================// LANÇAMENTOS — RESET + MÊS ATUAL// =========================
+  if (name === 'lanc') {
+    modoPeriodoLanc = "mes";     // força modo mensal
+    mesLancAtual = new Date();   // força mês atual
+
+    renderMesLanc();             // atualiza label (Janeiro 2026 etc)
+    this.refreshLancamentos();   // recarrega dados
+  }
+
+  // =========================// CONTAS// =========================
+  if (name === 'contas') {
+    UI.populateSelects();
+  }
+},
 
     subscribeRealtime() {
       // we create channels per table; store refs on STATE.subs to unsubscribe if needed
