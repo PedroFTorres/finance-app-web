@@ -752,23 +752,37 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
   return li;
 },
     // open add modal (clean)
-    openAddModal() {
-      const modal = $(IDS.modalAdd);
-      if (!modal) return;
-      // clear fields
-      $(IDS.modalTipo).value = 'despesa';
-      $(IDS.modalValor).value = '';
-      $(IDS.modalDesc).value = '';
-      $(IDS.modalData).value = isoToday();
-      $(IDS.modalRecorrencia).value = 'none';
-      $(IDS.modalParcelas).value = 1;
-      // remove edit metadata
-      const saveBtn = $(IDS.modalSave); if (saveBtn) { delete saveBtn.dataset.edit; delete saveBtn.dataset.editId; saveBtn.textContent = 'Salvar'; }
-      // ensure selects are populated
-      UI.populateSelects();
-      modal.classList.remove('hidden');
-      modal.setAttribute('aria-hidden','false');
-    },
+   openAddModal() {
+  const modal = $(IDS.modalAdd);
+  if (!modal) return;
+
+  // clear fields
+  $(IDS.modalTipo).value = 'despesa';
+  $(IDS.modalValor).value = '';
+  $(IDS.modalDesc).value = '';
+  $(IDS.modalData).value = isoToday();
+  $(IDS.modalRecorrencia).value = 'none';
+  $(IDS.modalParcelas).value = 1;
+
+  // remove edit metadata
+  const saveBtn = $(IDS.modalSave);
+  if (saveBtn) {
+    delete saveBtn.dataset.edit;
+    delete saveBtn.dataset.editId;
+    saveBtn.textContent = 'Salvar';
+  }
+
+  // 🔴 AQUI — ESCONDER BOTÃO EXCLUIR AO CRIAR
+  const btnExcluir = document.getElementById("btn-excluir-lancamento");
+  if (btnExcluir) btnExcluir.classList.add("hidden");
+
+  // ensure selects are populated
+  UI.populateSelects();
+
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden','false');
+},
+
 abrirModalEscopo(item, tipo) {
   const modal = document.getElementById("modal-escopo-recorrencia");
   if (!modal) {
@@ -865,14 +879,14 @@ openModalEditSemEscopo(item, tipo) {
   const modal = $(IDS.modalAdd);
   if (!modal) return;
 
-  // tipo (receita / despesa)
+  // =========================
+  // PREENCHER CAMPOS
+  // =========================
   $(IDS.modalTipo).value = tipo;
 
-  // descrição
   $(IDS.modalDesc).value =
     (item.descricao || '').replace(/\s*\(\d+\/\d+\)$/, '');
 
-  // valor e data
   $(IDS.modalValor).value = item.valor || '';
   $(IDS.modalData).value = item.data || isoToday();
 
@@ -881,11 +895,53 @@ openModalEditSemEscopo(item, tipo) {
   if (item.conta_id) $(IDS.modalConta).value = item.conta_id;
   if (item.categoria_id) $(IDS.modalCategoria).value = item.categoria_id;
 
+  // =========================
+  // BOTÃO SALVAR (EDIÇÃO)
+  // =========================
   const saveBtn = $(IDS.modalSave);
   saveBtn.dataset.edit = 'true';
   saveBtn.dataset.editId = item.id;
   saveBtn.textContent = 'Salvar alteração';
 
+  // =========================
+  // BOTÃO EXCLUIR (🔥 AQUI ESTÁ A CORREÇÃO)
+  // =========================
+  const btnExcluir = document.getElementById("btn-excluir-lancamento");
+
+  if (btnExcluir) {
+    btnExcluir.classList.remove("hidden");
+
+    btnExcluir.onclick = async () => {
+
+      // 🔒 não permite excluir se já baixado
+      if (item.baixado) {
+        alert("Este lançamento já foi baixado e não pode ser excluído.");
+        return;
+      }
+
+      // 🔁 recorrente → escolher escopo
+      if (item.recorrencia_id) {
+        UI.abrirModalExcluirRecorrencia(item, tipo);
+        return;
+      }
+
+      // ❌ simples
+      if (!confirm("Deseja excluir este lançamento?")) return;
+
+      try {
+        await LancService.delete(tipo, item.id);
+        UI.closeAddModal();
+        await App.refreshLancamentos();
+        await App.renderExtrato();
+      } catch (e) {
+        console.error("Erro ao excluir lançamento", e);
+        alert("Erro ao excluir lançamento.");
+      }
+    };
+  }
+
+  // =========================// ABRIR MODAL// =========================
+   
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
 },
