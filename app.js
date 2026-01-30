@@ -36,6 +36,7 @@
 // ================================ // CONTROLE DE PERÍODO — LANÇAMENTOS // ================================
 let modoPeriodoLanc = "mes";   // "mes" | "custom"
 let mesLancAtual = new Date();
+let LANC_INIT = false;
 
 // ================================ // CONTROLE DE PERÍODO — EXTRATO // ================================
 let modoPeriodoExtrato = "mes"; // "mes" | "custom"
@@ -1441,13 +1442,18 @@ showScreen(name) {
     b.classList.toggle('active', b.dataset.target === name)
   );
 
-  // =========================// LANÇAMENTOS — RESET + MÊS ATUAL// =========================
+  // =========================// LANÇAMENTOS — INIT CONTROLADO// =========================
   if (name === 'lanc') {
-    modoPeriodoLanc = "mes";     // força modo mensal
-    mesLancAtual = new Date();   // força mês atual
 
-    renderMesLanc();             // atualiza label (Janeiro 2026 etc)
-    this.refreshLancamentos();   // recarrega dados
+    // 🔒 só reseta o mês UMA vez
+    if (!LANC_INIT) {
+      modoPeriodoLanc = "mes";
+      mesLancAtual = new Date();
+      LANC_INIT = true;
+    }
+
+    renderMesLanc();
+    this.refreshLancamentos();
   }
 
   // =========================// CONTAS// =========================
