@@ -1442,21 +1442,20 @@ showScreen(name) {
     b.classList.toggle('active', b.dataset.target === name)
   );
 
-  // =========================// LANÇAMENTOS — INIT CONTROLADO// =========================
+  // =========================/ LANÇAMENTOS — APENAS UI// =========================
   if (name === 'lanc') {
-
-    // 🔒 só reseta o mês UMA vez
     if (!LANC_INIT) {
       modoPeriodoLanc = "mes";
       mesLancAtual = new Date();
       LANC_INIT = true;
     }
 
-    renderMesLanc();
-    this.refreshLancamentos();
+    renderMesLanc(); // 🔥 só atualiza o label
+    // ❌ NÃO chama refresh aqui
   }
 
   // =========================// CONTAS// =========================
+   
   if (name === 'contas') {
     UI.populateSelects();
   }
