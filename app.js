@@ -1834,21 +1834,31 @@ if (insertErr) {
    
 document.addEventListener("click", (e) => {
 
-  if (e.target.closest("#lanc-prev")) {
-    modoPeriodoLanc = "mes";
-    mesLancAtual.setMonth(mesLancAtual.getMonth() - 1);
-    renderMesLanc();
-    App.refreshLancamentos();
-    return;
-  }
+ if (e.target.closest("#lanc-prev")) {
+  modoPeriodoLanc = "mes";
 
-  if (e.target.closest("#lanc-next")) {
-    modoPeriodoLanc = "mes";
-    mesLancAtual.setMonth(mesLancAtual.getMonth() + 1);
-    renderMesLanc();
-    App.refreshLancamentos();
-    return;
-  }
+  const ano = mesLancAtual.getFullYear();
+  const mes = mesLancAtual.getMonth() - 1;
+
+  mesLancAtual = new Date(ano, mes, 1); // 🔥 dia SEMPRE 1
+
+  renderMesLanc();
+  App.refreshLancamentos();
+  return;
+}
+
+if (e.target.closest("#lanc-next")) {
+  modoPeriodoLanc = "mes";
+
+  const ano = mesLancAtual.getFullYear();
+  const mes = mesLancAtual.getMonth() + 1;
+
+  mesLancAtual = new Date(ano, mes, 1); // 🔥 dia SEMPRE 1
+
+  renderMesLanc();
+  App.refreshLancamentos();
+  return;
+}
 
   if (e.target.closest("#btn-periodo-custom")) {
     document.getElementById("periodo-custom-box")?.classList.remove("hidden");
