@@ -1726,32 +1726,49 @@ if (modoPeriodoExtrato === "custom") {
     let totalCred = 0;
     let totalDeb = 0;
 
-    (movsPeriodo || []).forEach(m => {
-      if (m.tipo === "credito") {
-        saldo += Number(m.valor);
-        totalCred += Number(m.valor);
-      } else {
-        saldo -= Number(m.valor);
-        totalDeb += Number(m.valor);
-      }
+   (movsPeriodo || []).forEach(m => {
+  if (m.tipo === "credito") {
+    saldo += Number(m.valor);
+    totalCred += Number(m.valor);
+  } else {
+    saldo -= Number(m.valor);
+    totalDeb += Number(m.valor);
+  }
 
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR")}</td>
-        <td>${m.descricao}</td>
-        <td class="${m.tipo === "credito" ? "extrato-credito" : "extrato-debito"}">
-          ${m.tipo === "credito" ? "Crédito" : "Débito"}
-        </td>
-        <td class="${m.tipo === "credito" ? "extrato-credito" : "extrato-debito"}">
-          ${Number(m.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-        </td>
-        <td class="${saldo >= 0 ? "extrato-saldo-positivo" : "extrato-saldo-negativo"}">
-          ${saldo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-        </td>
-        <td></td>
-      `;
-      tbody.appendChild(tr);
-    });
+  const tr = document.createElement("tr");
+
+  const tdAcoes = document.createElement("td");
+
+  // 🔥 AÇÃO EXCLUSIVA PARA TRANSFERÊNCIA
+  if (m.transferencia_id) {
+    const btnExcluir = document.createElement("button");
+    btnExcluir.textContent = "Excluir";
+    btnExcluir.classList.add("btn-danger");
+
+    btnExcluir.onclick = () => {
+      excluirTransferencia(m.transferencia_id);
+    };
+
+    tdAcoes.appendChild(btnExcluir);
+  }
+
+  tr.innerHTML = `
+    <td>${new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR")}</td>
+    <td>${m.descricao}</td>
+    <td class="${m.tipo === "credito" ? "extrato-credito" : "extrato-debito"}">
+      ${m.tipo === "credito" ? "Crédito" : "Débito"}
+    </td>
+    <td class="${m.tipo === "credito" ? "extrato-credito" : "extrato-debito"}">
+      ${Number(m.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+    </td>
+    <td class="${saldo >= 0 ? "extrato-saldo-positivo" : "extrato-saldo-negativo"}">
+      ${saldo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+    </td>
+  `;
+
+  tr.appendChild(tdAcoes);
+  tbody.appendChild(tr);
+});
 
     document.getElementById("total-receitas-extrato").textContent =
       totalCred.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
