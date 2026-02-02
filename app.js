@@ -676,17 +676,37 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
   li.style.justifyContent = "space-between";
   li.style.padding = "6px 0";
 
-  // =========================
-  // TEXTO DO LANÇAMENTO
-  // =========================
+  // =========================// TEXTO DO LANÇAMENTO// =========================
+      
   const left = document.createElement("div");
   left.textContent =
     `${fmtDateBR(item.data)} — ${item.descricao} — ${fmtMoney(item.valor)}` +
     (item.baixado ? " (BAIXADO)" : "");
+      
+// ================================// TRANSFERÊNCIA — AÇÃO ESPECIAL// ================================
+if (item.transferencia_id) {
 
-  // =========================
-  // AÇÕES (SEM EXCLUIR)
-  // =========================
+  const right = document.createElement("div");
+  right.style.display = "flex";
+  right.style.gap = "6px";
+
+  const btnExcluir = document.createElement("button");
+  btnExcluir.textContent = "Excluir transferência";
+  btnExcluir.classList.add("btn-danger");
+
+  btnExcluir.addEventListener("click", () => {
+    excluirTransferencia(item.transferencia_id);
+  });
+
+  li.appendChild(left);
+  right.appendChild(btnExcluir);
+  li.appendChild(right);
+
+  // 🔴 IMPORTANTE: NÃO executa Editar / Baixar
+  return li;
+}
+
+  // ========================= // AÇÕES (SEM EXCLUIR)// =========================
   const right = document.createElement("div");
   right.style.display = "flex";
   right.style.gap = "6px";
@@ -700,9 +720,7 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
   });
   right.appendChild(btnEdit);
 
-  // =========================
-  // BAIXAR / CANCELAR BAIXA
-  // =========================
+  // =========================// BAIXAR / CANCELAR BAIXA// =========================
   if (!item.baixado) {
     const btnBaixar = document.createElement("button");
     btnBaixar.textContent = "Baixar";
@@ -1302,6 +1320,35 @@ await App.refreshLancamentos();
 
 alert("Transferência realizada com sucesso.");
 
+}
+// ================================// EXCLUIR TRANSFERÊNCIA (NOVA) // ================================
+async function excluirTransferencia(transferenciaId) {
+  if (!confirm("Deseja excluir esta transferência?")) return;
+
+  try {
+    // 1️⃣ remove movimentações ligadas
+    await supabase
+      .from("movimentacoes")
+      .delete()
+      .eq("transferencia_id", transferenciaId);
+
+    // 2️⃣ remove o registro principal
+    await supabase
+      .from("transferencias")
+      .delete()
+      .eq("id", transferenciaId);
+
+    // 3️⃣ atualiza tudo
+    await App.reloadAll();
+    await App.refreshLancamentos();
+    await App.renderExtrato();
+
+    alert("Transferência excluída com sucesso.");
+
+  } catch (err) {
+    console.error(err);
+    alert("Erro ao excluir transferência.");
+  }
 }
 
   /* ============================  APP CORE ============================ */
