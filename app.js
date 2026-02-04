@@ -1059,16 +1059,16 @@ if (avisoBox) {
     avisoBox.classList.add("hidden");
   }
 }
-
    
-   // ========================= // EDIÇÃO DE LANÇAMENTO // =========================
-     
+// ========================= // EDIÇÃO DE LANÇAMENTO // =========================
 if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
 
   const editId = saveBtn.dataset.editId;
   const escopo = saveBtn.dataset.editScope || 'one';
   const recorrenciaId = saveBtn.dataset.recorrenciaId;
   const dataBase = saveBtn.dataset.dataBase;
+
+  const tabelaLanc = tipo === "receita" ? "receitas" : "despesas";
 
   const patchBase = {
     descricao,
@@ -1077,32 +1077,28 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
     categoria_id: categoria_id || null
   };
 
-  const patch =
-    escopo === 'one'
-      ? { ...patchBase, data }
-      : patchBase;
-
-  const tabelaLanc = tipo === 'receita' ? 'receitas' : 'despesas';
-
   // 1️⃣ Atualiza lançamento(s)
   if (escopo === 'one' || !recorrenciaId) {
-    await LancService.update(tipo, editId, patch);
-  }
-  else if (escopo === 'next') {
     await supabase
       .from(tabelaLanc)
-      .update(patch)
+      .update({ ...patchBase, data })
+      .eq('id', editId);
+
+  } else if (escopo === 'next') {
+    await supabase
+      .from(tabelaLanc)
+      .update(patchBase)
       .eq('recorrencia_id', recorrenciaId)
       .gte('data', dataBase);
-  }
-  else if (escopo === 'all') {
+
+  } else if (escopo === 'all') {
     await supabase
       .from(tabelaLanc)
-      .update(patch)
+      .update(patchBase)
       .eq('recorrencia_id', recorrenciaId);
   }
 
-  // 2️⃣ SINCRONIZA EXTRATO (SOMENTE escopo ONE)
+  // ==================================================// 🔄 SINCRONIZA EXTRATO (SOMENTE SE FOR "ONE")// ==================================================
   if (escopo === 'one') {
 
     const { data: lancAtual } = await supabase
@@ -1111,8 +1107,7 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
       .eq('id', editId)
       .maybeSingle();
 
-    if (lancAtual && lancAtual.baixado === true) {
-
+    if (lancAtual?.baixado === true) {
       const { data: mov } = await supabase
         .from('movimentacoes')
         .select('*')
@@ -1123,9 +1118,9 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
         await supabase
           .from('movimentacoes')
           .update({
-            data: patch.data ?? mov.data,
-            descricao: patch.descricao ?? mov.descricao,
-            valor: patch.valor ?? mov.valor
+            descricao,
+            valor,
+            data
           })
           .eq('id', mov.id);
       }
