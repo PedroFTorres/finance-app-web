@@ -588,10 +588,6 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
     el.appendChild(new Option('Todas as Contas', 'all'));
   };
 
-  // ✔ Só Filtros recebem "Todas as Contas"
-  addAllOpt(selFilter);
-  addAllOpt(selLista);
-
   // ✔ Modal NÃO recebe "Todas as Contas", apenas contas reais
   if (selModalConta) {
     selModalConta.innerHTML = '';
@@ -621,8 +617,6 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
   if (selFilter && (!selFilter.value || selFilter.value.trim() === ''))
     selFilter.value = 'all';
 
-  if (selExtr && (!selExtr.value || selExtr.value.trim() === ''))
-    selExtr.value = 'all';
 },
     renderCategorias() {
       const ul = $(IDS.listaCategorias);
@@ -1501,10 +1495,9 @@ if (name === 'contas') {
 
   const selExtr = document.getElementById("select-contas-extrato");
 
-  // 🔥 se não houver valor, seleciona a primeira conta automaticamente
-  if (selExtr && !selExtr.value && selExtr.options.length > 0) {
-    selExtr.selectedIndex = 0;
-  }
+  if (selExtr && selExtr.options.length > 0) {
+  selExtr.selectedIndex = 0;
+}
 
   // 🔥 agora renderiza o extrato sem depender de clique
   const tabExtrato = document.getElementById("tab-extrato");
@@ -1667,9 +1660,8 @@ safeText($(IDS.saldoAtual), fmtMoney(saldoPeriodo));
 
 async renderExtrato() {
   try {
-    const conta_id = document.getElementById("select-contas-extrato")?.value;
-    if (!conta_id || conta_id === "all") return;
-
+  const conta_id = document.getElementById("select-contas-extrato")?.value;
+if (!conta_id) return;
 
     // =========================// EXTRATO — DEFINIÇÃO DE DATAS // =========================
 let inicio, fim;
