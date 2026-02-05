@@ -1461,7 +1461,7 @@ if (btnConfirmar) {
   await drawResumo(inicio, fim);
   await drawReceitasPorCategoria(inicio, fim);
   await drawDespesasPorCategoria(inicio, fim);
-},
+}
 
 function showScreen(name) {
 
