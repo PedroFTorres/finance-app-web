@@ -1497,8 +1497,15 @@ showScreen(name) {
 
   // =========================// CONTAS// =========================
    
-  if (name === 'contas') {
-    UI.populateSelects();
+ if (name === 'contas') {
+  UI.populateSelects();
+
+  // ✅ se já existe conta selecionada, renderiza o extrato automaticamente
+  const selExtr = document.getElementById("select-contas-extrato");
+  if (selExtr && selExtr.value) {
+    modoPeriodoExtrato = "mes";
+    renderMesExtrato();
+    App.renderExtrato();
   }
 },
 
