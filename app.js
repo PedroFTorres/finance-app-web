@@ -1463,40 +1463,49 @@ if (btnConfirmar) {
   await drawDespesasPorCategoria(inicio, fim);
 },
 
-showScreen(name) {
-  // Esconde todas as telas
+function showScreen(name) {
+
+  // ===================== ESCONDE TODAS =====================
   document.querySelectorAll(IDS.screens)
     .forEach(s => s.classList.add('hidden'));
 
-  // Mostra a tela solicitada
+  // ===================== MOSTRA A ATUAL =====================
   const target = document.querySelector(`[data-screen="${name}"]`);
   if (target) target.classList.remove('hidden');
 
-  // Menu ativo
+  // ===================== MENU ATIVO =====================
   $all(IDS.menuBtns).forEach(b =>
     b.classList.toggle('active', b.dataset.target === name)
   );
 
-  // =========================/ LANÇAMENTOS — APENAS UI// =========================
+  // ===================== LANÇAMENTOS (UI) =====================
   if (name === 'lanc') {
     if (!LANC_INIT) {
       modoPeriodoLanc = "mes";
       mesLancAtual = new Date();
       LANC_INIT = true;
     }
-
-    renderMesLanc(); // 🔥 só atualiza o label
-    // ❌ NÃO chama refresh aqui
+    renderMesLanc();
   }
 
- // =========================// CONTAS// =========================
-if (name === 'contas') {
-  UI.populateSelects();
+  // ===================== CONTAS / EXTRATO =====================
+  if (name === 'contas') {
+    UI.populateSelects();
 
-  const selExtr = document.getElementById("select-contas-extrato");
+    const selExtr = document.getElementById("select-contas-extrato");
 
-  if (selExtr && selExtr.options.length > 0) {
-  selExtr.selectedIndex = 0;
+    // seleciona sempre a primeira conta válida
+    if (selExtr && selExtr.options.length > 0) {
+      selExtr.selectedIndex = 0;
+    }
+
+    // renderiza o extrato automaticamente
+    if (selExtr && selExtr.value) {
+      modoPeriodoExtrato = "mes";
+      renderMesExtrato();
+      renderExtrato();
+    }
+  }
 }
 
   // 🔥 agora renderiza o extrato sem depender de clique
