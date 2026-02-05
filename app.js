@@ -1507,7 +1507,7 @@ if (selExtr && selExtr.value) {
   renderMesExtrato();
   App.renderExtrato();
 }
-},
+}
  subscribeRealtime() {
       // we create channels per table; store refs on STATE.subs to unsubscribe if needed
       try {
