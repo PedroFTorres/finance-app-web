@@ -1514,9 +1514,8 @@ if (selExtr && selExtr.value) {
   renderMesExtrato();
   App.renderExtrato();
 }
-}
-
-    subscribeRealtime() {
+},
+ subscribeRealtime() {
       // we create channels per table; store refs on STATE.subs to unsubscribe if needed
       try {
         const chReceitas = supabase.channel('chan_receitas').on('postgres_changes', { event: '*', schema: 'public', table: 'receitas' }, payload => {
