@@ -1495,19 +1495,26 @@ showScreen(name) {
     // ❌ NÃO chama refresh aqui
   }
 
-  // =========================// CONTAS// =========================
-   
- if (name === 'contas') {
+ // =========================// CONTAS// =========================
+if (name === 'contas') {
   UI.populateSelects();
 
-  // ✅ se já existe conta selecionada, renderiza o extrato automaticamente
   const selExtr = document.getElementById("select-contas-extrato");
-  if (selExtr && selExtr.value) {
-    modoPeriodoExtrato = "mes";
-    renderMesExtrato();
-    App.renderExtrato();
+
+  // 🔥 se não houver valor, seleciona a primeira conta automaticamente
+  if (selExtr && !selExtr.value && selExtr.options.length > 0) {
+    selExtr.selectedIndex = 0;
   }
-},
+
+  // 🔥 agora renderiza o extrato sem depender de clique
+  const tabExtrato = document.getElementById("tab-extrato");
+
+if (selExtr && selExtr.value) {
+  modoPeriodoExtrato = "mes";
+  renderMesExtrato();
+  App.renderExtrato();
+}
+}
 
     subscribeRealtime() {
       // we create channels per table; store refs on STATE.subs to unsubscribe if needed
