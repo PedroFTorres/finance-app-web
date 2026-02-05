@@ -590,7 +590,6 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
 
   // ✔ Só Filtros recebem "Todas as Contas"
   addAllOpt(selFilter);
-  addAllOpt(selExtr);
   addAllOpt(selLista);
 
   // ✔ Modal NÃO recebe "Todas as Contas", apenas contas reais
