@@ -432,18 +432,14 @@ const CategoriasService = {
           if (t) App.showScreen(t);
         });
       });
-// ================================
-// LANÇAMENTOS — filtro por conta
-// ================================
+// ================================// LANÇAMENTOS — filtro por conta// ================================
 const selContaLanc = $(IDS.selectContas);
 if (selContaLanc) {
   selContaLanc.addEventListener('change', () => {
     App.refreshLancamentos();
   });
 }
-// ================================
-// LANÇAMENTOS — MENU LATERAL
-// ================================
+// ================================// LANÇAMENTOS — MENU LATERAL// ================================
 document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
   btn.addEventListener("click", () => {
 
@@ -703,6 +699,36 @@ if (item.transferencia_id) {
 
   // 🔴 IMPORTANTE: NÃO executa Editar / Baixar
   return li;
+},
+     
+renderContasCards() {
+  const container = document.getElementById("contas-cards");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!STATE.contas || STATE.contas.length === 0) {
+    container.innerHTML = "<p>Nenhuma conta cadastrada.</p>";
+    return;
+  }
+
+  STATE.contas.forEach(conta => {
+    const card = document.createElement("div");
+    card.className = "conta-card";
+
+    card.innerHTML = `
+      <div class="conta-card-header">
+        <strong>${conta.nome}</strong>
+      </div>
+
+      <div class="conta-card-body">
+        <div>Saldo atual</div>
+        <div class="conta-saldo">${fmtMoney(conta.saldo_atual)}</div>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
 }
 
   // ========================= // AÇÕES (SEM EXCLUIR)// =========================
@@ -1348,10 +1374,12 @@ async function excluirTransferencia(transferenciaId) {
   /* ============================  APP CORE ============================ */
   const App = {
     async reloadAll() {
-      await Promise.all([ CategoriasService.load(), ContasService.load() ]);
-      UI.populateSelects();
-      UI.renderCategorias();
-    },
+  await Promise.all([ CategoriasService.load(), ContasService.load() ]);
+  UI.populateSelects();
+  UI.renderCategorias();
+  UI.renderContasCards(); 
+},
+
 
   async init() {
   // carregar dados base
