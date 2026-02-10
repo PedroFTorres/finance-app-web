@@ -432,18 +432,16 @@ const CategoriasService = {
           if (t) App.showScreen(t);
         });
       });
-// ================================
-// LANÇAMENTOS — filtro por conta
-// ================================
+// ================================// LANÇAMENTOS — filtro por conta// ================================
+       
 const selContaLanc = $(IDS.selectContas);
 if (selContaLanc) {
   selContaLanc.addEventListener('change', () => {
     App.refreshLancamentos();
   });
 }
-// ================================
-// LANÇAMENTOS — MENU LATERAL
-// ================================
+// ================================// LANÇAMENTOS — MENU LATERAL// ================================
+       
 document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
   btn.addEventListener("click", () => {
 
@@ -645,6 +643,34 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
         li.appendChild(span); li.appendChild(btn); ul.appendChild(li);
       });
     },
+renderContasCards() {
+  const container = document.getElementById("lista-contas");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!STATE.contas || STATE.contas.length === 0) {
+    container.innerHTML = "<p>Nenhuma conta cadastrada.</p>";
+    return;
+  }
+
+  STATE.contas.forEach(conta => {
+    const div = document.createElement("div");
+    div.className = "conta-card";
+
+    div.innerHTML = `
+      <div class="conta-info">
+        <strong>${conta.nome}</strong>
+        <small>Saldo atual: ${Number(conta.saldo_atual || 0).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL"
+        })}</small>
+      </div>
+    `;
+
+    container.appendChild(div);
+  });
+},
 
     // renders the lists of receipts and expenses in the lanc screen
     renderLancamentos({ receitas, despesas }) {
@@ -1346,12 +1372,12 @@ async function excluirTransferencia(transferenciaId) {
 }
 
   /* ============================  APP CORE ============================ */
-  const App = {
-    async reloadAll() {
-      await Promise.all([ CategoriasService.load(), ContasService.load() ]);
-      UI.populateSelects();
-      UI.renderCategorias();
-    },
+  async reloadAll() {
+  await Promise.all([ CategoriasService.load(), ContasService.load() ]);
+  UI.populateSelects();
+  UI.renderCategorias();
+  UI.renderContasCards(); 
+},
 
   async init() {
   // carregar dados base
