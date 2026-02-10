@@ -82,7 +82,7 @@
       <div class="card-panel">
         <h2>Contas</h2>
 
-        <div class="tabs">
+        <div class="s">
           <button class="tab-btn active" data-tab="cadastro">Cadastro</button>
           <button class="tab-btn" data-tab="extrato">Extrato</button>
           <button class="tab-btn" data-tab="categorias">Categorias</button>
@@ -95,27 +95,30 @@
           <link rel="stylesheet" href="print.css">
         </div>
 
+       <!-- TAB CADASTRO -->
+<div id="tab-cadastro">
 
-        <!-- TAB CADASTRO -->
-        <div id="tab-cadastro">
+  <label>Nome da conta</label>
+  <input id="conta-nome" placeholder="Conta Ex: Nubank, Caixa..."/>
 
-          <label>Nome da conta</label>
-          <input id="conta-nome" placeholder="Conta Ex: Nubank, Caixa..."/>
+  <label>Saldo inicial</label>
+  <input id="conta-saldo" type="number" placeholder="0.00"/>
 
-          <label>Saldo inicial</label>
-          <input id="conta-saldo" type="number" placeholder="0.00"/>
+  <label>Data do saldo</label>
+  <input id="conta-data-saldo" type="date"/>
 
-          <label>Data do saldo</label>
-          <input id="conta-data-saldo" type="date"/>
+  <button id="btn-add-conta" class="btn-primary" style="margin-top:10px;">
+    Adicionar Conta
+  </button>
 
-          <button id="btn-add-conta" class="btn-primary" style="margin-top:10px;">Adicionar Conta</button>
+  <hr style="margin:25px 0"/>
 
-          <hr style="margin:25px 0"/>
+  <!-- 👇👇👇 AQUI É A PARTE 2 👇👇👇 -->
+  <h3 style="margin-top:20px">Contas cadastradas</h3>
 
-          <div id="contas-cards" class="contas-cards"></div>
+  <div id="lista-contas" class="contas-grid"></div>
 
-        </div>
-
+</div>
 
         <!-- TAB EXTRATO -->
         <div id="tab-extrato" class="hidden">
