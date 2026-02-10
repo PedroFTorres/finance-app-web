@@ -1372,6 +1372,8 @@ async function excluirTransferencia(transferenciaId) {
 }
 
   /* ============================  APP CORE ============================ */
+const App = {
+   
   async reloadAll() {
   await Promise.all([ CategoriasService.load(), ContasService.load() ]);
   UI.populateSelects();
@@ -1472,14 +1474,10 @@ if (btnConfirmar) {
   };
 }
 
-  // ================================
-  // REALTIME
-  // ================================
+  // ================================// REALTIME// ================================
   this.subscribeRealtime();
 
-  // ================================
-  // RENDERIZAÇÕES INICIAIS
-  // ================================
+  // ================================// RENDERIZAÇÕES INICIAIS// ================================
   await this.refreshLancamentos();
 
   const now = new Date();
