@@ -659,14 +659,24 @@ renderContasCards() {
     div.className = "conta-card";
 
     div.innerHTML = `
-      <div class="conta-info">
-        <strong>${conta.nome}</strong>
-        <small>Saldo atual: ${Number(conta.saldo_atual || 0).toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL"
-        })}</small>
-      </div>
-    `;
+  <div class="conta-info">
+    <strong>${conta.nome}</strong>
+
+    <small>
+      Saldo atual:
+      <span style="font-weight:600">
+        ${fmtMoney(conta.saldo_atual || 0)}
+      </span>
+    </small>
+
+    <div class="conta-actions" style="margin-top:10px">
+      <button class="btn-secondary" disabled>
+        Editar
+      </button>
+    </div>
+  </div>
+`;
+
 
     container.appendChild(div);
   });
