@@ -575,3 +575,47 @@ button:hover { opacity: .9; }
   }
 }
 
+/* ========================= CONTAS — CARDS ========================= */
+
+.contas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.conta-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.conta-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.12);
+}
+
+.conta-info strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+.conta-info small {
+  display: block;
+  font-size: 13px;
+  color: #666;
+}
+
+.conta-actions {
+  margin-top: 12px;
+}
+
+.conta-actions button {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
