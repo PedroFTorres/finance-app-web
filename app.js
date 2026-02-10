@@ -662,21 +662,18 @@ renderContasCards() {
   <div class="conta-info">
     <strong>${conta.nome}</strong>
 
-    <small>
-      Saldo atual:
-      <span style="font-weight:600">
-        ${fmtMoney(conta.saldo_atual || 0)}
-      </span>
-    </small>
+    <small>Agência: ${conta.agencia || "-"}</small>
+    <small>Conta: ${conta.numero_conta || "-"}</small>
+    <small>Gerente: ${conta.gerente || "-"}</small>
+    <small>Contato: ${conta.contato || "-"}</small>
 
-    <div class="conta-actions" style="margin-top:10px">
-      <button class="btn-secondary" disabled>
+    <div class="conta-actions">
+      <button class="btn-secondary btn-edit-conta" disabled>
         Editar
       </button>
     </div>
   </div>
 `;
-
 
     container.appendChild(div);
   });
