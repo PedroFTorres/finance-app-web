@@ -420,9 +420,7 @@ const CategoriasService = {
     }
   };
 
-  /* ============================
-     UI FUNCTIONS
-  ============================ */
+  /* ============================ UI FUNCTIONS ============================ */
   const UI = {
     attachHandlers() {
       // menu buttons
@@ -432,6 +430,46 @@ const CategoriasService = {
           if (t) App.showScreen(t);
         });
       });
+       
+       // ===================== MODAL CONTA =====================
+
+const modalConta = document.getElementById("modal-conta");
+
+const btnOpenModalConta = document.getElementById("btn-open-modal-conta");
+if (btnOpenModalConta) {
+  btnOpenModalConta.addEventListener("click", () => {
+    modalConta.classList.remove("hidden");
+  });
+}
+
+const btnCancelarConta = document.getElementById("btn-cancelar-conta");
+if (btnCancelarConta) {
+  btnCancelarConta.addEventListener("click", () => {
+    modalConta.classList.add("hidden");
+  });
+}
+
+const btnSalvarConta = document.getElementById("btn-salvar-conta");
+if (btnSalvarConta) {
+  btnSalvarConta.addEventListener("click", async () => {
+
+    const conta = {
+      nome: document.getElementById("modal-conta-nome").value,
+      agencia: document.getElementById("modal-conta-agencia").value,
+      numero_conta: document.getElementById("modal-conta-numero").value,
+      gerente: document.getElementById("modal-conta-gerente").value,
+      contato: document.getElementById("modal-conta-contato").value,
+      saldo_inicial: Number(document.getElementById("modal-conta-saldo").value || 0),
+      data_saldo: document.getElementById("modal-conta-data").value
+    };
+
+    await ContasService.create(conta);
+
+    modalConta.classList.add("hidden");
+
+    await App.reloadAll();
+  });
+}
 // ================================// LANÇAMENTOS — filtro por conta// ================================
        
 const selContaLanc = $(IDS.selectContas);
@@ -2022,6 +2060,7 @@ if (e.target.closest("#lanc-next")) {
 
     UI.populateSelects();
     UI.renderCategorias();
+    UI.renderContasCards();
 
     await App.init();
   } catch (e) {
