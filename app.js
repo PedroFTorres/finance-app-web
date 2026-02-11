@@ -2066,5 +2066,5 @@ document.getElementById("select-contas-extrato")
     App.renderExtrato();
   });
 
-
+})(); 
 
