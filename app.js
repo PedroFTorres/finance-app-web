@@ -422,54 +422,61 @@ const CategoriasService = {
 
   /* ============================ UI FUNCTIONS ============================ */
   const UI = {
-    attachHandlers() {
-      // menu buttons
-      $all(IDS.menuBtns).forEach(b => {
-        b.addEventListener('click', () => {
-          const t = b.dataset.target;
-          if (t) App.showScreen(t);
-        });
+
+  attachHandlers() {
+
+    // menu buttons
+    $all(IDS.menuBtns).forEach(b => {
+      b.addEventListener('click', () => {
+        const t = b.dataset.target;
+        if (t) App.showScreen(t);
       });
-       
-       // ===================== MODAL CONTA =====================
+    });
 
-const modalConta = document.getElementById("modal-conta");
+    // ===================== MODAL CONTA =====================
 
-const btnOpenModalConta = document.getElementById("btn-open-modal-conta");
-if (btnOpenModalConta) {
-  btnOpenModalConta.addEventListener("click", () => {
-    modalConta.classList.remove("hidden");
-  });
-}
+    const modal = document.getElementById("modal-conta");
 
-const btnCancelarConta = document.getElementById("btn-cancelar-conta");
-if (btnCancelarConta) {
-  btnCancelarConta.addEventListener("click", () => {
-    modalConta.classList.add("hidden");
-  });
-}
+    const btnOpen = document.getElementById("btn-open-modal-conta");
+    const btnCancel = document.getElementById("btn-cancelar-conta");
+    const btnSave = document.getElementById("btn-salvar-conta");
 
-const btnSalvarConta = document.getElementById("btn-salvar-conta");
-if (btnSalvarConta) {
-  btnSalvarConta.addEventListener("click", async () => {
+    if (btnOpen) {
+      btnOpen.addEventListener("click", function () {
+        modal.classList.remove("hidden");
+      });
+    }
 
-    const conta = {
-      nome: document.getElementById("modal-conta-nome").value,
-      agencia: document.getElementById("modal-conta-agencia").value,
-      numero_conta: document.getElementById("modal-conta-numero").value,
-      gerente: document.getElementById("modal-conta-gerente").value,
-      contato: document.getElementById("modal-conta-contato").value,
-      saldo_inicial: Number(document.getElementById("modal-conta-saldo").value || 0),
-      data_saldo: document.getElementById("modal-conta-data").value
-    };
+    if (btnCancel) {
+      btnCancel.addEventListener("click", function () {
+        modal.classList.add("hidden");
+      });
+    }
 
-    await ContasService.create(conta);
+    if (btnSave) {
+      btnSave.addEventListener("click", async function () {
 
-    modalConta.classList.add("hidden");
+        const conta = {
+          nome: document.getElementById("modal-conta-nome").value,
+          agencia: document.getElementById("modal-conta-agencia").value,
+          numero_conta: document.getElementById("modal-conta-numero").value,
+          gerente: document.getElementById("modal-conta-gerente").value,
+          contato: document.getElementById("modal-conta-contato").value,
+          saldo_inicial: Number(document.getElementById("modal-conta-saldo").value || 0),
+          data_saldo: document.getElementById("modal-conta-data").value
+        };
 
-    await App.reloadAll();
-  });
-}
+        await ContasService.create(conta);
+
+        modal.classList.add("hidden");
+
+        await App.reloadAll();
+      });
+    }
+
+  },  
+};
+
 // ================================// LANÇAMENTOS — filtro por conta// ================================
        
 const selContaLanc = $(IDS.selectContas);
