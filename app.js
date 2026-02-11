@@ -489,7 +489,7 @@ const UI = {
 
         await App.reloadAll();
       });
-    },
+    }
 
       // logout
       const btnLogout = $(IDS.logoutBtn);
