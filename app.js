@@ -450,10 +450,6 @@ const UI = {
     });
   });
 
-  // ===================== MODAL CONTA =====================
-  ...
-
-
     // ===================== MODAL CONTA =====================
 
     const modal = document.getElementById("modal-conta");
