@@ -421,17 +421,35 @@ const CategoriasService = {
   };
 
   /* ============================ UI FUNCTIONS ============================ */
-  const UI = {
-
   attachHandlers() {
 
-    // menu buttons
-    $all(IDS.menuBtns).forEach(b => {
-      b.addEventListener('click', () => {
-        const t = b.dataset.target;
-        if (t) App.showScreen(t);
-      });
+  // ================================// MENU SUPERIOR// ================================
+  $all(IDS.menuBtns).forEach(b => {
+    b.addEventListener('click', () => {
+      const t = b.dataset.target;
+      if (t) App.showScreen(t);
     });
+  });
+
+  // ================================// LANÇAMENTOS — MENU LATERAL// ================================
+  document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
+    btn.addEventListener("click", () => {
+
+      document
+        .querySelectorAll("[data-lanc-tab]")
+        .forEach(b => b.classList.remove("active"));
+
+      btn.classList.add("active");
+
+      FILTRO_LANCAMENTOS = btn.dataset.lancTab;
+
+      App.refreshLancamentos();
+    });
+  });
+
+  // ===================== MODAL CONTA =====================
+  ...
+
 
     // ===================== MODAL CONTA =====================
 
@@ -476,36 +494,6 @@ const CategoriasService = {
 
   },  
 };
-
-// ================================// LANÇAMENTOS — filtro por conta// ================================
-       
-const selContaLanc = $(IDS.selectContas);
-if (selContaLanc) {
-  selContaLanc.addEventListener('change', () => {
-    App.refreshLancamentos();
-  });
-}
-// ================================// LANÇAMENTOS — MENU LATERAL// ================================
-       
-document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
-  btn.addEventListener("click", () => {
-
-    // remove active de todos
-    document
-      .querySelectorAll("[data-lanc-tab]")
-      .forEach(b => b.classList.remove("active"));
-
-    // ativa o clicado
-    btn.classList.add("active");
-
-    // atualiza estado global
-  FILTRO_LANCAMENTOS = btn.dataset.lancTab;
-
-
-    // recarrega listas
-    App.refreshLancamentos();
-  });
-});
 
       // logout
       const btnLogout = $(IDS.logoutBtn);
