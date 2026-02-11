@@ -611,7 +611,7 @@ document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
         $(IDS.categoriaNome).value = '';
         await App.reloadAll();
       });
-   },
+},
   
    populateSelects() {
   const selFilter = $(IDS.selectContas);
