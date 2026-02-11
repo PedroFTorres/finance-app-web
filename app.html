@@ -98,18 +98,18 @@
        <!-- TAB CADASTRO -->
 <div id="tab-cadastro">
 
-  <label>Nome da conta</label>
-  <input id="conta-nome" placeholder="Conta Ex: Nubank, Caixa..."/>
+ <button
+  id="btn-open-modal-conta"
+  class="btn-primary"
+  style="margin-bottom:20px"
+>
+  ➕ Adicionar conta
+</button>
 
-  <label>Saldo inicial</label>
-  <input id="conta-saldo" type="number" placeholder="0.00"/>
+<hr style="margin:25px 0"/>
 
-  <label>Data do saldo</label>
-  <input id="conta-data-saldo" type="date"/>
-
-  <button id="btn-add-conta" class="btn-primary" style="margin-top:10px;">
-    Adicionar Conta
-  </button>
+<h3>Contas cadastradas</h3>
+<div id="lista-contas" class="contas-grid"></div>
 
   <hr style="margin:25px 0"/>
 
@@ -569,7 +569,47 @@
     </p>
   </div>
 </div>
+    
+<!-- ========================= MODAL CONTA ========================= -->
+<div id="modal-conta" class="modal hidden">
+  <div class="modal-content" style="max-width:520px">
 
+    <h3>Cadastrar conta</h3>
+
+    <label>Nome da conta</label>
+    <input id="modal-conta-nome">
+
+    <label>Agência</label>
+    <input id="modal-conta-agencia">
+
+    <label>Número da conta</label>
+    <input id="modal-conta-numero">
+
+    <label>Gerente</label>
+    <input id="modal-conta-gerente">
+
+    <label>Contato</label>
+    <input id="modal-conta-contato">
+
+    <hr>
+
+    <label>Saldo inicial</label>
+    <input id="modal-conta-saldo" type="number" step="0.01">
+
+    <label>Data do saldo</label>
+    <input id="modal-conta-data" type="date">
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:15px">
+      <button id="btn-cancelar-conta" class="btn-secondary">
+        Cancelar
+      </button>
+      <button id="btn-salvar-conta" class="btn-primary">
+        Salvar
+      </button>
+    </div>
+
+  </div>
+</div>
     
 </body>
 </html>
