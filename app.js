@@ -105,7 +105,7 @@ let FILTRO_LANCAMENTOS = "pendencias";
     modalValor: 'modal-valor',
     modalDesc: 'modal-desc',
     modalData: 'modal-data',
-    modalConta: 'modal-conta',
+    modalConta: 'modal-conta-select',
     modalCategoria: 'modal-categoria',
     modalRecorrencia: 'modal-recorrencia',
     modalParcelas: 'modal-parcelas',
