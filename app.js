@@ -473,13 +473,15 @@ const UI = {
 
 });
 
-   document.addEventListener("click", function (e) {
+  document.addEventListener("click", function (e) {
 
   if (e.target.closest("#btn-cancelar-conta")) {
     const modal = document.getElementById("modal-conta");
-    if (modal) modal.classList.add("hidden");
+    if (modal) {
+      modal.classList.add("hidden");
+      modal.style.removeProperty("display"); // 🔥 remove display inline
+    }
   }
-
 });
 
     if (btnSave) {
@@ -2060,7 +2062,6 @@ if (e.target.closest("#lanc-next")) {
     const modalConta = document.getElementById("modal-conta");
     if (modalConta) {
       modalConta.classList.add("hidden");
-      modalConta.style.display = "none";
     }
 
     // 🔥 Carrega dados iniciais
