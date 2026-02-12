@@ -251,7 +251,7 @@ function fecharModal(modalId) {
   try {
     // 🔹 carregar dados básicos
     await loadCards();
-    renderCardsSidebar();
+    ();
     await loadCategorias();
 
   // 🔹 inicialização da fatura (UMA ÚNICA VEZ)
@@ -302,6 +302,7 @@ if (btnVoltarEdicao) {
   }
 
 function renderCardsSidebar() {
+
   if (!cardsList) return;
 
   cardsList.innerHTML = "";
