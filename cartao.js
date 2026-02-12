@@ -430,7 +430,6 @@ async function definirMesInicialAberto() {
     // 👉 qualquer outro caso: este mês é o principal
     mesFatura = new Date(ano, mes - 1, 1);
     popularMesFatura();
-    ();
     return;
   }
 }
@@ -442,8 +441,9 @@ if (btnFatPrev) {
   btnFatPrev.onclick = async () => {
     mesFatura.setMonth(mesFatura.getMonth() - 1);
     popularMesFatura();
-    atualizarEstadoBotoesMes();
-    ();
+atualizarEstadoBotoesMes();
+await loadFaturaForSelected();
+
   };
 }
 
