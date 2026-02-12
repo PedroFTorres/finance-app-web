@@ -1784,6 +1784,7 @@ if (btnFecharEdicao) {
     modalEditarCompra.classList.add("hidden");
   };
 }
+}); // fim DOMContentLoaded
 
 // ==================================================================================// FIM do arquivo cartao.js// ==================================================================================
 
