@@ -619,23 +619,26 @@ async function fecharFaturaComConta(conta_id) {
       return;
     }
 
-    if (!state.faturaAtual) {
-      showToast("Fatura não encontrada.", "error");
-      return;
-    }
+    const ano = mesFatura.getFullYear();
+    const mesZero = mesFatura.getMonth();
+    const mes = mesZero + 1;
+
+    const inicio = new Date(ano, mesZero, 1)
+      .toISOString()
+      .slice(0, 10);
+
+    const fim = new Date(ano, mesZero + 1, 0)
+      .toISOString()
+      .slice(0, 10);
 
     const venc = document.getElementById("conta-fatura-vencimento")?.value;
+
     if (!venc) {
       showToast("Informe o vencimento.", "error");
       return;
     }
 
-    const inicio = state.faturaAtual.inicio;
-    const fim = state.faturaAtual.fim;
-    const mes = state.faturaAtual.mes;
-    const ano = state.faturaAtual.ano;
-
-    // 🔹 buscar compras da fatura atual
+    // 🔹 buscar compras do mês
     const { data: compras, error: errCompras } = await supabase
       .from("cartao_lancamentos")
       .select("*")
@@ -650,7 +653,7 @@ async function fecharFaturaComConta(conta_id) {
       0
     );
 
-    // 🔹 cria registro da fatura (FECHAR)
+    // 🔹 cria registro da fatura
     const { data: fData, error: errFatura } = await supabase
       .from("cartao_faturas")
       .insert([{
@@ -674,7 +677,7 @@ async function fecharFaturaComConta(conta_id) {
     const card =
       state.cards.find(c => c.id === activeCardId) || { nome: "Cartão" };
 
-    // 🔹 cria a DESPESA (AQUI É O PONTO-CHAVE)
+    // 🔹 cria despesa
     await supabase.from("despesas").insert([{
       id: crypto.randomUUID(),
       user_id: state.user.id,
@@ -687,7 +690,18 @@ async function fecharFaturaComConta(conta_id) {
       cartao_fatura_id: fData.id
     }]);
 
-    showToast("Fatura fechada e despesa criada.", "success");
+    showToast("Fatura fechada com sucesso!", "success");
+
+    // 🔥 Avança para o próximo mês
+    mesFatura.setMonth(mesFatura.getMonth() + 1);
+    popularMesFatura();
+    await loadFaturaForSelected();
+
+  } catch (err) {
+    console.error("Erro ao fechar fatura:", err);
+    showToast("Erro ao fechar fatura.", "error");
+  }
+}
 
     // ==================================================
     // 🔥 REGRA DEFINITIVA: // SÓ AGORA AVANÇA PARA O PRÓXIMO MÊS // ==================================================
