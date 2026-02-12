@@ -405,12 +405,12 @@ async function definirMesInicialAberto() {
       .maybeSingle();
 
     // 👉 se não existe fatura, é mês válido
-    if (!fatura) {
-      mesFatura = new Date(ano, mes - 1, 1);
-      popularMesFatura();
-      ();
-      return;
-    }
+   if (!fatura) {
+  mesFatura = new Date(ano, mes - 1, 1);
+  popularMesFatura();
+  return;
+}
+
 
     // 2️⃣ se fatura está FECHADA, verifica se já virou despesa
     if (fatura.status === "fechada") {
