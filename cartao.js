@@ -333,7 +333,7 @@ function renderCardsSidebar() {
 
     cardsList.appendChild(el);
   });
-
+}
   // ===========================// CATEGORIAS // ===========================
 async function loadCategorias() {
   const { data } = await supabase
