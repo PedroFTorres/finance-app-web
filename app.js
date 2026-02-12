@@ -458,11 +458,20 @@ const UI = {
     const btnCancel = document.getElementById("btn-cancelar-conta");
     const btnSave = document.getElementById("btn-salvar-conta");
 
-    if (btnOpen) {
-      btnOpen.addEventListener("click", function () {
-        modal.classList.remove("hidden");
-      });
-    }
+    document.addEventListener("click", function (e) {
+
+  if (e.target.closest("#btn-open-modal-conta")) {
+
+    e.stopPropagation();
+
+    const modal = document.getElementById("modal-conta");
+
+    modal.classList.remove("hidden");
+    modal.style.display = "flex";
+    modal.style.zIndex = "999999";
+  }
+
+});
 
     if (btnCancel) {
       btnCancel.addEventListener("click", function () {
@@ -2034,15 +2043,24 @@ if (e.target.closest("#lanc-next")) {
 
 });
 
-  /* ============================ BOOTSTRAP / START ============================ */
-   
+/* ============================ BOOTSTRAP / START ============================ */
+
 (async function bootstrap() {
   try {
+
     await requireSessionOrRedirect();
 
-
+    // 🔥 Anexa todos os eventos
     UI.attachHandlers();
 
+    // 🔥 GARANTE que o modal começa escondido
+    const modalConta = document.getElementById("modal-conta");
+    if (modalConta) {
+      modalConta.classList.add("hidden");
+      modalConta.style.display = "none";
+    }
+
+    // 🔥 Carrega dados iniciais
     await Promise.all([
       CategoriasService.load(),
       ContasService.load()
@@ -2052,11 +2070,14 @@ if (e.target.closest("#lanc-next")) {
     UI.renderCategorias();
     UI.renderContasCards();
 
+    // 🔥 Inicializa aplicação
     await App.init();
+
   } catch (e) {
     console.error('bootstrap error', e);
   }
 })();
+
 // ================================ // EXTRATO — ATUALIZAR AO TROCAR CONTA // ================================
    
 document.getElementById("select-contas-extrato")
