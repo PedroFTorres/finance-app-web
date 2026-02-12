@@ -473,11 +473,14 @@ const UI = {
 
 });
 
-    if (btnCancel) {
-      btnCancel.addEventListener("click", function () {
-        modal.classList.add("hidden");
-      });
-    }
+   document.addEventListener("click", function (e) {
+
+  if (e.target.closest("#btn-cancelar-conta")) {
+    const modal = document.getElementById("modal-conta");
+    if (modal) modal.classList.add("hidden");
+  }
+
+});
 
     if (btnSave) {
       btnSave.addEventListener("click", async function () {
