@@ -248,14 +248,15 @@ function fecharModal(modalId) {
   if (userEmail)
     userEmail.textContent = state.user.email;
 
-  try {
-    // 🔹 carregar dados básicos
-    await loadCards();
-    await loadCategorias();
+ try {
+  await loadCards();
+  renderCardsSidebar(); // 🔥 FALTAVA ISSO
+  await loadCategorias();
 
-  // 🔹 inicialização da fatura (UMA ÚNICA VEZ)
-mesFatura = new Date();   // 🔥 GARANTE base válida
-await definirMesInicialAberto();
+  mesFatura = new Date();
+  await definirMesInicialAberto();
+  await loadFaturaForSelected(); // 🔥 importante também
+
 
   } catch (err) {
     console.error(err);
