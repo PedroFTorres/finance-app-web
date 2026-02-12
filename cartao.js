@@ -251,7 +251,6 @@ function fecharModal(modalId) {
   try {
     // 🔹 carregar dados básicos
     await loadCards();
-    ();
     await loadCategorias();
 
   // 🔹 inicialização da fatura (UMA ÚNICA VEZ)
