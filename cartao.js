@@ -812,10 +812,7 @@ if (btnPagarFatura) {
 
       showToast("Fatura paga com sucesso!", "success");
 
-      // ======================================================
-      // 🔥 REGRA PRINCIPAL (FINAL)
-      // após PAGAR, mostrar a próxima fatura ABERTA
-      // ======================================================
+      // ======================================================// 🔥 REGRA PRINCIPAL (FINAL)// após PAGAR, mostrar a próxima fatura ABERTA// ======================================================
 
       let proximo = new Date(
         state.faturaAtual.ano,
@@ -1787,8 +1784,6 @@ if (btnFecharEdicao) {
     modalEditarCompra.classList.add("hidden");
   };
 }
-
-}); // fim DOMContentLoaded
 
 // ==================================================================================// FIM do arquivo cartao.js// ==================================================================================
 
