@@ -327,9 +327,15 @@ function renderCardsSidebar() {
       <div class="info">Fecha ${c.dia_fechamento} • Venc ${c.dia_vencimento}</div>
     `;
 
-  el.onclick = async () => {
+ el.onclick = async () => {
   activeCardId = c.id;
+
   renderCardsSidebar();
+
+  // 🔥 CARREGAR A FATURA DO CARTÃO SELECIONADO
+  mesFatura = new Date();
+  await definirMesInicialAberto();
+  await loadFaturaForSelected();
 };
 
     cardsList.appendChild(el);
