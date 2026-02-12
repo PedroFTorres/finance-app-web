@@ -326,16 +326,13 @@ function renderCardsSidebar() {
       <div class="info">Fecha ${c.dia_fechamento} • Venc ${c.dia_vencimento}</div>
     `;
 
-    el.onclick = async () => {
+  el.onclick = async () => {
   activeCardId = c.id;
   renderCardsSidebar();
-  ();
 };
-
 
     cardsList.appendChild(el);
   });
-}
 
   // ===========================// CATEGORIAS // ===========================
 async function loadCategorias() {
