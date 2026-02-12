@@ -329,7 +329,7 @@ function renderCardsSidebar() {
     el.onclick = async () => {
   activeCardId = c.id;
   renderCardsSidebar();
-  await loadFaturaForSelected();
+  ();
 };
 
 
@@ -411,7 +411,7 @@ async function definirMesInicialAberto() {
     if (!fatura) {
       mesFatura = new Date(ano, mes - 1, 1);
       popularMesFatura();
-      await loadFaturaForSelected();
+      ();
       return;
     }
 
@@ -433,7 +433,7 @@ async function definirMesInicialAberto() {
     // 👉 qualquer outro caso: este mês é o principal
     mesFatura = new Date(ano, mes - 1, 1);
     popularMesFatura();
-    await loadFaturaForSelected();
+    ();
     return;
   }
 }
@@ -446,7 +446,7 @@ if (btnFatPrev) {
     mesFatura.setMonth(mesFatura.getMonth() - 1);
     popularMesFatura();
     atualizarEstadoBotoesMes();
-    await loadFaturaForSelected();
+    ();
   };
 }
 
@@ -690,7 +690,7 @@ async function fecharFaturaComConta(conta_id) {
       cartao_fatura_id: fData.id
     }]);
 
-    showToast("Fatura fechada com sucesso!", "success");
+        showToast("Fatura fechada com sucesso!", "success");
 
     // 🔥 Avança para o próximo mês
     mesFatura.setMonth(mesFatura.getMonth() + 1);
@@ -703,17 +703,6 @@ async function fecharFaturaComConta(conta_id) {
   }
 }
 
-    // ==================================================
-    // 🔥 REGRA DEFINITIVA: // SÓ AGORA AVANÇA PARA O PRÓXIMO MÊS // ==================================================
-    mesFatura.setMonth(mesFatura.getMonth() + 1);
-    popularMesFatura();
-    await loadFaturaForSelected();
-
-  } catch (err) {
-    console.error("Erro ao fechar fatura:", err);
-    showToast("Erro ao fechar fatura.", "error");
-  }
-}
 
  // ===========================// FECHAR FATURA → apenas abre o modal// ===========================
   
