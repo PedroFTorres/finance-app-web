@@ -619,3 +619,24 @@ button:hover { opacity: .9; }
   padding: 6px 12px;
   border-radius: 8px;
 }
+/* ========================= BOTÃO ADICIONAR CONTA (DESTAQUE) ========================= */
+
+.btn-add-conta {
+  background: #16c784;          /* verde moderno */
+  color: #fff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 14px;
+  margin-top: 18px;             /* 🔥 espaçamento do menu */
+  margin-bottom: 25px;
+  box-shadow: 0 6px 18px rgba(22,199,132,0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-add-conta:hover {
+  background: #13b374;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(22,199,132,0.35);
+}
