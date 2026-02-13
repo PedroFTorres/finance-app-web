@@ -712,6 +712,7 @@ const UI = {
         li.appendChild(span); li.appendChild(btn); ul.appendChild(li);
       });
     },
+   
 renderContasCards() {
   const container = document.getElementById("lista-contas");
   if (!container) return;
@@ -728,25 +729,30 @@ renderContasCards() {
     div.className = "conta-card";
 
     div.innerHTML = `
-  <div class="conta-info">
-    <strong>${conta.nome}</strong>
+      <div class="conta-info">
+        <strong>${conta.nome}</strong>
 
-    <small>Agência: ${conta.agencia || "-"}</small>
-    <small>Conta: ${conta.numero_conta || "-"}</small>
-    <small>Gerente: ${conta.gerente || "-"}</small>
-    <small>Contato: ${conta.contato || "-"}</small>
+        <small>Agência: ${conta.agencia || "-"}</small>
+        <small>Conta: ${conta.numero_conta || "-"}</small>
+        <small>Gerente: ${conta.gerente || "-"}</small>
+        <small>Contato: ${conta.contato || "-"}</small>
 
-    <div class="conta-actions">
-      <button class="btn-secondary btn-edit-conta" disabled>
-        Editar
-      </button>
-    </div>
-  </div>
-`;
+        <div class="conta-actions">
+          <button class="btn-secondary btn-edit-conta">
+            Editar
+          </button>
+        </div>
+      </div>
+    `;
+
+    // 🔥 ATIVA O BOTÃO EDITAR
+    div.querySelector(".btn-edit-conta").addEventListener("click", () => {
+      abrirModalEditarConta(conta);
+    });
 
     container.appendChild(div);
   });
-},
+}
 
     // renders the lists of receipts and expenses in the lanc screen
     renderLancamentos({ receitas, despesas }) {
@@ -999,9 +1005,7 @@ openModalEditSemEscopo(item, tipo) {
   const modal = $(IDS.modalAdd);
   if (!modal) return;
 
-  // =========================
-  // PREENCHER CAMPOS
-  // =========================
+  // =========================// PREENCHER CAMPOS// =========================
   $(IDS.modalTipo).value = tipo;
 
   $(IDS.modalDesc).value =
@@ -1015,17 +1019,13 @@ openModalEditSemEscopo(item, tipo) {
   if (item.conta_id) $(IDS.modalConta).value = item.conta_id;
   if (item.categoria_id) $(IDS.modalCategoria).value = item.categoria_id;
 
-  // =========================
-  // BOTÃO SALVAR (EDIÇÃO)
-  // =========================
+  // ========================= // BOTÃO SALVAR (EDIÇÃO)// =========================
   const saveBtn = $(IDS.modalSave);
   saveBtn.dataset.edit = 'true';
   saveBtn.dataset.editId = item.id;
   saveBtn.textContent = 'Salvar alteração';
 
-  // =========================
-  // BOTÃO EXCLUIR (🔥 AQUI ESTÁ A CORREÇÃO)
-  // =========================
+  // =========================// BOTÃO EXCLUIR // =========================
   const btnExcluir = document.getElementById("btn-excluir-lancamento");
 
   if (btnExcluir) {
@@ -1298,6 +1298,25 @@ if (avisoBox) avisoBox.classList.add("hidden");
   }
 },
   };
+function abrirModalEditarConta(conta) {
+
+  const modal = document.getElementById("modal-conta");
+
+  document.getElementById("modal-conta-nome").value = conta.nome || "";
+  document.getElementById("modal-conta-agencia").value = conta.agencia || "";
+  document.getElementById("modal-conta-numero").value = conta.numero_conta || "";
+  document.getElementById("modal-conta-gerente").value = conta.gerente || "";
+  document.getElementById("modal-conta-contato").value = conta.contato || "";
+  document.getElementById("modal-conta-saldo").value = conta.saldo_inicial || 0;
+  document.getElementById("modal-conta-data").value = conta.data_saldo || "";
+
+  const btnSalvar = document.getElementById("btn-salvar-conta");
+  btnSalvar.dataset.editId = conta.id;
+
+  document.querySelector("#modal-conta h3").textContent = "Editar conta";
+
+  modal.classList.remove("hidden");
+}
 
   /* ============================ CHARTS ============================ */
    
