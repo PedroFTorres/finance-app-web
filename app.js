@@ -458,7 +458,7 @@ const UI = {
     const btnCancel = document.getElementById("btn-cancelar-conta");
     const btnSave = document.getElementById("btn-salvar-conta");
 
-    document.addEventListener("click", function (e) {
+   document.addEventListener("click", function (e) {
 
   if (e.target.closest("#btn-open-modal-conta")) {
 
@@ -466,12 +466,27 @@ const UI = {
 
     const modal = document.getElementById("modal-conta");
 
+    // 🔓 MODO CRIAÇÃO — libera todos os campos
+    document.getElementById("modal-conta-nome").disabled = false;
+    document.getElementById("modal-conta-agencia").disabled = false;
+    document.getElementById("modal-conta-numero").disabled = false;
+    document.getElementById("modal-conta-gerente").disabled = false;
+    document.getElementById("modal-conta-contato").disabled = false;
+    document.getElementById("modal-conta-saldo").disabled = false;
+    document.getElementById("modal-conta-data").disabled = false;
+
+    // remove modo edição
+    delete document.getElementById("btn-salvar-conta").dataset.editId;
+
+    document.querySelector("#modal-conta h3").textContent = "Cadastrar conta";
+
     modal.classList.remove("hidden");
     modal.style.display = "flex";
     modal.style.zIndex = "999999";
   }
 
 });
+
 
   document.addEventListener("click", function (e) {
 
@@ -506,17 +521,17 @@ const UI = {
 
     if (editId) {
 
-      // 🔥 MODO EDIÇÃO
-      await supabase
-        .from("contas_bancarias")
-        .update({
-          nome: conta.nome,
-          agencia: conta.agencia,
-          numero_conta: conta.numero_conta,
-          gerente: conta.gerente,
-          contato: conta.contato
-        })
-        .eq("id", editId);
+     await supabase
+  .from("contas_bancarias")
+  .update({
+    nome: conta.nome,
+    agencia: conta.agencia,
+    numero_conta: conta.numero_conta,
+    gerente: conta.gerente,
+    contato: conta.contato
+  })
+  .eq("id", editId);
+
 
       delete btnSave.dataset.editId;
 
@@ -1302,6 +1317,7 @@ function abrirModalEditarConta(conta) {
 
   const modal = document.getElementById("modal-conta");
 
+  // Preenche campos
   document.getElementById("modal-conta-nome").value = conta.nome || "";
   document.getElementById("modal-conta-agencia").value = conta.agencia || "";
   document.getElementById("modal-conta-numero").value = conta.numero_conta || "";
@@ -1309,6 +1325,17 @@ function abrirModalEditarConta(conta) {
   document.getElementById("modal-conta-contato").value = conta.contato || "";
   document.getElementById("modal-conta-saldo").value = conta.saldo_inicial || 0;
   document.getElementById("modal-conta-data").value = conta.data_saldo || "";
+
+  // 🔒 BLOQUEIA SOMENTE SALDO E DATA
+  document.getElementById("modal-conta-saldo").disabled = true;
+  document.getElementById("modal-conta-data").disabled = true;
+
+  // 🔓 Libera os demais campos
+  document.getElementById("modal-conta-nome").disabled = false;
+  document.getElementById("modal-conta-agencia").disabled = false;
+  document.getElementById("modal-conta-numero").disabled = false;
+  document.getElementById("modal-conta-gerente").disabled = false;
+  document.getElementById("modal-conta-contato").disabled = false;
 
   const btnSalvar = document.getElementById("btn-salvar-conta");
   btnSalvar.dataset.editId = conta.id;
