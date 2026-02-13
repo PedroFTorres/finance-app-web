@@ -752,7 +752,7 @@ renderContasCards() {
 
     container.appendChild(div);
   });
-}
+},
 
     // renders the lists of receipts and expenses in the lanc screen
     renderLancamentos({ receitas, despesas }) {
