@@ -484,26 +484,53 @@ const UI = {
   }
 });
 
-    if (btnSave) {
-      btnSave.addEventListener("click", async function () {
+   if (btnSave) {
+  btnSave.addEventListener("click", async function () {
 
-        const conta = {
-          nome: document.getElementById("modal-conta-nome").value,
-          agencia: document.getElementById("modal-conta-agencia").value,
-          numero_conta: document.getElementById("modal-conta-numero").value,
-          gerente: document.getElementById("modal-conta-gerente").value,
-          contato: document.getElementById("modal-conta-contato").value,
-          saldo_inicial: Number(document.getElementById("modal-conta-saldo").value || 0),
-          data_saldo: document.getElementById("modal-conta-data").value
-        };
+    const editId = btnSave.dataset.editId;
 
-        await ContasService.create(conta);
+    const conta = {
+      nome: document.getElementById("modal-conta-nome").value,
+      agencia: document.getElementById("modal-conta-agencia").value,
+      numero_conta: document.getElementById("modal-conta-numero").value,
+      gerente: document.getElementById("modal-conta-gerente").value,
+      contato: document.getElementById("modal-conta-contato").value,
+      saldo_inicial: Number(document.getElementById("modal-conta-saldo").value || 0),
+      data_saldo: document.getElementById("modal-conta-data").value
+    };
 
-        modal.classList.add("hidden");
-
-        await App.reloadAll();
-      });
+    if (!conta.nome) {
+      alert("Informe o nome da conta.");
+      return;
     }
+
+    if (editId) {
+
+      // 🔥 MODO EDIÇÃO
+      await supabase
+        .from("contas_bancarias")
+        .update({
+          nome: conta.nome,
+          agencia: conta.agencia,
+          numero_conta: conta.numero_conta,
+          gerente: conta.gerente,
+          contato: conta.contato
+        })
+        .eq("id", editId);
+
+      delete btnSave.dataset.editId;
+
+    } else {
+
+      // 🔥 MODO CRIAÇÃO
+      await ContasService.create(conta);
+    }
+
+    document.getElementById("modal-conta").classList.add("hidden");
+
+    await App.reloadAll();
+  });
+}
 
       // logout
       const btnLogout = $(IDS.logoutBtn);
