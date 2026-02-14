@@ -1644,8 +1644,22 @@ showScreen(name) {
   // =========================// CONTAS// =========================
    
   if (name === 'contas') {
-    UI.populateSelects();
+  UI.populateSelects();
+
+  // 🔥 sincroniza extrato ao entrar na tela
+  const selectExtrato = document.getElementById("select-contas-extrato");
+
+  if (selectExtrato) {
+    if (!selectExtrato.value || selectExtrato.value === "all") {
+      if (STATE.contas.length > 0) {
+        selectExtrato.value = STATE.contas[0].id;
+      }
+    }
+
+    App.renderExtrato();
   }
+}
+
 },
 
     subscribeRealtime() {
@@ -1800,7 +1814,14 @@ safeText($(IDS.saldoAtual), fmtMoney(saldoPeriodo));
 
 async renderExtrato() {
   try {
-    const conta_id = document.getElementById("select-contas-extrato")?.value;
+   const selectExtrato = document.getElementById("select-contas-extrato");
+
+if (!selectExtrato) return;
+
+const conta_id = selectExtrato.value;
+
+if (!conta_id || conta_id === "all") return;
+
     if (!conta_id || conta_id === "all") return;
 
 
