@@ -800,10 +800,13 @@ renderContasCards() {
 
   // =========================// TEXTO DO LANÇAMENTO// =========================
       
-  const left = document.createElement("div");
-  left.textContent =
-    `${fmtDateBR(item.data)} — ${item.descricao} — ${fmtMoney(item.valor)}` +
-    (item.baixado ? " (BAIXADO)" : "");
+ const left = document.createElement("div");
+
+left.textContent =
+  `${fmtDateBR(item.data_baixa || item.data)} — ` +
+  `${item.descricao} — ` +
+  `${fmtMoney(item.valor)}` +
+  (item.baixado ? " (BAIXADO)" : "");
       
 // ================================// TRANSFERÊNCIA — AÇÃO ESPECIAL// ================================
 if (item.transferencia_id) {
@@ -1720,6 +1723,20 @@ if (!inicio || !fim) {
 
 STATE.receitas = r;
 STATE.despesas = d;
+         
+// 🔥 ORDENAR DEPENDENDO DO FILTRO ATIVO
+
+if (FILTRO_LANCAMENTOS === "pagos" || FILTRO_LANCAMENTOS === "recebidos") {
+
+  r.sort((a, b) => new Date(a.data_baixa) - new Date(b.data_baixa));
+  d.sort((a, b) => new Date(a.data_baixa) - new Date(b.data_baixa));
+
+} else {
+
+  r.sort((a, b) => new Date(a.data) - new Date(b.data));
+  d.sort((a, b) => new Date(a.data) - new Date(b.data));
+
+}
 
 // ================================// LANÇAMENTOS — FILTRO POR MENU// ================================
          
@@ -1768,9 +1785,7 @@ if (boxReceitas && boxDespesas && listas) {
   boxDespesas.style.display = "";
   listas.classList.remove("single-column");
 
-  // ================================
-  // FILTROS QUE MOSTRAM APENAS UM TIPO
-  // ================================
+  // ================================// FILTROS QUE MOSTRAM APENAS UM TIPO// ================================
 
   // Receitas / Recebidos → mostra só receitas
   if (
