@@ -1716,10 +1716,39 @@ if (!inicio || !fim) {
   inicio = new Date(ano, mes, 1).toISOString().slice(0,10);
   fim = new Date(ano, mes + 1, 0).toISOString().slice(0,10);
 }
-         const [r, d] = await Promise.all([
-  LancService.fetch('receita', conta_id, inicio, fim),
-  LancService.fetch('despesa', conta_id, inicio, fim)
-]);
+        let r, d;
+
+if (FILTRO_LANCAMENTOS === "pagos" || FILTRO_LANCAMENTOS === "recebidos") {
+
+  // 🔥 FILTRA PELO PERÍODO DA BAIXA
+  const { data: receitas } = await supabase
+    .from('receitas')
+    .select('*')
+    .eq('user_id', STATE.user.id)
+    .eq(conta_id !== 'all' ? 'conta_id' : 'user_id', conta_id !== 'all' ? conta_id : STATE.user.id)
+    .gte('data_baixa', inicio)
+    .lte('data_baixa', fim);
+
+  const { data: despesas } = await supabase
+    .from('despesas')
+    .select('*')
+    .eq('user_id', STATE.user.id)
+    .eq(conta_id !== 'all' ? 'conta_id' : 'user_id', conta_id !== 'all' ? conta_id : STATE.user.id)
+    .gte('data_baixa', inicio)
+    .lte('data_baixa', fim);
+
+  r = receitas || [];
+  d = despesas || [];
+
+} else {
+
+  // 🔵 FILTRA PELO VENCIMENTO (COMPORTAMENTO NORMAL)
+  [r, d] = await Promise.all([
+    LancService.fetch('receita', conta_id, inicio, fim),
+    LancService.fetch('despesa', conta_id, inicio, fim)
+  ]);
+}
+
 
 STATE.receitas = r;
 STATE.despesas = d;
