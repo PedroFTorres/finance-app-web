@@ -1234,9 +1234,11 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
         await supabase
           .from('movimentacoes')
           .update({
-            descricao,
-            valor,
-            data
+  descricao,
+  valor,
+  data,
+  conta_id: conta_id || null
+})
           })
           .eq('id', mov.id);
       }
