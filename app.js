@@ -1230,18 +1230,17 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
         .eq('lancamento_id', editId)
         .maybeSingle();
 
-      if (mov) {
-        await supabase
-          .from('movimentacoes')
-          .update({
-  descricao,
-  valor,
-  data,
-  conta_id: conta_id || null
-})
-          })
-          .eq('id', mov.id);
-      }
+     if (mov) {
+  await supabase
+    .from('movimentacoes')
+    .update({
+      descricao,
+      valor,
+      data,
+      conta_id: conta_id || null   // 🔥 ESSA LINHA RESOLVE
+    })
+    .eq('id', mov.id);
+}
     }
   }
 
