@@ -500,29 +500,32 @@ button:hover { opacity: .9; }
   }
 }
 
-/* ========================= LANÇAMENTOS — LAYOUT FIXO========================= */
+/* ========================= LANÇAMENTOS — NOVO LAYOUT ========================= */
 
 .lanc-layout {
   display: grid;
-  grid-template-columns: 220px 1fr 320px;
+  grid-template-columns: 260px 1fr;
   gap: 18px;
   margin-top: 16px;
-
-  /* 🔥 altura visível da tela */
   height: calc(100vh - 180px);
-  align-items: stretch;
 }
 
-/* Área central com scroll próprio */
+/* coluna esquerda (menu + totais) */
+.lanc-left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* conteúdo principal com scroll */
 .lanc-content {
   overflow-y: auto;
   padding-right: 6px;
 }
-/* Totais fixos */
+
+/* totais agora ficam abaixo do menu */
 .card-totais {
-  position: sticky;
-  top: 0;
-  align-self: flex-start;
+  position: relative;
 }
 
 .lanc-menu {
