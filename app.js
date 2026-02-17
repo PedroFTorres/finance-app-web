@@ -196,6 +196,11 @@ async function requireSessionOrRedirect() {
 
     // ✅ carrega perfil (upgrade)
     STATE.profile = await loadUserProfile();
+     // Mostrar nome no header
+if (STATE.profile?.nome) {
+  const el = document.getElementById("user-email");
+  if (el) el.textContent = STATE.profile.nome;
+}
 
     // fallback de segurança
     if (!STATE.profile) {
