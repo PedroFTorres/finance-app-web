@@ -8,7 +8,14 @@ btnSignup.onclick = async () => {
 
   const { error } = await supabase.auth.signUp({ email, password: pass });
 
-  msg.textContent = error ? error.message : "Conta criada! Agora faça login.";
+  if (error) {
+  msg.textContent = error.message;
+  return;
+}
+
+msg.textContent =
+  "Conta criada! Verifique seu email para confirmar antes de entrar.";
+
 };
 
 btnSignin.onclick = async () => {
