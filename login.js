@@ -54,10 +54,17 @@ document.addEventListener("DOMContentLoaded", () => {
         password: pass
       });
 
-      if (error) {
-        signupMsg.textContent = error.message;
-        return;
-      }
+     if (error) {
+
+  if (error.message.includes("rate limit")) {
+    signupMsg.textContent =
+      "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+    return;
+  }
+
+  signupMsg.textContent = error.message;
+  return;
+}
 
       if (data?.user) {
         await supabase.from("user_profiles").insert([{
