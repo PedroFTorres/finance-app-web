@@ -270,56 +270,56 @@
 <!-- MENU + CONTEÚDO LATERAL -->
 <div class="lanc-layout">
 
-  <!-- MENU LATERAL -->
-  <aside class="lanc-menu">
-    <button data-lanc-tab="pendencias" class="active">Pendências</button>
-    <button data-lanc-tab="receitas">Receitas</button>
-    <button data-lanc-tab="despesas">Despesas</button>
-    <button data-lanc-tab="recebidos">Recebidos</button>
-    <button data-lanc-tab="pagos">Pagos</button>
-  </aside>
+  <!-- COLUNA ESQUERDA -->
+  <div class="lanc-left">
 
-  <!-- CONTEÚDO -->
-  <div class="lanc-content">
+    <!-- MENU -->
+    <aside class="lanc-menu">
+      <button data-lanc-tab="pendencias" class="active">Pendências</button>
+      <button data-lanc-tab="receitas">Receitas</button>
+      <button data-lanc-tab="despesas">Despesas</button>
+      <button data-lanc-tab="recebidos">Recebidos</button>
+      <button data-lanc-tab="pagos">Pagos</button>
+    </aside>
 
-    <div class="listas">
-
-     <div class="box" id="box-receitas">
-  <h3>Receitas</h3>
-  <ul id="list-receitas"></ul>
-</div>
-
-<div class="box" id="box-despesas">
-  <h3>Despesas</h3>
-  <ul id="list-despesas"></ul>
-</div>
-
-    </div>
-
-  </div>
-
-
-    <!-- TOTAIS -->
-    <div class="card-panel card-totais" style="margin-top:18px;">
+    <!-- TOTAIS (AGORA ABAIXO DO MENU) -->
+    <div class="card-panel card-totais">
       <h3>Totais do Período</h3>
 
-      <div class="total-item" style="display:flex;justify-content:space-between;padding:6px 0;">
+      <div style="display:flex;justify-content:space-between;padding:6px 0;">
         <strong>Total de receitas</strong>
-        <span id="total-receitas" class="total-value">R$ 0,00</span>
+        <span id="total-receitas">R$ 0,00</span>
       </div>
 
-      <div class="total-item" style="display:flex;justify-content:space-between;padding:6px 0;">
+      <div style="display:flex;justify-content:space-between;padding:6px 0;">
         <strong>Total de despesas</strong>
-        <span id="total-despesas" class="total-value">R$ 0,00</span>
+        <span id="total-despesas">R$ 0,00</span>
       </div>
 
-      <div class="total-item" style="display:flex;justify-content:space-between;padding:6px 0;">
+      <div style="display:flex;justify-content:space-between;padding:6px 0;">
         <strong>Saldo atual (filtro)</strong>
-        <span id="saldo-atual" class="total-value">—</span>
+        <span id="saldo-atual">—</span>
       </div>
     </div>
 
   </div>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <div class="lanc-content">
+    <div class="listas">
+      <div class="box" id="box-receitas">
+        <h3>Receitas</h3>
+        <ul id="list-receitas"></ul>
+      </div>
+
+      <div class="box" id="box-despesas">
+        <h3>Despesas</h3>
+        <ul id="list-despesas"></ul>
+      </div>
+    </div>
+  </div>
+
+</div>
 
 </section>
 
