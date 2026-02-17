@@ -653,23 +653,6 @@ button:hover { opacity: .9; }
   transform: translateY(-3px);
 }
 
-.login-avatar {
-  width: 90px;
-  height: 90px;
-  margin: 0 auto 20px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #7a4dff, #9b7bff);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 20px rgba(122,77,255,0.3);
-}
-
-.login-avatar img {
-  width: 50px;
-  height: 50px;
-}
-
 .login-title {
   font-size: 24px;
   margin-bottom: 6px;
@@ -680,4 +663,12 @@ button:hover { opacity: .9; }
   color: #777;
   margin-bottom: 24px;
 }
+/* ========================= LOGIN LOGO CLEAN ========================= */
+
+.login-logo-clean {
+  width: 180px;
+  margin: 0 auto 25px;
+  display: block;
+}
+
 
