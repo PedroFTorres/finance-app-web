@@ -408,14 +408,7 @@ button:hover { opacity: .9; }
 .listas button {
   white-space: nowrap;
 }
-/* LOGO NA TELA DE LOGIN */
-.login-logo {
-  width: 220px;     /* AUMENTADO */
-  margin-bottom: 25px;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
+
 /* Logo no centro do conteúdo (substitui o título) */
 .app-logo-center {
   width: 190px;        /* ajuste conforme preferir */
@@ -643,3 +636,48 @@ button:hover { opacity: .9; }
   transform: translateY(-2px);
   box-shadow: 0 10px 24px rgba(22,199,132,0.35);
 }
+/* ========================= LOGIN PREMIUM ========================= */
+
+.login-box {
+  max-width: 400px;
+  width: 100%;
+  background: #ffffff;
+  padding: 40px 32px;
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.login-box:hover {
+  transform: translateY(-3px);
+}
+
+.login-avatar {
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7a4dff, #9b7bff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(122,77,255,0.3);
+}
+
+.login-avatar img {
+  width: 50px;
+  height: 50px;
+}
+
+.login-title {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: #777;
+  margin-bottom: 24px;
+}
+
