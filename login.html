@@ -30,6 +30,26 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="login.js"></script>
+  
+  <!-- MODAL CRIAR CONTA -->
+<div id="modal-signup" class="modal hidden">
+  <div class="modal-box">
+
+    <h2>Criar Conta</h2>
+
+    <input id="signup-nome" type="text" placeholder="Seu nome completo" class="full">
+    <input id="signup-email" type="email" placeholder="Seu email" class="full">
+    <input id="signup-password" type="password" placeholder="Senha" class="full">
+    <input id="signup-password2" type="password" placeholder="Confirmar senha" class="full">
+
+    <button id="confirm-signup" class="btn-primary full">Criar Conta</button>
+    <button id="cancel-signup" class="btn-secondary full">Cancelar</button>
+
+    <p id="signup-msg" class="msg"></p>
+
+  </div>
+</div>
+
 
 </body>
 </html>
