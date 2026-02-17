@@ -210,9 +210,13 @@ if (STATE.profile?.nome) {
       };
     }
 
-    // email no topo
-    const emailEl = document.getElementById(IDS.userEmail);
-    if (emailEl) emailEl.textContent = STATE.user.email;
+    // Mostrar nome se existir, senão email
+const emailEl = document.getElementById(IDS.userEmail);
+
+if (emailEl) {
+  emailEl.textContent =
+    STATE.profile?.nome || STATE.user.email;
+}
 
     return true;
   } catch (e) {
