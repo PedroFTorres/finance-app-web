@@ -17,52 +17,59 @@ btnSignin.onclick = async () => {
   // Login OK → redireciona para o app
   window.location.href = "app.html";
 };
-// =========================// MODAL SIGNUP - LÓGICA // =========================
+// =========================// MODAL SIGNUP - LÓGICA SEGURA// =========================
 
-const btnConfirmSignup = document.getElementById("confirm-signup");
-const btnCancelSignup = document.getElementById("cancel-signup");
-const signupMsg = document.getElementById("signup-msg");
+document.addEventListener("DOMContentLoaded", () => {
 
-btnCancelSignup.onclick = () => {
-  document.getElementById("modal-signup").classList.add("hidden");
-};
+  const btnConfirmSignup = document.getElementById("confirm-signup");
+  const btnCancelSignup = document.getElementById("cancel-signup");
+  const signupMsg = document.getElementById("signup-msg");
 
-btnConfirmSignup.onclick = async () => {
-
-  const nome = document.getElementById("signup-nome").value.trim();
-  const email = document.getElementById("signup-email").value.trim();
-  const pass = document.getElementById("signup-password").value;
-  const pass2 = document.getElementById("signup-password2").value;
-
-  if (!nome || !email || !pass || !pass2) {
-    signupMsg.textContent = "Preencha todos os campos.";
-    return;
+  if (btnCancelSignup) {
+    btnCancelSignup.onclick = () => {
+      document.getElementById("modal-signup").classList.add("hidden");
+    };
   }
 
-  if (pass !== pass2) {
-    signupMsg.textContent = "As senhas não coincidem.";
-    return;
+  if (btnConfirmSignup) {
+    btnConfirmSignup.onclick = async () => {
+
+      const nome = document.getElementById("signup-nome").value.trim();
+      const email = document.getElementById("signup-email").value.trim();
+      const pass = document.getElementById("signup-password").value;
+      const pass2 = document.getElementById("signup-password2").value;
+
+      if (!nome || !email || !pass || !pass2) {
+        signupMsg.textContent = "Preencha todos os campos.";
+        return;
+      }
+
+      if (pass !== pass2) {
+        signupMsg.textContent = "As senhas não coincidem.";
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: pass
+      });
+
+      if (error) {
+        signupMsg.textContent = error.message;
+        return;
+      }
+
+      if (data?.user) {
+        await supabase.from("user_profiles").insert([{
+          id: data.user.id,
+          nome: nome,
+          plano: "free"
+        }]);
+      }
+
+      signupMsg.textContent =
+        "Conta criada! Verifique seu email para confirmar.";
+    };
   }
 
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password: pass
-  });
-
-  if (error) {
-    signupMsg.textContent = error.message;
-    return;
-  }
-
-  if (data?.user) {
-    await supabase.from("user_profiles").insert([{
-      id: data.user.id,
-      nome: nome,
-      plano: "free"
-    }]);
-  }
-
-  signupMsg.textContent =
-    "Conta criada! Verifique seu email para confirmar.";
-};
-
+});
