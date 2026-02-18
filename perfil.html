@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Meu Perfil - Arolix</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<div class="login-wrapper">
+  <div class="login-box">
+
+    <img id="avatar-preview"
+         src="logo-arolix.png"
+         style="width:100px;height:100px;border-radius:50%;margin-bottom:20px;object-fit:cover;">
+
+    <input type="file" id="avatar-file" class="full">
+
+    <input id="profile-nome" type="text" placeholder="Nome completo" class="full">
+    <input id="profile-email" type="email" disabled class="full">
+    <input id="profile-cpf" type="text" placeholder="CPF" class="full">
+
+    <p style="margin-top:15px;">
+      <strong>Plano:</strong> <span id="profile-plano"></span>
+    </p>
+
+    <button id="save-profile" class="btn-primary full">
+      Salvar Alterações
+    </button>
+
+    <p id="profile-msg" class="msg"></p>
+
+    <button onclick="window.location.href='app.html'"
+            class="btn-secondary full"
+            style="margin-top:15px;">
+      Voltar
+    </button>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  const avatarPreview = document.getElementById("avatar-preview");
+  const avatarFile = document.getElementById("avatar-file");
+
+  document.getElementById("profile-nome").value = profile?.nome || "";
+  document.getElementById("profile-email").value = user.email;
+  document.getElementById("profile-cpf").value = profile?.cpf || "";
+  document.getElementById("profile-plano").textContent = profile?.plano || "free";
+
+  // ======================
+  // UPLOAD AVATAR
+  // ======================
+
+  avatarFile.addEventListener("change", async (event) => {
+
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(fileName, file, { upsert: true });
+
+    if (uploadError) {
+      alert(uploadError.message);
+      return;
+    }
+
+    const { data } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(fileName);
+
+    await supabase
+      .from("user_profiles")
+      .update({ avatar_url: data.publicUrl })
+      .eq("id", user.id);
+
+    avatarPreview.src = data.publicUrl;
+  });
+
+  // ======================
+  // SALVAR PERFIL
+  // ======================
+
+  document.getElementById("save-profile").onclick = async () => {
+
+    const nome = document.getElementById("profile-nome").value.trim();
+    const cpf = document.getElementById("profile-cpf").value.trim();
+    const msg = document.getElementById("profile-msg");
+
+    const { error } = await supabase
+      .from("user_profiles")
+      .update({
+        nome,
+        cpf,
+        updated_at: new Date()
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      msg.textContent = error.message;
+      return;
+    }
+
+    msg.style.color = "green";
+    msg.textContent = "Perfil atualizado com sucesso!";
+  };
+
+});
+</script>
+
+</body>
+</html>
