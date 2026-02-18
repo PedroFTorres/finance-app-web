@@ -26,10 +26,23 @@
       <button class="menu-btn" onclick="window.location.href='cartao.html'">Cartão</button>
     </nav>
 
-    <div class="top-bar">
-      <span id="user-email" class="user-email"></span>
-      <button id="btn-logout" class="danger">Sair</button>
-    </div>
+  <div class="top-bar" style="display:flex;align-items:center;gap:12px;">
+
+  <img id="header-avatar"
+       src="logo-arolix.png"
+       style="width:35px;height:35px;border-radius:50%;object-fit:cover;">
+
+  <span id="user-email" class="user-email"></span>
+
+  <button onclick="window.location.href='perfil.html'"
+          class="btn-secondary">
+    Perfil
+  </button>
+
+  <button id="btn-logout" class="danger">Sair</button>
+
+</div>
+
   </header>
 
 
