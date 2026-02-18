@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redefinir Senha - Arolix</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<div class="login-wrapper">
+  <div class="login-box">
+
+    <img src="logo-arolix.png" class="login-logo-clean" alt="Arolix">
+
+    <h2 class="login-title">Redefinir Senha</h2>
+    <p class="login-subtitle">Digite sua nova senha abaixo</p>
+
+    <input id="new-password" type="password" placeholder="Nova senha" class="full">
+    <input id="confirm-password" type="password" placeholder="Confirmar nova senha" class="full">
+
+    <button id="btn-reset" class="btn-primary full">
+      Atualizar Senha
+    </button>
+
+    <p id="reset-msg" class="msg"></p>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+
+  const supabase = window.supabase;
+  const msg = document.getElementById("reset-msg");
+  const btnReset = document.getElementById("btn-reset");
+
+  btnReset.onclick = async () => {
+
+    const pass = document.getElementById("new-password").value;
+    const pass2 = document.getElementById("confirm-password").value;
+
+    if (!pass || !pass2) {
+      msg.textContent = "Preencha os dois campos.";
+      return;
+    }
+
+    if (pass !== pass2) {
+      msg.textContent = "As senhas não coincidem.";
+      return;
+    }
+
+    if (pass.length < 6) {
+      msg.textContent = "A senha deve ter no mínimo 6 caracteres.";
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: pass
+    });
+
+    if (error) {
+      msg.textContent = error.message;
+      return;
+    }
+
+    msg.style.color = "green";
+    msg.textContent = "Senha atualizada com sucesso! Redirecionando...";
+
+    setTimeout(() => {
+      window.location.href = "login.html";
+    }, 2000);
+  };
+
+});
+</script>
+
+</body>
+</html>
