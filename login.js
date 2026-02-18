@@ -50,9 +50,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password: pass
-      });
+  email,
+  password: pass,
+  options: {
+    emailRedirectTo: "https://pedroftorres.github.io/finance-app-web/app.html"
+  }
+});
 
      if (error) {
 
