@@ -18,6 +18,12 @@
 
     <input id="email" type="email" placeholder="Seu email" class="full">
     <input id="password" type="password" placeholder="Sua senha" class="full">
+    <p style="text-align:right; margin:8px 0 20px;">
+  <a href="#" id="forgot-password" style="font-size:13px; color:#7a4dff; text-decoration:none;">
+    Esqueci minha senha
+  </a>
+</p>
+
 
     <button id="btn-signin" class="btn-primary full">Entrar</button>
     <button id="btn-signup" class="btn-secondary full">Criar Conta</button>
@@ -46,6 +52,26 @@
     <button id="cancel-signup" class="btn-secondary full">Cancelar</button>
 
     <p id="signup-msg" class="msg"></p>
+
+  </div>
+</div>
+<!-- MODAL RESET SENHA -->
+<div id="modal-reset" class="modal hidden">
+  <div class="modal-box">
+
+    <h2>Recuperar Senha</h2>
+
+    <input id="reset-email" type="email" placeholder="Digite seu email" class="full">
+
+    <button id="send-reset" class="btn-primary full">
+      Enviar Link de Recuperação
+    </button>
+
+    <button id="cancel-reset" class="btn-secondary full">
+      Cancelar
+    </button>
+
+    <p id="reset-modal-msg" class="msg"></p>
 
   </div>
 </div>
