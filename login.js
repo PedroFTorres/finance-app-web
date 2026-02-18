@@ -83,3 +83,53 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 });
+
+// =========================// ESQUECI MINHA SENHA// =========================
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const forgotBtn = document.getElementById("forgot-password");
+  const modalReset = document.getElementById("modal-reset");
+  const cancelReset = document.getElementById("cancel-reset");
+  const sendReset = document.getElementById("send-reset");
+  const resetMsg = document.getElementById("reset-modal-msg");
+
+  if (forgotBtn) {
+    forgotBtn.onclick = () => {
+      modalReset.classList.remove("hidden");
+    };
+  }
+
+  if (cancelReset) {
+    cancelReset.onclick = () => {
+      modalReset.classList.add("hidden");
+    };
+  }
+
+  if (sendReset) {
+    sendReset.onclick = async () => {
+
+      const email = document.getElementById("reset-email").value.trim();
+
+      if (!email) {
+        resetMsg.textContent = "Digite seu email.";
+        return;
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: "https://pedroftorres.github.io/finance-app-web/reset.html"
+      });
+
+      if (error) {
+        resetMsg.textContent = error.message;
+        return;
+      }
+
+      resetMsg.style.color = "green";
+      resetMsg.textContent =
+        "Email enviado! Verifique sua caixa de entrada.";
+    };
+  }
+
+});
+
