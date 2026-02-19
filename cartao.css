@@ -313,3 +313,8 @@
   border-radius: 10px;
   white-space: nowrap;
 }
+.valor-pagamento {
+  color: #16a34a;
+  font-weight: 600;
+}
+
