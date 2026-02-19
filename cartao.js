@@ -1101,19 +1101,23 @@ if (btnConfirmarPagParcial) {
 
     // 🔥 4️⃣ Inserir abatimento na fatura
     await supabase.from("cartao_lancamentos").insert([{
-      id: crypto.randomUUID(),
-      user_id: state.user.id,
-      cartao_id: activeCardId,
-      descricao: "Pagamento parcial da fatura",
-      valor: -Math.abs(valor),
-      data_compra: data,
-      data_fatura: new Date(ano, mes - 1, 1).toISOString().slice(0,10),
-      parcelas: 1,
-      parcela_atual: 0,
-      tipo: "pagamento",
-      billed: false,
-      despesa_id: despesa.id
-    }]);
+  id: crypto.randomUUID(),
+  user_id: state.user.id,
+  cartao_id: activeCardId,
+  descricao: "Pagamento parcial da fatura",
+  valor: -Math.abs(valor),
+  data_compra: data,
+  data_fatura: new Date(
+    mesFatura.getFullYear(),
+    mesFatura.getMonth(),
+    1
+  ).toISOString().slice(0,10),
+  parcelas: 1,
+  parcela_atual: 0,
+  tipo: "pagamento",
+  billed: false,
+  despesa_id: despesa.id
+}]);
 
     modalPagParcial.classList.add("hidden");
 
