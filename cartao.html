@@ -71,6 +71,9 @@
     <button id="btn-lancar-compra" class="btn-outline">
       ➕ Lançar compra
     </button>
+    <button id="btn-pagamento-parcial" class="btn-secondary">
+  💰 Pagamento Parcial
+</button>
   </div>
 
   <!-- AÇÕES DA FATURA -->
@@ -253,6 +256,31 @@
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
       <button id="btn-cancel-card" class="btn-secondary">Cancelar</button>
       <button id="btn-save-card" class="btn-primary">Salvar</button>
+    </div>
+
+  </div>
+</div>
+<!-- ===================== MODAL PAGAMENTO PARCIAL ===================== -->
+
+<div id="modal-pagamento-parcial" class="modal hidden">
+  <div class="modal-content">
+
+    <h3>Pagamento parcial da fatura</h3>
+
+    <label>Valor</label>
+    <input id="pag-parcial-valor" type="number" step="0.01">
+
+    <label>Data</label>
+    <input id="pag-parcial-data" type="date">
+
+    <div style="margin-top:16px;display:flex;gap:10px">
+      <button id="btn-confirmar-pag-parcial" class="btn-primary">
+        Confirmar
+      </button>
+
+      <button id="btn-cancelar-pag-parcial" class="btn-secondary">
+        Cancelar
+      </button>
     </div>
 
   </div>
