@@ -540,18 +540,30 @@ async function loadFaturaForSelected() {
       </li>
     `;
   } else {
-    compras.forEach(c => {
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <span>${c.descricao}</span>
-        <span>${Number(c.valor).toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL"
-        })}</span>
-      `;
-      li.onclick = () => abrirFluxoEdicaoCompra(c);
-      listaComprasFatura.appendChild(li);
-    });
+   compras.forEach(c => {
+
+  const li = document.createElement("li");
+
+  const valorFormatado = Number(c.valor).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+
+  const valorClasse = c.tipo === "pagamento"
+    ? "valor-pagamento"
+    : "";
+
+  li.innerHTML = `
+    <span>${c.descricao}</span>
+    <span class="${valorClasse}">
+      ${valorFormatado}
+    </span>
+  `;
+
+  li.onclick = () => abrirFluxoEdicaoCompra(c);
+
+  listaComprasFatura.appendChild(li);
+});
   }
 
   popularMesFatura();
