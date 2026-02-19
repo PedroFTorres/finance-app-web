@@ -1017,6 +1017,71 @@ let dataBase = new Date(anoFatura, mesFatura - 1, 1);
     showToast("Pagamento antecipado registrado.");
     await loadFaturaForSelected();
   };
+  
+// ===========================// PAGAMENTO PARCIAL (ANTES DO FECHAMENTO)// ===========================
+
+const btnPagParcial = document.getElementById("btn-pagamento-parcial");
+const modalPagParcial = document.getElementById("modal-pagamento-parcial");
+const btnConfirmarPagParcial = document.getElementById("btn-confirmar-pag-parcial");
+const btnCancelarPagParcial = document.getElementById("btn-cancelar-pag-parcial");
+
+if (btnPagParcial) {
+  btnPagParcial.onclick = () => {
+
+    if (!activeCardId) {
+      showToast("Selecione um cartão.", "error");
+      return;
+    }
+
+    document.getElementById("pag-parcial-valor").value = "";
+    document.getElementById("pag-parcial-data").value =
+      new Date().toISOString().slice(0,10);
+
+    modalPagParcial.classList.remove("hidden");
+  };
+}
+
+if (btnCancelarPagParcial) {
+  btnCancelarPagParcial.onclick = () => {
+    modalPagParcial.classList.add("hidden");
+  };
+}
+
+if (btnConfirmarPagParcial) {
+  btnConfirmarPagParcial.onclick = async () => {
+
+    const valor = Number(document.getElementById("pag-parcial-valor").value);
+    const data = document.getElementById("pag-parcial-data").value;
+
+    if (!valor || valor <= 0) {
+      showToast("Informe um valor válido.", "error");
+      return;
+    }
+
+    const ano = mesFatura.getFullYear();
+    const mes = mesFatura.getMonth() + 1;
+
+    await supabase.from("cartao_lancamentos").insert([{
+      id: crypto.randomUUID(),
+      user_id: state.user.id,
+      cartao_id: activeCardId,
+      descricao: "Pagamento parcial da fatura",
+      valor: -Math.abs(valor),
+      data_compra: data,
+      data_fatura: new Date(ano, mes - 1, 1).toISOString().slice(0,10),
+      parcelas: 1,
+      parcela_atual: 0,
+      tipo: "pagamento",
+      billed: false
+    }]);
+
+    modalPagParcial.classList.add("hidden");
+
+    await loadFaturaForSelected();
+
+    showToast("Pagamento parcial registrado.");
+  };
+}
 
   // ===========================// HISTÓRICO DE FATURAS// ===========================
   async function loadHistoricoFaturas() {
