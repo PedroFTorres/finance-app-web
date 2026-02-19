@@ -985,53 +985,38 @@ let dataBase = new Date(anoFatura, mesFatura - 1, 1);
   };
 }
 
-  // ===========================// PAGAMENTO ANTECIPADO// ===========================
-  if (btnPagamentoAntecipado) btnPagamentoAntecipado.onclick = async () => {
-    await loadSelectsForLanc();
-    contaPagAntecipado.innerHTML = selectContaPagamento.innerHTML;
-    valorPagAntecipado.value = "";
-    dataPagAntecipado.value = formatISO(new Date());
-    showView(boxPagAntecipado);
-  };
-
-  if (btnConfirmarPagAntecipado) btnConfirmarPagAntecipado.onclick = async () => {
-    const conta = contaPagAntecipado.value;
-    const valor = Number(valorPagAntecipado.value || 0);
-    const data = dataPagAntecipado.value;
-
-    if (!conta || !valor || !data) return showToast("Preencha todos os campos.", "error");
-
-    await supabase.from("cartao_lancamentos").insert([{
-      id: crypto.randomUUID(),
-      user_id: state.user.id,
-      cartao_id: state.cartaoLancamentoAtual || activeCardId,
-      tipo: "pagamento",
-      descricao: "Pagamento antecipado",
-      valor: -Math.abs(valor),
-      data_compra: data,
-      parcelas: 1,
-      parcela_atual: 1,
-      billed: false
-    }]);
-
-    showToast("Pagamento antecipado registrado.");
-    await loadFaturaForSelected();
-  };
-  
-// ===========================// PAGAMENTO PARCIAL (ANTES DO FECHAMENTO)// ===========================
+  // ===========================// PAGAMENTO PARCIAL REAL (COM CONTA)// ===========================
 
 const btnPagParcial = document.getElementById("btn-pagamento-parcial");
 const modalPagParcial = document.getElementById("modal-pagamento-parcial");
 const btnConfirmarPagParcial = document.getElementById("btn-confirmar-pag-parcial");
 const btnCancelarPagParcial = document.getElementById("btn-cancelar-pag-parcial");
 
+// 🔹 ABRIR MODAL
 if (btnPagParcial) {
-  btnPagParcial.onclick = () => {
+  btnPagParcial.onclick = async () => {
 
     if (!activeCardId) {
       showToast("Selecione um cartão.", "error");
       return;
     }
+
+    const selectConta = document.getElementById("pag-parcial-conta");
+
+    // carregar contas
+    const { data: contas } = await supabase
+      .from("contas_bancarias")
+      .select("id, nome")
+      .eq("user_id", state.user.id)
+      .order("nome");
+
+    selectConta.innerHTML = "";
+
+    (contas || []).forEach(c => {
+      selectConta.appendChild(
+        new Option(c.nome, c.id)
+      );
+    });
 
     document.getElementById("pag-parcial-valor").value = "";
     document.getElementById("pag-parcial-data").value =
@@ -1041,26 +1026,35 @@ if (btnPagParcial) {
   };
 }
 
+// 🔹 CANCELAR
 if (btnCancelarPagParcial) {
   btnCancelarPagParcial.onclick = () => {
     modalPagParcial.classList.add("hidden");
   };
 }
 
+// 🔹 CONFIRMAR PAGAMENTO REAL
 if (btnConfirmarPagParcial) {
   btnConfirmarPagParcial.onclick = async () => {
 
     const valor = Number(document.getElementById("pag-parcial-valor").value);
     const data = document.getElementById("pag-parcial-data").value;
+    const contaId = document.getElementById("pag-parcial-conta").value;
 
     if (!valor || valor <= 0) {
       showToast("Informe um valor válido.", "error");
       return;
     }
 
+    if (!contaId) {
+      showToast("Selecione a conta.", "error");
+      return;
+    }
+
     const ano = mesFatura.getFullYear();
     const mes = mesFatura.getMonth() + 1;
 
+    // 1️⃣ Insere lançamento negativo na fatura
     await supabase.from("cartao_lancamentos").insert([{
       id: crypto.randomUUID(),
       user_id: state.user.id,
@@ -1075,13 +1069,39 @@ if (btnConfirmarPagParcial) {
       billed: false
     }]);
 
+    // 2️⃣ Criar movimentação (debita conta)
+    await supabase.from("movimentacoes").insert([{
+      id: crypto.randomUUID(),
+      user_id: state.user.id,
+      conta_id: contaId,
+      tipo: "debito",
+      valor: valor,
+      descricao: "Pagamento parcial cartão",
+      data: data
+    }]);
+
+    // 3️⃣ Atualizar saldo da conta
+    const { data: conta } = await supabase
+      .from("contas_bancarias")
+      .select("saldo_atual")
+      .eq("id", contaId)
+      .single();
+
+    const novoSaldo = Number(conta.saldo_atual || 0) - valor;
+
+    await supabase
+      .from("contas_bancarias")
+      .update({ saldo_atual: novoSaldo })
+      .eq("id", contaId);
+
     modalPagParcial.classList.add("hidden");
 
     await loadFaturaForSelected();
 
-    showToast("Pagamento parcial registrado.");
+    showToast("Pagamento parcial realizado com sucesso.");
   };
 }
+
 
   // ===========================// HISTÓRICO DE FATURAS// ===========================
   async function loadHistoricoFaturas() {
