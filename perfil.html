@@ -67,9 +67,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("profile-cpf").value = profile?.cpf || "";
   document.getElementById("profile-plano").textContent = profile?.plano || "free";
 
-  // ======================
-  // UPLOAD AVATAR
-  // ======================
+  // ======================// UPLOAD AVATAR// ======================
 
   avatarFile.addEventListener("change", async (event) => {
 
@@ -79,9 +77,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const fileExt = file.name.split(".").pop();
     const fileName = `${user.id}.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-     .upload(fileName, file);
+   const { error: uploadError } = await supabase.storage
+  .from("avatars")
+  .upload(fileName, file);
 
     if (uploadError) {
       alert(uploadError.message);
