@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const { error: uploadError } = await supabase.storage
       .from("avatars")
-      .upload(fileName, file, { upsert: true });
+     .upload(fileName, file);
 
     if (uploadError) {
       alert(uploadError.message);
