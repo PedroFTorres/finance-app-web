@@ -67,6 +67,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("profile-cpf").value = profile?.cpf || "";
   document.getElementById("profile-plano").textContent = profile?.plano || "free";
 
+  if (profile?.avatar_url) {
+    avatarPreview.src = profile.avatar_url;
+  }
+
   // ======================// UPLOAD AVATAR// ======================
 
   avatarFile.addEventListener("change", async (event) => {
@@ -74,12 +78,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     const file = event.target.files[0];
     if (!file) return;
 
-    const fileExt = file.name.split(".").pop();
+    const fileExt = file.name.split(".").pop()?.toLowerCase();
+    const allowedExtensions = ["jpg", "jpeg", "png", "webp", "gif"];
+
+    if (!allowedExtensions.includes(fileExt)) {
+      alert("Formato inválido. Envie uma imagem JPG, PNG, WEBP ou GIF.");
+      avatarFile.value = "";
+      return;
+    }
+
     const fileName = `${user.id}.${fileExt}`;
 
    const { error: uploadError } = await supabase.storage
   .from("avatars")
-  .upload(fileName, file);
+  .upload(fileName, file, { upsert: true });
 
     if (uploadError) {
       alert(uploadError.message);
@@ -95,7 +107,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       .update({ avatar_url: data.publicUrl })
       .eq("id", user.id);
 
-    avatarPreview.src = data.publicUrl;
+    avatarPreview.src = `${data.publicUrl}?t=${Date.now()}`;
   });
 
   // ======================
