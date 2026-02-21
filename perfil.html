@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const fileName = `${user.id}.${fileExt}`;
+  const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
    const { error: uploadError } = await supabase.storage
   .from("avatars")
