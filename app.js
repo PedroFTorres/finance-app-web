@@ -197,14 +197,18 @@ async function requireSessionOrRedirect() {
     // ✅ carrega perfil (upgrade)
     STATE.profile = await loadUserProfile();
      // ===================== AVATAR HEADER =====================
+
 const headerAvatar = document.getElementById("header-avatar");
 
 if (headerAvatar) {
   if (STATE.profile?.avatar_url) {
-   headerAvatar.src = STATE.profile.avatar_url + "?t=" + Date.now();
+    headerAvatar.src = STATE.profile.avatar_url + "?t=" + Date.now();
   } else {
     headerAvatar.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
   }
+
+  // 🔥 só mostra depois que definir a imagem correta
+  headerAvatar.style.display = "block";
 }
      // Mostrar nome no header
 if (STATE.profile?.nome) {
