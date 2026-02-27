@@ -1670,20 +1670,18 @@ showScreen(name) {
 
   // =========================// CONTAS// =========================
    
-  if (name === 'contas') {
+if (name === 'contas') {
   UI.populateSelects();
 
-  // 🔥 sincroniza extrato ao entrar na tela
   const selectExtrato = document.getElementById("select-contas-extrato");
 
- if (!selectExtrato.value) {
-  if (STATE.contas.length > 0) {
-    selectExtrato.value = STATE.contas[0].id;
+  if (selectExtrato && !selectExtrato.value) {
+    if (STATE.contas.length > 0) {
+      selectExtrato.value = STATE.contas[0].id;
+    }
   }
-}
 
-    App.renderExtrato();
-  }
+  App.renderExtrato();
 }
 
 },
