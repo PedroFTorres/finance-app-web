@@ -1889,9 +1889,6 @@ const conta_id = selectExtrato.value;
 
 if (!conta_id || conta_id === "all") return;
 
-    if (!conta_id || conta_id === "all") return;
-
-
     // =========================// EXTRATO — DEFINIÇÃO DE DATAS // =========================
 let inicio, fim;
 
