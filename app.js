@@ -1482,10 +1482,10 @@ async function transferirEntreContas({
     transferencia_id: transferenciaId
   }]);
 
-  // 4️⃣ Atualizar telas
-   
+ // 4️⃣ Atualizar telas
 await App.reloadAll();
 await App.refreshLancamentos();
+await App.renderExtrato(); // 🔥 ADICIONE ESTA LINHA
 
 alert("Transferência realizada com sucesso.");
 
@@ -1676,12 +1676,11 @@ showScreen(name) {
   // 🔥 sincroniza extrato ao entrar na tela
   const selectExtrato = document.getElementById("select-contas-extrato");
 
-  if (selectExtrato) {
-    if (!selectExtrato.value || selectExtrato.value === "all") {
-      if (STATE.contas.length > 0) {
-        selectExtrato.value = STATE.contas[0].id;
-      }
-    }
+ if (!selectExtrato.value) {
+  if (STATE.contas.length > 0) {
+    selectExtrato.value = STATE.contas[0].id;
+  }
+}
 
     App.renderExtrato();
   }
