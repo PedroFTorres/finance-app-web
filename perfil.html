@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     .from("user_profiles")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .maybeSingle()
 
   const avatarPreview = document.getElementById("avatar-preview");
   const avatarFile = document.getElementById("avatar-file");
@@ -121,13 +121,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     const msg = document.getElementById("profile-msg");
 
     const { error } = await supabase
-      .from("user_profiles")
-      .update({
-        nome,
-        cpf,
-        updated_at: new Date()
-      })
-      .eq("id", user.id);
+  .from("user_profiles")
+  .upsert({
+    id: user.id,
+    nome,
+    cpf,
+    updated_at: new Date()
+  });
 
     if (error) {
       msg.textContent = error.message;
