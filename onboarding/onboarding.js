@@ -1,6 +1,5 @@
 async function waitForState() {
 
-  // espera o app.js terminar de carregar o usuário
   while (!window.STATE || !STATE.profile) {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
@@ -9,10 +8,8 @@ async function waitForState() {
 
 document.addEventListener("DOMContentLoaded", async () => {
 
-  // espera STATE existir
   await waitForState();
 
-  // se onboarding já foi feito, não mostra
   if (STATE.profile?.onboarding_completed) return;
 
   iniciarOnboarding();
@@ -22,43 +19,96 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 function iniciarOnboarding(){
 
+  mostrarPasso(
+    "Bem-vindo ao Arolix 👋",
+    "Vamos começar criando sua primeira conta.",
+    () => {
+
+      irParaTela("contas");
+
+      setTimeout(() => {
+        destacarElemento("#btn-open-modal-conta");
+      }, 400);
+
+    }
+  );
+
+}
+
+
+function mostrarPasso(titulo, texto, callback){
+
+  removerOnboarding();
+
   const guide = document.createElement("div");
   guide.id = "onboarding-guide";
 
   guide.innerHTML = `
     <div class="onboarding-box">
-      <h2>Bem-vindo ao Arolix 👋</h2>
 
-      <p>Vamos fazer um rápido guia para você começar.</p>
+      <h2>${titulo}</h2>
 
-      <ul>
-        <li>1️⃣ Cadastre sua primeira conta</li>
-        <li>2️⃣ Crie categorias</li>
-        <li>3️⃣ Registre seus lançamentos</li>
-      </ul>
+      <p>${texto}</p>
 
-      <button id="onboarding-close">
-        Começar
+      <button id="onboarding-next">
+        Entendi
       </button>
+
     </div>
   `;
 
   document.body.appendChild(guide);
 
   document
-    .getElementById("onboarding-close")
-    .onclick = finalizarOnboarding;
+    .getElementById("onboarding-next")
+    .onclick = () => {
+
+      removerOnboarding();
+
+      if (callback) callback();
+
+    };
+
+}
+
+
+function destacarElemento(selector){
+
+  const el = document.querySelector(selector);
+
+  if (!el) return;
+
+  el.classList.add("onboarding-highlight");
+
+  mostrarPasso(
+    "Adicionar conta",
+    "Clique aqui para cadastrar sua primeira conta.",
+    finalizarOnboarding
+  );
+
+}
+
+
+function irParaTela(tela){
+
+  const btn = document.querySelector(`[data-target="${tela}"]`);
+
+  if (btn) btn.click();
+
+}
+
+
+function removerOnboarding(){
+
+  document
+    .getElementById("onboarding-guide")
+    ?.remove();
 
 }
 
 
 async function finalizarOnboarding(){
 
-  document
-    .getElementById("onboarding-guide")
-    ?.remove();
-
-  // salva no banco que onboarding foi concluído
   await supabase
     .from("user_profiles")
     .update({
