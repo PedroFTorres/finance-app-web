@@ -1,9 +1,7 @@
 async function waitForState() {
-
   while (!window.STATE || !STATE.profile) {
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(r => setTimeout(r, 100));
   }
-
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -16,7 +14,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 });
 
-
 function iniciarOnboarding(){
 
   mostrarPasso(
@@ -28,13 +25,13 @@ function iniciarOnboarding(){
 
       setTimeout(() => {
         destacarElemento("#btn-open-modal-conta");
+        esperarContaCriada();
       }, 400);
 
     }
   );
 
 }
-
 
 function mostrarPasso(titulo, texto, callback){
 
@@ -45,15 +42,9 @@ function mostrarPasso(titulo, texto, callback){
 
   guide.innerHTML = `
     <div class="onboarding-box">
-
       <h2>${titulo}</h2>
-
       <p>${texto}</p>
-
-      <button id="onboarding-next">
-        Entendi
-      </button>
-
+      <button id="onboarding-next">Continuar</button>
     </div>
   `;
 
@@ -71,7 +62,6 @@ function mostrarPasso(titulo, texto, callback){
 
 }
 
-
 function destacarElemento(selector){
 
   const el = document.querySelector(selector);
@@ -80,14 +70,7 @@ function destacarElemento(selector){
 
   el.classList.add("onboarding-highlight");
 
-  mostrarPasso(
-    "Adicionar conta",
-    "Clique aqui para cadastrar sua primeira conta.",
-    finalizarOnboarding
-  );
-
 }
-
 
 function irParaTela(tela){
 
@@ -97,15 +80,51 @@ function irParaTela(tela){
 
 }
 
-
 function removerOnboarding(){
+  document.getElementById("onboarding-guide")?.remove();
+}
 
-  document
-    .getElementById("onboarding-guide")
-    ?.remove();
+async function esperarContaCriada(){
+
+  const userId = STATE.user.id;
+
+  const { data: contas } = await supabase
+    .from("contas")
+    .select("id")
+    .eq("user_id", userId);
+
+  if (contas && contas.length > 0){
+    passoCategorias();
+    return;
+  }
+
+  setTimeout(esperarContaCriada, 2000);
 
 }
 
+function passoCategorias(){
+
+  irParaTela("contas");
+
+  mostrarPasso(
+    "Agora crie categorias",
+    "Use a aba categorias para organizar suas receitas e despesas.",
+    passoLancamentos
+  );
+
+}
+
+function passoLancamentos(){
+
+  irParaTela("lanc");
+
+  mostrarPasso(
+    "Registrar lançamentos",
+    "Agora você pode adicionar receitas e despesas.",
+    finalizarOnboarding
+  );
+
+}
 
 async function finalizarOnboarding(){
 
