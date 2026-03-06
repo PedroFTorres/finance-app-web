@@ -1,0 +1,21 @@
+#onboarding-guide{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:99999;
+}
+
+.onboarding-box{
+  background:white;
+  padding:30px;
+  border-radius:12px;
+  width:400px;
+  text-align:center;
+}
+
+.onboarding-box button{
+  margin-top:20px;
+}
