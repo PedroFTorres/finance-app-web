@@ -14,46 +14,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 });
 
-let etapa = 0;
-
-const passos = [
-
-{
-titulo: "Bem-vindo ao Arolix 👋",
-texto: "Vamos configurar seu sistema financeiro em poucos passos."
-},
-
-{
-titulo: "Passo 1 — Crie sua conta",
-texto: "Vá até a tela Contas e clique em 'Adicionar conta'."
-},
-
-{
-titulo: "Passo 2 — Crie categorias",
-texto: "Depois vá na aba Categorias e crie categorias para suas receitas e despesas."
-},
-
-{
-titulo: "Passo 3 — Adicione lançamentos",
-texto: "Agora registre receitas ou despesas na tela Lançamentos."
-},
-
-{
-titulo: "Tudo pronto 🎉",
-texto: "Seu sistema está pronto para usar."
-}
-
-];
-
 function iniciarOnboarding(){
-  mostrarPasso();
+  passoConta();
 }
 
-function mostrarPasso(){
+function mostrarPainel(titulo, texto){
 
-  removerOnboarding();
-
-  const passo = passos[etapa];
+  document.getElementById("onboarding-guide")?.remove();
 
   const guide = document.createElement("div");
   guide.id = "onboarding-guide";
@@ -61,53 +28,139 @@ function mostrarPasso(){
   guide.innerHTML = `
   <div class="onboarding-box">
 
-  <h2>${passo.titulo}</h2>
+  <h2>${titulo}</h2>
 
-  <p>${passo.texto}</p>
-
-  <button id="onboarding-next">
-  ${etapa === passos.length-1 ? "Finalizar" : "Próximo"}
-  </button>
+  <p>${texto}</p>
 
   </div>
   `;
 
   document.body.appendChild(guide);
 
-  document
-  .getElementById("onboarding-next")
-  .onclick = proximoPasso;
+}
+
+function irParaTela(tela){
+
+  const btn = document.querySelector(`[data-target="${tela}"]`);
+
+  if (btn) btn.click();
 
 }
 
-function proximoPasso(){
+function destacar(selector){
 
-  etapa++;
+  const el = document.querySelector(selector);
 
-  if (etapa >= passos.length){
+  if (!el) return;
 
-    finalizarOnboarding();
+  el.classList.add("onboarding-highlight");
 
+}
+
+async function passoConta(){
+
+  irParaTela("contas");
+
+  destacar("#btn-open-modal-conta");
+
+  mostrarPainel(
+    "Passo 1 — Crie sua conta",
+    "Clique no botão destacado para cadastrar sua primeira conta."
+  );
+
+  verificarConta();
+
+}
+
+async function verificarConta(){
+
+  const { data } = await supabase
+  .from("contas_bancarias")
+  .select("id")
+  .eq("user_id", STATE.user.id)
+  .limit(1);
+
+  if(data && data.length > 0){
+
+    passoCategoria();
     return;
 
   }
 
-  mostrarPasso();
+  setTimeout(verificarConta, 2000);
 
 }
 
-function removerOnboarding(){
-  document.getElementById("onboarding-guide")?.remove();
+async function passoCategoria(){
+
+  mostrarPainel(
+    "Passo 2 — Crie categorias",
+    "Agora vá na aba Categorias e crie pelo menos uma categoria."
+  );
+
+  verificarCategoria();
+
+}
+
+async function verificarCategoria(){
+
+  const { data } = await supabase
+  .from("categorias")
+  .select("id")
+  .eq("user_id", STATE.user.id)
+  .limit(1);
+
+  if(data && data.length > 0){
+
+    passoLancamento();
+    return;
+
+  }
+
+  setTimeout(verificarCategoria, 2000);
+
+}
+
+async function passoLancamento(){
+
+  irParaTela("lanc");
+
+  mostrarPainel(
+    "Passo 3 — Registre um lançamento",
+    "Adicione sua primeira receita ou despesa."
+  );
+
+  verificarLancamento();
+
+}
+
+async function verificarLancamento(){
+
+  const { data } = await supabase
+  .from("movimentacoes")
+  .select("id")
+  .eq("user_id", STATE.user.id)
+  .limit(1);
+
+  if(data && data.length > 0){
+
+    finalizarOnboarding();
+    return;
+
+  }
+
+  setTimeout(verificarLancamento, 2000);
+
 }
 
 async function finalizarOnboarding(){
 
-  removerOnboarding();
+  document.getElementById("onboarding-guide")?.remove();
 
   await supabase
   .from("user_profiles")
   .update({
-  onboarding_completed: true
+    onboarding_completed: true
   })
   .eq("id", STATE.user.id);
 
