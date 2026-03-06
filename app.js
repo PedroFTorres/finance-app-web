@@ -195,7 +195,10 @@ async function requireSessionOrRedirect() {
     STATE.user = data.session.user;
 
     // ✅ carrega perfil (upgrade)
-    STATE.profile = await loadUserProfile();
+   STATE.profile = await loadUserProfile();
+
+// 🔥 deixar STATE global para outros scripts
+window.STATE = STATE;
      // ===================== AVATAR HEADER =====================
 
 const headerAvatar = document.getElementById("header-avatar");
