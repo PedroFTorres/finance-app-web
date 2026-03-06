@@ -1,13 +1,24 @@
+async function waitForState() {
+
+  // espera o app.js terminar de carregar o usuário
+  while (!window.STATE || !STATE.profile) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
 
-  if (!window.STATE) return;
+  // espera STATE existir
+  await waitForState();
 
-  // verifica se é primeiro acesso
+  // se onboarding já foi feito, não mostra
   if (STATE.profile?.onboarding_completed) return;
 
   iniciarOnboarding();
 
 });
+
 
 function iniciarOnboarding(){
 
@@ -39,6 +50,7 @@ function iniciarOnboarding(){
     .onclick = finalizarOnboarding;
 
 }
+
 
 async function finalizarOnboarding(){
 
