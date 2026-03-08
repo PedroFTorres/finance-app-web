@@ -98,32 +98,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (error) {
 
-        if (error.message.includes("rate limit")) {
-          signupMsg.textContent =
-            "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
-        } else {
-          signupMsg.textContent = error.message;
-        }
+  if (error.message.includes("rate limit")) {
+    signupMsg.textContent =
+      "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+  } else {
+    signupMsg.textContent = error.message;
+  }
 
-        btnConfirmSignup.disabled = false;
-        btnConfirmSignup.textContent = "Criar Conta";
-        return;
-      }
+  btnConfirmSignup.disabled = false;
+  btnConfirmSignup.textContent = "Criar Conta";
+  return;
+}
 
-      if (data?.user) {
-        await supabase.from("user_profiles").insert([{
-          id: data.user.id,
-          nome: nome,
-          plano: "free"
-        }]);
-      }
+if (data?.user) {
+  signupMsg.style.color = "green";
+  signupMsg.textContent =
+    "Conta criada! Verifique seu email para confirmar.";
+}
 
-      signupMsg.style.color = "green";
-      signupMsg.textContent =
-        "Conta criada! Verifique seu email para confirmar.";
-
-      btnConfirmSignup.disabled = false;
-      btnConfirmSignup.textContent = "Criar Conta";
+btnConfirmSignup.disabled = false;
+btnConfirmSignup.textContent = "Criar Conta";
     };
   }
 
