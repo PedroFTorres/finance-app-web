@@ -1536,7 +1536,9 @@ const App = {
  async init() {
   await this.reloadAll();
   this.showScreen('dashboard');
-},
+}
+
+}; 
 
   // ================================// TRANSFERÊNCIA — abrir modal // ================================
      
