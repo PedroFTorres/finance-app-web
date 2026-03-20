@@ -1533,13 +1533,28 @@ const App = {
   UI.renderContasCards(); 
 },
 
- async init() {
+async init() {
   await this.reloadAll();
   this.showScreen('dashboard');
+
+  // 🔥 REALTIME
+  this.subscribeRealtime();
+
+  // 🔥 PRIMEIRO RENDER
+  await this.refreshLancamentos();
+
+  const now = new Date();
+  const ano = now.getFullYear();
+  const mes = now.getMonth() + 1;
+
+  const inicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
+  const lastDay = new Date(ano, mes, 0).getDate();
+  const fim = `${ano}-${String(mes).padStart(2, '0')}-${lastDay}`;
+
+  await drawResumo(inicio, fim);
+  await drawReceitasPorCategoria(inicio, fim);
+  await drawDespesasPorCategoria(inicio, fim);
 }
-
-}; 
-
   // ================================// TRANSFERÊNCIA — abrir modal // ================================
      
 const btnTransferir = document.getElementById("btn-transferir");
@@ -1628,25 +1643,7 @@ if (btnConfirmar) {
   };
 }
 
-  // ================================// REALTIME// ================================
-  this.subscribeRealtime();
-
-  // ================================// RENDERIZAÇÕES INICIAIS// ================================
-  await this.refreshLancamentos();
-
-  const now = new Date();
-  const ano = now.getFullYear();
-  const mes = now.getMonth() + 1;
-
-  const inicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
-  const lastDay = new Date(ano, mes, 0).getDate();
-  const fim = `${ano}-${String(mes).padStart(2, '0')}-${lastDay}`;
-
-  await drawResumo(inicio, fim);
-  await drawReceitasPorCategoria(inicio, fim);
-  await drawDespesasPorCategoria(inicio, fim);
-},
-
+ 
 showScreen(name) {
   // Esconde todas as telas
   document.querySelectorAll(IDS.screens)
