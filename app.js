@@ -1543,6 +1543,7 @@ const App = {
 }
      window.APP_READY = true;
   }
+   };
 
   // ================================// TRANSFERÊNCIA — abrir modal // ================================
      
