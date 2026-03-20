@@ -64,7 +64,10 @@ async function passoConta(){
 
   irParaTela("contas");
 
-  destacar("#btn-open-modal-conta");
+  // 🔥 espera renderizar
+  setTimeout(() => {
+    destacar("#btn-open-modal-conta");
+  }, 300);
 
   mostrarPainel(
     "Passo 1 — Crie sua conta",
@@ -72,7 +75,6 @@ async function passoConta(){
   );
 
   verificarConta();
-
 }
 
 async function verificarConta(){
