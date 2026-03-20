@@ -77,8 +77,6 @@ function destacar(selector){
 
 async function passoConta(){
 
-  await esperarApp(); // 👈 LINHA NOVA
-
   irParaTela("contas");
 
   const btn = await esperarElemento("#btn-open-modal-conta");
@@ -115,8 +113,6 @@ async function verificarConta(){
 }
 
 async function passoCategoria(){
-
-  await esperarApp(); // 👈 LINHA NOVA
 
   irParaTela("contas");
 
