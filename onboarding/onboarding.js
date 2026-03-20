@@ -14,6 +14,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 });
 
+async function esperarElemento(selector, timeout = 5000) {
+
+  const start = Date.now();
+
+  while (Date.now() - start < timeout) {
+    const el = document.querySelector(selector);
+    if (el) return el;
+
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  console.error("Elemento NÃO encontrado:", selector);
+  return null;
+}
+
 function iniciarOnboarding(){
   passoConta();
 }
@@ -64,10 +79,11 @@ async function passoConta(){
 
   irParaTela("contas");
 
-  // 🔥 espera renderizar
-  setTimeout(() => {
-    destacar("#btn-open-modal-conta");
-  }, 300);
+  const btn = await esperarElemento("#btn-open-modal-conta");
+
+  if (btn) {
+    btn.classList.add("onboarding-highlight");
+  }
 
   mostrarPainel(
     "Passo 1 — Crie sua conta",
@@ -100,14 +116,12 @@ async function passoCategoria(){
 
   irParaTela("contas");
 
-  // 🔥 espera a aba existir
   const btnCategoria = await esperarElemento('[data-tab="categorias"]');
 
   if (btnCategoria) {
     btnCategoria.click();
   }
 
-  // 🔥 espera o botão de adicionar existir
   const btnAdd = await esperarElemento("#btn-add-categoria");
 
   if (btnAdd) {
