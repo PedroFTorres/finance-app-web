@@ -10,8 +10,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (STATE.profile?.onboarding_completed) return;
 
+  setTimeout(() => {
   iniciarOnboarding();
-
+}, 500);
 });
 
 async function esperarElemento(selector, timeout = 5000) {
