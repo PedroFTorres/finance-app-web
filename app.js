@@ -1536,7 +1536,11 @@ const App = {
   async init() {
   // carregar dados base
   await this.reloadAll();
+  if (!STATE.profile?.onboarding_completed) {
+  console.log("Onboarding ativo - não forçar dashboard");
+} else {
   this.showScreen('dashboard');
+}
 
   // ================================// TRANSFERÊNCIA — abrir modal // ================================
      
