@@ -8,11 +8,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await waitForState();
 
+  // 🔥 espera o app terminar
+  while (!window.APP_READY) {
+    await new Promise(r => setTimeout(r, 100));
+  }
+
   if (STATE.profile?.onboarding_completed) return;
 
-  setTimeout(() => {
   iniciarOnboarding();
-}, 500);
+
 });
 
 async function esperarElemento(selector, timeout = 5000) {
