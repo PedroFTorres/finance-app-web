@@ -1533,14 +1533,10 @@ const App = {
   UI.renderContasCards(); 
 },
 
-  async init() {
-  // carregar dados base
+ async init() {
   await this.reloadAll();
-  if (!STATE.profile?.onboarding_completed) {
-  console.log("Onboarding ativo - não forçar dashboard");
-} else {
   this.showScreen('dashboard');
-}
+},
 
   // ================================// TRANSFERÊNCIA — abrir modal // ================================
      
