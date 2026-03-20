@@ -3,7 +3,11 @@ async function waitForState() {
     await new Promise(r => setTimeout(r, 100));
   }
 }
-
+async function esperarApp() {
+  while (!window.App || !App.showScreen) {
+    await new Promise(r => setTimeout(r, 100));
+  }
+}
 document.addEventListener("DOMContentLoaded", async () => {
 
   await waitForState();
@@ -77,6 +81,8 @@ function destacar(selector){
 
 async function passoConta(){
 
+  await esperarApp(); // 👈 LINHA NOVA
+
   irParaTela("contas");
 
   const btn = await esperarElemento("#btn-open-modal-conta");
@@ -113,6 +119,8 @@ async function verificarConta(){
 }
 
 async function passoCategoria(){
+
+  await esperarApp(); // 👈 LINHA NOVA
 
   irParaTela("contas");
 
