@@ -1554,96 +1554,8 @@ async init() {
   await drawResumo(inicio, fim);
   await drawReceitasPorCategoria(inicio, fim);
   await drawDespesasPorCategoria(inicio, fim);
-}
-  // ================================// TRANSFERÊNCIA — abrir modal // ================================
-     
-const btnTransferir = document.getElementById("btn-transferir");
-
-if (btnTransferir) {
-  btnTransferir.onclick = () => {
-    const modal = document.getElementById("modal-transferencia");
-    if (!modal) return;
-
-    modal.classList.remove("hidden");
-
-    const selOrigem = document.getElementById("transf-origem");
-    const selDestino = document.getElementById("transf-destino");
-
-    selOrigem.innerHTML = "";
-    selDestino.innerHTML = "";
-
-    (STATE.contas || []).forEach(c => {
-      selOrigem.appendChild(new Option(c.nome, c.id));
-      selDestino.appendChild(new Option(c.nome, c.id));
-    });
-
-    document.getElementById("transf-valor").value = "";
-    document.getElementById("transf-desc").value = "";
-    document.getElementById("transf-data").value =
-      new Date().toISOString().slice(0, 10);
-  };
-}
-
-// ================================// TRANSFERÊNCIA — confirmar// ================================
-     
-const btnConfirmar = document.getElementById("btn-confirmar-transf");
-
-if (btnConfirmar) {
-  btnConfirmar.onclick = async () => {
-
-    // 🔒 trava contra clique duplo / lag
-    if (IS_TRANSFERINDO) return;
-    IS_TRANSFERINDO = true;
-
-    try {
-      const contaOrigem = document.getElementById("transf-origem").value;
-      const contaDestino = document.getElementById("transf-destino").value;
-      const valor = Number(document.getElementById("transf-valor").value);
-      const data = document.getElementById("transf-data").value;
-      const descricao =
-        document.getElementById("transf-desc").value ||
-        "Transferência entre contas";
-
-      if (!contaOrigem || !contaDestino) {
-        alert("Selecione as contas de origem e destino.");
-        return;
-      }
-
-      if (contaOrigem === contaDestino) {
-        alert("Conta de origem e destino devem ser diferentes.");
-        return;
-      }
-
-      if (!valor || valor <= 0) {
-        alert("Informe um valor válido.");
-        return;
-      }
-
-      await transferirEntreContas({
-        contaOrigem,
-        contaDestino,
-        valor,
-        data,
-        descricao
-      });
-
-      document
-        .getElementById("modal-transferencia")
-        .classList.add("hidden");
-
-      alert("Transferência realizada com sucesso!");
-
-    } catch (err) {
-      console.error("Erro ao confirmar transferência:", err);
-      alert("Erro ao realizar a transferência. Veja o console.");
-    } finally {
-      // 🔓 libera a trava SEMPRE
-      IS_TRANSFERINDO = false;
-    }
-  };
-}
-
- 
+},
+  
 showScreen(name) {
   // Esconde todas as telas
   document.querySelectorAll(IDS.screens)
@@ -2205,7 +2117,93 @@ if (e.target.closest("#lanc-next")) {
   }
 
 });
+// ================================// TRANSFERÊNCIA — abrir modal // ================================
+     
+const btnTransferir = document.getElementById("btn-transferir");
 
+if (btnTransferir) {
+  btnTransferir.onclick = () => {
+    const modal = document.getElementById("modal-transferencia");
+    if (!modal) return;
+
+    modal.classList.remove("hidden");
+
+    const selOrigem = document.getElementById("transf-origem");
+    const selDestino = document.getElementById("transf-destino");
+
+    selOrigem.innerHTML = "";
+    selDestino.innerHTML = "";
+
+    (STATE.contas || []).forEach(c => {
+      selOrigem.appendChild(new Option(c.nome, c.id));
+      selDestino.appendChild(new Option(c.nome, c.id));
+    });
+
+    document.getElementById("transf-valor").value = "";
+    document.getElementById("transf-desc").value = "";
+    document.getElementById("transf-data").value =
+      new Date().toISOString().slice(0, 10);
+  };
+}
+
+// ================================// TRANSFERÊNCIA — confirmar// ================================
+     
+const btnConfirmar = document.getElementById("btn-confirmar-transf");
+
+if (btnConfirmar) {
+  btnConfirmar.onclick = async () => {
+
+    // 🔒 trava contra clique duplo / lag
+    if (IS_TRANSFERINDO) return;
+    IS_TRANSFERINDO = true;
+
+    try {
+      const contaOrigem = document.getElementById("transf-origem").value;
+      const contaDestino = document.getElementById("transf-destino").value;
+      const valor = Number(document.getElementById("transf-valor").value);
+      const data = document.getElementById("transf-data").value;
+      const descricao =
+        document.getElementById("transf-desc").value ||
+        "Transferência entre contas";
+
+      if (!contaOrigem || !contaDestino) {
+        alert("Selecione as contas de origem e destino.");
+        return;
+      }
+
+      if (contaOrigem === contaDestino) {
+        alert("Conta de origem e destino devem ser diferentes.");
+        return;
+      }
+
+      if (!valor || valor <= 0) {
+        alert("Informe um valor válido.");
+        return;
+      }
+
+      await transferirEntreContas({
+        contaOrigem,
+        contaDestino,
+        valor,
+        data,
+        descricao
+      });
+
+      document
+        .getElementById("modal-transferencia")
+        .classList.add("hidden");
+
+      alert("Transferência realizada com sucesso!");
+
+    } catch (err) {
+      console.error("Erro ao confirmar transferência:", err);
+      alert("Erro ao realizar a transferência. Veja o console.");
+    } finally {
+      // 🔓 libera a trava SEMPRE
+      IS_TRANSFERINDO = false;
+    }
+  };
+}
 /* ============================ BOOTSTRAP / START ============================ */
 
 (async function bootstrap() {
