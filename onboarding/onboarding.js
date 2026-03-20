@@ -3,11 +3,7 @@ async function waitForState() {
     await new Promise(r => setTimeout(r, 100));
   }
 }
-async function esperarApp() {
-  while (!window.App || !App.showScreen) {
-    await new Promise(r => setTimeout(r, 100));
-  }
-}
+
 document.addEventListener("DOMContentLoaded", async () => {
 
   await waitForState();
