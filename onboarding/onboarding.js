@@ -98,13 +98,33 @@ async function verificarConta(){
 
 async function passoCategoria(){
 
+  // 🔥 IR PARA A TELA CERTA
+  irParaTela("contas");
+
+  // 🔥 ESPERAR RENDER + ABRIR ABA CATEGORIAS
+  setTimeout(() => {
+
+    const btnCategoria = document.querySelector('[data-tab="categorias"]');
+
+    if (btnCategoria) {
+      btnCategoria.click();
+    } else {
+      console.error("Botão de categorias não encontrado");
+    }
+
+    // 🔥 destacar botão de adicionar categoria
+    setTimeout(() => {
+      destacar("#btn-add-categoria");
+    }, 300);
+
+  }, 300);
+
   mostrarPainel(
     "Passo 2 — Crie categorias",
-    "Agora vá na aba Categorias e crie pelo menos uma categoria."
+    "Clique no botão destacado para criar uma categoria."
   );
 
   verificarCategoria();
-
 }
 
 async function verificarCategoria(){
