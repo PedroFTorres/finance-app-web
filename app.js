@@ -1541,9 +1541,6 @@ const App = {
 } else {
   this.showScreen('dashboard');
 }
-     window.APP_READY = true;
-  }
-   };
 
   // ================================// TRANSFERÊNCIA — abrir modal // ================================
      
