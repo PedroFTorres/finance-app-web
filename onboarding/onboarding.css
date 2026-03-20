@@ -6,8 +6,13 @@
   align-items:center;
   justify-content:center;
   z-index:99999;
+
+  pointer-events: none; /* 🔥 ESSENCIAL */
 }
 
+.onboarding-box{
+  pointer-events: auto; /* 🔥 permite clicar no painel */
+}
 .onboarding-box{
   background:white;
   padding:30px;
