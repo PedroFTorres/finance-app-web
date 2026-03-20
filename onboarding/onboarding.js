@@ -41,9 +41,9 @@ function mostrarPainel(titulo, texto){
 
 function irParaTela(tela){
 
-  const btn = document.querySelector(`[data-target="${tela}"]`);
-
-  if (btn) btn.click();
+  if (window.App && App.showScreen) {
+    App.showScreen(tela);
+  }
 
 }
 
@@ -51,7 +51,10 @@ function destacar(selector){
 
   const el = document.querySelector(selector);
 
-  if (!el) return;
+  if (!el) {
+    console.error("Elemento não encontrado:", selector);
+    return;
+  }
 
   el.classList.add("onboarding-highlight");
 
@@ -165,3 +168,8 @@ async function finalizarOnboarding(){
   .eq("id", STATE.user.id);
 
 }
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    document.getElementById("onboarding-guide")?.remove();
+  }
+});
