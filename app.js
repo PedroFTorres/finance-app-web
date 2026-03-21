@@ -1124,6 +1124,12 @@ openModalEditSemEscopo(item, tipo) {
   document.getElementById("juros-baixa").value = "";
   document.getElementById("desconto-baixa").value = "";
 
+ document.getElementById("valor-original-baixa").textContent =
+  Number(lancamento.valor).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+
   const selectConta = document.getElementById("conta-baixa-select");
 selectConta.innerHTML = "";
 
