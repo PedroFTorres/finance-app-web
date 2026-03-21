@@ -1592,17 +1592,7 @@ async init() {
   // 🔥 PRIMEIRO RENDER
   await this.refreshLancamentos();
 
-  const now = new Date();
-  const ano = now.getFullYear();
-  const mes = now.getMonth() + 1;
-
-  const inicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
-  const lastDay = new Date(ano, mes, 0).getDate();
-  const fim = `${ano}-${String(mes).padStart(2, '0')}-${lastDay}`;
-
-  await drawResumo(inicio, fim);
-  await drawReceitasPorCategoria(inicio, fim);
-  await drawDespesasPorCategoria(inicio, fim);
+  await atualizarDashboardPorMes();
 },
   
 showScreen(name) {
