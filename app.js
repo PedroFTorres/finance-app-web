@@ -32,6 +32,32 @@
   };
    
   let BAIXA_ATUAL = null;
+let mesDashboardAtual = new Date();
+   function renderMesDashboard() {
+  const el = document.getElementById("dash-mes-label");
+
+  const meses = [
+    "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+    "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
+  ];
+
+  el.textContent =
+    `${meses[mesDashboardAtual.getMonth()]} ${mesDashboardAtual.getFullYear()}`;
+}
+
+async function atualizarDashboardPorMes() {
+  const ano = mesDashboardAtual.getFullYear();
+  const mes = mesDashboardAtual.getMonth();
+
+  const inicio = new Date(ano, mes, 1).toISOString().slice(0,10);
+  const fim = new Date(ano, mes + 1, 0).toISOString().slice(0,10);
+
+  await drawResumo(inicio, fim);
+  await drawReceitasPorCategoria(inicio, fim);
+  await drawDespesasPorCategoria(inicio, fim);
+
+  renderMesDashboard();
+}
    
    function atualizarValorFinalBaixa() {
   if (!BAIXA_ATUAL) return;
@@ -2275,6 +2301,16 @@ document.getElementById("select-contas-extrato")
     renderMesExtrato();
     App.renderExtrato();
   });
+   
+   document.getElementById("dash-prev")?.addEventListener("click", async () => {
+  mesDashboardAtual.setMonth(mesDashboardAtual.getMonth() - 1);
+  await atualizarDashboardPorMes();
+});
+
+document.getElementById("dash-next")?.addEventListener("click", async () => {
+  mesDashboardAtual.setMonth(mesDashboardAtual.getMonth() + 1);
+  await atualizarDashboardPorMes();
+});
 
 })(); 
 
