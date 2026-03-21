@@ -32,6 +32,22 @@
   };
    
   let BAIXA_ATUAL = null;
+   
+   function atualizarValorFinalBaixa() {
+  if (!BAIXA_ATUAL) return;
+
+  const valor = Number(BAIXA_ATUAL.lancamento.valor || 0);
+  const juros = Number(document.getElementById("juros-baixa").value || 0);
+  const desconto = Number(document.getElementById("desconto-baixa").value || 0);
+
+  const final = valor + juros - desconto;
+
+  document.getElementById("valor-final-baixa").textContent =
+    final.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    });
+}
 
 // ================================ // CONTROLE DE PERÍODO — LANÇAMENTOS // ================================
 let modoPeriodoLanc = "mes";   // "mes" | "custom"
@@ -1129,6 +1145,7 @@ openModalEditSemEscopo(item, tipo) {
     style: "currency",
     currency: "BRL"
   });
+ atualizarValorFinalBaixa();
 
   const selectConta = document.getElementById("conta-baixa-select");
 selectConta.innerHTML = "";
@@ -2036,6 +2053,12 @@ if (insertErr) {
     IS_BAIXANDO = false;
   }
 });
+   
+   document.getElementById("juros-baixa")
+  ?.addEventListener("input", atualizarValorFinalBaixa);
+
+document.getElementById("desconto-baixa")
+  ?.addEventListener("input", atualizarValorFinalBaixa);
 
 // ================================// LANÇAMENTOS — EVENTOS (DELEGAÇÃO)// ================================
    
