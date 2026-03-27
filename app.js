@@ -238,6 +238,18 @@ async function requireSessionOrRedirect() {
 
     // ✅ carrega perfil (upgrade)
    STATE.profile = await loadUserProfile();
+     
+     // =========================// CONTROLE DO BOTÃO UPGRADE// =========================
+
+const btnUpgrade = document.querySelector('[onclick*="upgrade.html"]');
+
+if (btnUpgrade) {
+  if (STATE.profile?.plano === "pro") {
+    btnUpgrade.style.display = "none"; // esconde para PRO
+  } else {
+    btnUpgrade.style.display = "inline-block"; // mostra para FREE
+  }
+}
 
 // 🔥 deixar STATE global para outros scripts
 window.STATE = STATE;
