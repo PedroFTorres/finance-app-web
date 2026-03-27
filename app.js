@@ -253,6 +253,21 @@ if (btnUpgrade) {
      
 // 🔥 deixar STATE global para outros scripts
 window.STATE = STATE;
+     
+     // =========================// UPGRADE FLOW (GLOBAL)// =========================
+
+function goToUpgrade(msg) {
+  alert(msg + "\n\n👉 Faça upgrade para liberar.");
+
+  // pequeno delay pra UX melhor
+  setTimeout(() => {
+    window.location.href = "upgrade.html";
+  }, 500);
+}
+
+// deixa global (importante!)
+window.goToUpgrade = goToUpgrade;
+     
      // ===================== AVATAR HEADER =====================
 
 const headerAvatar = document.getElementById("header-avatar");
