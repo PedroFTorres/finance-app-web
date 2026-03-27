@@ -245,12 +245,12 @@ const btnUpgrade = document.querySelector('[onclick*="upgrade.html"]');
 
 if (btnUpgrade) {
   if (STATE.profile?.plano === "pro") {
-    btnUpgrade.style.display = "none"; // esconde para PRO
+    btnUpgrade.style.display = "none";
   } else {
-    btnUpgrade.style.display = "inline-block"; // mostra para FREE
+    btnUpgrade.style.display = "";
   }
 }
-
+     
 // 🔥 deixar STATE global para outros scripts
 window.STATE = STATE;
      // ===================== AVATAR HEADER =====================
