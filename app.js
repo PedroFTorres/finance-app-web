@@ -522,7 +522,6 @@ const UI = {
 
   attachHandlers() {
 
-
   // ================================// MENU SUPERIOR// ================================
   $all(IDS.menuBtns).forEach(b => {
     b.addEventListener('click', () => {
@@ -695,6 +694,10 @@ const UI = {
       // add conta / categoria in tabs
       const btnAddConta = $(IDS.btnAddConta);
       if (btnAddConta) btnAddConta.addEventListener('click', async () => {
+         if (!isPro() && STATE.contas.length >= 2) {
+  goToUpgrade("Plano Free permite até 2 contas.");
+  return;
+}
 
   if (IS_CREATING_CONTA) return;
   IS_CREATING_CONTA = true;
