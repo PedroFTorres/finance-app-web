@@ -12,7 +12,7 @@
 /* eslint-disable no-unused-vars */
 (() => {
   'use strict';
-   
+ 
    let IS_SAVING_LANCAMENTO = false;
    let IS_CREATING_CONTA = false;
    let IS_BAIXANDO = false;
@@ -30,7 +30,9 @@
     charts: { recCat: null, desCat: null, resumo: null },
     subs: [] // para armazenar channels se quiser unsub later
   };
-   
+     function isPro() {
+  return STATE.profile?.plano === "pro";
+}
   let BAIXA_ATUAL = null;
 let mesDashboardAtual = new Date();
    function renderMesDashboard() {
