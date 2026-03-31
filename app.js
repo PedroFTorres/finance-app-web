@@ -597,6 +597,11 @@ const UI = {
 
    if (btnSave) {
   btnSave.addEventListener("click", async function () {
+     // 🔥 BLOQUEIO PLANO FREE
+if (!isPro() && STATE.contas.length >= 2) {
+  goToUpgrade("Plano Free permite até 2 contas.");
+  return;
+}
 
     const editId = btnSave.dataset.editId;
 
@@ -695,12 +700,7 @@ const UI = {
       const btnAddConta = $(IDS.btnAddConta);
      if (btnAddConta) btnAddConta.addEventListener('click', async () => {
 
-  console.log("CLICK ADD CONTA"); // 👈 TESTE
 
-  if (!isPro() && STATE.contas.length >= 2) {
-    goToUpgrade("Plano Free permite até 2 contas.");
-    return;
-  }
   if (IS_CREATING_CONTA) return;
   IS_CREATING_CONTA = true;
 
