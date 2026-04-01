@@ -1251,6 +1251,15 @@ modal.setAttribute("aria-hidden", "false");
     const tipo = $(IDS.modalTipo).value;
     const descricao = $(IDS.modalDesc).value.trim();
     const valor = Number($(IDS.modalValor).value || 0);
+     // 🔥 BLOQUEIO DE LANÇAMENTOS (PLANO FREE)
+if (!isPro()) {
+  const totalLanc = (STATE.receitas?.length || 0) + (STATE.despesas?.length || 0);
+
+  if (totalLanc >= 50 && !btnSave?.dataset?.editId) {
+    goToUpgrade("Plano Free permite até 50 lançamentos.");
+    return;
+  }
+}
     const data = $(IDS.modalData).value || isoToday();
     const conta_id = $(IDS.modalConta).value || null;
     const categoria_id = $(IDS.modalCategoria).value || null;
