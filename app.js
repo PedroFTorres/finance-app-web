@@ -170,7 +170,7 @@ let FILTRO_LANCAMENTOS = "pendencias";
   function fmtMoney(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
   function fmtDateBR(d) { if (!d) return ''; const x = new Date(d + 'T00:00:00'); return `${String(x.getDate()).padStart(2,'0')}/${String(x.getMonth()+1).padStart(2,'0')}/${x.getFullYear()}`; }
   function isoToday() { return new Date().toISOString().slice(0,10); }
-  function uid() { return (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'id_' + Math.random().toString(36).slice(2,9); }
+  function uid() {return crypto.randomUUID();}
   function safeGet(elId) { const e = $(elId); return e ? e.value : null; }
  function renderMesLanc() {
   const el = document.getElementById("lanc-mes-label");
