@@ -1255,7 +1255,7 @@ modal.setAttribute("aria-hidden", "false");
 if (!isPro()) {
   const totalLanc = (STATE.receitas?.length || 0) + (STATE.despesas?.length || 0);
 
-  if (totalLanc >= 50 && !btnSave?.dataset?.editId) {
+  if (totalLanc >= 1 && !btnSave?.dataset?.editId) {
     goToUpgrade("Plano Free permite até 50 lançamentos.");
     return;
   }
