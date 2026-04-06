@@ -171,7 +171,7 @@ let FILTRO_LANCAMENTOS = "pendencias";
   function fmtDateBR(d) { if (!d) return ''; const x = new Date(d + 'T00:00:00'); return `${String(x.getDate()).padStart(2,'0')}/${String(x.getMonth()+1).padStart(2,'0')}/${x.getFullYear()}`; }
   function isoToday() { return new Date().toISOString().slice(0,10); }
   function uid() {
-  if (crypto && crypto.randomUUID) {return crypto.randomUUID();}
+  if (crypto && crypto.randomUUID) {return ();}
   // fallback seguro (gera UUID válido)
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     const r = Math.random() * 16 | 0;
@@ -1383,8 +1383,8 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
      
     if (recorrencia !== 'none' && parcelas > 1) {
 
-      const recorrenciaId = crypto.randomUUID();
-      const base = new Date(data + 'T00:00:00');
+      const recorrenciaId =uid();
+      const base = new Date (data + 'T00:00:00');
 
       for (let i = 1; i <= parcelas; i++) {
         const dt = new Date(base);
@@ -1548,7 +1548,7 @@ async function transferirEntreContas({
     return;
   }
 
-  const transferenciaId = crypto.randomUUID();
+  const transferenciaId = uid();
 
   // 1️⃣ Registrar transferência
   await supabase.from("transferencias").insert([{
@@ -1563,7 +1563,7 @@ async function transferirEntreContas({
 
   // 2️⃣ Débito na conta origem
   await supabase.from("movimentacoes").insert([{
-    id: crypto.randomUUID(),
+    id: uid(),
     user_id: STATE.user.id,
     conta_id: contaOrigem,
     tipo: "debito",
@@ -1575,7 +1575,7 @@ async function transferirEntreContas({
 
   // 3️⃣ Crédito na conta destino
   await supabase.from("movimentacoes").insert([{
-    id: crypto.randomUUID(),
+    id:uid() ,
     user_id: STATE.user.id,
     conta_id: contaDestino,
     tipo: "credito",
@@ -2073,7 +2073,7 @@ if (jaBaixado && jaBaixado.length > 0) {
 const { error: insertErr } = await supabase
   .from("movimentacoes")
   .insert([{
-    id: crypto.randomUUID(),
+    id:uid() ,
     user_id: STATE.user.id,
     conta_id: contaId,
     tipo: tipo === "receita" ? "credito" : "debito",
