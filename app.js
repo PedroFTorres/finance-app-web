@@ -760,6 +760,20 @@ if (!isPro() && STATE.contas.length >= 2) {
         $(IDS.categoriaNome).value = '';
         await App.reloadAll();
       });
+     // 🔥 BLOQUEIO DO CARTÃO
+const btnCartao = document.getElementById("btn-cartao");
+
+if (btnCartao) {
+  btnCartao.addEventListener("click", () => {
+
+    if (!isPro()) {
+      goToUpgrade("Cartão disponível apenas no plano PRO.");
+      return;
+    }
+
+    window.location.href = "cartao.html";
+  });
+}
 },
   
    populateSelects() {
