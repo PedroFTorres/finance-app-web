@@ -746,3 +746,14 @@ button:hover { opacity: .9; }
   border-radius: 8px;
   font-size: 12px;
 }
+.price-pro {
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: bold;
+  margin: 10px 0;
+}
+.title-pro {
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 22px;
+}
