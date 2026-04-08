@@ -60,6 +60,25 @@
 </div>
 
 <script src="upgrade.js"></script>
+<script>
+async function ativarProManual() {
+  const { data: { user } } = await supabase.auth.getUser();
 
+  const hoje = new Date();
+  const expira = new Date();
+  expira.setDate(hoje.getDate() + 30);
+
+  await supabase
+    .from("user_profiles")
+    .update({
+      plano: "pro",
+      plano_expira_em: expira
+    })
+    .eq("id", user.id);
+
+  alert("Plano PRO ativado por 30 dias!");
+  window.location.href = "app.html";
+}
+</script>
 </body>
 </html>
