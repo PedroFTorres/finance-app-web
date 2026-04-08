@@ -250,7 +250,28 @@ async function requireSessionOrRedirect() {
 
     // ✅ carrega perfil (upgrade)
    STATE.profile = await loadUserProfile();
-     
+     // 🔥 CONTROLE DE EXPIRAÇÃO (PROTEGENDO VIP)
+const hoje = new Date();
+
+if (STATE.profile?.plano === "pro") {
+
+  const expira = STATE.profile.plano_expira_em 
+    ? new Date(STATE.profile.plano_expira_em)
+    : null;
+
+  if (expira && expira < hoje) {
+
+    STATE.profile.plano = "free";
+
+    await supabase
+      .from("user_profiles")
+      .update({ plano: "free" })
+      .eq("id", STATE.user.id);
+
+    console.log("Plano PRO expirado → voltou para FREE");
+  }
+}
+    
      // =========================// CONTROLE DO BOTÃO UPGRADE// =========================
 
 const btnUpgrade = document.querySelector('[onclick*="upgrade.html"]');
