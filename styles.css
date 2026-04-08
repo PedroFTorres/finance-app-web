@@ -763,3 +763,15 @@ button:hover { opacity: .9; }
   right: 20px;
   z-index: 9999;
 }
+/* ===== CORREÇÃO HEADER (botão upgrade sumindo) ===== */
+
+#header-avatar {
+  position: relative;
+  z-index: 1;
+}
+
+.top-bar button {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
