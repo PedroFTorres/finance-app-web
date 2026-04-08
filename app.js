@@ -248,9 +248,18 @@ async function requireSessionOrRedirect() {
     // ✅ usuário autenticado
     STATE.user = data.session.user;
 
-    // ✅ carrega perfil (upgrade)
-   STATE.profile = await loadUserProfile();
-     // 🔥 CONTROLE DE EXPIRAÇÃO (PROTEGENDO VIP)
+ STATE.profile = await loadUserProfile();
+
+// 🔥 CONTROLE DO BOTÃO UPGRADE (AQUI É O LUGAR CERTO)
+const btnUpgrade = document.querySelector('[onclick*="upgrade.html"]');
+
+if (btnUpgrade && STATE.profile) {
+  if (STATE.profile.plano === "pro" || STATE.profile.plano === "vip") {
+    btnUpgrade.style.display = "none";
+  } else {
+    btnUpgrade.style.display = "inline-block";
+  }
+}
 const hoje = new Date();
 
 if (STATE.profile?.plano === "pro") {
@@ -275,6 +284,22 @@ if (STATE.profile?.plano === "pro") {
      // =========================// CONTROLE DO BOTÃO UPGRADE// =========================
 
 const btnUpgrade = document.querySelector('[onclick*="upgrade.html"]');
+
+if (btnUpgrade) {
+  // 🔥 só executa se profile existir
+  if (!STATE.profile) {
+    console.warn("Profile ainda não carregado");
+    return;
+  }
+
+  const plano = STATE.profile.plano;
+
+  if (plano === "pro" || plano === "vip") {
+    btnUpgrade.style.display = "none";
+  } else {
+    btnUpgrade.style.display = "inline-block";
+  }
+}
 
 if (btnUpgrade) {
   if (STATE.profile?.plano === "pro") {
