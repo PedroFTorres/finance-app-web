@@ -33,6 +33,9 @@
      function isPro() {
   return STATE.profile?.plano === "pro";
 }
+   function isVip() {
+  return STATE.profile?.plano === "vip";
+}
   let BAIXA_ATUAL = null;
 let mesDashboardAtual = new Date();
    function renderMesDashboard() {
@@ -766,7 +769,7 @@ const btnCartao = document.getElementById("btn-cartao");
 if (btnCartao) {
   btnCartao.addEventListener("click", () => {
 
-    if (!isPro()) {
+    if (!isPro() && !isVip()) {
       goToUpgrade("Cartão disponível apenas no plano PRO.");
       return;
     }
@@ -1273,7 +1276,7 @@ modal.setAttribute("aria-hidden", "false");
     const descricao = $(IDS.modalDesc).value.trim();
     const valor = Number($(IDS.modalValor).value || 0);
      // 🔥 BLOQUEIO DE LANÇAMENTOS (PLANO FREE)
-if (!isPro()) {
+if (!isPro() && !isVip()) {
   const totalLanc = (STATE.receitas?.length || 0) + (STATE.despesas?.length || 0);
 
   if (totalLanc >= 50 && !saveBtn?.dataset?.editId) {
