@@ -757,3 +757,9 @@ button:hover { opacity: .9; }
   font-weight: bold;
   font-size: 22px;
 }
+.btn-upgrade-top {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  z-index: 9999; /* 🔥 ISSO RESOLVE */
+}
