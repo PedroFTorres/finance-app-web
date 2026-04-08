@@ -280,35 +280,7 @@ if (STATE.profile?.plano === "pro") {
     console.log("Plano PRO expirado → voltou para FREE");
   }
 }
-    
-     // =========================// CONTROLE DO BOTÃO UPGRADE// =========================
-
-const btnUpgrade = document.querySelector('[onclick*="upgrade.html"]');
-
-if (btnUpgrade) {
-  // 🔥 só executa se profile existir
-  if (!STATE.profile) {
-    console.warn("Profile ainda não carregado");
-    return;
-  }
-
-  const plano = STATE.profile.plano;
-
-  if (plano === "pro" || plano === "vip") {
-    btnUpgrade.style.display = "none";
-  } else {
-    btnUpgrade.style.display = "inline-block";
-  }
-}
-
-if (btnUpgrade) {
-  if (STATE.profile?.plano === "pro") {
-    btnUpgrade.style.display = "none";
-  } else {
-    btnUpgrade.style.display = "";
-  }
-}
-     
+         
 // 🔥 deixar STATE global para outros scripts
 window.STATE = STATE;
      
