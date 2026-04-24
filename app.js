@@ -404,7 +404,11 @@ if (emailEl) {
         const { data: movs } = await supabase.from('movimentacoes').select('tipo,valor').eq('conta_id', conta_id);
         let cred = 0, deb = 0;
         (movs || []).forEach(m => { if (m.tipo === 'credito') cred += Number(m.valor||0); else deb += Number(m.valor||0); });
-        const saldo = si + cred - deb;
+        // Se já existem movimentações (incluindo "Saldo inicial"), não somar saldo_inicial novamente
+        // para evitar saldo duplicado.
+        const temMovimentacoes = (movs || []).length > 0;
+        const base = temMovimentacoes ? 0 : si;
+        const saldo = base + cred - deb;
         await supabase.from('contas_bancarias').update({ saldo_atual: saldo }).eq('id', conta_id);
         // atualizar cache local se existir
         const idx = STATE.contas.findIndex(c => c.id === conta_id);
