@@ -410,17 +410,21 @@ if (emailEl) {
         const { data: movs } = await supabase
           .from('movimentacoes')
           .select('tipo,valor,descricao,data')
-          .eq('conta_id', conta_id);
+          .eq('conta_id', conta_id)
+          .eq('user_id', STATE.user.id);
 
         let saldo = si;
         let saldoInicialJaDescontado = false;
+         const moneyEq = (a, b) => Math.abs(Number(a || 0) - Number(b || 0)) < 0.000001;
+        
 
         (movs || []).forEach(m => {
           const valor = Number(m.valor || 0);
           const isSaldoInicialDuplicado =
             !saldoInicialJaDescontado &&
+             m.tipo === 'credito' &&
             (m.descricao || '').trim().toLowerCase() === 'saldo inicial' &&
-            Number(valor) === si &&
+            moneyEq(valor, si) &&
             (!dataSaldo || m.data === dataSaldo);
 
           if (isSaldoInicialDuplicado) {
