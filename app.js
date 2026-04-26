@@ -399,16 +399,39 @@ if (emailEl) {
     async recalc(conta_id) {
       try {
         if (!conta_id) return null;
-        const { data: conta } = await supabase.from('contas_bancarias').select('saldo_inicial').eq('id', conta_id).maybeSingle();
+         const { data: conta } = await supabase
+          .from('contas_bancarias')
+          .select('saldo_inicial,data_saldo')
+          .eq('id', conta_id)
+          .maybeSingle();
         const si = Number(conta?.saldo_inicial || 0);
-        const { data: movs } = await supabase.from('movimentacoes').select('tipo,valor').eq('conta_id', conta_id);
-        let cred = 0, deb = 0;
-        (movs || []).forEach(m => { if (m.tipo === 'credito') cred += Number(m.valor||0); else deb += Number(m.valor||0); });
-        // Se já existem movimentações (incluindo "Saldo inicial"), não somar saldo_inicial novamente
-        // para evitar saldo duplicado.
-        const temMovimentacoes = (movs || []).length > 0;
-        const base = temMovimentacoes ? 0 : si;
-        const saldo = base + cred - deb;
+         const dataSaldo = conta?.data_saldo || null;
+
+        const { data: movs } = await supabase
+          .from('movimentacoes')
+          .select('tipo,valor,descricao,data')
+          .eq('conta_id', conta_id);
+
+        let saldo = si;
+        let saldoInicialJaDescontado = false;
+
+        (movs || []).forEach(m => {
+          const valor = Number(m.valor || 0);
+          const isSaldoInicialDuplicado =
+            !saldoInicialJaDescontado &&
+            (m.descricao || '').trim().toLowerCase() === 'saldo inicial' &&
+            Number(valor) === si &&
+            (!dataSaldo || m.data === dataSaldo);
+
+          if (isSaldoInicialDuplicado) {
+            saldoInicialJaDescontado = true;
+            return;
+          }
+
+          if (m.tipo === 'credito') saldo += valor;
+          else saldo -= valor;
+        });
+
         await supabase.from('contas_bancarias').update({ saldo_atual: saldo }).eq('id', conta_id);
         // atualizar cache local se existir
         const idx = STATE.contas.findIndex(c => c.id === conta_id);
