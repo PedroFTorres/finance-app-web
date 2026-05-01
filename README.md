@@ -62,4 +62,18 @@ Pequeno app para controle de contas, receitas e despesas.
 3. Semana 3: controle de acesso premium + onboarding e pricing.
 4. Semana 4: métricas SaaS + testes críticos + monitoramento.
 
+## Auditoria extra de policies (recomendado)
+
+Além do `rls-check.sql`, rode `rls-audit.sql` para achar riscos comuns:
+
+- Policies com `qual = true` ou `with_check = true` (acesso amplo).
+- Policies duplicadas para mesma tabela/comando/role (sobreposição difícil de manter).
+- Policies sem `auth.uid()` (exceto `service_role`) que merecem revisão manual.
+
+Se aparecer policy ampla para `{authenticated}` ou `{public}` com `true`, o ideal é trocar por filtro por usuário, por exemplo:
+
+- `USING (auth.uid() = user_id)` para `SELECT/UPDATE/DELETE`.
+- `WITH CHECK (auth.uid() = user_id)` para `INSERT/UPDATE`.
+
+
 
