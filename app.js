@@ -36,6 +36,12 @@
    function isVip() {
   return STATE.profile?.plano === "vip";
 }
+   function hasPremiumAccess() {
+  const plano = String(STATE.profile?.plano || "").toLowerCase();
+  const status = String(STATE.profile?.subscription_status || "").toLowerCase();
+  const premiumPlan = plano === "pro" || plano === "vip";
+  return premiumPlan && status === "active";
+}
   let BAIXA_ATUAL = null;
 let mesDashboardAtual = new Date();
    function renderMesDashboard() {
@@ -254,7 +260,7 @@ async function requireSessionOrRedirect() {
 const btnUpgrade = document.querySelector('[onclick*="upgrade.html"]');
 
 if (btnUpgrade && STATE.profile) {
-  if (STATE.profile.plano === "pro" || STATE.profile.plano === "vip") {
+  if (hasPremiumAccess()) {
     btnUpgrade.style.display = "none";
   } else {
     btnUpgrade.style.display = "inline-block";
@@ -657,7 +663,7 @@ const UI = {
    if (btnSave) {
   btnSave.addEventListener("click", async function () {
      // 🔥 BLOQUEIO PLANO FREE
-if (!isPro() && !isVip() && STATE.contas.length >= 2) {
+if (!hasPremiumAccess() && STATE.contas.length >= 2) {
   goToUpgrade("Plano Free permite até 2 contas.");
   return;
 }
@@ -817,7 +823,7 @@ const btnCartao = document.getElementById("btn-cartao");
 if (btnCartao) {
   btnCartao.addEventListener("click", () => {
 
-    if (!isPro() && !isVip()) {
+    if (!hasPremiumAccess()) {
       goToUpgrade("Cartão disponível apenas no plano PRO.");
       return;
     }
@@ -1324,7 +1330,7 @@ modal.setAttribute("aria-hidden", "false");
     const descricao = $(IDS.modalDesc).value.trim();
     const valor = Number($(IDS.modalValor).value || 0);
      // 🔥 BLOQUEIO DE LANÇAMENTOS (PLANO FREE)
-if (!isPro() && !isVip()) {
+if (!hasPremiumAccess()) {
   const totalLanc = (STATE.receitas?.length || 0) + (STATE.despesas?.length || 0);
 
   if (totalLanc >= 50 && !saveBtn?.dataset?.editId) {
@@ -2418,4 +2424,3 @@ document.getElementById("dash-next")?.addEventListener("click", async () => {
 });
 
 })(); 
-
