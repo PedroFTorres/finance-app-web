@@ -1,10 +1,18 @@
-const CHECKOUT_URL = "https://mpago.li/1BXpNxM";
+const CHECKOUT_URL = ""; // Configure aqui quando escolher Mercado Pago, Stripe, Asaas etc.
 const ENABLE_MANUAL_CONFIRM = new URLSearchParams(window.location.search).get("manual") === "1";
 
   function setupCheckoutButton() {
   const btn = document.getElementById("btn-assinar");
   if (!btn) return;
+    
   btn.onclick = () => {
+  if (!CHECKOUT_URL) {
+      alert(
+        "Checkout ainda não configurado. Escolha e configure uma plataforma de pagamento antes de vender o plano PRO."
+      );
+      return;
+    }
+    
     window.open(CHECKOUT_URL, "_blank", "noopener,noreferrer");
   };
 }
@@ -20,13 +28,14 @@ async function ativarProManual() {
   const expira = new Date();
   expira.setDate(expira.getDate() + 30);
   
-    const { error } = await supabase
+  const { error } = await supabase
     .from("user_profiles")
     .update({
       plano: "pro",
+      plano_expira_em: expira.toISOString(),
       subscription_status: "active",
-      subscription_ends_at: expiraEm.toISOString()
-    })
+      subscription_ends_at: expira.toISOString()
+      })
     .eq("id", user.id);
 
   if (error) {
