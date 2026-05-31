@@ -6,7 +6,7 @@ Pequeno app para controle de contas, receitas e despesas.
 
 
 ## Como usar
-1. Substitua `SUPABASE_URL` e `SUPABASE_ANON_KEY` em `supabase.js` pelos valores do seu projeto.
+1. 1. Configure `SUPABASE_URL` e `SUPABASE_ANON_KEY` em `config.js`.
 2. Suba os arquivos no repositório GitHub e publique no GitHub Pages (ou use qualquer host estático).
 3. Crie pelo menos uma conta em `contas_bancarias` para testar.
 
