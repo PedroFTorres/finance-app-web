@@ -39,13 +39,14 @@ async function ativarProManual() {
     .eq("id", user.id);
 
   if (error) {
-    console.error("Falha ao atualizar assinatura:", error);
-    alert("Não foi possível ativar seu plano agora. Tente novamente.");
+    console.error("Falha ao ativar PRO manual:", error);
+    alert("Não foi possível ativar o plano agora. Tente novamente.");
     return;
   }
-   alert("Plano PRO ativado por 30 dias!");
   
+   alert("Plano PRO de teste ativado por 30 dias!");
   window.location.href = "app.html";
+  
   }
 
 function setupManualConfirmButton() {
@@ -54,6 +55,7 @@ function setupManualConfirmButton() {
 
   if (ENABLE_MANUAL_CONFIRM) {
     btn.classList.remove("hidden");
+    btn.textContent = "Ativar PRO teste";
     btn.onclick = ativarProManual;
   } else {
     btn.classList.add("hidden");
