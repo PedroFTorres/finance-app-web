@@ -66,37 +66,7 @@
 <script src="config.js"></script>
 <script src="supabase.js"></script>
 <script src="upgrade.js"></script>
+
   
-<script>
-async function ativarProManual() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    alert("Sessão inválida. Faça login novamente.");
-    window.location.href = "login.html";
-    return;
-  }
-
-   expira.setDate(expira.getDate() + 30);
-
-
-  const { error } = await supabase
-    .from("user_profiles")
-    .update({
-      plano: "pro",
-      subscription_status: "active",
-      subscription_ends_at: expira.toISOString()
-    })
-    .eq("id", user.id);
-  
-  if (error) {
-    console.error("Falha ao ativar PRO manual:", error);
-    alert("Não foi possível ativar o plano agora. Tente novamente.");
-    return;
-  }
-
-  alert("Plano PRO ativado por 30 dias!");
-  window.location.href = "app.html";
-}
-</script>
 </body>
 </html>
