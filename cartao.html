@@ -191,7 +191,36 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="supabase.js"></script>
-<script src="cartao.js"></script>
+<script type="module">
+  function hasPremiumAccess(profile) {
+    const plano = String(profile?.plano || "").toLowerCase();
+    const status = String(profile?.subscription_status || "").toLowerCase();
+    return (plano === "pro" || plano === "vip") && status === "active";
+  }
+
+  const { data: sessionResp } = await window.supabase.auth.getSession();
+
+  if (!sessionResp?.session) {
+    window.location.href = "login.html";
+  } else {
+    const { data: profile, error } = await window.supabase
+      .from("user_profiles")
+      .select("plano, subscription_status")
+      .eq("id", sessionResp.session.user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Erro ao validar acesso premium:", error);
+      alert("Nao foi possivel validar seu plano agora. Tente novamente.");
+      window.location.href = "app.html";
+    } else if (!hasPremiumAccess(profile)) {
+      alert("Cartao disponivel apenas no plano PRO.");
+      window.location.href = "upgrade.html";
+    } else {
+      await import("./cartao.js");
+    }
+  }
+</script>
   
 <!-- ✅ MODAL FECHAR FATURA (LUGAR CORRETO) -->
 <div id="modal-conta-fatura" class="modal hidden">
