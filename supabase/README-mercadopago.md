@@ -31,9 +31,11 @@ supabase secrets set MERCADO_PAGO_WEBHOOK_SECRET="..."
 ## Deploy
 
 ```bash
-supabase functions deploy create-mercadopago-checkout
-supabase functions deploy mercadopago-webhook
+supabase functions deploy create-mercadopago-checkout --project-ref SEU-PROJECT-REF
+supabase functions deploy mercadopago-webhook --project-ref SEU-PROJECT-REF --no-verify-jwt
 ```
+
+A funcao de checkout deve exigir JWT do usuario logado. O webhook precisa ser publico porque o Mercado Pago nao envia JWT do Supabase; a validacao segura acontece consultando o pagamento na API do Mercado Pago e, em producao, pela assinatura `MERCADO_PAGO_WEBHOOK_SECRET`.
 
 Depois do deploy, cadastre no painel do Mercado Pago a URL:
 
