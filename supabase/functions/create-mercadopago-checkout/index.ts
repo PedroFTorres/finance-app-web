@@ -53,9 +53,6 @@ Deno.serve(async (req) => {
           unit_price: proPrice,
         },
       ],
-      payer: {
-        email: user.email,
-      },
       back_urls: {
         success: successUrl,
         failure: failureUrl,
@@ -89,10 +86,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const isTestToken = mercadoPagoAccessToken.startsWith("TEST-");
-    const checkoutUrl = isTestToken
-      ? mpBody.sandbox_init_point || mpBody.init_point
-      : mpBody.init_point || mpBody.sandbox_init_point;
+    const checkoutUrl = mpBody.sandbox_init_point || mpBody.init_point;
 
     return jsonResponse({
       preference_id: mpBody.id,
