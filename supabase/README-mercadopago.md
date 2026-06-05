@@ -19,7 +19,6 @@ Configure no Supabase, nunca no front-end e nunca no GitHub:
 
 ```bash
 supabase secrets set MERCADO_PAGO_ACCESS_TOKEN="TEST-..."
-supabase secrets set SUPABASE_SERVICE_ROLE_KEY="..."
 supabase secrets set APP_BASE_URL="https://seu-dominio.com"
 supabase secrets set FUNCTION_BASE_URL="https://SEU-PROJETO.supabase.co/functions/v1"
 supabase secrets set PRO_PRICE_BRL="19.90"
@@ -27,7 +26,7 @@ supabase secrets set PRO_PLAN_DAYS="30"
 supabase secrets set MERCADO_PAGO_WEBHOOK_SECRET="..."
 ```
 
-`SUPABASE_URL` e `SUPABASE_ANON_KEY` costumam existir automaticamente no ambiente das Edge Functions.
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` sao variaveis reservadas do Supabase e costumam existir automaticamente no ambiente das Edge Functions. Nao crie secrets manuais com prefixo `SUPABASE_`.
 
 ## Deploy
 
