@@ -89,10 +89,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    const isTestToken = mercadoPagoAccessToken.startsWith("TEST-");
+    const checkoutUrl = isTestToken
+      ? mpBody.sandbox_init_point || mpBody.init_point
+      : mpBody.init_point || mpBody.sandbox_init_point;
+
     return jsonResponse({
       preference_id: mpBody.id,
       init_point: mpBody.init_point,
       sandbox_init_point: mpBody.sandbox_init_point,
+      checkout_url: checkoutUrl,
     });
   } catch (error) {
     console.error("create-mercadopago-checkout error:", error);
