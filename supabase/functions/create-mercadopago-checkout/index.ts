@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const checkoutUrl = mpBody.sandbox_init_point || mpBody.init_point;
+    const checkoutUrl = mpBody.init_point || mpBody.sandbox_init_point;
 
     return jsonResponse({
       preference_id: mpBody.id,
