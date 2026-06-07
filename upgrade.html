@@ -10,7 +10,7 @@
 
 <div class="upgrade-container">
 
-  <h1>Desbloqueie todo o poder do Arolix 🚀</h1>
+  <h1>Desbloqueie todo o poder do Arolix</h1>
   <p>Tenha controle financeiro completo sem limitações</p>
 
   <div class="plans">
@@ -38,7 +38,7 @@
       <div class="badge">MAIS USADO</div>
 
       <h2 class="title-pro">Plano PRO</h2>
-     <h3 class="price-pro">R$ 19,90/mês</h3>
+     <h3 class="price-pro">R$ 1,00</h3>
 
       <ul>
         <li>✔ Contas ilimitadas</li>
@@ -50,16 +50,27 @@
       </ul>
 
      <button id="btn-assinar" class="btn-primary">
-  🚀 Desbloquear tudo
+  Desbloquear tudo
 </button>
 
     </div>
 
   </div>
 
+  <section id="payment-panel" class="payment-panel hidden" aria-live="polite">
+    <div class="payment-panel-header">
+      <h2>Pagamento PRO</h2>
+      <button id="btn-fechar-pagamento" class="btn-link" type="button">Fechar</button>
+    </div>
+    <p id="payment-status" class="payment-status">Carregando pagamento seguro...</p>
+    <div id="payment-brick-container"></div>
+    <div id="pix-result" class="pix-result hidden"></div>
+  </section>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
 <script src="config.js"></script>
 <script src="supabase.js"></script>
 <script src="upgrade.js"></script>
