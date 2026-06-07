@@ -58,7 +58,6 @@ Deno.serve(async (req) => {
         failure: failureUrl,
         pending: pendingUrl,
       },
-      auto_return: "approved",
       notification_url: `${functionBaseUrl}/mercadopago-webhook`,
       external_reference: user.id,
       metadata: {
