@@ -17,7 +17,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = requiredEnv("SUPABASE_URL");
     const supabaseAnonKey = requiredEnv("SUPABASE_ANON_KEY");
     const mercadoPagoAccessToken = requiredEnv("MERCADO_PAGO_ACCESS_TOKEN");
-    const appBaseUrl = requiredEnv("APP_BASE_URL").replace(/\/$/, "");
     const functionBaseUrl = Deno.env.get("FUNCTION_BASE_URL")?.replace(/\/$/, "") ||
       `${supabaseUrl}/functions/v1`;
     const proPrice = Number(Deno.env.get("PRO_PRICE_BRL") || "19.90");
@@ -38,10 +37,6 @@ Deno.serve(async (req) => {
     }
 
     const user = userData.user;
-    const successUrl = `${appBaseUrl}/upgrade.html?payment=success`;
-    const failureUrl = `${appBaseUrl}/upgrade.html?payment=failure`;
-    const pendingUrl = `${appBaseUrl}/upgrade.html?payment=pending`;
-
     const preference = {
       items: [
         {
@@ -53,11 +48,6 @@ Deno.serve(async (req) => {
           unit_price: proPrice,
         },
       ],
-      back_urls: {
-        success: successUrl,
-        failure: failureUrl,
-        pending: pendingUrl,
-      },
       notification_url: `${functionBaseUrl}/mercadopago-webhook`,
       external_reference: user.id,
       metadata: {
