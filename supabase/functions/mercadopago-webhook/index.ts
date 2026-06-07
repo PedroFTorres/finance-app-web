@@ -85,6 +85,41 @@ function addDays(date: Date, days: number) {
   return next;
 }
 
+async function logPaymentEvent(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  event: {
+    paymentId?: string;
+    eventType: string;
+    status?: string;
+    externalReference?: string;
+    amount?: number;
+    expectedAmount?: number;
+    rawPayload?: unknown;
+    errorMessage?: string;
+  },
+) {
+  try {
+    const { error } = await supabaseAdmin
+      .from("mercadopago_payment_events")
+      .insert({
+        payment_id: event.paymentId || null,
+        event_type: event.eventType,
+        status: event.status || null,
+        external_reference: event.externalReference || null,
+        amount: event.amount ?? null,
+        expected_amount: event.expectedAmount ?? null,
+        raw_payload: event.rawPayload || null,
+        error_message: event.errorMessage || null,
+      });
+
+    if (error) {
+      console.warn("Unable to log Mercado Pago event:", error);
+    }
+  } catch (error) {
+    console.warn("Mercado Pago event logging failed:", error);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -100,16 +135,26 @@ Deno.serve(async (req) => {
     const supabaseServiceRoleKey = requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
     const expectedPrice = Number(Deno.env.get("PRO_PRICE_BRL") || "19.90");
     const planDays = Number(Deno.env.get("PRO_PLAN_DAYS") || "30");
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     const body = (await req.json().catch(() => ({}))) as MercadoPagoNotification;
     const paymentId = getPaymentId(req, body);
 
     if (!paymentId) {
+      await logPaymentEvent(supabaseAdmin, {
+        eventType: "missing_payment_id",
+        rawPayload: body,
+      });
       return jsonResponse({ received: true, ignored: "missing payment id" });
     }
 
     const isSignatureValid = await verifyMercadoPagoSignature(req, paymentId);
     if (!isSignatureValid) {
+      await logPaymentEvent(supabaseAdmin, {
+        paymentId,
+        eventType: "invalid_signature",
+        rawPayload: body,
+      });
       return jsonResponse({ error: "Invalid webhook signature" }, 401);
     }
 
@@ -122,8 +167,29 @@ Deno.serve(async (req) => {
     const payment = await paymentResponse.json();
     if (!paymentResponse.ok) {
       console.error("Mercado Pago payment fetch error:", payment);
+      await logPaymentEvent(supabaseAdmin, {
+        paymentId,
+        eventType: "payment_fetch_error",
+        rawPayload: payment,
+        errorMessage: "Unable to fetch payment from Mercado Pago",
+      });
       return jsonResponse({ error: "Unable to fetch payment" }, 502);
     }
+
+    const userId = payment.external_reference ||
+      payment.metadata?.supabase_user_id ||
+      payment.metadata?.user_id;
+    const paidAmount = Number(payment.transaction_amount || 0);
+
+    await logPaymentEvent(supabaseAdmin, {
+      paymentId,
+      eventType: "payment_received",
+      status: payment.status,
+      externalReference: userId,
+      amount: paidAmount,
+      expectedAmount: expectedPrice,
+      rawPayload: payment,
+    });
 
     if (payment.status !== "approved") {
       return jsonResponse({
@@ -133,18 +199,31 @@ Deno.serve(async (req) => {
       });
     }
 
-    const userId = payment.external_reference ||
-      payment.metadata?.supabase_user_id ||
-      payment.metadata?.user_id;
-
     if (!userId) {
       console.error("Approved payment without user reference:", paymentId);
+      await logPaymentEvent(supabaseAdmin, {
+        paymentId,
+        eventType: "missing_user_reference",
+        status: payment.status,
+        amount: paidAmount,
+        expectedAmount: expectedPrice,
+        rawPayload: payment,
+      });
       return jsonResponse({ error: "Payment missing user reference" }, 422);
     }
 
-    const paidAmount = Number(payment.transaction_amount || 0);
     if (Math.abs(paidAmount - expectedPrice) > 0.01) {
       console.error("Unexpected payment amount:", { paymentId, paidAmount, expectedPrice });
+      await logPaymentEvent(supabaseAdmin, {
+        paymentId,
+        eventType: "unexpected_amount",
+        status: payment.status,
+        externalReference: userId,
+        amount: paidAmount,
+        expectedAmount: expectedPrice,
+        rawPayload: payment,
+        errorMessage: `Paid amount ${paidAmount} differs from expected ${expectedPrice}`,
+      });
       return jsonResponse({ error: "Unexpected payment amount" }, 422);
     }
 
@@ -153,15 +232,23 @@ Deno.serve(async (req) => {
       : new Date();
     const paymentEndsAt = addDays(approvedAt, planDays);
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("user_profiles")
-      .select("subscription_ends_at, plano_expira_em")
+      .select("plano, subscription_ends_at, plano_expira_em")
       .eq("id", userId)
       .maybeSingle();
 
     if (profileError) {
       console.error("Profile fetch error:", profileError);
+      await logPaymentEvent(supabaseAdmin, {
+        paymentId,
+        eventType: "profile_fetch_error",
+        status: payment.status,
+        externalReference: userId,
+        amount: paidAmount,
+        expectedAmount: expectedPrice,
+        errorMessage: profileError.message,
+      });
       return jsonResponse({ error: "Unable to fetch profile" }, 500);
     }
 
@@ -169,11 +256,12 @@ Deno.serve(async (req) => {
     const currentEndDate = currentEndsAt ? new Date(currentEndsAt) : null;
     const finalEndsAt =
       currentEndDate && currentEndDate > paymentEndsAt ? currentEndDate : paymentEndsAt;
+    const nextPlan = profile?.plano === "vip" ? "vip" : "pro";
 
     const { error: updateError } = await supabaseAdmin
       .from("user_profiles")
       .update({
-        plano: "pro",
+        plano: nextPlan,
         subscription_status: "active",
         subscription_ends_at: finalEndsAt.toISOString(),
         plano_expira_em: finalEndsAt.toISOString(),
@@ -182,14 +270,32 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       console.error("Profile update error:", updateError);
+      await logPaymentEvent(supabaseAdmin, {
+        paymentId,
+        eventType: "profile_update_error",
+        status: payment.status,
+        externalReference: userId,
+        amount: paidAmount,
+        expectedAmount: expectedPrice,
+        errorMessage: updateError.message,
+      });
       return jsonResponse({ error: "Unable to activate profile" }, 500);
     }
+
+    await logPaymentEvent(supabaseAdmin, {
+      paymentId,
+      eventType: "profile_activated",
+      status: payment.status,
+      externalReference: userId,
+      amount: paidAmount,
+      expectedAmount: expectedPrice,
+    });
 
     return jsonResponse({
       received: true,
       payment_id: paymentId,
       user_id: userId,
-      plan: "pro",
+      plan: nextPlan,
       subscription_ends_at: finalEndsAt.toISOString(),
     });
   } catch (error) {
