@@ -52,13 +52,14 @@ function showPaymentPanel() {
   const panel = document.getElementById("payment-panel");
   if (!panel) return;
   panel.classList.remove("hidden");
-  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  document.body.style.overflow = "hidden";
 }
 
 function hidePaymentPanel() {
   const panel = document.getElementById("payment-panel");
   if (!panel) return;
   panel.classList.add("hidden");
+  document.body.style.overflow = "";
 }
 
 function showPixResult(payment) {
@@ -231,8 +232,18 @@ function setupCheckoutButton() {
 
 function setupClosePaymentButton() {
   const btn = document.getElementById("btn-fechar-pagamento");
+  const panel = document.getElementById("payment-panel");
+
   if (!btn) return;
   btn.onclick = hidePaymentPanel;
+
+  if (panel) {
+    panel.onclick = (event) => {
+      if (event.target === panel) {
+        hidePaymentPanel();
+      }
+    };
+  }
 }
 
 showPaymentReturnMessage();
