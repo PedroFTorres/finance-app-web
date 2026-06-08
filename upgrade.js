@@ -3,6 +3,7 @@ const PAYMENT_BRICK_CONTAINER_ID = "payment-brick-container";
 
 let paymentBrickController = null;
 let isPaymentBrickLoading = false;
+let premiumPollingTimer = null;
 
 function getPaymentMessage() {
   const status = new URLSearchParams(window.location.search).get("payment");
@@ -58,6 +59,7 @@ function showPaymentPanel() {
 function hidePaymentPanel() {
   const panel = document.getElementById("payment-panel");
   if (!panel) return;
+  stopPremiumPolling();
   panel.classList.add("hidden");
   document.body.style.overflow = "";
 }
@@ -80,10 +82,85 @@ function showPixResult(payment) {
   pixBox.classList.remove("hidden");
   pixBox.innerHTML = `
     <h3>Pagamento Pix gerado</h3>
+    <p class="pix-waiting">Depois de pagar, mantenha esta janela aberta. O Arolix vai confirmar automaticamente e liberar seu PRO.</p>
     ${qrCodeBase64 ? `<img src="data:image/png;base64,${qrCodeBase64}" alt="QR Code Pix">` : ""}
     ${qrCode ? `<textarea readonly>${qrCode}</textarea>` : ""}
     ${ticketUrl ? `<a href="${ticketUrl}" target="_blank" rel="noopener">Abrir instrucoes de pagamento</a>` : ""}
   `;
+}
+
+function isPremiumProfile(profile) {
+  if (!profile) return false;
+  const plan = String(profile.plano || "").toLowerCase();
+  return (
+    (plan === "pro" || plan === "vip") &&
+    profile.subscription_status === "active"
+  );
+}
+
+function stopPremiumPolling() {
+  if (!premiumPollingTimer) return;
+  clearInterval(premiumPollingTimer);
+  premiumPollingTimer = null;
+}
+
+async function checkPremiumActivation() {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData?.user?.id;
+
+  if (!userId) return false;
+
+  const { data: profile, error } = await supabase
+    .from("user_profiles")
+    .select("plano, subscription_status, subscription_ends_at, plano_expira_em")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Nao foi possivel verificar liberacao PRO:", error);
+    return false;
+  }
+
+  return isPremiumProfile(profile);
+}
+
+function waitForPremiumActivation() {
+  stopPremiumPolling();
+
+  let attempts = 0;
+  const maxAttempts = 90;
+
+  setPaymentStatus(
+    "Pagamento enviado. Aguardando confirmacao automatica do Mercado Pago...",
+    "pending",
+  );
+
+  premiumPollingTimer = setInterval(async () => {
+    attempts += 1;
+
+    try {
+      const isActive = await checkPremiumActivation();
+
+      if (isActive) {
+        stopPremiumPolling();
+        setPaymentStatus("Pagamento confirmado. Abrindo o Arolix PRO...", "success");
+        setTimeout(() => {
+          window.location.href = "app.html";
+        }, 1200);
+        return;
+      }
+    } catch (error) {
+      console.warn("Verificacao de PRO falhou:", error);
+    }
+
+    if (attempts >= maxAttempts) {
+      stopPremiumPolling();
+      setPaymentStatus(
+        "Pagamento enviado. Se o PRO nao abrir automaticamente, recarregue o app em alguns instantes.",
+        "pending",
+      );
+    }
+  }, 4000);
 }
 
 async function processPayment(formData, selectedPaymentMethod) {
@@ -185,14 +262,16 @@ async function initializePaymentBrick() {
                     }, 2500);
                   } else if (result.status === "pending") {
                     setPaymentStatus(
-                      "Pagamento pendente. Assim que o Mercado Pago confirmar, seu PRO sera liberado.",
+                      "Pagamento pendente. Aguardando confirmacao automatica do Mercado Pago...",
                       "pending",
                     );
+                    waitForPremiumActivation();
                   } else {
                     setPaymentStatus(
                       `Pagamento recebido com status: ${result.status || "em analise"}.`,
                       "pending",
                     );
+                    waitForPremiumActivation();
                   }
 
                   resolve();
