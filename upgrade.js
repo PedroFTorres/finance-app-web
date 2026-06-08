@@ -114,6 +114,13 @@ async function processPayment(formData, selectedPaymentMethod) {
 
   if (!response.ok) {
     console.error("Detalhes do erro de pagamento:", data);
+
+    if (data?.error === "PIX_NOT_ENABLED_ON_MERCADO_PAGO_ACCOUNT") {
+      throw new Error(
+        "Pix ainda nao esta habilitado na conta Mercado Pago recebedora. Cadastre uma chave Pix no Mercado Pago e tente novamente.",
+      );
+    }
+
     throw new Error(data?.details?.message || data?.error || "Pagamento recusado");
   }
 
@@ -193,7 +200,8 @@ async function initializePaymentBrick() {
                 .catch((error) => {
                   console.error("Erro no pagamento:", error);
                   setPaymentStatus(
-                    "Nao foi possivel concluir o pagamento. Confira os dados e tente novamente.",
+                    error?.message ||
+                      "Nao foi possivel concluir o pagamento. Confira os dados e tente novamente.",
                     "error",
                   );
                   reject(error);
