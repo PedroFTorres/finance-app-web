@@ -134,9 +134,22 @@ Deno.serve(async (req) => {
     const payment = await paymentResponse.json();
     if (!paymentResponse.ok) {
       console.error("Mercado Pago payment error:", payment);
+      const mercadoPagoMessage = String(payment?.message || "");
+      const isPixKeyMissing = mercadoPagoMessage.includes(
+        "Collector user without key enabled for QR render",
+      );
+
       return jsonResponse(
-        { error: "Unable to create Mercado Pago payment", details: payment },
-        502,
+        {
+          error: isPixKeyMissing
+            ? "PIX_NOT_ENABLED_ON_MERCADO_PAGO_ACCOUNT"
+            : "Unable to create Mercado Pago payment",
+          message: isPixKeyMissing
+            ? "A conta Mercado Pago recebedora ainda nao tem chave Pix habilitada para gerar QR Code."
+            : undefined,
+          details: payment,
+        },
+        isPixKeyMissing ? 400 : 502,
       );
     }
 
