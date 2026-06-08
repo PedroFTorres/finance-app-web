@@ -87,20 +87,34 @@ function showPixResult(payment) {
 }
 
 async function processPayment(formData, selectedPaymentMethod) {
-  const { data, error } = await supabase.functions.invoke(PAYMENT_FUNCTION_NAME, {
-    method: "POST",
-    body: {
-      selected_payment_method: selectedPaymentMethod,
-      form_data: formData,
-    },
-  });
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData?.session?.access_token;
 
-  if (error) {
-    throw error;
+  if (!accessToken) {
+    throw new Error("Sessao expirada. Faca login novamente.");
   }
 
-  if (data?.error) {
-    throw new Error(data.error);
+  const response = await fetch(
+    `${window.APP_CONFIG.SUPABASE_URL}/functions/v1/${PAYMENT_FUNCTION_NAME}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: window.APP_CONFIG.SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        selected_payment_method: selectedPaymentMethod,
+        form_data: formData,
+      }),
+    },
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    console.error("Detalhes do erro de pagamento:", data);
+    throw new Error(data?.details?.message || data?.error || "Pagamento recusado");
   }
 
   return data;
