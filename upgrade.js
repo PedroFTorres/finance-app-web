@@ -140,8 +140,6 @@ async function initializePaymentBrick() {
           paymentMethods: {
             bankTransfer: "pix",
             creditCard: "all",
-            debitCard: "all",
-            ticket: "bolbradesco",
           },
         },
         callbacks: {
