@@ -88,14 +88,17 @@ Deno.serve(async (req) => {
     const body = (await req.json().catch(() => ({}))) as BrickPaymentBody;
     const formData = body.form_data || {};
     const payer = (formData.payer || {}) as Record<string, unknown>;
+    const paymentMethodId = String(formData.payment_method_id || "");
+    const isCardPayment = Boolean(formData.token);
+
+    if (!paymentMethodId) {
+      return jsonResponse({ error: "Missing payment method" }, 400);
+    }
 
     const paymentPayload = cleanObject({
       transaction_amount: proPrice,
       description: `Arolix PRO - ${planDays} dias`,
-      token: formData.token,
-      installments: toNumber(formData.installments, 1),
-      payment_method_id: formData.payment_method_id,
-      issuer_id: formData.issuer_id,
+      payment_method_id: paymentMethodId,
       payer: {
         email: payer.email || user.email,
         first_name: payer.first_name,
@@ -109,6 +112,13 @@ Deno.serve(async (req) => {
         plan_days: planDays,
       },
       notification_url: `${functionBaseUrl}/mercadopago-webhook`,
+      ...(isCardPayment
+        ? {
+          token: formData.token,
+          installments: toNumber(formData.installments, 1),
+          issuer_id: formData.issuer_id,
+        }
+        : {}),
     });
 
     const paymentResponse = await fetch(MERCADO_PAGO_PAYMENTS_URL, {
