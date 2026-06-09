@@ -49,6 +49,47 @@ function setPaymentStatus(message, type = "") {
   status.className = `payment-status ${type}`.trim();
 }
 
+function getRejectedPaymentMessage(result) {
+  const statusDetail = String(
+    result?.status_detail || result?.payment?.status_detail || "",
+  );
+
+  const messages = {
+    cc_rejected_bad_filled_card_number:
+      "Pagamento recusado. Confira o numero do cartao e tente novamente.",
+    cc_rejected_bad_filled_date:
+      "Pagamento recusado. Confira a validade do cartao e tente novamente.",
+    cc_rejected_bad_filled_security_code:
+      "Pagamento recusado. Confira o codigo de seguranca e tente novamente.",
+    cc_rejected_bad_filled_other:
+      "Pagamento recusado. Confira os dados do cartao e tente novamente.",
+    cc_rejected_call_for_authorize:
+      "Pagamento recusado pelo banco. Autorize a compra com o banco ou use outro cartao.",
+    cc_rejected_card_disabled:
+      "Pagamento recusado. O cartao esta desabilitado. Use outro cartao ou Pix.",
+    cc_rejected_duplicated_payment:
+      "Pagamento recusado por tentativa duplicada. Aguarde alguns minutos ou use outro meio de pagamento.",
+    cc_rejected_high_risk:
+      "Pagamento recusado pelos controles de seguranca do Mercado Pago. Use outro cartao ou Pix.",
+    cc_rejected_insufficient_amount:
+      "Pagamento recusado por limite insuficiente. Use outro cartao ou Pix.",
+    cc_rejected_invalid_installments:
+      "Pagamento recusado para o parcelamento escolhido. Tente em 1 vez ou use outro cartao.",
+    cc_rejected_max_attempts:
+      "Pagamento recusado por muitas tentativas. Aguarde alguns minutos ou use outro cartao.",
+    cc_rejected_other_reason:
+      "Pagamento recusado pelo Mercado Pago. Use outro cartao ou Pix.",
+  };
+
+  return messages[statusDetail] || "Pagamento recusado. Use outro cartao ou Pix.";
+}
+
+function isRejectedPaymentStatus(status) {
+  return ["rejected", "cancelled", "refunded", "charged_back"].includes(
+    String(status || "").toLowerCase(),
+  );
+}
+
 function showPaymentPanel() {
   const panel = document.getElementById("payment-panel");
   if (!panel) return;
@@ -320,6 +361,9 @@ async function initializePaymentBrick() {
                       "pending",
                     );
                     waitForPremiumActivation();
+                  } else if (isRejectedPaymentStatus(result.status)) {
+                    stopPremiumPolling();
+                    setPaymentStatus(getRejectedPaymentMessage(result), "error");
                   } else {
                     setPaymentStatus(
                       `Pagamento recebido com status: ${result.status || "em analise"}.`,
