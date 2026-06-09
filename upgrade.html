@@ -123,6 +123,18 @@
       color: #b91c1c;
     }
 
+    .payment-pix-note {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-left: 4px solid var(--roxo, #7a4dff);
+      border-radius: 8px;
+      background: #ffffff;
+      color: #4b5563;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
     .payment-security-strip {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -147,11 +159,17 @@
 
     .pix-result {
       margin-top: 18px;
-      padding: 16px;
-      border: 1px solid rgba(122, 77, 255, 0.18);
+      padding: 18px;
+      border: 2px solid rgba(122, 77, 255, 0.28);
       border-radius: 8px;
       background: #ffffff;
       text-align: left;
+      box-shadow: 0 14px 32px rgba(52, 34, 112, 0.12);
+      scroll-margin-top: 14px;
+    }
+
+    .pix-result-highlight {
+      animation: pixResultPulse 1.1s ease-in-out 2;
     }
 
     .pix-result h3 {
@@ -172,7 +190,11 @@
       max-width: 220px;
       width: 100%;
       height: auto;
-      margin-bottom: 12px;
+      margin: 8px auto 14px;
+      padding: 10px;
+      border: 1px solid rgba(122, 77, 255, 0.14);
+      border-radius: 8px;
+      background: #ffffff;
     }
 
     .pix-result textarea {
@@ -183,6 +205,33 @@
       border: 1px solid rgba(122, 77, 255, 0.24);
       border-radius: 8px;
       font: inherit;
+    }
+
+    .pix-copy-label {
+      display: block;
+      margin: 4px 0 8px;
+      color: #1f2937;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .pix-copy-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+      min-height: 40px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--roxo, #7a4dff);
+      color: #ffffff;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .pix-copy-button:hover {
+      opacity: 0.92;
     }
 
     .pix-result a {
@@ -209,6 +258,17 @@
       }
       50% {
         box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
+      }
+    }
+
+    @keyframes pixResultPulse {
+      0%, 100% {
+        border-color: rgba(122, 77, 255, 0.28);
+        box-shadow: 0 14px 32px rgba(52, 34, 112, 0.12);
+      }
+      50% {
+        border-color: rgba(122, 77, 255, 0.82);
+        box-shadow: 0 18px 38px rgba(122, 77, 255, 0.24);
       }
     }
 
@@ -299,6 +359,9 @@
           <div class="security-item">Processado pelo Mercado Pago</div>
           <div class="security-item">Liberação automática do PRO</div>
         </div>
+        <p class="payment-pix-note">
+          No Pix, o Mercado Pago pode pedir seu email, mas o QR Code aparece aqui na tela logo depois.
+        </p>
         <p id="payment-status" class="payment-status">Carregando pagamento seguro...</p>
         <div id="payment-brick-container"></div>
         <div id="pix-result" class="pix-result hidden"></div>
