@@ -246,6 +246,12 @@ async function processPayment(formData, selectedPaymentMethod) {
       );
     }
 
+    if (data?.error === "MERCADO_PAGO_INVALID_CREDENTIALS") {
+      throw new Error(
+        "Cartao indisponivel por configuracao do Mercado Pago. Confira se a Public Key do site e o Access Token do Supabase sao da mesma aplicacao e do mesmo ambiente.",
+      );
+    }
+
     throw new Error(data?.details?.message || data?.error || "Pagamento recusado");
   }
 
