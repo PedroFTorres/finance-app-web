@@ -91,8 +91,10 @@ document.addEventListener("DOMContentLoaded", () => {
         email,
         password: pass,
         options: {
-          emailRedirectTo:
-            "https://pedroftorres.github.io/finance-app-web/app.html"
+          emailRedirectTo: `${window.location.origin}/app.html`,
+          data: {
+            nome
+          }
         }
       });
 
@@ -107,6 +109,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btnConfirmSignup.disabled = false;
   btnConfirmSignup.textContent = "Criar Conta";
+  return;
+}
+
+if (data?.session) {
+  signupMsg.style.color = "green";
+  signupMsg.textContent = "Conta criada! Entrando...";
+  window.location.href = "app.html";
   return;
 }
 
@@ -159,8 +168,7 @@ btnConfirmSignup.textContent = "Criar Conta";
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo:
-          "https://pedroftorres.github.io/finance-app-web/reset.html"
+        redirectTo: `${window.location.origin}/reset.html`
       });
 
       if (error) {
