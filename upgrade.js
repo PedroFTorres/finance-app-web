@@ -1,9 +1,10 @@
 const PAYMENT_FUNCTION_NAME = "process-mercadopago-payment";
+const PAYMENT_STATUS_FUNCTION_NAME = "check-mercadopago-payment";
 const PAYMENT_BRICK_CONTAINER_ID = "payment-brick-container";
 
 let paymentBrickController = null;
 let isPaymentBrickLoading = false;
-let premiumPollingTimer = null;
+let paymentPollingTimer = null;
 
 function getPaymentMessage() {
   const status = new URLSearchParams(window.location.search).get("payment");
@@ -47,6 +48,16 @@ function setPaymentStatus(message, type = "") {
   if (!status) return;
   status.textContent = message;
   status.className = `payment-status ${type}`.trim();
+}
+
+function scrollToPaymentStatus() {
+  const status = document.getElementById("payment-status");
+  if (!status) return;
+
+  status.scrollIntoView({
+    behavior: "smooth",
+    block: "nearest",
+  });
 }
 
 function getRejectedPaymentMessage(result) {
@@ -100,7 +111,7 @@ function showPaymentPanel() {
 function hidePaymentPanel() {
   const panel = document.getElementById("payment-panel");
   if (!panel) return;
-  stopPremiumPolling();
+  stopPaymentPolling();
   panel.classList.add("hidden");
   document.body.style.overflow = "";
 }
@@ -187,10 +198,10 @@ function isPremiumProfile(profile) {
   );
 }
 
-function stopPremiumPolling() {
-  if (!premiumPollingTimer) return;
-  clearInterval(premiumPollingTimer);
-  premiumPollingTimer = null;
+function stopPaymentPolling() {
+  if (!paymentPollingTimer) return;
+  clearInterval(paymentPollingTimer);
+  paymentPollingTimer = null;
 }
 
 async function checkPremiumActivation() {
@@ -213,8 +224,40 @@ async function checkPremiumActivation() {
   return isPremiumProfile(profile);
 }
 
-function waitForPremiumActivation() {
-  stopPremiumPolling();
+async function checkMercadoPagoPayment(paymentId) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData?.session?.access_token;
+
+  if (!accessToken) {
+    throw new Error("Sessao expirada. Faca login novamente.");
+  }
+
+  const response = await fetch(
+    `${window.APP_CONFIG.SUPABASE_URL}/functions/v1/${PAYMENT_STATUS_FUNCTION_NAME}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: window.APP_CONFIG.SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        payment_id: paymentId,
+      }),
+    },
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data?.error || "Nao foi possivel consultar o pagamento.");
+  }
+
+  return data;
+}
+
+function waitForPaymentOutcome(paymentId) {
+  stopPaymentPolling();
 
   let attempts = 0;
   const maxAttempts = 90;
@@ -223,16 +266,29 @@ function waitForPremiumActivation() {
     "Pagamento enviado. Aguardando confirmacao automatica do Mercado Pago...",
     "pending",
   );
+  scrollToPaymentStatus();
 
-  premiumPollingTimer = setInterval(async () => {
+  paymentPollingTimer = setInterval(async () => {
     attempts += 1;
 
     try {
+      if (paymentId) {
+        const payment = await checkMercadoPagoPayment(paymentId);
+
+        if (isRejectedPaymentStatus(payment.status)) {
+          stopPaymentPolling();
+          setPaymentStatus(getRejectedPaymentMessage(payment), "error");
+          scrollToPaymentStatus();
+          return;
+        }
+      }
+
       const isActive = await checkPremiumActivation();
 
       if (isActive) {
-        stopPremiumPolling();
+        stopPaymentPolling();
         setPaymentStatus("Pagamento confirmado. Abrindo o Arolix PRO...", "success");
+        scrollToPaymentStatus();
         setTimeout(() => {
           window.location.href = "app.html";
         }, 1200);
@@ -243,11 +299,12 @@ function waitForPremiumActivation() {
     }
 
     if (attempts >= maxAttempts) {
-      stopPremiumPolling();
+      stopPaymentPolling();
       setPaymentStatus(
         "Pagamento enviado. Se o PRO nao abrir automaticamente, recarregue o app em alguns instantes.",
         "pending",
       );
+      scrollToPaymentStatus();
     }
   }, 4000);
 }
@@ -341,6 +398,7 @@ async function initializePaymentBrick() {
           },
           onSubmit: ({ selectedPaymentMethod, formData }) => {
             setPaymentStatus("Processando pagamento...");
+            scrollToPaymentStatus();
 
             return new Promise((resolve, reject) => {
               processPayment(formData, selectedPaymentMethod)
@@ -360,16 +418,19 @@ async function initializePaymentBrick() {
                       "Pagamento pendente. Aguardando confirmacao automatica do Mercado Pago...",
                       "pending",
                     );
-                    waitForPremiumActivation();
+                    scrollToPaymentStatus();
+                    waitForPaymentOutcome(result.payment_id);
                   } else if (isRejectedPaymentStatus(result.status)) {
-                    stopPremiumPolling();
+                    stopPaymentPolling();
                     setPaymentStatus(getRejectedPaymentMessage(result), "error");
+                    scrollToPaymentStatus();
                   } else {
                     setPaymentStatus(
                       `Pagamento recebido com status: ${result.status || "em analise"}.`,
                       "pending",
                     );
-                    waitForPremiumActivation();
+                    scrollToPaymentStatus();
+                    waitForPaymentOutcome(result.payment_id);
                   }
 
                   resolve();
@@ -381,6 +442,7 @@ async function initializePaymentBrick() {
                       "Nao foi possivel concluir o pagamento. Confira os dados e tente novamente.",
                     "error",
                   );
+                  scrollToPaymentStatus();
                   reject(error);
                 });
             });
