@@ -64,6 +64,38 @@ function hidePaymentPanel() {
   document.body.style.overflow = "";
 }
 
+function scrollPaymentDialogToPix() {
+  const dialog = document.querySelector(".payment-dialog");
+  const pixBox = document.getElementById("pix-result");
+
+  if (!dialog || !pixBox) return;
+
+  requestAnimationFrame(() => {
+    pixBox.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  });
+}
+
+async function copyPixCode() {
+  const field = document.getElementById("pix-code");
+  const btn = document.getElementById("copy-pix-code");
+  const code = field?.value;
+
+  if (!code || !navigator.clipboard) return;
+
+  await navigator.clipboard.writeText(code);
+
+  if (btn) {
+    const originalText = btn.textContent;
+    btn.textContent = "Codigo copiado";
+    setTimeout(() => {
+      btn.textContent = originalText;
+    }, 1800);
+  }
+}
+
 function showPixResult(payment) {
   const pixBox = document.getElementById("pix-result");
   if (!pixBox) return;
@@ -82,11 +114,27 @@ function showPixResult(payment) {
   pixBox.classList.remove("hidden");
   pixBox.innerHTML = `
     <h3>Pagamento Pix gerado</h3>
-    <p class="pix-waiting">Depois de pagar, mantenha esta janela aberta. O Arolix vai confirmar automaticamente e liberar seu PRO.</p>
+    <p class="pix-waiting">Use o QR Code abaixo ou copie o codigo Pix. Depois de pagar, mantenha esta janela aberta para o Arolix liberar seu PRO automaticamente.</p>
     ${qrCodeBase64 ? `<img src="data:image/png;base64,${qrCodeBase64}" alt="QR Code Pix">` : ""}
-    ${qrCode ? `<textarea readonly>${qrCode}</textarea>` : ""}
+    ${qrCode ? `
+      <label class="pix-copy-label" for="pix-code">Pix copia e cola</label>
+      <textarea id="pix-code" readonly>${qrCode}</textarea>
+      <button id="copy-pix-code" class="pix-copy-button" type="button">Copiar codigo Pix</button>
+    ` : ""}
     ${ticketUrl ? `<a href="${ticketUrl}" target="_blank" rel="noopener">Abrir instrucoes de pagamento</a>` : ""}
   `;
+
+  const copyButton = document.getElementById("copy-pix-code");
+  if (copyButton) {
+    copyButton.onclick = copyPixCode;
+  }
+
+  pixBox.classList.add("pix-result-highlight");
+  setTimeout(() => {
+    pixBox.classList.remove("pix-result-highlight");
+  }, 2200);
+
+  scrollPaymentDialogToPix();
 }
 
 function isPremiumProfile(profile) {
