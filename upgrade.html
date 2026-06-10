@@ -105,22 +105,36 @@
     }
 
     .payment-status {
+      position: sticky;
+      top: 0;
+      z-index: 5;
       margin: 0 0 14px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1px solid rgba(122, 77, 255, 0.18);
       color: var(--roxo, #7a4dff);
       font-weight: 700;
       text-align: left;
+      box-shadow: 0 8px 18px rgba(52, 34, 112, 0.08);
     }
 
     .payment-status.success {
       color: #047857;
+      border-color: rgba(4, 120, 87, 0.26);
+      background: #ecfdf5;
     }
 
     .payment-status.pending {
       color: #b45309;
+      border-color: rgba(180, 83, 9, 0.26);
+      background: #fff7ed;
     }
 
     .payment-status.error {
       color: #b91c1c;
+      border-color: rgba(185, 28, 28, 0.24);
+      background: #fef2f2;
     }
 
     .payment-pix-note {
