@@ -6,6 +6,7 @@ const MERCADO_PAGO_PAYMENTS_URL = "https://api.mercadopago.com/v1/payments";
 type BrickPaymentBody = {
   selected_payment_method?: unknown;
   form_data?: Record<string, unknown>;
+  device_session_id?: unknown;
 };
 
 function addDays(date: Date, days: number) {
@@ -89,6 +90,7 @@ Deno.serve(async (req) => {
     const formData = body.form_data || {};
     const payer = (formData.payer || {}) as Record<string, unknown>;
     const paymentMethodId = String(formData.payment_method_id || "");
+    const deviceSessionId = String(body.device_session_id || "").trim();
     const isCardPayment = Boolean(formData.token);
 
     if (!paymentMethodId) {
@@ -111,6 +113,22 @@ Deno.serve(async (req) => {
         plan: "pro",
         plan_days: planDays,
       },
+      additional_info: {
+        items: [
+          {
+            id: "arolix-pro-30",
+            title: `Arolix PRO - ${planDays} dias`,
+            description: `Assinatura Arolix PRO por ${planDays} dias`,
+            category_id: "services",
+            quantity: 1,
+            unit_price: proPrice,
+          },
+        ],
+        payer: {
+          first_name: payer.first_name,
+          last_name: payer.last_name,
+        },
+      },
       notification_url: `${functionBaseUrl}/mercadopago-webhook`,
       ...(isCardPayment
         ? {
@@ -127,6 +145,7 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${mercadoPagoAccessToken}`,
         "Content-Type": "application/json",
         "X-Idempotency-Key": crypto.randomUUID(),
+        ...(deviceSessionId ? { "X-meli-session-id": deviceSessionId } : {}),
       },
       body: JSON.stringify(paymentPayload),
     });
@@ -138,18 +157,25 @@ Deno.serve(async (req) => {
       const isPixKeyMissing = mercadoPagoMessage.includes(
         "Collector user without key enabled for QR render",
       );
+      const isInvalidCredentials = mercadoPagoMessage
+        .toLowerCase()
+        .includes("invalid credentials");
 
       return jsonResponse(
         {
           error: isPixKeyMissing
             ? "PIX_NOT_ENABLED_ON_MERCADO_PAGO_ACCOUNT"
-            : "Unable to create Mercado Pago payment",
+            : isInvalidCredentials
+              ? "MERCADO_PAGO_INVALID_CREDENTIALS"
+              : "Unable to create Mercado Pago payment",
           message: isPixKeyMissing
             ? "A conta Mercado Pago recebedora ainda nao tem chave Pix habilitada para gerar QR Code."
-            : undefined,
+            : isInvalidCredentials
+              ? "Public Key e Access Token do Mercado Pago parecem ser de ambientes ou aplicacoes diferentes."
+              : undefined,
           details: payment,
         },
-        isPixKeyMissing ? 400 : 502,
+        isPixKeyMissing || isInvalidCredentials ? 400 : 502,
       );
     }
 
