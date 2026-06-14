@@ -312,6 +312,7 @@ function waitForPaymentOutcome(paymentId) {
 async function processPayment(formData, selectedPaymentMethod) {
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData?.session?.access_token;
+  const deviceSessionId = window.MP_DEVICE_SESSION_ID || null;
 
   if (!accessToken) {
     throw new Error("Sessao expirada. Faca login novamente.");
@@ -329,6 +330,7 @@ async function processPayment(formData, selectedPaymentMethod) {
       body: JSON.stringify({
         selected_payment_method: selectedPaymentMethod,
         form_data: formData,
+        device_session_id: deviceSessionId,
       }),
     },
   );
