@@ -26,9 +26,7 @@ function getPaymentMessage() {
 
 function showPaymentReturnMessage() {
   const message = getPaymentMessage();
-  if (!message) return;
-
-  alert(message);
+  if (message) alert(message);
 }
 
 function setButtonLoading(btn, loading) {
@@ -51,48 +49,10 @@ function setPaymentStatus(message, type = "") {
 }
 
 function scrollToPaymentStatus() {
-  const status = document.getElementById("payment-status");
-  if (!status) return;
-
-  status.scrollIntoView({
+  document.getElementById("payment-status")?.scrollIntoView({
     behavior: "smooth",
     block: "nearest",
   });
-}
-
-function getRejectedPaymentMessage(result) {
-  const statusDetail = String(
-    result?.status_detail || result?.payment?.status_detail || "",
-  );
-
-  const messages = {
-    cc_rejected_bad_filled_card_number:
-      "Pagamento recusado. Confira o numero do cartao e tente novamente.",
-    cc_rejected_bad_filled_date:
-      "Pagamento recusado. Confira a validade do cartao e tente novamente.",
-    cc_rejected_bad_filled_security_code:
-      "Pagamento recusado. Confira o codigo de seguranca e tente novamente.",
-    cc_rejected_bad_filled_other:
-      "Pagamento recusado. Confira os dados do cartao e tente novamente.",
-    cc_rejected_call_for_authorize:
-      "Pagamento recusado pelo banco. Autorize a compra com o banco ou use outro cartao.",
-    cc_rejected_card_disabled:
-      "Pagamento recusado. O cartao esta desabilitado. Use outro cartao ou Pix.",
-    cc_rejected_duplicated_payment:
-      "Pagamento recusado por tentativa duplicada. Aguarde alguns minutos ou use outro meio de pagamento.",
-    cc_rejected_high_risk:
-      "Pagamento recusado pelos controles de seguranca do Mercado Pago. Use outro cartao ou Pix.",
-    cc_rejected_insufficient_amount:
-      "Pagamento recusado por limite insuficiente. Use outro cartao ou Pix.",
-    cc_rejected_invalid_installments:
-      "Pagamento recusado para o parcelamento escolhido. Tente em 1 vez ou use outro cartao.",
-    cc_rejected_max_attempts:
-      "Pagamento recusado por muitas tentativas. Aguarde alguns minutos ou use outro cartao.",
-    cc_rejected_other_reason:
-      "Pagamento recusado pelo Mercado Pago. Use outro cartao ou Pix.",
-  };
-
-  return messages[statusDetail] || "Pagamento recusado. Use outro cartao ou Pix.";
 }
 
 function isRejectedPaymentStatus(status) {
@@ -114,20 +74,6 @@ function hidePaymentPanel() {
   stopPaymentPolling();
   panel.classList.add("hidden");
   document.body.style.overflow = "";
-}
-
-function scrollPaymentDialogToPix() {
-  const dialog = document.querySelector(".payment-dialog");
-  const pixBox = document.getElementById("pix-result");
-
-  if (!dialog || !pixBox) return;
-
-  requestAnimationFrame(() => {
-    pixBox.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  });
 }
 
 async function copyPixCode() {
@@ -176,26 +122,14 @@ function showPixResult(payment) {
     ${ticketUrl ? `<a href="${ticketUrl}" target="_blank" rel="noopener">Abrir instrucoes de pagamento</a>` : ""}
   `;
 
-  const copyButton = document.getElementById("copy-pix-code");
-  if (copyButton) {
-    copyButton.onclick = copyPixCode;
-  }
-
-  pixBox.classList.add("pix-result-highlight");
-  setTimeout(() => {
-    pixBox.classList.remove("pix-result-highlight");
-  }, 2200);
-
-  scrollPaymentDialogToPix();
+  document.getElementById("copy-pix-code")?.addEventListener("click", copyPixCode);
+  pixBox.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function isPremiumProfile(profile) {
   if (!profile) return false;
   const plan = String(profile.plano || "").toLowerCase();
-  return (
-    (plan === "pro" || plan === "vip") &&
-    profile.subscription_status === "active"
-  );
+  return (plan === "pro" || plan === "vip") && profile.subscription_status === "active";
 }
 
 function stopPaymentPolling() {
@@ -241,9 +175,7 @@ async function checkMercadoPagoPayment(paymentId) {
         apikey: window.APP_CONFIG.SUPABASE_ANON_KEY,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        payment_id: paymentId,
-      }),
+      body: JSON.stringify({ payment_id: paymentId }),
     },
   );
 
@@ -263,7 +195,7 @@ function waitForPaymentOutcome(paymentId) {
   const maxAttempts = 90;
 
   setPaymentStatus(
-    "Pagamento enviado. Aguardando confirmacao automatica do Mercado Pago...",
+    "Pix gerado. Aguardando confirmacao automatica do Mercado Pago...",
     "pending",
   );
   scrollToPaymentStatus();
@@ -277,22 +209,19 @@ function waitForPaymentOutcome(paymentId) {
 
         if (isRejectedPaymentStatus(payment.status)) {
           stopPaymentPolling();
-          setPaymentStatus(getRejectedPaymentMessage(payment), "error");
+          setPaymentStatus("Pagamento Pix nao foi aprovado. Gere um novo Pix e tente novamente.", "error");
           scrollToPaymentStatus();
           return;
         }
       }
 
-      const isActive = await checkPremiumActivation();
-
-      if (isActive) {
+      if (await checkPremiumActivation()) {
         stopPaymentPolling();
         setPaymentStatus("Pagamento confirmado. Abrindo o Arolix PRO...", "success");
         scrollToPaymentStatus();
         setTimeout(() => {
           window.location.href = "app.html";
         }, 1200);
-        return;
       }
     } catch (error) {
       console.warn("Verificacao de PRO falhou:", error);
@@ -301,7 +230,7 @@ function waitForPaymentOutcome(paymentId) {
     if (attempts >= maxAttempts) {
       stopPaymentPolling();
       setPaymentStatus(
-        "Pagamento enviado. Se o PRO nao abrir automaticamente, recarregue o app em alguns instantes.",
+        "Pix gerado. Se o PRO nao abrir automaticamente apos o pagamento, recarregue o app em alguns instantes.",
         "pending",
       );
       scrollToPaymentStatus();
@@ -316,6 +245,10 @@ async function processPayment(formData, selectedPaymentMethod) {
 
   if (!accessToken) {
     throw new Error("Sessao expirada. Faca login novamente.");
+  }
+
+  if (selectedPaymentMethod !== "bank_transfer" && formData?.payment_method_id !== "pix") {
+    throw new Error("No momento, o Arolix aceita somente Pix.");
   }
 
   const response = await fetch(
@@ -346,13 +279,7 @@ async function processPayment(formData, selectedPaymentMethod) {
       );
     }
 
-    if (data?.error === "MERCADO_PAGO_INVALID_CREDENTIALS") {
-      throw new Error(
-        "Cartao indisponivel por configuracao do Mercado Pago. Confira se a Public Key do site e o Access Token do Supabase sao da mesma aplicacao e do mesmo ambiente.",
-      );
-    }
-
-    throw new Error(data?.details?.message || data?.error || "Pagamento recusado");
+    throw new Error(data?.details?.message || data?.error || "Nao foi possivel gerar o Pix.");
   }
 
   return data;
@@ -375,7 +302,7 @@ async function initializePaymentBrick() {
   }
 
   isPaymentBrickLoading = true;
-  setPaymentStatus(`Escolha Pix ou cartao para pagar ${formatPrice(amount)}.`);
+  setPaymentStatus(`Gere um Pix para pagar ${formatPrice(amount)}.`);
 
   try {
     const mercadoPago = new window.MercadoPago(publicKey, { locale: "pt-BR" });
@@ -385,21 +312,18 @@ async function initializePaymentBrick() {
       "payment",
       PAYMENT_BRICK_CONTAINER_ID,
       {
-        initialization: {
-          amount,
-        },
+        initialization: { amount },
         customization: {
           paymentMethods: {
             bankTransfer: "pix",
-            creditCard: "all",
           },
         },
         callbacks: {
           onReady: () => {
-            setPaymentStatus(`Escolha Pix ou cartao para pagar ${formatPrice(amount)}.`);
+            setPaymentStatus(`Gere um Pix para pagar ${formatPrice(amount)}.`);
           },
           onSubmit: ({ selectedPaymentMethod, formData }) => {
-            setPaymentStatus("Processando pagamento...");
+            setPaymentStatus("Gerando Pix...");
             scrollToPaymentStatus();
 
             return new Promise((resolve, reject) => {
@@ -415,23 +339,11 @@ async function initializePaymentBrick() {
                     setTimeout(() => {
                       window.location.href = "app.html";
                     }, 2500);
-                  } else if (result.status === "pending") {
-                    setPaymentStatus(
-                      "Pagamento pendente. Aguardando confirmacao automatica do Mercado Pago...",
-                      "pending",
-                    );
-                    scrollToPaymentStatus();
-                    waitForPaymentOutcome(result.payment_id);
-                  } else if (isRejectedPaymentStatus(result.status)) {
-                    stopPaymentPolling();
-                    setPaymentStatus(getRejectedPaymentMessage(result), "error");
-                    scrollToPaymentStatus();
                   } else {
                     setPaymentStatus(
-                      `Pagamento recebido com status: ${result.status || "em analise"}.`,
+                      "Pix gerado. Aguardando confirmacao automatica do Mercado Pago...",
                       "pending",
                     );
-                    scrollToPaymentStatus();
                     waitForPaymentOutcome(result.payment_id);
                   }
 
@@ -440,8 +352,7 @@ async function initializePaymentBrick() {
                 .catch((error) => {
                   console.error("Erro no pagamento:", error);
                   setPaymentStatus(
-                    error?.message ||
-                      "Nao foi possivel concluir o pagamento. Confira os dados e tente novamente.",
+                    error?.message || "Nao foi possivel gerar o Pix. Tente novamente.",
                     "error",
                   );
                   scrollToPaymentStatus();
@@ -467,7 +378,7 @@ async function initializePaymentBrick() {
 function setupCheckoutButton() {
   const btn = document.getElementById("btn-assinar");
   if (!btn) return;
-    
+
   btn.onclick = async () => {
     setButtonLoading(btn, true);
 
@@ -495,14 +406,11 @@ function setupClosePaymentButton() {
   const btn = document.getElementById("btn-fechar-pagamento");
   const panel = document.getElementById("payment-panel");
 
-  if (!btn) return;
-  btn.onclick = hidePaymentPanel;
+  if (btn) btn.onclick = hidePaymentPanel;
 
   if (panel) {
     panel.onclick = (event) => {
-      if (event.target === panel) {
-        hidePaymentPanel();
-      }
+      if (event.target === panel) hidePaymentPanel();
     };
   }
 }
