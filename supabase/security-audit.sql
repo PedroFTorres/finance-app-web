@@ -4,15 +4,15 @@
 
 -- 1) Public tables and RLS status.
 select
-  schemaname,
-  tablename,
-  rowsecurity as rls_enabled,
-  hasrls as has_rls
-from pg_tables t
-join pg_class c on c.relname = t.tablename
-join pg_namespace n on n.oid = c.relnamespace and n.nspname = t.schemaname
-where schemaname = 'public'
-order by tablename;
+  n.nspname as schema_name,
+  c.relname as table_name,
+  c.relrowsecurity as rls_enabled,
+  c.relforcerowsecurity as rls_forced
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public'
+  and c.relkind = 'r'
+order by c.relname;
 
 -- 2) Policies currently configured.
 select
@@ -30,14 +30,14 @@ order by tablename, policyname;
 
 -- 3) Tables exposed in public without RLS. This should return zero rows.
 select
-  schemaname,
-  tablename
-from pg_tables t
-join pg_class c on c.relname = t.tablename
-join pg_namespace n on n.oid = c.relnamespace and n.nspname = t.schemaname
-where schemaname = 'public'
+  n.nspname as schema_name,
+  c.relname as table_name
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public'
+  and c.relkind = 'r'
   and coalesce(c.relrowsecurity, false) = false
-order by tablename;
+order by c.relname;
 
 -- 4) Broad policies that usually need manual review.
 -- Some log/config tables can be exceptions, but user financial data should not appear here.
