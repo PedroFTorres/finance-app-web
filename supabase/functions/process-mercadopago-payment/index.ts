@@ -43,9 +43,11 @@ function cleanObject<T>(value: T): T {
   return value;
 }
 
-function toNumber(value: unknown, fallback: number) {
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : fallback;
+function isPixPayment(selectedPaymentMethod: unknown, paymentMethodId: unknown) {
+  return (
+    String(selectedPaymentMethod || "") === "bank_transfer" &&
+    String(paymentMethodId || "") === "pix"
+  );
 }
 
 Deno.serve(async (req) => {
@@ -91,16 +93,15 @@ Deno.serve(async (req) => {
     const payer = (formData.payer || {}) as Record<string, unknown>;
     const paymentMethodId = String(formData.payment_method_id || "");
     const deviceSessionId = String(body.device_session_id || "").trim();
-    const isCardPayment = Boolean(formData.token);
 
-    if (!paymentMethodId) {
-      return jsonResponse({ error: "Missing payment method" }, 400);
+    if (!isPixPayment(body.selected_payment_method, paymentMethodId)) {
+      return jsonResponse({ error: "Only Pix payments are enabled" }, 400);
     }
 
     const paymentPayload = cleanObject({
       transaction_amount: proPrice,
       description: `Arolix PRO - ${planDays} dias`,
-      payment_method_id: paymentMethodId,
+      payment_method_id: "pix",
       payer: {
         email: payer.email || user.email,
         first_name: payer.first_name,
@@ -130,13 +131,6 @@ Deno.serve(async (req) => {
         },
       },
       notification_url: `${functionBaseUrl}/mercadopago-webhook`,
-      ...(isCardPayment
-        ? {
-          token: formData.token,
-          installments: toNumber(formData.installments, 1),
-          issuer_id: formData.issuer_id,
-        }
-        : {}),
     });
 
     const paymentResponse = await fetch(MERCADO_PAGO_PAYMENTS_URL, {
@@ -152,7 +146,7 @@ Deno.serve(async (req) => {
 
     const payment = await paymentResponse.json();
     if (!paymentResponse.ok) {
-      console.error("Mercado Pago payment error:", payment);
+      console.error("Mercado Pago Pix payment error:", payment);
       const mercadoPagoMessage = String(payment?.message || "");
       const isPixKeyMissing = mercadoPagoMessage.includes(
         "Collector user without key enabled for QR render",
@@ -167,7 +161,7 @@ Deno.serve(async (req) => {
             ? "PIX_NOT_ENABLED_ON_MERCADO_PAGO_ACCOUNT"
             : isInvalidCredentials
               ? "MERCADO_PAGO_INVALID_CREDENTIALS"
-              : "Unable to create Mercado Pago payment",
+              : "Unable to create Mercado Pago Pix payment",
           message: isPixKeyMissing
             ? "A conta Mercado Pago recebedora ainda nao tem chave Pix habilitada para gerar QR Code."
             : isInvalidCredentials
