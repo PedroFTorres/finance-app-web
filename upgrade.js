@@ -5,6 +5,7 @@ const PAYMENT_BRICK_CONTAINER_ID = "payment-brick-container";
 let paymentBrickController = null;
 let isPaymentBrickLoading = false;
 let paymentPollingTimer = null;
+let currentUserEmail = "";
 
 function getPaymentMessage() {
   const status = new URLSearchParams(window.location.search).get("payment");
@@ -31,7 +32,7 @@ function showPaymentReturnMessage() {
 
 function setButtonLoading(btn, loading) {
   btn.disabled = loading;
-  btn.textContent = loading ? "Carregando pagamento..." : "Desbloquear tudo";
+  btn.textContent = loading ? "Carregando pagamento..." : "Pagar com Pix";
 }
 
 function formatPrice(value) {
@@ -46,6 +47,13 @@ function setPaymentStatus(message, type = "") {
   if (!status) return;
   status.textContent = message;
   status.className = `payment-status ${type}`.trim();
+}
+
+function scrollPaymentToTop() {
+  const dialog = document.querySelector(".payment-dialog");
+  if (dialog) {
+    dialog.scrollTo({ top: 0, behavior: "smooth" });
+  }
 }
 
 function scrollToPaymentStatus() {
@@ -66,6 +74,7 @@ function showPaymentPanel() {
   if (!panel) return;
   panel.classList.remove("hidden");
   document.body.style.overflow = "hidden";
+  scrollPaymentToTop();
 }
 
 function hidePaymentPanel() {
@@ -74,6 +83,13 @@ function hidePaymentPanel() {
   stopPaymentPolling();
   panel.classList.add("hidden");
   document.body.style.overflow = "";
+}
+
+function hidePaymentBrickAfterPix() {
+  const brickContainer = document.getElementById(PAYMENT_BRICK_CONTAINER_ID);
+  if (brickContainer) {
+    brickContainer.style.display = "none";
+  }
 }
 
 async function copyPixCode() {
@@ -111,8 +127,8 @@ function showPixResult(payment) {
 
   pixBox.classList.remove("hidden");
   pixBox.innerHTML = `
-    <h3>Pagamento Pix gerado</h3>
-    <p class="pix-waiting">Use o QR Code abaixo ou copie o codigo Pix. Depois de pagar, mantenha esta janela aberta para o Arolix liberar seu PRO automaticamente.</p>
+    <h3>Pix gerado com sucesso</h3>
+    <p class="pix-waiting">Escaneie o QR Code abaixo ou use o Pix copia e cola. Depois do pagamento, mantenha esta janela aberta para liberarmos o PRO automaticamente.</p>
     ${qrCodeBase64 ? `<img src="data:image/png;base64,${qrCodeBase64}" alt="QR Code Pix">` : ""}
     ${qrCode ? `
       <label class="pix-copy-label" for="pix-code">Pix copia e cola</label>
@@ -123,7 +139,8 @@ function showPixResult(payment) {
   `;
 
   document.getElementById("copy-pix-code")?.addEventListener("click", copyPixCode);
-  pixBox.scrollIntoView({ behavior: "smooth", block: "start" });
+  hidePaymentBrickAfterPix();
+  scrollPaymentToTop();
 }
 
 function isPremiumProfile(profile) {
@@ -198,7 +215,7 @@ function waitForPaymentOutcome(paymentId) {
     "Pix gerado. Aguardando confirmacao automatica do Mercado Pago...",
     "pending",
   );
-  scrollToPaymentStatus();
+  scrollPaymentToTop();
 
   paymentPollingTimer = setInterval(async () => {
     attempts += 1;
@@ -218,7 +235,7 @@ function waitForPaymentOutcome(paymentId) {
       if (await checkPremiumActivation()) {
         stopPaymentPolling();
         setPaymentStatus("Pagamento confirmado. Abrindo o Arolix PRO...", "success");
-        scrollToPaymentStatus();
+        scrollPaymentToTop();
         setTimeout(() => {
           window.location.href = "app.html";
         }, 1200);
@@ -233,21 +250,34 @@ function waitForPaymentOutcome(paymentId) {
         "Pix gerado. Se o PRO nao abrir automaticamente apos o pagamento, recarregue o app em alguns instantes.",
         "pending",
       );
-      scrollToPaymentStatus();
+      scrollPaymentToTop();
     }
   }, 4000);
+}
+
+function withArolixEmail(formData) {
+  const nextFormData = { ...(formData || {}) };
+  const payer = { ...(nextFormData.payer || {}) };
+
+  if (currentUserEmail && !payer.email) {
+    payer.email = currentUserEmail;
+  }
+
+  nextFormData.payer = payer;
+  return nextFormData;
 }
 
 async function processPayment(formData, selectedPaymentMethod) {
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData?.session?.access_token;
   const deviceSessionId = window.MP_DEVICE_SESSION_ID || null;
+  const normalizedFormData = withArolixEmail(formData);
 
   if (!accessToken) {
     throw new Error("Sessao expirada. Faca login novamente.");
   }
 
-  if (selectedPaymentMethod !== "bank_transfer" && formData?.payment_method_id !== "pix") {
+  if (selectedPaymentMethod !== "bank_transfer" || normalizedFormData?.payment_method_id !== "pix") {
     throw new Error("No momento, o Arolix aceita somente Pix.");
   }
 
@@ -262,7 +292,7 @@ async function processPayment(formData, selectedPaymentMethod) {
       },
       body: JSON.stringify({
         selected_payment_method: selectedPaymentMethod,
-        form_data: formData,
+        form_data: normalizedFormData,
         device_session_id: deviceSessionId,
       }),
     },
@@ -285,11 +315,12 @@ async function processPayment(formData, selectedPaymentMethod) {
   return data;
 }
 
-async function initializePaymentBrick() {
+async function initializePaymentBrick(userEmail = "") {
   if (paymentBrickController || isPaymentBrickLoading) return;
 
   const publicKey = window.APP_CONFIG?.MERCADO_PAGO_PUBLIC_KEY;
   const amount = Number(window.APP_CONFIG?.PRO_PRICE_BRL || 1);
+  currentUserEmail = userEmail || currentUserEmail;
 
   if (!publicKey) {
     setPaymentStatus("Chave publica do Mercado Pago nao configurada.", "error");
@@ -312,7 +343,10 @@ async function initializePaymentBrick() {
       "payment",
       PAYMENT_BRICK_CONTAINER_ID,
       {
-        initialization: { amount },
+        initialization: {
+          amount,
+          payer: currentUserEmail ? { email: currentUserEmail } : undefined,
+        },
         customization: {
           paymentMethods: {
             bankTransfer: "pix",
@@ -321,10 +355,11 @@ async function initializePaymentBrick() {
         callbacks: {
           onReady: () => {
             setPaymentStatus(`Gere um Pix para pagar ${formatPrice(amount)}.`);
+            scrollPaymentToTop();
           },
           onSubmit: ({ selectedPaymentMethod, formData }) => {
             setPaymentStatus("Gerando Pix...");
-            scrollToPaymentStatus();
+            scrollPaymentToTop();
 
             return new Promise((resolve, reject) => {
               processPayment(formData, selectedPaymentMethod)
@@ -391,8 +426,9 @@ function setupCheckoutButton() {
         return;
       }
 
+      currentUserEmail = sessionData.session.user?.email || "";
       showPaymentPanel();
-      await initializePaymentBrick();
+      await initializePaymentBrick(currentUserEmail);
     } catch (err) {
       console.error("Falha ao abrir pagamento:", err);
       alert("Nao foi possivel iniciar o pagamento agora. Tente novamente.");
