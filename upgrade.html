@@ -154,9 +154,9 @@
     .pix-result.hidden { display: none; }
 
     .pix-result {
-      margin-top: 18px;
+      margin: 0 0 16px;
       padding: 18px;
-      border: 2px solid rgba(122, 77, 255, 0.28);
+      border: 2px solid rgba(122, 77, 255, 0.34);
       border-radius: 8px;
       background: #ffffff;
       text-align: left;
@@ -178,7 +178,7 @@
 
     .pix-result img {
       display: block;
-      max-width: 220px;
+      max-width: 240px;
       width: 100%;
       height: auto;
       margin: 8px auto 14px;
@@ -196,6 +196,7 @@
       border: 1px solid rgba(122, 77, 255, 0.24);
       border-radius: 8px;
       font: inherit;
+      box-sizing: border-box;
     }
 
     .pix-copy-label {
@@ -304,11 +305,11 @@
           <div class="security-item">Liberação automática do PRO</div>
         </div>
         <p class="payment-pix-note">
-          Gere o QR Code Pix, pague no app do seu banco e mantenha esta janela aberta até a confirmação.
+          Usaremos o email da sua conta Arolix quando o Mercado Pago permitir. Depois de gerar o Pix, o QR Code aparece nesta mesma janela.
         </p>
         <p id="payment-status" class="payment-status">Carregando pagamento seguro...</p>
-        <div id="payment-brick-container"></div>
         <div id="pix-result" class="pix-result hidden"></div>
+        <div id="payment-brick-container"></div>
       </div>
     </div>
   </div>
