@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, jsonResponse, requiredEnv } from "../_shared/http.ts";
 
 const MERCADO_PAGO_PAYMENTS_URL = "https://api.mercadopago.com/v1/payments";
+const MAX_SIGNATURE_AGE_MS = 10 * 60 * 1000;
 
 type MercadoPagoNotification = {
   type?: string;
@@ -36,18 +37,22 @@ function timingSafeEqual(a: string, b: string) {
   return result === 0;
 }
 
-async function verifyMercadoPagoSignature(req: Request, dataId: string) {
-  const secret = Deno.env.get("MERCADO_PAGO_WEBHOOK_SECRET");
-  if (!secret) {
-    console.warn("MERCADO_PAGO_WEBHOOK_SECRET not set; skipping signature check.");
-    return true;
-  }
-
+async function verifyMercadoPagoSignature(req: Request, dataId: string, secret: string) {
   const signatureHeader = req.headers.get("x-signature") || "";
   const requestId = req.headers.get("x-request-id") || "";
   const { ts, v1 } = parseSignature(signatureHeader);
 
   if (!ts || !v1 || !requestId || !dataId) {
+    return false;
+  }
+
+  const timestamp = Number(ts);
+  if (!Number.isFinite(timestamp)) {
+    return false;
+  }
+
+  const signatureAge = Math.abs(Date.now() - timestamp);
+  if (signatureAge > MAX_SIGNATURE_AGE_MS) {
     return false;
   }
 
@@ -131,6 +136,7 @@ Deno.serve(async (req) => {
 
   try {
     const mercadoPagoAccessToken = requiredEnv("MERCADO_PAGO_ACCESS_TOKEN");
+    const mercadoPagoWebhookSecret = requiredEnv("MERCADO_PAGO_WEBHOOK_SECRET");
     const supabaseUrl = requiredEnv("SUPABASE_URL");
     const supabaseServiceRoleKey = requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
     const expectedPrice = Number(Deno.env.get("PRO_PRICE_BRL") || "19.90");
@@ -148,7 +154,12 @@ Deno.serve(async (req) => {
       return jsonResponse({ received: true, ignored: "missing payment id" });
     }
 
-    const isSignatureValid = await verifyMercadoPagoSignature(req, paymentId);
+    const isSignatureValid = await verifyMercadoPagoSignature(
+      req,
+      paymentId,
+      mercadoPagoWebhookSecret,
+    );
+
     if (!isSignatureValid) {
       await logPaymentEvent(supabaseAdmin, {
         paymentId,
