@@ -2,7 +2,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, jsonResponse, requiredEnv } from "../_shared/http.ts";
 
 const MERCADO_PAGO_PAYMENTS_URL = "https://api.mercadopago.com/v1/payments";
-const MAX_SIGNATURE_AGE_MS = 10 * 60 * 1000;
 
 type MercadoPagoNotification = {
   type?: string;
@@ -43,16 +42,6 @@ async function verifyMercadoPagoSignature(req: Request, dataId: string, secret: 
   const { ts, v1 } = parseSignature(signatureHeader);
 
   if (!ts || !v1 || !requestId || !dataId) {
-    return false;
-  }
-
-  const timestamp = Number(ts);
-  if (!Number.isFinite(timestamp)) {
-    return false;
-  }
-
-  const signatureAge = Math.abs(Date.now() - timestamp);
-  if (signatureAge > MAX_SIGNATURE_AGE_MS) {
     return false;
   }
 
