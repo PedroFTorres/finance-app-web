@@ -1,8 +1,11 @@
+const allowedOrigin = Deno.env.get("APP_ORIGIN") || "*";
+
 export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": allowedOrigin,
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-signature, x-request-id",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Vary": "Origin",
 };
 
 export function jsonResponse(body: unknown, status = 200) {
