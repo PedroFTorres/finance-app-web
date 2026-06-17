@@ -59,8 +59,7 @@ where schemaname = 'public'
 order by tablename, policyname;
 
 -- 5) Policies for common user-owned tables that do not mention auth.uid().
--- Review anything returned here, especially contas_bancarias, receitas, despesas,
--- movimentacoes, categorias, user_profiles, and payment/event tables.
+-- Review anything returned here, especially financial data, profiles, and subscription tables.
 select
   schemaname,
   tablename,
@@ -76,9 +75,14 @@ where schemaname = 'public'
     'receitas',
     'despesas',
     'movimentacoes',
+    'movimentos',
     'categorias',
+    'cartoes_credito',
+    'cartao_faturas',
+    'cartao_lancamentos',
+    'transferencias',
     'user_profiles',
-    'mercadopago_payment_events'
+    'subscription_events'
   )
   and coalesce(qual, '') not ilike '%auth.uid()%'
   and coalesce(with_check, '') not ilike '%auth.uid()%'
