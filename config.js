@@ -4,5 +4,5 @@
 window.APP_CONFIG = {
   SUPABASE_URL: "https://febwinynlbviadasgwlg.supabase.co",
   SUPABASE_ANON_KEY:
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6ImZlYndpbnlubGJ2aWFkYXNnd2xnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjI3MjMsImV4cCI6MjA3OTczODcyM30.WubNRAHhlH6wnjGAWc4B7oHEbrU9fd1xU5uWWqRjE4c"
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZlYndpbnlubGJ2aWFkYXNnd2xnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjI3MjMsImV4cCI6MjA3OTczODcyM30.WubNRAHhlH6wnjGAWc4B7oHEbrU9fd1xU5uWWqRjE4c"
 };
