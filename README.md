@@ -57,6 +57,7 @@ Rode os scripts em `supabase/` no SQL Editor do Supabase:
 - `security-audit.sql`: audita RLS, policies, grants públicos e valores de plano.
 - `revoke-anon-writes.sql`: remove escrita direta de usuários não autenticados.
 - `plan-security.sql`: impede que usuários alterem o próprio plano pelo navegador.
+- `remove-mercado-pago.sql`: remove objetos antigos do banco ligados ao gateway removido.
 
 Se aparecer policy ampla para `{authenticated}` ou `{public}` com `true`, troque por filtro por usuário, por exemplo:
 
