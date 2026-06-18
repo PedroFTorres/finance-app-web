@@ -266,27 +266,6 @@ if (btnUpgrade && STATE.profile) {
     btnUpgrade.style.display = "inline-block";
   }
 }
-const hoje = new Date();
-
-if (STATE.profile?.plano === "pro") {
-
-  const expira = STATE.profile.plano_expira_em 
-    ? new Date(STATE.profile.plano_expira_em)
-    : null;
-
-  if (expira && expira < hoje) {
-
-    STATE.profile.plano = "free";
-
-    await supabase
-      .from("user_profiles")
-      .update({ plano: "free" })
-      .eq("id", STATE.user.id);
-
-    console.log("Plano PRO expirado → voltou para FREE");
-  }
-}
-         
 // 🔥 deixar STATE global para outros scripts
 window.STATE = STATE;
      
@@ -409,6 +388,7 @@ if (emailEl) {
           .from('contas_bancarias')
           .select('saldo_inicial,data_saldo')
           .eq('id', conta_id)
+          .eq('user_id', STATE.user.id)
           .maybeSingle();
         const si = Number(conta?.saldo_inicial || 0);
          const dataSaldo = conta?.data_saldo || null;
@@ -442,7 +422,11 @@ if (emailEl) {
           else saldo -= valor;
         });
 
-        await supabase.from('contas_bancarias').update({ saldo_atual: saldo }).eq('id', conta_id);
+        await supabase
+          .from('contas_bancarias')
+          .update({ saldo_atual: saldo })
+          .eq('id', conta_id)
+          .eq('user_id', STATE.user.id);
         // atualizar cache local se existir
         const idx = STATE.contas.findIndex(c => c.id === conta_id);
         if (idx >= 0) { STATE.contas[idx].saldo_atual = saldo; }
@@ -536,7 +520,11 @@ const CategoriasService = {
     async update(tipo, id, patch) {
       try {
         const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
-        const { error } = await supabase.from(tabela).update(patch).eq('id', id);
+        const { error } = await supabase
+          .from(tabela)
+          .update(patch)
+          .eq('id', id)
+          .eq('user_id', STATE.user.id);
         if (error) throw error;
         return true;
       } catch (e) { console.error('LancService.update', e); throw e; }
@@ -544,7 +532,11 @@ const CategoriasService = {
     async delete(tipo, id) {
       try {
         const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
-        const { error } = await supabase.from(tabela).delete().eq('id', id);
+        const { error } = await supabase
+          .from(tabela)
+          .delete()
+          .eq('id', id)
+          .eq('user_id', STATE.user.id);
         if (error) throw error;
         return true;
       } catch (e) { console.error('LancService.delete', e); throw e; }
@@ -573,7 +565,13 @@ const CategoriasService = {
   const ExtratoService = {
     async fetch(conta_id='all', inicio, fim) {
       try {
-        let q = supabase.from('movimentacoes').select('*').gte('data', inicio).lte('data', fim).order('data', { ascending: true });
+        let q = supabase
+          .from('movimentacoes')
+          .select('*')
+          .eq('user_id', STATE.user.id)
+          .gte('data', inicio)
+          .lte('data', fim)
+          .order('data', { ascending: true });
         if (conta_id && conta_id !== 'all') q = q.eq('conta_id', conta_id);
         const { data, error } = await q;
         if (error) throw error;
@@ -695,7 +693,8 @@ if (!hasPremiumAccess() && STATE.contas.length >= 2) {
     gerente: conta.gerente,
     contato: conta.contato
   })
-  .eq("id", editId);
+  .eq("id", editId)
+  .eq("user_id", STATE.user.id);
 
 
       delete btnSave.dataset.editId;
@@ -898,10 +897,22 @@ if (btnCartao) {
         const btn = document.createElement('button'); btn.textContent = 'Excluir';
         btn.addEventListener('click', async () => {
           if (!confirm('Deseja excluir esta categoria?')) return;
-          await supabase.from('categorias').delete().eq('id', cat.id);
+          await supabase
+            .from('categorias')
+            .delete()
+            .eq('id', cat.id)
+            .eq('user_id', STATE.user.id);
           // remove referencia em receitas/despesas
-          await supabase.from('receitas').update({ categoria_id: null }).eq('categoria_id', cat.id);
-          await supabase.from('despesas').update({ categoria_id: null }).eq('categoria_id', cat.id);
+          await supabase
+            .from('receitas')
+            .update({ categoria_id: null })
+            .eq('categoria_id', cat.id)
+            .eq('user_id', STATE.user.id);
+          await supabase
+            .from('despesas')
+            .update({ categoria_id: null })
+            .eq('categoria_id', cat.id)
+            .eq('user_id', STATE.user.id);
           await App.reloadAll();
         });
         li.appendChild(span); li.appendChild(btn); ul.appendChild(li);
@@ -1043,7 +1054,8 @@ if (item.transferencia_id) {
       const { data: movs } = await supabase
         .from("movimentacoes")
         .select("id")
-        .eq("lancamento_id", item.id);
+        .eq("lancamento_id", item.id)
+        .eq("user_id", STATE.user.id);
 
       if (!movs || movs.length === 0) {
         alert("Nenhuma movimentação encontrada.");
@@ -1054,7 +1066,8 @@ if (item.transferencia_id) {
         await supabase
           .from("movimentacoes")
           .delete()
-          .eq("id", m.id);
+          .eq("id", m.id)
+          .eq("user_id", STATE.user.id);
       }
 
       await supabase
@@ -1063,7 +1076,8 @@ if (item.transferencia_id) {
           baixado: false,
           data_baixa: null
         })
-        .eq("id", item.id);
+        .eq("id", item.id)
+        .eq("user_id", STATE.user.id);
 
       await App.refreshLancamentos();
       await App.renderExtrato();
@@ -1176,13 +1190,15 @@ abrirModalExcluirRecorrencia(item, tipo) {
         .from(tabela)
         .delete()
         .eq("recorrencia_id", item.recorrencia_id)
+        .eq("user_id", STATE.user.id)
         .gte("data", item.data);
     } 
     else if (escopo === "all") {
       await supabase
         .from(tabela)
         .delete()
-        .eq("recorrencia_id", item.recorrencia_id);
+        .eq("recorrencia_id", item.recorrencia_id)
+        .eq("user_id", STATE.user.id);
     }
 
     await App.refreshLancamentos();
@@ -1360,6 +1376,7 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
     .from(tabelaLanc)
     .select('baixado')
     .eq('id', saveBtn.dataset.editId)
+    .eq('user_id', STATE.user.id)
     .maybeSingle();
 
   avisoBaixado = lancCheck?.baixado === true;
@@ -1397,20 +1414,23 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
     await supabase
       .from(tabelaLanc)
       .update({ ...patchBase, data })
-      .eq('id', editId);
+      .eq('id', editId)
+      .eq('user_id', STATE.user.id);
 
   } else if (escopo === 'next') {
     await supabase
       .from(tabelaLanc)
       .update(patchBase)
       .eq('recorrencia_id', recorrenciaId)
+      .eq('user_id', STATE.user.id)
       .gte('data', dataBase);
 
   } else if (escopo === 'all') {
     await supabase
       .from(tabelaLanc)
       .update(patchBase)
-      .eq('recorrencia_id', recorrenciaId);
+      .eq('recorrencia_id', recorrenciaId)
+      .eq('user_id', STATE.user.id);
   }
 
   // ==================================================// 🔄 SINCRONIZA EXTRATO (SOMENTE SE FOR "ONE")// ==================================================
@@ -1420,6 +1440,7 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
       .from(tabelaLanc)
       .select('baixado')
       .eq('id', editId)
+      .eq('user_id', STATE.user.id)
       .maybeSingle();
 
     if (lancAtual?.baixado === true) {
@@ -1427,6 +1448,7 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
         .from('movimentacoes')
         .select('*')
         .eq('lancamento_id', editId)
+        .eq('user_id', STATE.user.id)
         .maybeSingle();
 
      if (mov) {
@@ -1438,7 +1460,8 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
       data,
       conta_id: conta_id || null   // 🔥 ESSA LINHA RESOLVE
     })
-    .eq('id', mov.id);
+    .eq('id', mov.id)
+    .eq('user_id', STATE.user.id);
 }
     }
   }
@@ -1672,13 +1695,15 @@ async function excluirTransferencia(transferenciaId) {
     await supabase
       .from("movimentacoes")
       .delete()
-      .eq("transferencia_id", transferenciaId);
+      .eq("transferencia_id", transferenciaId)
+      .eq("user_id", STATE.user.id);
 
     // 2️⃣ remove o registro principal
     await supabase
       .from("transferencias")
       .delete()
-      .eq("id", transferenciaId);
+      .eq("id", transferenciaId)
+      .eq("user_id", STATE.user.id);
 
     // 3️⃣ atualiza tudo
     await App.reloadAll();
@@ -1985,7 +2010,8 @@ if (modoPeriodoExtrato === "custom") {
     let qAntes = supabase
       .from("movimentacoes")
       .select("tipo,valor")
-      .eq("conta_id", conta_id);
+      .eq("conta_id", conta_id)
+      .eq("user_id", STATE.user.id);
 
     if (inicio) qAntes = qAntes.lt("data", inicio);
 
@@ -2004,6 +2030,7 @@ if (modoPeriodoExtrato === "custom") {
       .from("movimentacoes")
       .select("*")
       .eq("conta_id", conta_id)
+      .eq("user_id", STATE.user.id)
       .order("data", { ascending: true });
 
     if (inicio) qPeriodo = qPeriodo.gte("data", inicio);
@@ -2132,6 +2159,7 @@ const { data: jaBaixado } = await supabase
   .from("movimentacoes")
   .select("id")
   .eq("lancamento_id", lancamento.id)
+  .eq("user_id", STATE.user.id)
   .limit(1);
 
 if (jaBaixado && jaBaixado.length > 0) {
@@ -2172,7 +2200,8 @@ if (insertErr) {
         baixado: true,
         data_baixa: dataBaixa
       })
-      .eq("id", lancamento.id);
+      .eq("id", lancamento.id)
+      .eq("user_id", STATE.user.id);
 
     // 🔹 fecha modal e limpa estado
     document.getElementById("modal-baixa").classList.add("hidden");
@@ -2375,7 +2404,8 @@ if (btnConfirmar) {
 (async function bootstrap() {
   try {
 
-    await requireSessionOrRedirect();
+    const hasSession = await requireSessionOrRedirect();
+    if (!hasSession) return;
 
     // 🔥 Anexa todos os eventos
     UI.attachHandlers();
