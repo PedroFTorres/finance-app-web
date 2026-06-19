@@ -4,7 +4,9 @@
 // histórico, toasts, modais.
 // Observação: supabase deve estar disponível em window.supabase (carregado antes).
 
-document.addEventListener("DOMContentLoaded", () => {
+function initCartaoPage() {
+  if (window.__cartaoPageInitialized) return;
+  window.__cartaoPageInitialized = true;
 
   // ===========================// TOAST SIMPLES // ===========================
   function showToast(message, type = "success") {
@@ -26,6 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===========================// ESTADO // ===========================
   const state = {
     user: null,
+    profile: null,
     cards: [],
     categories: [],
     editingPurchaseFull: null,       // para edição parcelada
@@ -163,6 +166,38 @@ if (contaFaturaConfirmar) {
   function formatISO(d) {
     return new Date(d).toISOString().slice(0,10);
   }
+
+  function hasPremiumAccess(profile) {
+    const plano = String(profile?.plano || "").toLowerCase();
+    const status = String(profile?.subscription_status || "").toLowerCase();
+    return (plano === "pro" || plano === "vip") && status === "active";
+  }
+
+  async function requirePremiumAccess() {
+    const { data: profile, error } = await supabase
+      .from("user_profiles")
+      .select("plano, subscription_status")
+      .eq("id", state.user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Erro ao validar acesso premium:", error);
+      alert("Nao foi possivel validar seu plano agora. Tente novamente.");
+      window.location.href = "app.html";
+      return false;
+    }
+
+    state.profile = profile;
+
+    if (!hasPremiumAccess(profile)) {
+      alert("Cartao disponivel apenas no plano PRO.");
+      window.location.href = "upgrade.html";
+      return false;
+    }
+
+    return true;
+  }
+
   function getCardGradient(i) {
   const gradients = [
     // roxo premium (principal)
@@ -247,6 +282,9 @@ function fecharModal(modalId) {
 
   if (userEmail)
     userEmail.textContent = state.user.email;
+
+  const canAccessCartao = await requirePremiumAccess();
+  if (!canAccessCartao) return;
 
  try {
   await loadCards();
@@ -425,6 +463,7 @@ async function definirMesInicialAberto() {
         .from("despesas")
         .select("id")
         .eq("cartao_fatura_id", fatura.id)
+        .eq("user_id", state.user.id)
         .maybeSingle();
 
       // 👉 fechada + despesa gerada → PULA
@@ -516,6 +555,7 @@ async function loadFaturaForSelected() {
     .from("cartao_lancamentos")
     .select("*")
     .eq("cartao_id", cartao_id)
+    .eq("user_id", state.user.id)
     .gte("data_fatura", inicio)
     .lte("data_fatura", fim)
     .order("data_fatura");
@@ -659,6 +699,7 @@ async function fecharFaturaComConta(conta_id) {
       .from("cartao_lancamentos")
       .select("*")
       .eq("cartao_id", activeCardId)
+      .eq("user_id", state.user.id)
       .gte("data_fatura", inicio)
       .lte("data_fatura", fim);
 
@@ -777,6 +818,7 @@ if (btnPagarFatura) {
         .from("despesas")
         .select("*")
         .eq("cartao_fatura_id", state.faturaAtual.id)
+        .eq("user_id", state.user.id)
         .maybeSingle();
 
       if (!desp) {
@@ -792,7 +834,8 @@ if (btnPagarFatura) {
           conta_id: contaId,
           data_baixa: venc
         })
-        .eq("id", desp.id);
+        .eq("id", desp.id)
+        .eq("user_id", state.user.id);
 
       // 🔹 movimentação
       await supabase.from("movimentacoes").insert([{
@@ -811,6 +854,7 @@ if (btnPagarFatura) {
         .from("contas_bancarias")
         .select("*")
         .eq("id", contaId)
+        .eq("user_id", state.user.id)
         .single();
 
       const novoSaldo = Number(conta.saldo_atual || 0) - total;
@@ -818,7 +862,8 @@ if (btnPagarFatura) {
       await supabase
         .from("contas_bancarias")
         .update({ saldo_atual: novoSaldo })
-        .eq("id", contaId);
+        .eq("id", contaId)
+        .eq("user_id", state.user.id);
 
       // 🔹 marcar fatura como PAGA
       await supabase
@@ -827,7 +872,8 @@ if (btnPagarFatura) {
           pago: true,
           status: "paga"
         })
-        .eq("id", state.faturaAtual.id);
+        .eq("id", state.faturaAtual.id)
+        .eq("user_id", state.user.id);
 
       showToast("Fatura paga com sucesso!", "success");
 
@@ -878,7 +924,11 @@ if (btnPagarFatura) {
     if (!confirm("Deseja realmente reabrir esta fatura?")) return;
 
     try {
-      const { error } = await supabase.from("cartao_faturas").delete().eq("id", state.faturaAtual.id);
+      const { error } = await supabase
+        .from("cartao_faturas")
+        .delete()
+        .eq("id", state.faturaAtual.id)
+        .eq("user_id", state.user.id);
       if (error) {
         console.error(error);
         return showToast("Erro ao reabrir fatura.", "error");
@@ -1102,6 +1152,7 @@ if (btnConfirmarPagParcial) {
       .from("contas_bancarias")
       .select("saldo_atual")
       .eq("id", contaId)
+      .eq("user_id", state.user.id)
       .single();
 
     await supabase
@@ -1109,7 +1160,8 @@ if (btnConfirmarPagParcial) {
       .update({
         saldo_atual: Number(conta.saldo_atual || 0) - valor
       })
-      .eq("id", contaId);
+      .eq("id", contaId)
+      .eq("user_id", state.user.id);
 
     // 🔥 4️⃣ Inserir abatimento na fatura
     await supabase.from("cartao_lancamentos").insert([{
@@ -1267,7 +1319,11 @@ async function abrirEdicaoAvista(l) {
 }
 
   async function popularSelectCategoriaAvista(id) {
-    const { data } = await supabase.from("categorias").select("*").order("nome");
+    const { data } = await supabase
+      .from("categorias")
+      .select("*")
+      .eq("user_id", state.user.id)
+      .order("nome");
     const sel = document.getElementById("avista-categoria");
     sel.innerHTML = "";
     (data || []).forEach((c) => {
@@ -1307,7 +1363,8 @@ async function abrirEdicaoAvista(l) {
         categoria_id: cat,
         cartao_id: cartao,
       })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", state.user.id);
 
     if (error) {
       console.error(error);
@@ -1323,7 +1380,11 @@ async function abrirEdicaoAvista(l) {
     const id = viewEditarAvista.dataset.lancId;
     if (!confirm("Excluir compra?")) return;
 
-    await supabase.from("cartao_lancamentos").delete().eq("id", id);
+    await supabase
+      .from("cartao_lancamentos")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", state.user.id);
 
     showToast("Compra excluída.");
     await loadFaturaForSelected();
@@ -1362,6 +1423,7 @@ async function abrirEdicaoAvista(l) {
       .from("cartao_lancamentos")
       .select("*")
       .eq("cartao_id", c.cartao_id)
+      .eq("user_id", state.user.id)
       .ilike("descricao", `${base}%`)
       .gte("data_fatura", dataInicioEdicao)
       .order("data_fatura", { ascending: true });
@@ -1500,7 +1562,8 @@ if (modalParcelaCancelar) {
     const { error } = await supabase
       .from("cartao_lancamentos")
       .update({ valor: novoValor, data_fatura: novaData })
-      .eq("id", parcelaEditandoId);
+      .eq("id", parcelaEditandoId)
+      .eq("user_id", state.user.id);
 
     if (error) {
       console.error(error);
@@ -1516,7 +1579,11 @@ if (modalParcelaCancelar) {
   async function excluirParcela(id) {
     if (!confirm("Excluir somente esta parcela?")) return;
 
-    const { error } = await supabase.from("cartao_lancamentos").delete().eq("id", id);
+    const { error } = await supabase
+      .from("cartao_lancamentos")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", state.user.id);
 
     if (error) {
       console.error(error);
@@ -1558,7 +1625,11 @@ if (modalParcelaCancelar) {
 
   // ===========================// POPULAR SELECTS PARA EDIÇÃO// ===========================
   async function popularSelectCategoriaEdicao(id) {
-    const { data } = await supabase.from("categorias").select("*").order("nome");
+    const { data } = await supabase
+      .from("categorias")
+      .select("*")
+      .eq("user_id", state.user.id)
+      .order("nome");
     const sel = document.getElementById("edit-categoria");
     sel.innerHTML = "";
     (data || []).forEach((c) => {
@@ -1602,7 +1673,8 @@ if (modalParcelaCancelar) {
             categoria_id: categoria,
             cartao_id: cartao
           })
-          .eq("id", idFull);
+          .eq("id", idFull)
+          .eq("user_id", state.user.id);
 
         if (error) {
           console.error(error);
@@ -1626,7 +1698,11 @@ if (modalParcelaCancelar) {
         if (!confirm("Excluir esta compra (todas parcelas)?")) return;
 
         const ids = state.editingPurchaseParcels.map(p => p.id);
-        await supabase.from("cartao_lancamentos").delete().in("id", ids);
+        await supabase
+          .from("cartao_lancamentos")
+          .delete()
+          .in("id", ids)
+          .eq("user_id", state.user.id);
 
         showToast("Compra parcelada excluída.");
         await loadFaturaForSelected();
@@ -1748,6 +1824,7 @@ if (btnGerarDespesa) {
         .from("despesas")
         .select("id")
         .eq("cartao_fatura_id", state.faturaAtual.id)
+        .eq("user_id", state.user.id)
         .maybeSingle();
 
       if (despExistente) {
@@ -1912,7 +1989,12 @@ if (btnFecharEdicao) {
     modalEditarCompra.classList.add("hidden");
   };
 }
-}); // fim DOMContentLoaded
+} // fim initCartaoPage
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initCartaoPage);
+} else {
+  initCartaoPage();
+}
 
 // ==================================================================================// FIM do arquivo cartao.js// ==================================================================================
-
