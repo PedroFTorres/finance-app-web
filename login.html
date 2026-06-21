@@ -16,8 +16,8 @@
     <h2 class="login-title">Bem-vindo</h2>
     <p class="login-subtitle">Acesse sua conta Arolix</p>
 
-    <input id="email" type="email" placeholder="Seu email" class="full">
-    <input id="password" type="password" placeholder="Sua senha" class="full">
+    <input id="email" type="email" placeholder="Seu email" class="full" autocomplete="email">
+    <input id="password" type="password" placeholder="Sua senha" class="full" autocomplete="current-password" maxlength="128">
     <p style="text-align:right; margin:8px 0 20px;">
   <a href="#" id="forgot-password" style="font-size:13px; color:#7a4dff; text-decoration:none;">
     Esqueci minha senha
@@ -36,7 +36,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="supabase.js"></script>
-  <script src="login.js"></script>
+  <script src="login.js?v=20260621-1"></script>
   
   <!-- MODAL CRIAR CONTA -->
 <div id="modal-signup" class="modal hidden">
@@ -44,10 +44,10 @@
 
     <h2>Criar Conta</h2>
 
-    <input id="signup-nome" type="text" placeholder="Seu nome completo" class="full">
-    <input id="signup-email" type="email" placeholder="Seu email" class="full">
-    <input id="signup-password" type="password" placeholder="Senha" class="full">
-    <input id="signup-password2" type="password" placeholder="Confirmar senha" class="full">
+    <input id="signup-nome" type="text" placeholder="Seu nome completo" class="full" autocomplete="name" maxlength="120">
+    <input id="signup-email" type="email" placeholder="Seu email" class="full" autocomplete="email">
+    <input id="signup-password" type="password" placeholder="Senha (mínimo de 12 caracteres)" class="full" autocomplete="new-password" minlength="12" maxlength="128">
+    <input id="signup-password2" type="password" placeholder="Confirmar senha" class="full" autocomplete="new-password" minlength="12" maxlength="128">
 
     <button id="confirm-signup" class="btn-primary full">Criar Conta</button>
     <button id="cancel-signup" class="btn-secondary full">Cancelar</button>
@@ -62,7 +62,7 @@
 
     <h2>Recuperar Senha</h2>
 
-    <input id="reset-email" type="email" placeholder="Digite seu email" class="full">
+    <input id="reset-email" type="email" placeholder="Digite seu email" class="full" autocomplete="email">
 
     <button id="send-reset" class="btn-primary full">
       Enviar Link de Recuperação

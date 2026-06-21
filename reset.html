@@ -18,8 +18,8 @@
     <h2 class="login-title">Redefinir Senha</h2>
     <p class="login-subtitle">Digite sua nova senha abaixo</p>
 
-    <input id="new-password" type="password" placeholder="Nova senha" class="full">
-    <input id="confirm-password" type="password" placeholder="Confirmar nova senha" class="full">
+    <input id="new-password" type="password" placeholder="Nova senha (mínimo de 12 caracteres)" class="full" autocomplete="new-password" minlength="12" maxlength="128">
+    <input id="confirm-password" type="password" placeholder="Confirmar nova senha" class="full" autocomplete="new-password" minlength="12" maxlength="128">
 
     <button id="btn-reset" class="btn-primary full">
       Atualizar Senha
@@ -56,8 +56,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    if (pass.length < 6) {
-      msg.textContent = "A senha deve ter no mínimo 6 caracteres.";
+    if (pass.length < 12) {
+      msg.textContent = "A senha deve ter no mínimo 12 caracteres.";
       return;
     }
 

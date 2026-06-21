@@ -15,11 +15,11 @@
  <img id="avatar-preview"
      src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
      style="width:100px;height:100px;border-radius:50%;margin-bottom:20px;object-fit:cover;">
-    <input type="file" id="avatar-file" class="full">
+    <input type="file" id="avatar-file" class="full" accept="image/jpeg,image/png,image/webp">
 
-    <input id="profile-nome" type="text" placeholder="Nome completo" class="full">
+    <input id="profile-nome" type="text" placeholder="Nome completo" class="full" autocomplete="name" maxlength="120">
     <input id="profile-email" type="email" disabled class="full">
-    <input id="profile-cpf" type="text" placeholder="CPF" class="full">
+    <input id="profile-cpf" type="text" placeholder="CPF" class="full" inputmode="numeric" maxlength="14">
 
     <p style="margin-top:15px;">
       <strong>Plano:</strong> <span id="profile-plano"></span>
@@ -79,11 +79,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     const file = event.target.files[0];
     if (!file) return;
 
-    const fileExt = file.name.split(".").pop()?.toLowerCase();
-    const allowedExtensions = ["jpg", "jpeg", "png", "webp", "gif"];
+    const maxAvatarBytes = 2 * 1024 * 1024;
+    const extensionsByMime = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp"
+    };
+    const fileExt = extensionsByMime[file.type];
 
-    if (!allowedExtensions.includes(fileExt)) {
-      alert("Formato inválido. Envie uma imagem JPG, PNG, WEBP ou GIF.");
+    if (!fileExt) {
+      alert("Formato inválido. Envie uma imagem JPG, PNG ou WEBP.");
+      avatarFile.value = "";
+      return;
+    }
+
+    if (file.size > maxAvatarBytes) {
+      alert("A imagem deve ter no máximo 2 MB.");
+      avatarFile.value = "";
+      return;
+    }
+
+    try {
+      const bitmap = await createImageBitmap(file);
+      const dimensionsAreValid =
+        bitmap.width > 0 && bitmap.height > 0 &&
+        bitmap.width <= 4096 && bitmap.height <= 4096;
+      bitmap.close();
+
+      if (!dimensionsAreValid) {
+        throw new Error("Invalid image dimensions");
+      }
+    } catch (_error) {
+      alert("O arquivo não é uma imagem válida ou possui dimensões muito grandes.");
       avatarFile.value = "";
       return;
     }
@@ -92,7 +119,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
    const { error: uploadError } = await supabase.storage
   .from("avatars")
-  .upload(fileName, file, { upsert: true });
+  .upload(fileName, file, {
+    upsert: false,
+    contentType: file.type,
+    cacheControl: "3600"
+  });
 
     if (uploadError) {
       alert(uploadError.message);
@@ -103,10 +134,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       .from("avatars")
       .getPublicUrl(fileName);
 
-    await supabase
+    const { error: profileError } = await supabase
       .from("user_profiles")
       .update({ avatar_url: data.publicUrl })
       .eq("id", user.id);
+
+    if (profileError) {
+      await supabase.storage.from("avatars").remove([fileName]);
+      alert("Não foi possível atualizar o avatar.");
+      return;
+    }
 
     avatarPreview.src = `${data.publicUrl}?t=${Date.now()}`;
   });
