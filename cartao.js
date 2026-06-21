@@ -25,6 +25,13 @@ function initCartaoPage() {
     }, 3500);
   }
 
+  function createTextElement(tag, text, className = "") {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    el.textContent = String(text ?? "");
+    return el;
+  }
+
   // ===========================// ESTADO // ===========================
   const state = {
     user: null,
@@ -359,11 +366,13 @@ function renderCardsSidebar() {
     el.className = "card-tile" + (c.id === activeCardId ? " active" : "");
     el.style.background = getCardGradient(i);
 
-    el.innerHTML = `
-      <div class="nome">${c.nome}</div>
-      <div class="info">Limite: ${formatReal(c.limite)}</div>
-      <div class="info">Fecha ${c.dia_fechamento} • Venc ${c.dia_vencimento}</div>
-    `;
+    el.appendChild(createTextElement("div", c.nome, "nome"));
+    el.appendChild(createTextElement("div", `Limite: ${formatReal(c.limite)}`, "info"));
+    el.appendChild(createTextElement(
+      "div",
+      `Fecha ${c.dia_fechamento} • Venc ${c.dia_vencimento}`,
+      "info"
+    ));
 
  el.onclick = async () => {
   activeCardId = c.id;
@@ -593,12 +602,8 @@ async function loadFaturaForSelected() {
     ? "valor-pagamento"
     : "";
 
-  li.innerHTML = `
-    <span>${c.descricao}</span>
-    <span class="${valorClasse}">
-      ${valorFormatado}
-    </span>
-  `;
+  li.appendChild(createTextElement("span", c.descricao));
+  li.appendChild(createTextElement("span", valorFormatado, valorClasse));
 
   li.onclick = () => abrirFluxoEdicaoCompra(c);
 
@@ -1489,29 +1494,24 @@ async function abrirEdicaoAvista(l) {
       ? new Date(p.data_fatura + "T00:00:00").toLocaleDateString("pt-BR")
       : "-";
 
-    li.innerHTML = `
-      <span>
-        (${p.parcela_atual}/${total}) —
-        Compra: ${dataCompra} —
-        Fatura: ${dataFatura} —
-        ${formatReal(p.valor)}
-      </span>
+    li.appendChild(createTextElement(
+      "span",
+      `(${p.parcela_atual}/${total}) — Compra: ${dataCompra} — Fatura: ${dataFatura} — ${formatReal(p.valor)}`
+    ));
 
-      <div class="parcela-actions">
-        <button class="btn-secondary btn-edit">Editar</button>
-        <button class="btn-danger btn-del">Excluir</button>
-        <button class="btn-primary btn-ant">Antecipar</button>
-      </div>
-    `;
-
-    li.querySelector(".btn-edit").onclick = () =>
-      abrirModalEditarParcela(p);
-
-    li.querySelector(".btn-del").onclick = () =>
-      excluirParcela(p.id);
-
-    li.querySelector(".btn-ant").onclick = () =>
-      anteciparParcela(p.id);
+    const actions = document.createElement("div");
+    actions.className = "parcela-actions";
+    const editButton = createTextElement("button", "Editar", "btn-secondary btn-edit");
+    const deleteButton = createTextElement("button", "Excluir", "btn-danger btn-del");
+    const anticipateButton = createTextElement("button", "Antecipar", "btn-primary btn-ant");
+    editButton.type = "button";
+    deleteButton.type = "button";
+    anticipateButton.type = "button";
+    editButton.onclick = () => abrirModalEditarParcela(p);
+    deleteButton.onclick = () => excluirParcela(p.id);
+    anticipateButton.onclick = () => anteciparParcela(p.id);
+    actions.append(editButton, deleteButton, anticipateButton);
+    li.appendChild(actions);
 
     lista.appendChild(li);
   });

@@ -45,15 +45,14 @@ function mostrarPainel(titulo, texto){
   const guide = document.createElement("div");
   guide.id = "onboarding-guide";
 
-  guide.innerHTML = `
-  <div class="onboarding-box">
-
-  <h2>${titulo}</h2>
-
-  <p>${texto}</p>
-
-  </div>
-  `;
+  const box = document.createElement("div");
+  box.className = "onboarding-box";
+  const heading = document.createElement("h2");
+  heading.textContent = String(titulo ?? "");
+  const description = document.createElement("p");
+  description.textContent = String(texto ?? "");
+  box.append(heading, description);
+  guide.appendChild(box);
 
   document.body.appendChild(guide);
 
