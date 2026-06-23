@@ -22,10 +22,14 @@
       background:#fff3cd;color:#664d03;border:1px solid #ffecb5;
       font-size:14px;
     `;
-    alert.innerHTML = `
-      🔒 Recurso premium. Faça upgrade para liberar esta funcionalidade.
-      <a href="upgrade.html" style="margin-left:8px;font-weight:700;">Ir para upgrade</a>
-    `;
+    alert.appendChild(document.createTextNode(
+      "🔒 Recurso premium. Faça upgrade para liberar esta funcionalidade. "
+    ));
+    const upgradeLink = document.createElement("a");
+    upgradeLink.href = "upgrade.html";
+    upgradeLink.textContent = "Ir para upgrade";
+    upgradeLink.style.cssText = "margin-left:8px;font-weight:700;";
+    alert.appendChild(upgradeLink);
 
     // coloca no topo do main
     const main = document.querySelector("main");

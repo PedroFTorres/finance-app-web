@@ -176,6 +176,12 @@ let FILTRO_LANCAMENTOS = "pendencias";
   const $ = id => document.getElementById(id);
   const $all = sel => Array.from(document.querySelectorAll(sel || ''));
   function safeText(el, txt) { if (!el) return; el.textContent = txt; }
+  function createTextElement(tag, text, className = '') {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    el.textContent = String(text ?? '');
+    return el;
+  }
   function fmtMoney(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
   function fmtDateBR(d) { if (!d) return ''; const x = new Date(d + 'T00:00:00'); return `${String(x.getDate()).padStart(2,'0')}/${String(x.getMonth()+1).padStart(2,'0')}/${x.getFullYear()}`; }
   function isoToday() { return new Date().toISOString().slice(0,10); }
@@ -934,25 +940,24 @@ renderContasCards() {
     const div = document.createElement("div");
     div.className = "conta-card";
 
-    div.innerHTML = `
-      <div class="conta-info">
-        <strong>${conta.nome}</strong>
+    const info = document.createElement("div");
+    info.className = "conta-info";
+    info.appendChild(createTextElement("strong", conta.nome));
+    info.appendChild(createTextElement("small", `Agência: ${conta.agencia || "-"}`));
+    info.appendChild(createTextElement("small", `Conta: ${conta.numero_conta || "-"}`));
+    info.appendChild(createTextElement("small", `Gerente: ${conta.gerente || "-"}`));
+    info.appendChild(createTextElement("small", `Contato: ${conta.contato || "-"}`));
 
-        <small>Agência: ${conta.agencia || "-"}</small>
-        <small>Conta: ${conta.numero_conta || "-"}</small>
-        <small>Gerente: ${conta.gerente || "-"}</small>
-        <small>Contato: ${conta.contato || "-"}</small>
-
-        <div class="conta-actions">
-          <button class="btn-secondary btn-edit-conta">
-            Editar
-          </button>
-        </div>
-      </div>
-    `;
+    const actions = document.createElement("div");
+    actions.className = "conta-actions";
+    const editButton = createTextElement("button", "Editar", "btn-secondary btn-edit-conta");
+    editButton.type = "button";
+    actions.appendChild(editButton);
+    info.appendChild(actions);
+    div.appendChild(info);
 
     // 🔥 ATIVA O BOTÃO EDITAR
-    div.querySelector(".btn-edit-conta").addEventListener("click", () => {
+    editButton.addEventListener("click", () => {
       abrirModalEditarConta(conta);
     });
 
@@ -2076,19 +2081,27 @@ if (modoPeriodoExtrato === "custom") {
     tdAcoes.appendChild(btnExcluir);
   }
 
-  tr.innerHTML = `
-    <td>${new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR")}</td>
-    <td>${m.descricao}</td>
-    <td class="${m.tipo === "credito" ? "extrato-credito" : "extrato-debito"}">
-      ${m.tipo === "credito" ? "Crédito" : "Débito"}
-    </td>
-    <td class="${m.tipo === "credito" ? "extrato-credito" : "extrato-debito"}">
-      ${Number(m.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-    </td>
-    <td class="${saldo >= 0 ? "extrato-saldo-positivo" : "extrato-saldo-negativo"}">
-      ${saldo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-    </td>
-  `;
+  const movementClass = m.tipo === "credito" ? "extrato-credito" : "extrato-debito";
+  tr.appendChild(createTextElement(
+    "td",
+    new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR")
+  ));
+  tr.appendChild(createTextElement("td", m.descricao));
+  tr.appendChild(createTextElement(
+    "td",
+    m.tipo === "credito" ? "Crédito" : "Débito",
+    movementClass
+  ));
+  tr.appendChild(createTextElement(
+    "td",
+    Number(m.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+    movementClass
+  ));
+  tr.appendChild(createTextElement(
+    "td",
+    saldo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+    saldo >= 0 ? "extrato-saldo-positivo" : "extrato-saldo-negativo"
+  ));
 
   tr.appendChild(tdAcoes);
   tbody.appendChild(tr);

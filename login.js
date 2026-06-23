@@ -87,6 +87,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      if (pass.length < 12) {
+        signupMsg.textContent = "A senha deve ter no mínimo 12 caracteres.";
+        btnConfirmSignup.disabled = false;
+        btnConfirmSignup.textContent = "Criar Conta";
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password: pass,
