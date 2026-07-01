@@ -25,6 +25,61 @@
       <strong>Plano:</strong> <span id="profile-plano"></span>
     </p>
 
+    <div class="mfa-card">
+      <h3>Segurança da conta</h3>
+      <p class="mfa-description">
+        Ative a verificação em duas etapas usando Google Authenticator,
+        Microsoft Authenticator, 1Password ou outro app compatível.
+      </p>
+
+      <p class="mfa-status-line">
+        <strong>Status MFA:</strong> <span id="mfa-status">Verificando...</span>
+      </p>
+
+      <button id="start-mfa" class="btn-primary full">
+        Ativar verificação em duas etapas
+      </button>
+
+      <button id="disable-mfa" class="btn-secondary full hidden">
+        Desativar verificação em duas etapas
+      </button>
+
+      <div id="mfa-setup" class="mfa-setup hidden">
+        <p class="mfa-description">
+          1. Escaneie o QR Code no seu app autenticador.<br>
+          2. Digite o código de 6 dígitos para confirmar.
+        </p>
+
+        <img id="mfa-qr" class="mfa-qr" alt="QR Code do MFA">
+
+        <p class="mfa-description">
+          Se não conseguir escanear, use esta chave manual:
+        </p>
+
+        <code id="mfa-secret" class="mfa-secret"></code>
+
+        <input
+          id="mfa-verify-code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          placeholder="Código de 6 dígitos"
+          class="full"
+          maxlength="6"
+        >
+
+        <button id="confirm-mfa-setup" class="btn-primary full">
+          Confirmar MFA
+        </button>
+
+        <button id="cancel-mfa-setup" class="btn-secondary full">
+          Cancelar ativação
+        </button>
+      </div>
+
+      <p id="mfa-profile-msg" class="msg"></p>
+    </div>
+
     <button id="save-profile" class="btn-primary full">
       Salvar Alterações
     </button>
@@ -71,6 +126,262 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (profile?.avatar_url) {
     avatarPreview.src = profile.avatar_url;
   }
+
+  // ======================
+  // MFA / AUTENTICADOR
+  // ======================
+
+  let pendingMfaFactorId = null;
+
+  const mfaStatus = document.getElementById("mfa-status");
+  const startMfa = document.getElementById("start-mfa");
+  const disableMfa = document.getElementById("disable-mfa");
+  const mfaSetup = document.getElementById("mfa-setup");
+  const mfaQr = document.getElementById("mfa-qr");
+  const mfaSecret = document.getElementById("mfa-secret");
+  const mfaVerifyCode = document.getElementById("mfa-verify-code");
+  const confirmMfaSetup = document.getElementById("confirm-mfa-setup");
+  const cancelMfaSetup = document.getElementById("cancel-mfa-setup");
+  const mfaProfileMsg = document.getElementById("mfa-profile-msg");
+
+  function normalizeOtpCode(code) {
+    return String(code || "").replace(/\D/g, "").slice(0, 6);
+  }
+
+  function setMfaMessage(text, isSuccess = false) {
+    mfaProfileMsg.style.color = isSuccess ? "green" : "red";
+    mfaProfileMsg.textContent = text;
+  }
+
+  function setButtonLoading(button, isLoading, loadingText, defaultText) {
+    if (!button) return;
+    button.disabled = isLoading;
+    button.textContent = isLoading ? loadingText : defaultText;
+  }
+
+  function renderQrCode(qrCode) {
+    if (!qrCode) {
+      mfaQr.removeAttribute("src");
+      return;
+    }
+
+    if (qrCode.trim().startsWith("<svg")) {
+      mfaQr.src = `data:image/svg+xml;utf8,${encodeURIComponent(qrCode)}`;
+      return;
+    }
+
+    mfaQr.src = qrCode;
+  }
+
+  async function getVerifiedTotpFactor() {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+
+    if (error) {
+      throw error;
+    }
+
+    return data?.totp?.find((factor) => factor.status === "verified") || null;
+  }
+
+  async function loadMfaStatus() {
+    try {
+      const verifiedFactor = await getVerifiedTotpFactor();
+
+      if (verifiedFactor) {
+        mfaStatus.textContent = "Ativo";
+        mfaStatus.style.color = "green";
+        startMfa.classList.add("hidden");
+        disableMfa.classList.remove("hidden");
+        mfaSetup.classList.add("hidden");
+        return;
+      }
+
+      mfaStatus.textContent = "Desativado";
+      mfaStatus.style.color = "#777";
+      startMfa.classList.remove("hidden");
+      disableMfa.classList.add("hidden");
+    } catch (error) {
+      mfaStatus.textContent = "Não foi possível verificar";
+      setMfaMessage(error.message || "Erro ao verificar MFA.");
+    }
+  }
+
+  if (mfaVerifyCode) {
+    mfaVerifyCode.addEventListener("input", () => {
+      mfaVerifyCode.value = normalizeOtpCode(mfaVerifyCode.value);
+    });
+
+    mfaVerifyCode.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        confirmMfaSetup?.click();
+      }
+    });
+  }
+
+  if (startMfa) {
+    startMfa.onclick = async () => {
+      if (startMfa.disabled) return;
+
+      setMfaMessage("");
+      setButtonLoading(
+        startMfa,
+        true,
+        "Preparando...",
+        "Ativar verificação em duas etapas"
+      );
+
+      try {
+        const existingFactor = await getVerifiedTotpFactor();
+
+        if (existingFactor) {
+          setMfaMessage("MFA já está ativo nesta conta.", true);
+          await loadMfaStatus();
+          return;
+        }
+
+        const { data, error } = await supabase.auth.mfa.enroll({
+          factorType: "totp",
+          friendlyName: "Arolix"
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        pendingMfaFactorId = data.id;
+        renderQrCode(data?.totp?.qr_code);
+        mfaSecret.textContent = data?.totp?.secret || "";
+        mfaVerifyCode.value = "";
+        mfaSetup.classList.remove("hidden");
+        mfaVerifyCode.focus();
+        setMfaMessage(
+          "Escaneie o QR Code e confirme com o código do app.",
+          true
+        );
+      } catch (error) {
+        setMfaMessage(error.message || "Não foi possível iniciar o MFA.");
+      } finally {
+        setButtonLoading(
+          startMfa,
+          false,
+          "Preparando...",
+          "Ativar verificação em duas etapas"
+        );
+      }
+    };
+  }
+
+  if (confirmMfaSetup) {
+    confirmMfaSetup.onclick = async () => {
+      if (confirmMfaSetup.disabled) return;
+
+      const code = normalizeOtpCode(mfaVerifyCode.value);
+
+      if (!pendingMfaFactorId || code.length !== 6) {
+        setMfaMessage("Digite o código de 6 dígitos.");
+        return;
+      }
+
+      setButtonLoading(confirmMfaSetup, true, "Confirmando...", "Confirmar MFA");
+      setMfaMessage("");
+
+      try {
+        const challenge = await supabase.auth.mfa.challenge({
+          factorId: pendingMfaFactorId
+        });
+
+        if (challenge.error) {
+          throw challenge.error;
+        }
+
+        const verify = await supabase.auth.mfa.verify({
+          factorId: pendingMfaFactorId,
+          challengeId: challenge.data.id,
+          code
+        });
+
+        if (verify.error) {
+          throw verify.error;
+        }
+
+        pendingMfaFactorId = null;
+        setMfaMessage("MFA ativado com sucesso!", true);
+        await loadMfaStatus();
+      } catch (error) {
+        setMfaMessage(error.message || "Código MFA inválido.");
+      } finally {
+        setButtonLoading(confirmMfaSetup, false, "Confirmando...", "Confirmar MFA");
+      }
+    };
+  }
+
+  if (cancelMfaSetup) {
+    cancelMfaSetup.onclick = async () => {
+      if (pendingMfaFactorId) {
+        await supabase.auth.mfa.unenroll({ factorId: pendingMfaFactorId });
+      }
+
+      pendingMfaFactorId = null;
+      mfaSetup.classList.add("hidden");
+      setMfaMessage("Ativação de MFA cancelada.");
+      await loadMfaStatus();
+    };
+  }
+
+  if (disableMfa) {
+    disableMfa.onclick = async () => {
+      if (disableMfa.disabled) return;
+
+      const confirmed = window.confirm(
+        "Tem certeza que deseja desativar a verificação em duas etapas?"
+      );
+
+      if (!confirmed) return;
+
+      setButtonLoading(
+        disableMfa,
+        true,
+        "Desativando...",
+        "Desativar verificação em duas etapas"
+      );
+      setMfaMessage("");
+
+      try {
+        const verifiedFactor = await getVerifiedTotpFactor();
+
+        if (!verifiedFactor) {
+          setMfaMessage("Nenhum MFA ativo foi encontrado.");
+          await loadMfaStatus();
+          return;
+        }
+
+        const { error } = await supabase.auth.mfa.unenroll({
+          factorId: verifiedFactor.id
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        setMfaMessage("MFA desativado com sucesso.", true);
+        await loadMfaStatus();
+      } catch (error) {
+        setMfaMessage(
+          error.message ||
+          "Não foi possível desativar. Faça login novamente com MFA e tente outra vez."
+        );
+      } finally {
+        setButtonLoading(
+          disableMfa,
+          false,
+          "Desativando...",
+          "Desativar verificação em duas etapas"
+        );
+      }
+    };
+  }
+
+  await loadMfaStatus();
 
   // ======================// UPLOAD AVATAR// ======================
 
