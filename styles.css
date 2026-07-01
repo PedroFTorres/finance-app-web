@@ -332,11 +332,13 @@ button:hover { opacity: .9; }
 
 .login-wrapper {
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   background: var(--bg);
+  box-sizing: border-box;
+  padding: 24px 12px;
 }
 
 .login-box {
@@ -376,6 +378,60 @@ button:hover { opacity: .9; }
   margin-top: 10px;
   font-size: 14px;
   color: red;
+}
+
+.mfa-card {
+  margin: 22px 0;
+  padding: 18px;
+  border: 1px solid #eee;
+  border-radius: 14px;
+  background: #faf9ff;
+  text-align: left;
+}
+
+.mfa-card h3 {
+  margin-top: 0;
+  text-align: center;
+}
+
+.mfa-description {
+  color: #666;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.mfa-status-line {
+  font-size: 14px;
+}
+
+.mfa-setup {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.mfa-qr {
+  width: 190px;
+  max-width: 100%;
+  min-height: 190px;
+  margin: 10px auto 14px;
+  display: block;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+}
+
+.mfa-secret {
+  display: block;
+  margin: 10px 0 14px;
+  padding: 10px;
+  overflow-wrap: anywhere;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #eee;
+  color: #333;
+  font-size: 12px;
+  text-align: center;
 }
 
 /* ============================================================= RESPONSIVIDADE ============================================================= */
