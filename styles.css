@@ -235,6 +235,34 @@ button:hover { opacity: .9; }
 .listas li:nth-child(odd) { background: #fff; }
 .listas li:nth-child(even) { background: var(--roxo-claro); }
 
+.listas li.lanc-provisorio-cartao {
+  background: #fff8e1;
+  border: 1px dashed #f6b73c;
+  color: #5f4700;
+}
+
+.lanc-provisorio-info {
+  align-items: flex-end;
+  flex-direction: column;
+}
+
+.lanc-badge-provisorio {
+  background: #f59e0b;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.lanc-provisorio-info small {
+  color: #8a6d1f;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 
 /* =============================================================ÍCONES PROFISSIONAIS DOS BOTÕES ============================================================= */
 
