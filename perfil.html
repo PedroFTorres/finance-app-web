@@ -28,8 +28,7 @@
     <div class="mfa-card">
       <h3>Segurança da conta</h3>
       <p class="mfa-description">
-        Ative a verificação em duas etapas usando Google Authenticator,
-        Microsoft Authenticator, 1Password ou outro app compatível.
+        Ative a verificação em duas etapas usando o Google Authenticator.
       </p>
 
       <p class="mfa-status-line">
@@ -46,7 +45,7 @@
 
       <div id="mfa-setup" class="mfa-setup hidden">
         <p class="mfa-description">
-          1. Escaneie o QR Code no seu app autenticador.<br>
+          1. Escaneie o QR Code no Google Authenticator.<br>
           2. Digite o código de 6 dígitos para confirmar.
         </p>
 
@@ -173,14 +172,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     mfaQr.src = qrCode;
   }
 
-  async function getVerifiedTotpFactor() {
+  async function listTotpFactors() {
     const { data, error } = await supabase.auth.mfa.listFactors();
 
     if (error) {
       throw error;
     }
 
-    return data?.totp?.find((factor) => factor.status === "verified") || null;
+    return data?.totp || [];
+  }
+
+  async function getVerifiedTotpFactor() {
+    const factors = await listTotpFactors();
+    return factors.find((factor) => factor.status === "verified") || null;
+  }
+
+  async function removeUnverifiedTotpFactors() {
+    const factors = await listTotpFactors();
+    const unverifiedFactors = factors.filter(
+      (factor) => factor.status !== "verified"
+    );
+
+    for (const factor of unverifiedFactors) {
+      await supabase.auth.mfa.unenroll({ factorId: factor.id });
+    }
   }
 
   async function loadMfaStatus() {
@@ -238,6 +253,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           await loadMfaStatus();
           return;
         }
+
+        await removeUnverifiedTotpFactors();
 
         const { data, error } = await supabase.auth.mfa.enroll({
           factorType: "totp",
