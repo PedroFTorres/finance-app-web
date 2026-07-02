@@ -26,6 +26,7 @@
     categorias: [],
     receitas: [],
     despesas: [],
+    cartaoPrevistos: [],
     movimentacoes: [],
     charts: { recCat: null, desCat: null, resumo: null },
     subs: [] // para armazenar channels se quiser unsub later
@@ -555,6 +556,94 @@ const CategoriasService = {
         if (error) throw error;
         return true;
       } catch (e) { console.error('LancService.delete', e); throw e; }
+    },
+    async fetchPrevisoesCartao(conta_id = 'all', inicio, fim) {
+      try {
+        // A fatura aberta ainda não pertence a uma conta bancária.
+        // Por isso ela aparece só na visão "Todas as contas", evitando ruído
+        // quando o usuário filtra uma conta específica.
+        if (conta_id && conta_id !== 'all') return [];
+
+        const { data: lancamentos, error: errLanc } = await supabase
+          .from('cartao_lancamentos')
+          .select('id, cartao_id, descricao, valor, data_compra, data_fatura, tipo')
+          .eq('user_id', STATE.user.id)
+          .gte('data_fatura', inicio)
+          .lte('data_fatura', fim)
+          .order('data_fatura', { ascending: true });
+
+        if (errLanc) throw errLanc;
+        if (!lancamentos || lancamentos.length === 0) return [];
+
+        const cartaoIds = [...new Set(lancamentos.map(l => l.cartao_id).filter(Boolean))];
+
+        const [{ data: cartoes, error: errCartoes }, { data: faturas, error: errFaturas }] = await Promise.all([
+          cartaoIds.length
+            ? supabase
+                .from('cartoes_credito')
+                .select('id, nome')
+                .eq('user_id', STATE.user.id)
+                .in('id', cartaoIds)
+            : Promise.resolve({ data: [], error: null }),
+          supabase
+            .from('cartao_faturas')
+            .select('id, cartao_id, mes, ano, status, pago')
+            .eq('user_id', STATE.user.id)
+        ]);
+
+        if (errCartoes) throw errCartoes;
+        if (errFaturas) throw errFaturas;
+
+        const cartoesPorId = new Map((cartoes || []).map(c => [c.id, c]));
+        const faturasPorChave = new Map(
+          (faturas || []).map(f => [`${f.cartao_id}:${f.ano}-${String(f.mes).padStart(2, '0')}`, f])
+        );
+        const grupos = new Map();
+
+        lancamentos.forEach(lanc => {
+          if (!lanc.cartao_id || !lanc.data_fatura) return;
+
+          const data = new Date(`${lanc.data_fatura}T00:00:00`);
+          const ano = data.getFullYear();
+          const mes = data.getMonth() + 1;
+          const chave = `${lanc.cartao_id}:${ano}-${String(mes).padStart(2, '0')}`;
+          const fatura = faturasPorChave.get(chave);
+
+          // Se já fechou ou pagou, a despesa real da fatura assume o lugar.
+          if (fatura && (fatura.status === 'fechada' || fatura.pago === true)) return;
+
+          const grupo = grupos.get(chave) || {
+            id: `cartao-previsto-${chave}`,
+            user_id: STATE.user.id,
+            descricao: '',
+            valor: 0,
+            data: lanc.data_fatura,
+            baixado: false,
+            provisorio_cartao: true,
+            cartao_id: lanc.cartao_id,
+            movimentos: 0
+          };
+
+          grupo.valor += Number(lanc.valor || 0);
+          grupo.movimentos += 1;
+          grupo.nome_cartao = cartoesPorId.get(lanc.cartao_id)?.nome || 'Cartão';
+          grupo.mes = mes;
+          grupo.ano = ano;
+          grupos.set(chave, grupo);
+        });
+
+        return [...grupos.values()]
+          .filter(g => Math.abs(Number(g.valor || 0)) > 0.009)
+          .map(g => ({
+            ...g,
+            valor: Number(Number(g.valor || 0).toFixed(2)),
+            descricao: `Fatura aberta ${g.nome_cartao} — ${String(g.mes).padStart(2, '0')}/${g.ano}`
+          }))
+          .sort((a, b) => new Date(a.data) - new Date(b.data));
+      } catch (e) {
+        console.error('LancService.fetchPrevisoesCartao', e);
+        return [];
+      }
     }
   };
 
@@ -975,7 +1064,7 @@ renderContasCards() {
 },
 
     // renders the lists of receipts and expenses in the lanc screen
-    renderLancamentos({ receitas, despesas }) {
+    renderLancamentos({ receitas, despesas, totais }) {
       const ulR = $(IDS.listReceitas); const ulD = $(IDS.listDespesas);
       if (ulR) ulR.innerHTML = '';
       if (ulD) ulD.innerHTML = '';
@@ -992,9 +1081,16 @@ renderContasCards() {
         if (ulD) ulD.appendChild(UI._createLancItem(d, 'despesa'));
       });
 
+      if (totais) {
+        totalR = Number(totais.receitas || 0);
+        totalD = Number(totais.despesas || 0);
+      }
+
       const tr = $(IDS.totalReceitas); const td = $(IDS.totalDespesas);
       if (tr) tr.textContent = fmtMoney(totalR);
       if (td) td.textContent = fmtMoney(totalD);
+
+      safeText($(IDS.saldoAtual), fmtMoney(totalR - totalD));
     },
 
    _createLancItem(item, tipo) {
@@ -1006,6 +1102,32 @@ renderContasCards() {
   // =========================// TEXTO DO LANÇAMENTO// =========================
       
  const left = document.createElement("div");
+
+if (item.provisorio_cartao) {
+  li.classList.add("lanc-provisorio-cartao");
+  li.title = "Previsão da fatura aberta. O lançamento real será criado quando a fatura for fechada.";
+
+  left.textContent =
+    `${fmtDateBR(item.data)} — ` +
+    `${item.descricao} — ` +
+    `${fmtMoney(item.valor)}`;
+
+  const badge = document.createElement("span");
+  badge.className = "lanc-badge-provisorio";
+  badge.textContent = "Fatura aberta";
+
+  const detalhe = document.createElement("small");
+  detalhe.textContent = `${item.movimentos || 0} movimento(s) do cartão`;
+
+  const right = document.createElement("div");
+  right.className = "lanc-provisorio-info";
+  right.appendChild(badge);
+  right.appendChild(detalhe);
+
+  li.appendChild(left);
+  li.appendChild(right);
+  return li;
+}
 
 left.textContent =
   `${fmtDateBR(item.data_baixa || item.data)} — ` +
@@ -1817,10 +1939,18 @@ if (name === 'contas') {
     }
   )
   .subscribe();
+        const chCartaoLanc = supabase.channel('chan_cartao_lancamentos').on('postgres_changes', { event: '*', schema: 'public', table: 'cartao_lancamentos' }, payload => {
+          console.debug('realtime cartao_lancamentos', payload);
+          this.refreshLancamentos();
+        }).subscribe();
+        const chCartaoFaturas = supabase.channel('chan_cartao_faturas').on('postgres_changes', { event: '*', schema: 'public', table: 'cartao_faturas' }, payload => {
+          console.debug('realtime cartao_faturas', payload);
+          this.refreshLancamentos();
+        }).subscribe();
 
         const chCats = supabase.channel('chan_cats').on('postgres_changes', { event: '*', schema: 'public', table: 'categorias' }, payload => { console.debug('realtime categorias', payload); this.reloadCatsContas(); }).subscribe();
         const chContas = supabase.channel('chan_contas').on('postgres_changes', { event: '*', schema: 'public', table: 'contas_bancarias' }, payload => { console.debug('realtime contas', payload); this.reloadCatsContas(); }).subscribe();
-        STATE.subs.push(chReceitas, chDespesas, chMov, chCats, chContas);
+        STATE.subs.push(chReceitas, chDespesas, chMov, chCartaoLanc, chCartaoFaturas, chCats, chContas);
       } catch (e) { console.warn('subscribeRealtime failed', e); }
     },
 
@@ -1850,6 +1980,7 @@ if (!inicio || !fim) {
   fim = new Date(ano, mes + 1, 0).toISOString().slice(0,10);
 }
         let r, d;
+        let previsoesCartao = [];
 
 if (FILTRO_LANCAMENTOS === "pagos" || FILTRO_LANCAMENTOS === "recebidos") {
 
@@ -1876,15 +2007,22 @@ if (FILTRO_LANCAMENTOS === "pagos" || FILTRO_LANCAMENTOS === "recebidos") {
 } else {
 
   // 🔵 FILTRA PELO VENCIMENTO (COMPORTAMENTO NORMAL)
-  [r, d] = await Promise.all([
+  [r, d, previsoesCartao] = await Promise.all([
     LancService.fetch('receita', conta_id, inicio, fim),
-    LancService.fetch('despesa', conta_id, inicio, fim)
+    LancService.fetch('despesa', conta_id, inicio, fim),
+    LancService.fetchPrevisoesCartao(conta_id, inicio, fim)
   ]);
 }
 
 
 STATE.receitas = r;
 STATE.despesas = d;
+STATE.cartaoPrevistos = previsoesCartao || [];
+
+const despesasPeriodo = [
+  ...(d || []),
+  ...((FILTRO_LANCAMENTOS === "pagos" || FILTRO_LANCAMENTOS === "recebidos") ? [] : STATE.cartaoPrevistos)
+];
          
 // 🔥 ORDENAR DEPENDENDO DO FILTRO ATIVO
 
@@ -1896,7 +2034,7 @@ if (FILTRO_LANCAMENTOS === "pagos" || FILTRO_LANCAMENTOS === "recebidos") {
 } else {
 
   r.sort((a, b) => new Date(a.data) - new Date(b.data));
-  d.sort((a, b) => new Date(a.data) - new Date(b.data));
+  despesasPeriodo.sort((a, b) => new Date(a.data) - new Date(b.data));
 
 }
 
@@ -1926,13 +2064,23 @@ const filtrar = (lista, tipo) => {
 };
 
 const receitasFiltradas = filtrar(r, "receita");
-const despesasFiltradas = filtrar(d, "despesa");
+const despesasFiltradas = filtrar(despesasPeriodo, "despesa");
+
+const totalReceitasPeriodo = (r || [])
+  .reduce((s, i) => s + Number(i.valor || 0), 0);
+
+const totalDespesasPeriodo = (despesasPeriodo || [])
+  .reduce((s, i) => s + Number(i.valor || 0), 0);
 
 // ================================// RENDER FINAL// ================================
          
 UI.renderLancamentos({
   receitas: receitasFiltradas,
-  despesas: despesasFiltradas
+  despesas: despesasFiltradas,
+  totais: {
+    receitas: totalReceitasPeriodo,
+    despesas: totalDespesasPeriodo
+  }
 });
 // ================================ VISIBILIDADE DOS BLOCOS (UX) // ================================
 
@@ -1969,21 +2117,6 @@ if (boxReceitas && boxDespesas && listas) {
 
   // Pendências → mostra os dois (layout padrão)
 }
-
-// ================================// SALDO DO PERÍODO — SOMENTE BAIXADOS// ================================
-         
-const totalReceitas = (r || [])
-  .filter(i => i.baixado === true)
-  .reduce((s, i) => s + Number(i.valor || 0), 0);
-
-const totalDespesas = (d || [])
-  .filter(i => i.baixado === true)
-  .reduce((s, i) => s + Number(i.valor || 0), 0);
-
-const saldoPeriodo = totalReceitas - totalDespesas;
-
-safeText($(IDS.saldoAtual), fmtMoney(saldoPeriodo));
-
 
        } catch (e) {
         console.error('refreshLancamentos', e);
