@@ -257,6 +257,15 @@ async function requireSessionOrRedirect() {
       return false;
     }
 
+    if (window.ArolixSecurity) {
+      const securityOk =
+        await window.ArolixSecurity.requireMfaForProtectedPage();
+
+      if (!securityOk) {
+        return false;
+      }
+    }
+
     // ✅ usuário autenticado
     STATE.user = data.session.user;
 

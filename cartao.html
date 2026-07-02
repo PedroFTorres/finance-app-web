@@ -191,6 +191,7 @@
 <script src="vendor/supabase-2.108.2.js"></script>
 <script src="config.js"></script>
 <script src="supabase.js"></script>
+<script src="security.js?v=20260702-1"></script>
 <script type="module">
   function hasPremiumAccess(profile) {
     const plano = String(profile?.plano || "").toLowerCase();
@@ -203,6 +204,13 @@
   if (!sessionResp?.session) {
     window.location.href = "login.html";
   } else {
+    const securityOk =
+      await window.ArolixSecurity.requireMfaForProtectedPage();
+
+    if (!securityOk) {
+      throw new Error("MFA obrigatório para acessar cartões.");
+    }
+
     const { data: profile, error } = await window.supabase
       .from("user_profiles")
       .select("plano, subscription_status")
