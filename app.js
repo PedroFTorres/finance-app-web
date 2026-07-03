@@ -64,9 +64,11 @@ async function atualizarDashboardPorMes() {
   const inicio = new Date(ano, mes, 1).toISOString().slice(0,10);
   const fim = new Date(ano, mes + 1, 0).toISOString().slice(0,10);
 
-  await drawResumo(inicio, fim);
-  await drawReceitasPorCategoria(inicio, fim);
-  await drawDespesasPorCategoria(inicio, fim);
+  const dadosDashboard = await carregarDadosDashboard(inicio, fim);
+
+  drawResumo(dadosDashboard);
+  drawReceitasPorCategoria(dadosDashboard);
+  drawDespesasPorCategoria(dadosDashboard);
 
   renderMesDashboard();
 }
@@ -1706,53 +1708,245 @@ function abrirModalEditarConta(conta) {
 
   /* ============================ CHARTS ============================ */
    
-  async function drawReceitasPorCategoria(inicio, fim) {
+  const DASH_COLORS = [
+    '#7a4dff',
+    '#22c55e',
+    '#f97316',
+    '#06b6d4',
+    '#ec4899',
+    '#f59e0b',
+    '#14b8a6',
+    '#6366f1',
+    '#ef4444',
+    '#84cc16'
+  ];
+
+  function categoriaNome(categoriaId) {
+    return STATE.categorias.find(c => c.id === categoriaId)?.nome || 'Sem categoria';
+  }
+
+  function agruparPorCategoria(lista, fallback = 'Sem categoria') {
+    const grupos = {};
+    (lista || []).forEach(item => {
+      const nome = item.categoria_nome || categoriaNome(item.categoria_id) || fallback;
+      grupos[nome] = (grupos[nome] || 0) + Number(item.valor || 0);
+    });
+    return grupos;
+  }
+
+  function prepararSerieGrafico(grupos) {
+    const itens = Object.entries(grupos || {})
+      .filter(([, valor]) => Math.abs(Number(valor || 0)) > 0.009)
+      .sort((a, b) => Number(b[1]) - Number(a[1]));
+
+    if (itens.length === 0) {
+      return {
+        labels: ['Sem dados'],
+        values: [1],
+        colors: ['#e5e7eb'],
+        vazio: true
+      };
+    }
+
+    const top = itens.slice(0, 7);
+    const restante = itens.slice(7).reduce((s, [, valor]) => s + Number(valor || 0), 0);
+
+    if (restante > 0) top.push(['Outros', restante]);
+
+    return {
+      labels: top.map(([label]) => label),
+      values: top.map(([, valor]) => Number(Number(valor || 0).toFixed(2))),
+      colors: top.map((_, i) => DASH_COLORS[i % DASH_COLORS.length]),
+      vazio: false
+    };
+  }
+
+  function chartMoneyTooltip(context) {
+    if (context.dataset?.metaVazio) return 'Sem dados no período';
+    const label = context.label || context.dataset?.label || '';
+    const value = context.parsed?.y ?? context.parsed ?? 0;
+    return `${label}: ${fmtMoney(value)}`;
+  }
+
+  async function carregarDadosDashboard(inicio, fim) {
     try {
-      const { data } = await supabase.from('receitas').select('*').eq('user_id', STATE.user.id).gte('data', inicio).lte('data', fim);
-      const groups = {};
-      (data || []).forEach(r => {
-        const name = STATE.categorias.find(c => c.id === r.categoria_id)?.nome || 'Sem categoria';
-        groups[name] = (groups[name] || 0) + Number(r.valor || 0);
-      });
-      const labels = Object.keys(groups);
-      const values = Object.values(groups);
+      const [{ data: receitas }, { data: despesas }, previsoesCartao] = await Promise.all([
+        supabase
+          .from('receitas')
+          .select('*')
+          .eq('user_id', STATE.user.id)
+          .gte('data', inicio)
+          .lte('data', fim),
+        supabase
+          .from('despesas')
+          .select('*')
+          .eq('user_id', STATE.user.id)
+          .gte('data', inicio)
+          .lte('data', fim),
+        LancService.fetchPrevisoesCartao('all', inicio, fim)
+      ]);
+
+      const receitasLista = receitas || [];
+      const despesasLista = despesas || [];
+      const cartaoLista = (previsoesCartao || []).map(item => ({
+        ...item,
+        categoria_nome: 'Cartão de crédito aberto'
+      }));
+      const despesasComPrevisao = [...despesasLista, ...cartaoLista];
+
+      const totalReceitas = receitasLista.reduce((s, x) => s + Number(x.valor || 0), 0);
+      const totalDespesas = despesasComPrevisao.reduce((s, x) => s + Number(x.valor || 0), 0);
+      const totalRecebido = receitasLista.filter(x => x.baixado === true).reduce((s, x) => s + Number(x.valor || 0), 0);
+      const totalPago = despesasLista.filter(x => x.baixado === true).reduce((s, x) => s + Number(x.valor || 0), 0);
+      const totalAReceber = receitasLista.filter(x => x.baixado !== true).reduce((s, x) => s + Number(x.valor || 0), 0);
+      const totalAPagar = despesasComPrevisao.filter(x => x.baixado !== true).reduce((s, x) => s + Number(x.valor || 0), 0);
+
+      return {
+        inicio,
+        fim,
+        receitas: receitasLista,
+        despesas: despesasLista,
+        previsoesCartao: cartaoLista,
+        despesasComPrevisao,
+        totalReceitas,
+        totalDespesas,
+        totalRecebido,
+        totalPago,
+        totalAReceber,
+        totalAPagar,
+        saldoRealizado: totalRecebido - totalPago,
+        saldoPrevisto: totalReceitas - totalDespesas
+      };
+    } catch (e) {
+      console.error('carregarDadosDashboard', e);
+      return {
+        inicio,
+        fim,
+        receitas: [],
+        despesas: [],
+        previsoesCartao: [],
+        despesasComPrevisao: [],
+        totalReceitas: 0,
+        totalDespesas: 0,
+        totalRecebido: 0,
+        totalPago: 0,
+        totalAReceber: 0,
+        totalAPagar: 0,
+        saldoRealizado: 0,
+        saldoPrevisto: 0
+      };
+    }
+  }
+
+  function drawReceitasPorCategoria(dados) {
+    try {
+      const serie = prepararSerieGrafico(agruparPorCategoria(dados.receitas));
       const ctx = document.getElementById(IDS.chartRecCat);
       if (!ctx || !window.Chart) return;
       try { if (STATE.charts.recCat) STATE.charts.recCat.destroy(); } catch (e) {}
-      STATE.charts.recCat = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Receitas por categoria', data: values }] }, options: { responsive: true } });
+      STATE.charts.recCat = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: serie.labels,
+          datasets: [{
+            label: 'Receitas',
+            data: serie.values,
+            backgroundColor: serie.colors,
+            borderColor: '#ffffff',
+            borderWidth: 3,
+            metaVazio: serie.vazio
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
+            tooltip: { callbacks: { label: chartMoneyTooltip } }
+          }
+        }
+      });
     } catch (e) { console.error('drawReceitasPorCategoria', e); }
   }
 
-  async function drawDespesasPorCategoria(inicio, fim) {
+  function drawDespesasPorCategoria(dados) {
     try {
-      const { data } = await supabase.from('despesas').select('*').eq('user_id', STATE.user.id).gte('data', inicio).lte('data', fim);
-      const groups = {};
-      (data || []).forEach(d => {
-        const name = STATE.categorias.find(c => c.id === d.categoria_id)?.nome || 'Sem categoria';
-        groups[name] = (groups[name] || 0) + Number(d.valor || 0);
-      });
-      const labels = Object.keys(groups);
-      const values = Object.values(groups);
+      const serie = prepararSerieGrafico(agruparPorCategoria(dados.despesasComPrevisao));
       const ctx = document.getElementById(IDS.chartDesCat);
       if (!ctx || !window.Chart) return;
       try { if (STATE.charts.desCat) STATE.charts.desCat.destroy(); } catch (e) {}
-      STATE.charts.desCat = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Despesas por categoria', data: values }] }, options: { responsive: true } });
+      STATE.charts.desCat = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: serie.labels,
+          datasets: [{
+            label: 'Despesas',
+            data: serie.values,
+            backgroundColor: serie.colors,
+            borderColor: '#ffffff',
+            borderWidth: 3,
+            metaVazio: serie.vazio
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
+            tooltip: { callbacks: { label: chartMoneyTooltip } }
+          }
+        }
+      });
     } catch (e) { console.error('drawDespesasPorCategoria', e); }
   }
 
-  async function drawResumo(inicio, fim) {
+  function drawResumo(dados) {
     try {
-      const { data: rec } = await supabase.from('receitas').select('*').eq('user_id', STATE.user.id).gte('data', inicio).lte('data', fim);
-      const { data: des } = await supabase.from('despesas').select('*').eq('user_id', STATE.user.id).gte('data', inicio).lte('data', fim);
-      const totalR = (rec || []).reduce((s, x) => s + Number(x.valor || 0), 0);
-      const totalD = (des || []).reduce((s, x) => s + Number(x.valor || 0), 0);
-      safeText($(IDS.dashReceber), fmtMoney(totalR));
-      safeText($(IDS.dashPagar), fmtMoney(totalD));
-      safeText($(IDS.dashSaldoAtual), fmtMoney(totalR - totalD));
+      safeText($(IDS.dashPeriod), `${fmtDateBR(dados.inicio)} a ${fmtDateBR(dados.fim)}`);
+      safeText($(IDS.dashReceber), fmtMoney(dados.totalAReceber));
+      safeText($(IDS.dashPagar), fmtMoney(dados.totalAPagar));
+      safeText($(IDS.dashSaldoAtual), fmtMoney(dados.saldoRealizado));
+      safeText($(IDS.dashSaldoPrevisto), fmtMoney(dados.saldoPrevisto));
+
       const ctx = document.getElementById(IDS.chartResumo);
       if (!ctx || !window.Chart) return;
       try { if (STATE.charts.resumo) STATE.charts.resumo.destroy(); } catch (e) {}
-      STATE.charts.resumo = new Chart(ctx, { type: 'bar', data: { labels: ['Receitas','Despesas'], datasets: [{ label: 'Resumo', data: [totalR, totalD] }] }, options: { responsive: true } });
+      STATE.charts.resumo = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Realizado', 'A receber', 'A pagar', 'Saldo previsto'],
+          datasets: [{
+            label: 'Resumo do período',
+            data: [dados.saldoRealizado, dados.totalAReceber, dados.totalAPagar, dados.saldoPrevisto],
+            backgroundColor: ['#6366f1', '#22c55e', '#ef4444', dados.saldoPrevisto >= 0 ? '#14b8a6' : '#f97316'],
+            borderRadius: 10,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: context => `${context.label}: ${fmtMoney(context.parsed.y || 0)}`
+              }
+            }
+          },
+          scales: {
+            y: {
+              ticks: {
+                callback: value => fmtMoney(Number(value)).replace('R$', 'R$ ')
+              },
+              grid: { color: '#eef0f4' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
     } catch (e) { console.error('drawResumo', e); }
   }
 async function transferirEntreContas({
@@ -1927,8 +2121,9 @@ if (name === 'contas') {
         const chReceitas = supabase.channel('chan_receitas').on('postgres_changes', { event: '*', schema: 'public', table: 'receitas' }, payload => {
           console.debug('realtime receitas', payload);
           this.refreshLancamentos();
+          atualizarDashboardPorMes();
         }).subscribe();
-        const chDespesas = supabase.channel('chan_despesas').on('postgres_changes', { event: '*', schema: 'public', table: 'despesas' }, payload => { console.debug('realtime despesas', payload); this.refreshLancamentos(); }).subscribe();
+        const chDespesas = supabase.channel('chan_despesas').on('postgres_changes', { event: '*', schema: 'public', table: 'despesas' }, payload => { console.debug('realtime despesas', payload); this.refreshLancamentos(); atualizarDashboardPorMes(); }).subscribe();
       const chMov = supabase.channel('chan_mov')
   .on(
     'postgres_changes',
@@ -1942,10 +2137,12 @@ if (name === 'contas') {
         const chCartaoLanc = supabase.channel('chan_cartao_lancamentos').on('postgres_changes', { event: '*', schema: 'public', table: 'cartao_lancamentos' }, payload => {
           console.debug('realtime cartao_lancamentos', payload);
           this.refreshLancamentos();
+          atualizarDashboardPorMes();
         }).subscribe();
         const chCartaoFaturas = supabase.channel('chan_cartao_faturas').on('postgres_changes', { event: '*', schema: 'public', table: 'cartao_faturas' }, payload => {
           console.debug('realtime cartao_faturas', payload);
           this.refreshLancamentos();
+          atualizarDashboardPorMes();
         }).subscribe();
 
         const chCats = supabase.channel('chan_cats').on('postgres_changes', { event: '*', schema: 'public', table: 'categorias' }, payload => { console.debug('realtime categorias', payload); this.reloadCatsContas(); }).subscribe();
