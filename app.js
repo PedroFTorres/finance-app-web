@@ -2263,10 +2263,10 @@ const filtrar = (lista, tipo) => {
 const receitasFiltradas = filtrar(r, "receita");
 const despesasFiltradas = filtrar(despesasPeriodo, "despesa");
 
-const totalReceitasPeriodo = (r || [])
+const totalReceitasPeriodo = (receitasFiltradas || [])
   .reduce((s, i) => s + Number(i.valor || 0), 0);
 
-const totalDespesasPeriodo = (despesasPeriodo || [])
+const totalDespesasPeriodo = (despesasFiltradas || [])
   .reduce((s, i) => s + Number(i.valor || 0), 0);
 
 // ================================// RENDER FINAL// ================================
