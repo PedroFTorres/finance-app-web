@@ -51,13 +51,44 @@
     <!-- ============================================================TELA DASHBOARD (data-screen) ============================================================ -->
     <section class="screen hidden" data-screen="dashboard">
 
-      <section class="card-panel">
-        <h2>Resumo do Mês</h2>
-        <div style="display:flex;align-items:center;gap:10px;">
-  <button id="dash-prev" class="btn-secondary">◀</button>
-  <strong id="dash-mes-label"></strong>
-  <button id="dash-next" class="btn-secondary">▶</button>
-</div>
+      <section class="card-panel dashboard-panel">
+        <div class="dashboard-header">
+          <div>
+            <h2>Resumo do Mês</h2>
+            <p class="dashboard-subtitle">Visão consolidada de receitas, despesas e faturas abertas.</p>
+          </div>
+          <div class="dashboard-period-nav">
+            <button id="dash-prev" class="btn-secondary">◀</button>
+            <strong id="dash-mes-label"></strong>
+            <button id="dash-next" class="btn-secondary">▶</button>
+          </div>
+        </div>
+
+        <div class="dashboard-kpis">
+          <div class="kpi-card kpi-income">
+            <span>A receber</span>
+            <strong id="dash-receber">R$ 0,00</strong>
+            <small>Pendente no período</small>
+          </div>
+
+          <div class="kpi-card kpi-expense">
+            <span>A pagar</span>
+            <strong id="dash-pagar">R$ 0,00</strong>
+            <small>Despesas + faturas abertas</small>
+          </div>
+
+          <div class="kpi-card kpi-realized">
+            <span>Realizado</span>
+            <strong id="dash-saldo-atual">R$ 0,00</strong>
+            <small>Recebido menos pago</small>
+          </div>
+
+          <div class="kpi-card kpi-forecast">
+            <span>Saldo previsto</span>
+            <strong id="dash-saldo-previsto">R$ 0,00</strong>
+            <small>Resultado esperado do período</small>
+          </div>
+        </div>
 
         <div class="dashboard-grid">
 
@@ -75,11 +106,9 @@
             <h3>Resumo Geral</h3>
             <canvas id="chart-dashboard"></canvas>
 
-            <p><strong>Período:</strong> <span id="dash-period"></span></p>
-            <p><strong>Total a receber:</strong> <span id="dash-receber">R$ 0,00</span></p>
-            <p><strong>Total a pagar:</strong> <span id="dash-pagar">R$ 0,00</span></p>
-            <p><strong>Saldo atual:</strong> <span id="dash-saldo-atual">R$ 0,00</span></p>
-            <p><strong>Saldo previsto:</strong> <span id="dash-saldo-previsto">R$ 0,00</span></p>
+            <div class="dashboard-period-info">
+              <strong>Período:</strong> <span id="dash-period"></span>
+            </div>
           </div>
 
         </div>
