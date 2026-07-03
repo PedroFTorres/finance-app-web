@@ -1770,7 +1770,13 @@ function abrirModalEditarConta(conta) {
 
   async function carregarDadosDashboard(inicio, fim) {
     try {
-      const [{ data: receitas }, { data: despesas }, previsoesCartao] = await Promise.all([
+      const [
+        { data: receitas },
+        { data: despesas },
+        { data: receitasBaixadas },
+        { data: despesasBaixadas },
+        previsoesCartao
+      ] = await Promise.all([
         supabase
           .from('receitas')
           .select('*')
@@ -1783,11 +1789,27 @@ function abrirModalEditarConta(conta) {
           .eq('user_id', STATE.user.id)
           .gte('data', inicio)
           .lte('data', fim),
+        supabase
+          .from('receitas')
+          .select('*')
+          .eq('user_id', STATE.user.id)
+          .eq('baixado', true)
+          .gte('data_baixa', inicio)
+          .lte('data_baixa', fim),
+        supabase
+          .from('despesas')
+          .select('*')
+          .eq('user_id', STATE.user.id)
+          .eq('baixado', true)
+          .gte('data_baixa', inicio)
+          .lte('data_baixa', fim),
         LancService.fetchPrevisoesCartao('all', inicio, fim)
       ]);
 
       const receitasLista = receitas || [];
       const despesasLista = despesas || [];
+      const receitasBaixadasLista = receitasBaixadas || [];
+      const despesasBaixadasLista = despesasBaixadas || [];
       const cartaoLista = (previsoesCartao || []).map(item => ({
         ...item,
         categoria_nome: 'Cartão de crédito aberto'
@@ -1796,8 +1818,8 @@ function abrirModalEditarConta(conta) {
 
       const totalReceitas = receitasLista.reduce((s, x) => s + Number(x.valor || 0), 0);
       const totalDespesas = despesasComPrevisao.reduce((s, x) => s + Number(x.valor || 0), 0);
-      const totalRecebido = receitasLista.filter(x => x.baixado === true).reduce((s, x) => s + Number(x.valor || 0), 0);
-      const totalPago = despesasLista.filter(x => x.baixado === true).reduce((s, x) => s + Number(x.valor || 0), 0);
+      const totalRecebido = receitasBaixadasLista.reduce((s, x) => s + Number(x.valor || 0), 0);
+      const totalPago = despesasBaixadasLista.reduce((s, x) => s + Number(x.valor || 0), 0);
       const totalAReceber = receitasLista.filter(x => x.baixado !== true).reduce((s, x) => s + Number(x.valor || 0), 0);
       const totalAPagar = despesasComPrevisao.filter(x => x.baixado !== true).reduce((s, x) => s + Number(x.valor || 0), 0);
 
@@ -1806,6 +1828,8 @@ function abrirModalEditarConta(conta) {
         fim,
         receitas: receitasLista,
         despesas: despesasLista,
+        receitasBaixadas: receitasBaixadasLista,
+        despesasBaixadas: despesasBaixadasLista,
         previsoesCartao: cartaoLista,
         despesasComPrevisao,
         totalReceitas,
