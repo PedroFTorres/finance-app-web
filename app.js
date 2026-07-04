@@ -512,6 +512,57 @@ const CategoriasService = {
         return [];
       }
     },
+    async fetchBaixadosComValorReal(tipo, conta_id='all', inicio, fim) {
+      try {
+        const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
+        let q = supabase
+          .from(tabela)
+          .select('*')
+          .eq('user_id', STATE.user.id)
+          .eq('baixado', true)
+          .gte('data_baixa', inicio)
+          .lte('data_baixa', fim)
+          .order('data_baixa', { ascending: true });
+
+        if (conta_id && conta_id !== 'all') q = q.eq('conta_id', conta_id);
+
+        const { data, error } = await q;
+        if (error) throw error;
+
+        const lancamentos = data || [];
+        if (lancamentos.length === 0) return [];
+
+        const ids = lancamentos.map(item => item.id).filter(Boolean);
+        const { data: movs, error: errMovs } = await supabase
+          .from('movimentacoes')
+          .select('lancamento_id, valor, descricao, data')
+          .eq('user_id', STATE.user.id)
+          .in('lancamento_id', ids);
+
+        if (errMovs) throw errMovs;
+
+        const movPorLancamento = new Map((movs || []).map(m => [m.lancamento_id, m]));
+
+        return lancamentos.map(item => {
+          const mov = movPorLancamento.get(item.id);
+          if (!mov) return item;
+
+          const valorOriginal = Number(item.valor || 0);
+          const valorReal = Number(mov.valor || valorOriginal);
+
+          return {
+            ...item,
+            valor_original_lancamento: valorOriginal,
+            valor: valorReal,
+            descricao_baixa: mov.descricao,
+            ajuste_baixa: Number((valorReal - valorOriginal).toFixed(2))
+          };
+        });
+      } catch (e) {
+        console.error('LancService.fetchBaixadosComValorReal', e);
+        return [];
+      }
+    },
     async insert(t) {
       try {
         const tabela = t.tipo === 'receita' ? 'receitas' : 'despesas';
@@ -1135,6 +1186,9 @@ left.textContent =
   `${fmtDateBR(item.data_baixa || item.data)} — ` +
   `${item.descricao} — ` +
   `${fmtMoney(item.valor)}` +
+  (item.ajuste_baixa
+    ? ` (ajuste na baixa ${item.ajuste_baixa > 0 ? "+" : ""}${fmtMoney(item.ajuste_baixa)})`
+    : "") +
   (item.baixado ? " (BAIXADO)" : "");
       
 // ================================// TRANSFERÊNCIA — AÇÃO ESPECIAL// ================================
@@ -1773,8 +1827,8 @@ function abrirModalEditarConta(conta) {
       const [
         { data: receitas },
         { data: despesas },
-        { data: receitasBaixadas },
-        { data: despesasBaixadas },
+        receitasBaixadas,
+        despesasBaixadas,
         previsoesCartao
       ] = await Promise.all([
         supabase
@@ -1789,20 +1843,8 @@ function abrirModalEditarConta(conta) {
           .eq('user_id', STATE.user.id)
           .gte('data', inicio)
           .lte('data', fim),
-        supabase
-          .from('receitas')
-          .select('*')
-          .eq('user_id', STATE.user.id)
-          .eq('baixado', true)
-          .gte('data_baixa', inicio)
-          .lte('data_baixa', fim),
-        supabase
-          .from('despesas')
-          .select('*')
-          .eq('user_id', STATE.user.id)
-          .eq('baixado', true)
-          .gte('data_baixa', inicio)
-          .lte('data_baixa', fim),
+        LancService.fetchBaixadosComValorReal('receita', 'all', inicio, fim),
+        LancService.fetchBaixadosComValorReal('despesa', 'all', inicio, fim),
         LancService.fetchPrevisoesCartao('all', inicio, fim)
       ]);
 
@@ -2205,25 +2247,11 @@ if (!inicio || !fim) {
 
 if (FILTRO_LANCAMENTOS === "pagos" || FILTRO_LANCAMENTOS === "recebidos") {
 
-  // 🔥 FILTRA PELO PERÍODO DA BAIXA
-  const { data: receitas } = await supabase
-    .from('receitas')
-    .select('*')
-    .eq('user_id', STATE.user.id)
-    .eq(conta_id !== 'all' ? 'conta_id' : 'user_id', conta_id !== 'all' ? conta_id : STATE.user.id)
-    .gte('data_baixa', inicio)
-    .lte('data_baixa', fim);
-
-  const { data: despesas } = await supabase
-    .from('despesas')
-    .select('*')
-    .eq('user_id', STATE.user.id)
-    .eq(conta_id !== 'all' ? 'conta_id' : 'user_id', conta_id !== 'all' ? conta_id : STATE.user.id)
-    .gte('data_baixa', inicio)
-    .lte('data_baixa', fim);
-
-  r = receitas || [];
-  d = despesas || [];
+  // 🔥 FILTRA PELO PERÍODO DA BAIXA E USA O VALOR REAL DO EXTRATO
+  [r, d] = await Promise.all([
+    LancService.fetchBaixadosComValorReal('receita', conta_id, inicio, fim),
+    LancService.fetchBaixadosComValorReal('despesa', conta_id, inicio, fim)
+  ]);
 
 } else {
 
