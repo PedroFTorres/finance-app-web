@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investimentos - Arolix</title>
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <link rel="stylesheet" href="investimentos.css">
+</head>
+<body>
+  <header class="invest-header">
+    <div>
+      <img src="../logo-arolix.png" alt="Arolix" class="invest-logo">
+      <span class="invest-badge">Beta privado</span>
+    </div>
+    <nav>
+      <button id="btn-voltar" class="btn-secondary">Voltar ao app</button>
+      <button id="btn-sair" class="btn-danger">Sair</button>
+    </nav>
+  </header>
+
+  <main class="invest-container">
+    <section class="hero-card">
+      <div>
+        <h1>Investimentos</h1>
+        <p>
+          Controle inicial para CDB atrelado ao CDI, com cálculo estimado de rendimento,
+          IOF e imposto de renda conforme a data da aplicação.
+        </p>
+      </div>
+      <div class="hero-values">
+        <span>Total líquido estimado</span>
+        <strong id="total-liquido">R$ 0,00</strong>
+      </div>
+    </section>
+
+    <section id="access-alert" class="alert hidden"></section>
+
+    <section class="grid">
+      <form id="form-investimento" class="panel">
+        <h2>Nova aplicação CDB</h2>
+
+        <label>Nome do investimento</label>
+        <input id="invest-nome" required placeholder="Ex: CDB Santander Liquidez Diária">
+
+        <label>CNPJ do emissor / produto</label>
+        <input id="invest-cnpj" inputmode="numeric" placeholder="Opcional nesta primeira versão">
+
+        <div class="row">
+          <div>
+            <label>Valor aplicado</label>
+            <input id="invest-valor" type="number" min="0" step="0.01" required placeholder="300,00">
+          </div>
+          <div>
+            <label>Data da aplicação</label>
+            <input id="invest-data" type="date" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Vencimento</label>
+            <input id="invest-vencimento" type="date">
+          </div>
+          <div>
+            <label>Liquidez</label>
+            <select id="invest-liquidez">
+              <option value="diaria">Diária</option>
+              <option value="vencimento">No vencimento</option>
+              <option value="carencia">Com carência</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>% do CDI</label>
+            <input id="invest-percentual-cdi" type="number" min="0" step="0.01" value="100" required>
+          </div>
+          <div>
+            <label>CDI anual estimado (%)</label>
+            <input id="invest-cdi-anual" type="number" min="0" step="0.01" value="10.65" required>
+          </div>
+        </div>
+
+        <label>Conta corrente de origem</label>
+        <select id="invest-conta-origem"></select>
+
+        <label>Conta de investimento destino</label>
+        <select id="invest-conta-destino"></select>
+
+        <label class="checkbox-line">
+          <input id="invest-gerar-transferencia" type="checkbox" checked>
+          Registrar transferência da conta corrente para a conta de investimento
+        </label>
+
+        <label>Observações</label>
+        <textarea id="invest-observacoes" rows="3" placeholder="Ex: aplicação feita pelo app Santander"></textarea>
+
+        <button class="btn-primary" type="submit">Salvar aplicação</button>
+        <p id="form-msg" class="msg"></p>
+      </form>
+
+      <section class="panel">
+        <h2>Resumo da carteira</h2>
+        <div class="summary-list">
+          <div><span>Valor aplicado</span><strong id="total-aplicado">R$ 0,00</strong></div>
+          <div><span>Rendimento bruto</span><strong id="total-rendimento">R$ 0,00</strong></div>
+          <div><span>IOF estimado</span><strong id="total-iof">R$ 0,00</strong></div>
+          <div><span>IR estimado</span><strong id="total-ir">R$ 0,00</strong></div>
+        </div>
+
+        <div class="hint">
+          <strong>Como usar para o Santander:</strong>
+          crie uma conta “Investimentos Santander” abaixo, depois registre cada CDB
+          como uma aplicação separada. O módulo faz a transferência patrimonial,
+          sem tratar isso como despesa.
+        </div>
+
+        <div class="quick-account">
+          <h3>Criar conta de investimento</h3>
+          <p>Use quando ainda não existir uma conta destino para os CDBs.</p>
+          <input id="nova-conta-investimento-nome" placeholder="Ex: Investimentos Santander">
+          <button id="btn-criar-conta-investimento" class="btn-secondary" type="button">
+            Criar conta investimento
+          </button>
+          <p id="conta-invest-msg" class="msg"></p>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>Aplicações cadastradas</h2>
+        <button id="btn-recarregar" class="btn-secondary">Recarregar</button>
+      </div>
+      <div id="lista-investimentos" class="invest-list"></div>
+    </section>
+  </main>
+
+  <script src="../vendor/supabase-2.108.2.js"></script>
+  <script src="../config.js"></script>
+  <script src="../supabase.js"></script>
+  <script src="investimentos.js"></script>
+</body>
+</html>
