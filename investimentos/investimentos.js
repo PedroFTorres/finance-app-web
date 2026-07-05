@@ -41,6 +41,23 @@ function money(value) {
   });
 }
 
+function parseMoneyBR(value) {
+  if (typeof value === "number") return value;
+  const normalized = String(value || "")
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/[R$]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function parsePercentBR(value, fallback = 0) {
+  const parsed = parseMoneyBR(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function isoToday() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -85,6 +102,14 @@ function formatDateBR(iso) {
   const d = parseISODate(iso);
   if (!d) return "-";
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+}
+
+function addDaysISO(startISO, days) {
+  const start = parseISODate(startISO);
+  const totalDays = Number(days || 0);
+  if (!start || !Number.isFinite(totalDays) || totalDays <= 0) return null;
+  start.setDate(start.getDate() + totalDays);
+  return start.toISOString().slice(0, 10);
 }
 
 function normalizeCnpj(value) {
@@ -177,13 +202,59 @@ async function loadSession() {
 async function loadContas() {
   const { data, error } = await supabase
     .from("contas_bancarias")
-    .select("id,nome,saldo_atual,saldo_inicial,tipo_conta")
+    .select("id,nome,saldo_atual,saldo_inicial,data_saldo,tipo_conta")
     .eq("user_id", state.user.id)
     .order("nome");
 
   if (error) throw error;
-  state.contas = data || [];
+  state.contas = await contasComSaldoCalculado(data || []);
   renderContaOptions();
+}
+
+async function contasComSaldoCalculado(contas) {
+  if (!contas.length) return [];
+
+  const { data: movs, error } = await supabase
+    .from("movimentacoes")
+    .select("conta_id,tipo,valor,descricao,data")
+    .eq("user_id", state.user.id);
+
+  if (error) throw error;
+
+  const movsPorConta = new Map();
+  (movs || []).forEach((mov) => {
+    if (!movsPorConta.has(mov.conta_id)) movsPorConta.set(mov.conta_id, []);
+    movsPorConta.get(mov.conta_id).push(mov);
+  });
+
+  return contas.map((conta) => {
+    const saldoInicial = Number(conta.saldo_inicial || 0);
+    const dataSaldo = conta.data_saldo || null;
+    let saldo = saldoInicial;
+    let saldoInicialJaDescontado = false;
+
+    (movsPorConta.get(conta.id) || []).forEach((mov) => {
+      const valor = Number(mov.valor || 0);
+      const isSaldoInicialDuplicado =
+        !saldoInicialJaDescontado &&
+        mov.tipo === "credito" &&
+        String(mov.descricao || "").trim().toLowerCase() === "saldo inicial" &&
+        Math.abs(valor - saldoInicial) < 0.000001 &&
+        (!dataSaldo || mov.data === dataSaldo);
+
+      if (isSaldoInicialDuplicado) {
+        saldoInicialJaDescontado = true;
+        return;
+      }
+
+      saldo += mov.tipo === "credito" ? valor : -valor;
+    });
+
+    return {
+      ...conta,
+      saldo_calculado: Number(saldo.toFixed(2))
+    };
+  });
 }
 
 function renderContaOptions() {
@@ -196,15 +267,24 @@ function renderContaOptions() {
   const contasInvestimento = state.contas.filter(c => c.tipo_conta === "investimento");
 
   origem.append(new Option("Selecione a conta corrente", ""));
-  contasCorrentes.forEach(c => origem.append(new Option(`${c.nome} — ${money(c.saldo_atual || 0)}`, c.id)));
+  contasCorrentes.forEach(c => origem.append(new Option(`${c.nome} — saldo calculado ${money(c.saldo_calculado ?? c.saldo_atual ?? 0)}`, c.id)));
 
   destino.append(new Option("Selecione a conta de investimento", ""));
-  contasInvestimento.forEach(c => destino.append(new Option(`${c.nome} — ${money(c.saldo_atual || 0)}`, c.id)));
+  contasInvestimento.forEach(c => destino.append(new Option(`${c.nome} — saldo calculado ${money(c.saldo_calculado ?? c.saldo_atual ?? 0)}`, c.id)));
 
   if (contasInvestimento.length === 0) {
     const opt = new Option("Crie uma conta do tipo investimento primeiro", "");
     opt.disabled = true;
     destino.append(opt);
+  }
+}
+
+function toggleCarenciaFields() {
+  const isCarencia = el("invest-liquidez").value === "carencia";
+  el("grupo-carencia").classList.toggle("hidden", !isCarencia);
+  if (!isCarencia) {
+    el("invest-data-carencia").value = "";
+    el("invest-dias-carencia").value = "";
   }
 }
 
@@ -300,6 +380,7 @@ function renderInvestimentos() {
         <p><strong>Instituição:</strong> ${escapeHtml(item.instituicao || "-")}</p>
         <p><strong>CNPJ:</strong> ${formatCnpj(item.cnpj_emissor)}</p>
         <p><strong>Aplicado em:</strong> ${formatDateBR(item.data_aplicacao)} • <strong>Vencimento:</strong> ${formatDateBR(item.data_vencimento)}</p>
+        ${item.liquidez === "carencia" ? `<p><strong>Carência:</strong> ${formatDateBR(item.data_carencia)}${item.dias_carencia ? ` • ${Number(item.dias_carencia)} dias` : ""}</p>` : ""}
         <p><strong>Origem:</strong> ${escapeHtml(accountName(item.conta_origem_id))} • <strong>Destino:</strong> ${escapeHtml(accountName(item.conta_investimento_id))}</p>
         ${item.observacoes ? `<p><strong>Obs.:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
       </div>
@@ -428,14 +509,21 @@ async function handleSubmit(event) {
 
   try {
     const nome = el("invest-nome").value.trim();
-    const valor = Number(el("invest-valor").value || 0);
+    const valor = parseMoneyBR(el("invest-valor").value);
     const dataAplicacao = el("invest-data").value;
     const origemId = el("invest-conta-origem").value || null;
     const destinoId = el("invest-conta-destino").value || null;
     const gerarTransferencia = el("invest-gerar-transferencia").checked;
+    const liquidez = el("invest-liquidez").value;
+    const diasCarencia = Number(el("invest-dias-carencia").value || 0);
+    const dataCarencia = el("invest-data-carencia").value || addDaysISO(dataAplicacao, diasCarencia);
 
     if (!nome || !valor || valor <= 0 || !dataAplicacao) {
       throw new Error("Informe nome, valor e data da aplicação.");
+    }
+
+    if (liquidez === "carencia" && !dataCarencia && !diasCarencia) {
+      throw new Error("Informe a data fim da carência ou a quantidade de dias de carência.");
     }
 
     if (gerarTransferencia && (!origemId || !destinoId)) {
@@ -457,9 +545,11 @@ async function handleSubmit(event) {
       valor_aplicado: Number(valor.toFixed(2)),
       data_aplicacao: dataAplicacao,
       data_vencimento: el("invest-vencimento").value || null,
-      percentual_cdi: Number(el("invest-percentual-cdi").value || 100),
-      cdi_anual_referencia: Number(el("invest-cdi-anual").value || 0),
-      liquidez: el("invest-liquidez").value,
+      percentual_cdi: parsePercentBR(el("invest-percentual-cdi").value || 100, 100),
+      cdi_anual_referencia: parsePercentBR(el("invest-cdi-anual").value || 0),
+      liquidez,
+      data_carencia: liquidez === "carencia" ? dataCarencia : null,
+      dias_carencia: liquidez === "carencia" && diasCarencia > 0 ? diasCarencia : null,
       conta_origem_id: origemId,
       conta_investimento_id: destinoId,
       observacoes: el("invest-observacoes").value.trim() || null,
@@ -479,10 +569,12 @@ async function handleSubmit(event) {
     }
 
     event.target.reset();
+    el("invest-valor").value = "0,00";
     el("invest-data").value = isoToday();
     el("invest-percentual-cdi").value = "100";
-    el("invest-cdi-anual").value = "10.65";
+    el("invest-cdi-anual").value = "10,65";
     el("invest-gerar-transferencia").checked = true;
+    toggleCarenciaFields();
 
     await loadContas();
     await loadInvestimentos();
@@ -507,7 +599,9 @@ async function boot() {
   };
   el("btn-criar-conta-investimento").onclick = criarContaInvestimento;
   el("form-investimento").addEventListener("submit", handleSubmit);
+  el("invest-liquidez").addEventListener("change", toggleCarenciaFields);
   el("invest-data").value = isoToday();
+  toggleCarenciaFields();
 
   try {
     const ok = await loadSession();

@@ -31,6 +31,8 @@ create table if not exists public.investimentos (
   percentual_cdi numeric(8,4) not null default 100,
   cdi_anual_referencia numeric(8,4) not null default 0,
   liquidez text not null default 'diaria',
+  data_carencia date,
+  dias_carencia integer,
   conta_origem_id uuid references public.contas_bancarias(id) on delete set null,
   conta_investimento_id uuid references public.contas_bancarias(id) on delete set null,
   transferencia_id uuid references public.transferencias(id) on delete set null,
@@ -41,6 +43,7 @@ create table if not exists public.investimentos (
   constraint investimentos_tipo_check check (tipo in ('cdb')),
   constraint investimentos_indexador_check check (indexador in ('cdi')),
   constraint investimentos_liquidez_check check (liquidez in ('diaria', 'vencimento', 'carencia')),
+  constraint investimentos_dias_carencia_check check (dias_carencia is null or dias_carencia >= 0),
   constraint investimentos_status_check check (status in ('ativo', 'resgatado', 'cancelado'))
 );
 
