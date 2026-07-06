@@ -22,6 +22,7 @@ create table if not exists public.investimentos (
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   tipo text not null default 'cdb',
   indexador text not null default 'cdi',
+  produto_grupo_id uuid,
   nome text not null,
   instituicao text,
   cnpj_emissor text,
@@ -56,7 +57,38 @@ create index if not exists investimentos_user_status_idx
 create index if not exists investimentos_data_aplicacao_idx
   on public.investimentos(user_id, data_aplicacao);
 
+create index if not exists investimentos_produto_grupo_idx
+  on public.investimentos(user_id, produto_grupo_id);
+
+create table if not exists public.investimento_resgates (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  investimento_id uuid not null references public.investimentos(id) on delete cascade,
+  produto_grupo_id uuid not null,
+  data_resgate date not null,
+  valor_bruto_solicitado numeric(14,2) not null check (valor_bruto_solicitado > 0),
+  valor_principal_resgatado numeric(14,2) not null check (valor_principal_resgatado > 0),
+  rendimento_bruto numeric(14,2) not null default 0,
+  iof numeric(14,2) not null default 0,
+  ir numeric(14,2) not null default 0,
+  valor_liquido numeric(14,2) not null check (valor_liquido >= 0),
+  conta_destino_id uuid references public.contas_bancarias(id) on delete set null,
+  transferencia_id uuid references public.transferencias(id) on delete set null,
+  observacoes text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists investimento_resgates_user_idx
+  on public.investimento_resgates(user_id);
+
+create index if not exists investimento_resgates_investimento_idx
+  on public.investimento_resgates(user_id, investimento_id);
+
+create index if not exists investimento_resgates_produto_grupo_idx
+  on public.investimento_resgates(user_id, produto_grupo_id);
+
 alter table public.investimentos enable row level security;
+alter table public.investimento_resgates enable row level security;
 
 drop policy if exists investimentos_owner_all on public.investimentos;
 create policy investimentos_owner_all
@@ -66,7 +98,18 @@ create policy investimentos_owner_all
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()));
 
+drop policy if exists investimento_resgates_owner_all on public.investimento_resgates;
+create policy investimento_resgates_owner_all
+  on public.investimento_resgates
+  for all
+  to authenticated
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
+
 grant select, insert, update, delete
   on table public.investimentos to authenticated;
+
+grant select, insert, update, delete
+  on table public.investimento_resgates to authenticated;
 
 commit;

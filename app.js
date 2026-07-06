@@ -187,6 +187,12 @@ let FILTRO_LANCAMENTOS = "pendencias";
   }
   function fmtMoney(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
   function fmtDateBR(d) { if (!d) return ''; const x = new Date(d + 'T00:00:00'); return `${String(x.getDate()).padStart(2,'0')}/${String(x.getMonth()+1).padStart(2,'0')}/${x.getFullYear()}`; }
+  function contaLabel(conta) {
+    if (!conta) return '';
+    return conta.tipo_conta === 'investimento'
+      ? `💼 ${conta.nome} (Investimento)`
+      : conta.nome;
+  }
   function isoToday() { return new Date().toISOString().slice(0,10); }
  function uid() { if (typeof crypto !== "undefined" && crypto.randomUUID) {return crypto.randomUUID();}
   // fallback seguro (gera UUID válido)
@@ -1014,16 +1020,16 @@ if (btnCartao) {
   if (selModalConta) {
     selModalConta.innerHTML = '';
     (STATE.contas || []).forEach(c => {
-      selModalConta.appendChild(new Option(c.nome, c.id));
+      selModalConta.appendChild(new Option(contaLabel(c), c.id));
     });
   }
 
   // ✔ Popular contas nos filtros normalmente
   (STATE.contas || []).forEach(c => {
-   const label = c.nome;
+   const label = contaLabel(c);
     if (selFilter) selFilter.appendChild(new Option(label, c.id));
-    if (selExtr) selExtr.appendChild(new Option(c.nome, c.id));
-    if (selLista) selLista.appendChild(new Option(c.nome, c.id));
+    if (selExtr) selExtr.appendChild(new Option(label, c.id));
+    if (selLista) selLista.appendChild(new Option(label, c.id));
   });
 
   // ✔ Categorias no modal
@@ -1093,7 +1099,14 @@ renderContasCards() {
 
     const info = document.createElement("div");
     info.className = "conta-info";
-    info.appendChild(createTextElement("strong", conta.nome));
+    const title = document.createElement("div");
+    title.className = "conta-title-line";
+    title.appendChild(createTextElement("strong", conta.nome));
+    if (conta.tipo_conta === "investimento") {
+      title.appendChild(createTextElement("span", "Investimento", "conta-tipo-badge"));
+      div.classList.add("conta-card-investimento");
+    }
+    info.appendChild(title);
     info.appendChild(createTextElement("small", `Agência: ${conta.agencia || "-"}`));
     info.appendChild(createTextElement("small", `Conta: ${conta.numero_conta || "-"}`));
     info.appendChild(createTextElement("small", `Gerente: ${conta.gerente || "-"}`));
@@ -1498,7 +1511,7 @@ selectConta.innerHTML = "";
 
 // popular contas
 (STATE.contas || []).forEach(c => {
-  selectConta.appendChild(new Option(c.nome, c.id));
+  selectConta.appendChild(new Option(contaLabel(c), c.id));
 });
 
 // ✅ selecionar automaticamente a conta do lançamento
@@ -2734,8 +2747,8 @@ if (btnTransferir) {
     selDestino.innerHTML = "";
 
     (STATE.contas || []).forEach(c => {
-      selOrigem.appendChild(new Option(c.nome, c.id));
-      selDestino.appendChild(new Option(c.nome, c.id));
+      selOrigem.appendChild(new Option(contaLabel(c), c.id));
+      selDestino.appendChild(new Option(contaLabel(c), c.id));
     });
 
     document.getElementById("transf-valor").value = "";

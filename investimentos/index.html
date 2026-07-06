@@ -38,7 +38,15 @@
 
     <section class="grid">
       <form id="form-investimento" class="panel">
-        <h2>Nova aplicação CDB</h2>
+        <h2>Nova aplicação / aporte CDB</h2>
+
+        <label>Produto CDB</label>
+        <select id="invest-produto-existente">
+          <option value="">Novo produto CDB</option>
+        </select>
+        <p class="field-help">
+          Para aportar novamente no mesmo CDB, selecione o produto existente. O app mantém cada aporte com sua própria data para calcular IOF e IR.
+        </p>
 
         <label>Nome do investimento</label>
         <input id="invest-nome" required placeholder="Ex: CDB Santander Liquidez Diária">
@@ -123,9 +131,14 @@
 
         <div class="hint">
           <strong>Como usar para o Santander:</strong>
-          crie uma conta “Investimentos Santander” abaixo, depois registre cada CDB
-          como uma aplicação separada. O módulo faz a transferência patrimonial,
+          crie uma conta “Investimentos Santander” abaixo, depois registre o CDB e seus aportes.
+          O módulo faz a transferência patrimonial,
           sem tratar isso como despesa.
+        </div>
+
+        <div class="investment-accounts">
+          <h3>Contas de investimento</h3>
+          <div id="lista-contas-investimento" class="mini-list"></div>
         </div>
 
         <div class="quick-account">
@@ -141,8 +154,45 @@
     </section>
 
     <section class="panel">
+      <h2>Resgate de investimento</h2>
+      <form id="form-resgate" class="resgate-form">
+        <div class="row">
+          <div>
+            <label>Produto para resgatar</label>
+            <select id="resgate-produto"></select>
+          </div>
+          <div>
+            <label>Data do resgate</label>
+            <input id="resgate-data" type="date">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Valor principal a resgatar</label>
+            <input id="resgate-valor" type="text" inputmode="decimal" value="0,00" placeholder="0,00">
+          </div>
+          <div>
+            <label>Conta corrente destino</label>
+            <select id="resgate-conta-destino"></select>
+          </div>
+        </div>
+
+        <label>Observações do resgate</label>
+        <textarea id="resgate-observacoes" rows="2" placeholder="Ex: resgate parcial para recompor saldo"></textarea>
+
+        <div id="resgate-preview" class="resgate-preview">
+          Selecione um produto e informe o valor para estimar líquido, IOF e IR.
+        </div>
+
+        <button class="btn-primary" type="submit">Registrar resgate</button>
+        <p id="resgate-msg" class="msg"></p>
+      </form>
+    </section>
+
+    <section class="panel">
       <div class="section-title">
-        <h2>Aplicações cadastradas</h2>
+        <h2>Produtos e aportes cadastrados</h2>
         <button id="btn-recarregar" class="btn-secondary">Recarregar</button>
       </div>
       <div id="lista-investimentos" class="invest-list"></div>

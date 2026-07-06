@@ -11,7 +11,8 @@ const state = {
   user: null,
   profile: null,
   contas: [],
-  investimentos: []
+  investimentos: [],
+  resgates: []
 };
 
 const el = (id) => document.getElementById(id);
@@ -151,6 +152,154 @@ function calculateCdb(investimento, endDate = isoToday()) {
   };
 }
 
+function groupId(item) {
+  return item?.produto_grupo_id || item?.id || "";
+}
+
+function resgatesByInvestimento() {
+  return (state.resgates || []).reduce((acc, resgate) => {
+    const key = resgate.investimento_id;
+    if (!key) return acc;
+    acc[key] = acc[key] || [];
+    acc[key].push(resgate);
+    return acc;
+  }, {});
+}
+
+function principalResgatado(investimentoId) {
+  return (state.resgates || [])
+    .filter(r => r.investimento_id === investimentoId)
+    .reduce((sum, r) => sum + Number(r.valor_principal_resgatado || 0), 0);
+}
+
+function principalDisponivel(aporte) {
+  return Math.max(0, Number(aporte.valor_aplicado || 0) - principalResgatado(aporte.id));
+}
+
+function canRedeemAporte(aporte, dataResgate = isoToday()) {
+  if (aporte.liquidez === "diaria") return { ok: true, reason: "" };
+  if (aporte.liquidez === "carencia") {
+    const dataCarencia = aporte.data_carencia || addDaysISO(aporte.data_aplicacao, aporte.dias_carencia);
+    if (dataCarencia && dataResgate < dataCarencia) {
+      return { ok: false, reason: `Carência até ${formatDateBR(dataCarencia)}` };
+    }
+  }
+  if (aporte.liquidez === "vencimento" && aporte.data_vencimento && dataResgate < aporte.data_vencimento) {
+    return { ok: false, reason: `Resgate apenas no vencimento em ${formatDateBR(aporte.data_vencimento)}` };
+  }
+  return { ok: true, reason: "" };
+}
+
+function buildProductGroups() {
+  const map = new Map();
+
+  (state.investimentos || []).forEach((item) => {
+    const gid = groupId(item);
+    if (!map.has(gid)) {
+      map.set(gid, {
+        id: gid,
+        base: item,
+        aportes: [],
+        principalAplicado: 0,
+        principalDisponivel: 0,
+        rendimento: 0,
+        iof: 0,
+        ir: 0,
+        liquido: 0
+      });
+    }
+
+    const group = map.get(gid);
+    group.aportes.push(item);
+  });
+
+  [...map.values()].forEach((group) => {
+    group.aportes.sort((a, b) => String(a.data_aplicacao).localeCompare(String(b.data_aplicacao)));
+    group.base = group.aportes[0] || group.base;
+
+    group.aportes.forEach((aporte) => {
+      const disponivel = principalDisponivel(aporte);
+      const proportion = Number(aporte.valor_aplicado || 0) > 0 ? disponivel / Number(aporte.valor_aplicado || 0) : 0;
+      const calc = calculateCdb({ ...aporte, valor_aplicado: disponivel });
+      group.principalAplicado += Number(aporte.valor_aplicado || 0);
+      group.principalDisponivel += disponivel;
+      group.rendimento += calc.rendimentoBruto;
+      group.iof += calc.iof;
+      group.ir += calc.ir;
+      group.liquido += calc.valorLiquido;
+      aporte.__principalDisponivel = disponivel;
+      aporte.__resgatado = Number(aporte.valor_aplicado || 0) - disponivel;
+      aporte.__proporcaoDisponivel = proportion;
+    });
+  });
+
+  return [...map.values()].sort((a, b) => String(a.base.nome).localeCompare(String(b.base.nome)));
+}
+
+function buildResgatePreview(produtoGrupoId, valorPrincipal, dataResgate = isoToday()) {
+  const group = buildProductGroups().find(g => g.id === produtoGrupoId);
+  if (!group) return { ok: false, message: "Selecione um produto válido.", slices: [] };
+  if (!valorPrincipal || valorPrincipal <= 0) return { ok: false, message: "Informe o valor principal do resgate.", slices: [] };
+  if (valorPrincipal > group.principalDisponivel + 0.000001) {
+    return {
+      ok: false,
+      message: `Valor acima do disponível neste produto: ${money(group.principalDisponivel)}.`,
+      slices: []
+    };
+  }
+
+  let restante = valorPrincipal;
+  const slices = [];
+
+  for (const aporte of group.aportes) {
+    if (restante <= 0) break;
+    const disponivel = principalDisponivel(aporte);
+    if (disponivel <= 0) continue;
+
+    const redeemCheck = canRedeemAporte(aporte, dataResgate);
+    if (!redeemCheck.ok) {
+      return {
+        ok: false,
+        message: `Este produto ainda não permite resgate. ${redeemCheck.reason}.`,
+        slices: []
+      };
+    }
+
+    const principal = Math.min(disponivel, restante);
+    const proporcao = principal / Number(aporte.valor_aplicado || 1);
+    const calcTotal = calculateCdb(aporte, dataResgate);
+    const rendimento = Math.max(0, calcTotal.rendimentoBruto * proporcao);
+    const iof = Math.max(0, calcTotal.iof * proporcao);
+    const ir = Math.max(0, calcTotal.ir * proporcao);
+    const liquido = principal + rendimento - iof - ir;
+
+    slices.push({
+      aporte,
+      principal,
+      rendimento,
+      iof,
+      ir,
+      liquido,
+      diasCorridos: calcTotal.diasCorridos,
+      iofRate: calcTotal.iofRate,
+      irRate: calcTotal.irRate
+    });
+
+    restante -= principal;
+  }
+
+  const totals = slices.reduce((acc, slice) => {
+    acc.principal += slice.principal;
+    acc.rendimento += slice.rendimento;
+    acc.iof += slice.iof;
+    acc.ir += slice.ir;
+    acc.liquido += slice.liquido;
+    return acc;
+  }, { principal: 0, rendimento: 0, iof: 0, ir: 0, liquido: 0 });
+
+  return { ok: true, group, slices, totals };
+}
+
 function setMessage(text, success = false) {
   const msg = el("form-msg");
   msg.textContent = text || "";
@@ -159,6 +308,12 @@ function setMessage(text, success = false) {
 
 function setContaMessage(text, success = false) {
   const msg = el("conta-invest-msg");
+  msg.textContent = text || "";
+  msg.style.color = success ? "#16a34a" : "#dc2626";
+}
+
+function setResgateMessage(text, success = false) {
+  const msg = el("resgate-msg");
   msg.textContent = text || "";
   msg.style.color = success ? "#16a34a" : "#dc2626";
 }
@@ -260,8 +415,10 @@ async function contasComSaldoCalculado(contas) {
 function renderContaOptions() {
   const origem = el("invest-conta-origem");
   const destino = el("invest-conta-destino");
+  const resgateDestino = el("resgate-conta-destino");
   origem.innerHTML = "";
   destino.innerHTML = "";
+  if (resgateDestino) resgateDestino.innerHTML = "";
 
   const contasCorrentes = state.contas.filter(c => (c.tipo_conta || "corrente") === "corrente");
   const contasInvestimento = state.contas.filter(c => c.tipo_conta === "investimento");
@@ -269,14 +426,41 @@ function renderContaOptions() {
   origem.append(new Option("Selecione a conta corrente", ""));
   contasCorrentes.forEach(c => origem.append(new Option(`${c.nome} — saldo calculado ${money(c.saldo_calculado ?? c.saldo_atual ?? 0)}`, c.id)));
 
+  if (resgateDestino) {
+    resgateDestino.append(new Option("Selecione a conta corrente destino", ""));
+    contasCorrentes.forEach(c => resgateDestino.append(new Option(`${c.nome} — conta corrente`, c.id)));
+  }
+
   destino.append(new Option("Selecione a conta de investimento", ""));
-  contasInvestimento.forEach(c => destino.append(new Option(`${c.nome} — saldo calculado ${money(c.saldo_calculado ?? c.saldo_atual ?? 0)}`, c.id)));
+  contasInvestimento.forEach(c => destino.append(new Option(`💼 ${c.nome} — conta investimento`, c.id)));
 
   if (contasInvestimento.length === 0) {
     const opt = new Option("Crie uma conta do tipo investimento primeiro", "");
     opt.disabled = true;
     destino.append(opt);
   }
+
+  renderContasInvestimento(contasInvestimento);
+}
+
+function renderContasInvestimento(contasInvestimento = []) {
+  const list = el("lista-contas-investimento");
+  if (!list) return;
+
+  if (!contasInvestimento.length) {
+    list.innerHTML = `<p class="muted">Nenhuma conta de investimento criada ainda.</p>`;
+    return;
+  }
+
+  list.innerHTML = contasInvestimento.map((conta) => `
+    <div class="mini-item investment-account-item">
+      <div>
+        <strong>${escapeHtml(conta.nome)}</strong>
+        <span>Conta separada para patrimônio aplicado</span>
+      </div>
+      <em>Investimento</em>
+    </div>
+  `).join("");
 }
 
 function toggleCarenciaFields() {
@@ -297,7 +481,80 @@ async function loadInvestimentos() {
 
   if (error) throw error;
   state.investimentos = data || [];
+  await loadResgates();
   renderInvestimentos();
+  renderProdutoOptions();
+  renderResgatePreview();
+}
+
+async function loadResgates() {
+  const { data, error } = await supabase
+    .from("investimento_resgates")
+    .select("*")
+    .eq("user_id", state.user.id)
+    .order("data_resgate", { ascending: false });
+
+  if (error) {
+    console.warn("Tabela de resgates ainda não disponível.", error);
+    state.resgates = [];
+    return;
+  }
+
+  state.resgates = data || [];
+}
+
+function renderProdutoOptions() {
+  const produtos = buildProductGroups();
+  const aporteSelect = el("invest-produto-existente");
+  const resgateSelect = el("resgate-produto");
+
+  if (aporteSelect) {
+    const current = aporteSelect.value;
+    aporteSelect.innerHTML = "";
+    aporteSelect.append(new Option("Novo produto CDB", ""));
+    produtos.forEach((produto) => {
+      aporteSelect.append(new Option(`${produto.base.nome} — disponível ${money(produto.principalDisponivel)}`, produto.id));
+    });
+    aporteSelect.value = produtos.some(p => p.id === current) ? current : "";
+  }
+
+  if (resgateSelect) {
+    const current = resgateSelect.value;
+    resgateSelect.innerHTML = "";
+    resgateSelect.append(new Option("Selecione o produto", ""));
+    produtos
+      .filter(p => p.principalDisponivel > 0)
+      .forEach((produto) => {
+        resgateSelect.append(new Option(`${produto.base.nome} — disponível ${money(produto.principalDisponivel)}`, produto.id));
+      });
+    resgateSelect.value = produtos.some(p => p.id === current) ? current : "";
+  }
+}
+
+function preencherProdutoExistente() {
+  const produtoId = el("invest-produto-existente").value;
+  if (!produtoId) {
+    el("invest-nome").disabled = false;
+    el("invest-cnpj").disabled = false;
+    return;
+  }
+
+  const produto = buildProductGroups().find(p => p.id === produtoId);
+  if (!produto) return;
+  const base = produto.base;
+
+  el("invest-nome").value = base.nome || "";
+  el("invest-cnpj").value = formatCnpj(base.cnpj_emissor || "");
+  el("invest-vencimento").value = base.data_vencimento || "";
+  el("invest-liquidez").value = base.liquidez || "diaria";
+  el("invest-data-carencia").value = base.data_carencia || "";
+  el("invest-dias-carencia").value = base.dias_carencia || "";
+  el("invest-percentual-cdi").value = String(base.percentual_cdi || 100).replace(".", ",");
+  el("invest-cdi-anual").value = String(base.cdi_anual_referencia || 10.65).replace(".", ",");
+  el("invest-conta-destino").value = base.conta_investimento_id || "";
+  el("invest-nome").disabled = true;
+  el("invest-cnpj").disabled = true;
+  toggleCarenciaFields();
 }
 
 async function criarContaInvestimento() {
@@ -351,7 +608,9 @@ function renderInvestimentos() {
   const list = el("lista-investimentos");
   list.innerHTML = "";
 
-  if (state.investimentos.length === 0) {
+  const grupos = buildProductGroups();
+
+  if (grupos.length === 0) {
     list.innerHTML = "<p>Nenhuma aplicação cadastrada ainda.</p>";
   }
 
@@ -363,13 +622,28 @@ function renderInvestimentos() {
     liquido: 0
   };
 
-  state.investimentos.forEach((item) => {
-    const calc = calculateCdb(item);
-    totals.aplicado += calc.principal;
-    totals.rendimento += calc.rendimentoBruto;
-    totals.iof += calc.iof;
-    totals.ir += calc.ir;
-    totals.liquido += calc.valorLiquido;
+  grupos.forEach((grupo) => {
+    const item = grupo.base;
+    totals.aplicado += grupo.principalDisponivel;
+    totals.rendimento += grupo.rendimento;
+    totals.iof += grupo.iof;
+    totals.ir += grupo.ir;
+    totals.liquido += grupo.liquido;
+
+    const aportesHtml = grupo.aportes.map((aporte) => {
+      const disponivel = principalDisponivel(aporte);
+      const calc = calculateCdb({ ...aporte, valor_aplicado: disponivel });
+      return `
+        <tr>
+          <td>${formatDateBR(aporte.data_aplicacao)}</td>
+          <td>${money(aporte.valor_aplicado)}</td>
+          <td>${money(aporte.__resgatado || 0)}</td>
+          <td>${money(disponivel)}</td>
+          <td>${money(calc.valorLiquido)}</td>
+          <td>${calc.iofRate}% / ${calc.irRate}%</td>
+        </tr>
+      `;
+    }).join("");
 
     const card = document.createElement("article");
     card.className = "invest-card";
@@ -379,18 +653,33 @@ function renderInvestimentos() {
         <h3>${escapeHtml(item.nome)}</h3>
         <p><strong>Instituição:</strong> ${escapeHtml(item.instituicao || "-")}</p>
         <p><strong>CNPJ:</strong> ${formatCnpj(item.cnpj_emissor)}</p>
-        <p><strong>Aplicado em:</strong> ${formatDateBR(item.data_aplicacao)} • <strong>Vencimento:</strong> ${formatDateBR(item.data_vencimento)}</p>
+        <p><strong>Aportes:</strong> ${grupo.aportes.length} • <strong>Vencimento:</strong> ${formatDateBR(item.data_vencimento)}</p>
         ${item.liquidez === "carencia" ? `<p><strong>Carência:</strong> ${formatDateBR(item.data_carencia)}${item.dias_carencia ? ` • ${Number(item.dias_carencia)} dias` : ""}</p>` : ""}
-        <p><strong>Origem:</strong> ${escapeHtml(accountName(item.conta_origem_id))} • <strong>Destino:</strong> ${escapeHtml(accountName(item.conta_investimento_id))}</p>
+        <p><strong>Destino:</strong> ${escapeHtml(accountName(item.conta_investimento_id))}</p>
         ${item.observacoes ? `<p><strong>Obs.:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
+        <div class="aportes-table-wrap">
+          <table class="aportes-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Aporte</th>
+                <th>Resgatado</th>
+                <th>Disponível</th>
+                <th>Líquido estimado</th>
+                <th>IOF/IR</th>
+              </tr>
+            </thead>
+            <tbody>${aportesHtml}</tbody>
+          </table>
+        </div>
       </div>
       <div class="invest-meta">
-        <div><span>Aplicado</span><strong>${money(calc.principal)}</strong></div>
-        <div><span>Bruto</span><strong class="positive">${money(calc.rendimentoBruto)}</strong></div>
-        <div><span>IOF ${calc.iofRate}%</span><strong class="negative">${money(calc.iof)}</strong></div>
-        <div><span>IR ${calc.irRate}%</span><strong class="negative">${money(calc.ir)}</strong></div>
-        <div><span>Dias úteis</span><strong>${calc.diasUteis}</strong></div>
-        <div><span>Líquido estimado</span><strong>${money(calc.valorLiquido)}</strong></div>
+        <div><span>Principal disponível</span><strong>${money(grupo.principalDisponivel)}</strong></div>
+        <div><span>Rendimento bruto</span><strong class="positive">${money(grupo.rendimento)}</strong></div>
+        <div><span>IOF estimado</span><strong class="negative">${money(grupo.iof)}</strong></div>
+        <div><span>IR estimado</span><strong class="negative">${money(grupo.ir)}</strong></div>
+        <div><span>Total aportado</span><strong>${money(grupo.principalAplicado)}</strong></div>
+        <div><span>Líquido estimado</span><strong>${money(grupo.liquido)}</strong></div>
       </div>
     `;
     list.appendChild(card);
@@ -499,6 +788,87 @@ async function registrarTransferenciaInvestimento(investimento, origemId, destin
   return transferenciaId;
 }
 
+async function registrarTransferenciaResgate({ produtoNome, valorLiquido, dataResgate, origemId, destinoId }) {
+  const transferenciaId = uid();
+  const descricao = `Resgate CDB — ${produtoNome}`;
+
+  const { error: errTransf } = await supabase.from("transferencias").insert([{
+    id: transferenciaId,
+    user_id: state.user.id,
+    conta_origem: origemId,
+    conta_destino: destinoId,
+    valor: Number(valorLiquido.toFixed(2)),
+    data: dataResgate,
+    descricao
+  }]);
+  if (errTransf) throw errTransf;
+
+  const { error: errMov } = await supabase.from("movimentacoes").insert([
+    {
+      id: uid(),
+      user_id: state.user.id,
+      conta_id: origemId,
+      tipo: "debito",
+      valor: Number(valorLiquido.toFixed(2)),
+      data: dataResgate,
+      descricao: `Resgate enviado — ${produtoNome}`,
+      transferencia_id: transferenciaId
+    },
+    {
+      id: uid(),
+      user_id: state.user.id,
+      conta_id: destinoId,
+      tipo: "credito",
+      valor: Number(valorLiquido.toFixed(2)),
+      data: dataResgate,
+      descricao: `Resgate recebido — ${produtoNome}`,
+      transferencia_id: transferenciaId
+    }
+  ]);
+  if (errMov) throw errMov;
+
+  await Promise.all([
+    recalcConta(origemId),
+    recalcConta(destinoId)
+  ]);
+
+  return transferenciaId;
+}
+
+function renderResgatePreview() {
+  const previewEl = el("resgate-preview");
+  if (!previewEl) return;
+
+  const produtoId = el("resgate-produto").value;
+  const valor = parseMoneyBR(el("resgate-valor").value);
+  const dataResgate = el("resgate-data").value || isoToday();
+  const preview = buildResgatePreview(produtoId, valor, dataResgate);
+
+  if (!produtoId || !valor) {
+    previewEl.innerHTML = "Selecione um produto e informe o valor para estimar líquido, IOF e IR.";
+    previewEl.classList.remove("preview-error");
+    return;
+  }
+
+  if (!preview.ok) {
+    previewEl.innerHTML = escapeHtml(preview.message);
+    previewEl.classList.add("preview-error");
+    return;
+  }
+
+  previewEl.classList.remove("preview-error");
+  previewEl.innerHTML = `
+    <div class="preview-grid">
+      <div><span>Principal resgatado</span><strong>${money(preview.totals.principal)}</strong></div>
+      <div><span>Rendimento bruto</span><strong>${money(preview.totals.rendimento)}</strong></div>
+      <div><span>IOF estimado</span><strong>${money(preview.totals.iof)}</strong></div>
+      <div><span>IR estimado</span><strong>${money(preview.totals.ir)}</strong></div>
+      <div><span>Líquido estimado</span><strong>${money(preview.totals.liquido)}</strong></div>
+    </div>
+    <p>Estimativa feita aporte por aporte, usando primeiro os aportes mais antigos.</p>
+  `;
+}
+
 async function handleSubmit(event) {
   event.preventDefault();
   if (!requireInvestmentAccess()) return;
@@ -509,6 +879,10 @@ async function handleSubmit(event) {
 
   try {
     const nome = el("invest-nome").value.trim();
+    const produtoExistenteId = el("invest-produto-existente").value || null;
+    const produtoExistente = produtoExistenteId
+      ? buildProductGroups().find(p => p.id === produtoExistenteId)
+      : null;
     const valor = parseMoneyBR(el("invest-valor").value);
     const dataAplicacao = el("invest-data").value;
     const origemId = el("invest-conta-origem").value || null;
@@ -537,6 +911,7 @@ async function handleSubmit(event) {
     const investimento = {
       id: uid(),
       user_id: state.user.id,
+      produto_grupo_id: produtoExistente ? produtoExistente.id : null,
       tipo: "cdb",
       indexador: "cdi",
       nome,
@@ -556,6 +931,10 @@ async function handleSubmit(event) {
       status: "ativo"
     };
 
+    if (!investimento.produto_grupo_id) {
+      investimento.produto_grupo_id = investimento.id;
+    }
+
     const { error } = await supabase.from("investimentos").insert([investimento]);
     if (error) throw error;
 
@@ -569,6 +948,9 @@ async function handleSubmit(event) {
     }
 
     event.target.reset();
+    el("invest-produto-existente").value = "";
+    el("invest-nome").disabled = false;
+    el("invest-cnpj").disabled = false;
     el("invest-valor").value = "0,00";
     el("invest-data").value = isoToday();
     el("invest-percentual-cdi").value = "100";
@@ -587,6 +969,87 @@ async function handleSubmit(event) {
   }
 }
 
+async function handleResgateSubmit(event) {
+  event.preventDefault();
+  if (!requireInvestmentAccess()) return;
+
+  const button = event.submitter;
+  button.disabled = true;
+  setResgateMessage("");
+
+  try {
+    const produtoId = el("resgate-produto").value;
+    const valor = parseMoneyBR(el("resgate-valor").value);
+    const dataResgate = el("resgate-data").value || isoToday();
+    const contaDestinoId = el("resgate-conta-destino").value || null;
+    const observacoes = el("resgate-observacoes").value.trim() || null;
+    const preview = buildResgatePreview(produtoId, valor, dataResgate);
+
+    if (!preview.ok) throw new Error(preview.message);
+    if (!contaDestinoId) throw new Error("Selecione a conta corrente que vai receber o resgate.");
+
+    const contaInvestimentoId = preview.group.base.conta_investimento_id;
+    if (!contaInvestimentoId) throw new Error("Este produto não possui conta de investimento destino.");
+
+    const rows = preview.slices.map((slice) => ({
+      id: uid(),
+      user_id: state.user.id,
+      investimento_id: slice.aporte.id,
+      produto_grupo_id: preview.group.id,
+      data_resgate: dataResgate,
+      valor_bruto_solicitado: Number(valor.toFixed(2)),
+      valor_principal_resgatado: Number(slice.principal.toFixed(2)),
+      rendimento_bruto: Number(slice.rendimento.toFixed(2)),
+      iof: Number(slice.iof.toFixed(2)),
+      ir: Number(slice.ir.toFixed(2)),
+      valor_liquido: Number(slice.liquido.toFixed(2)),
+      conta_destino_id: contaDestinoId,
+      transferencia_id: null,
+      observacoes
+    }));
+
+    const { error } = await supabase.from("investimento_resgates").insert(rows);
+    if (error) throw error;
+
+    let transferenciaId = null;
+    try {
+      transferenciaId = await registrarTransferenciaResgate({
+        produtoNome: preview.group.base.nome,
+        valorLiquido: preview.totals.liquido,
+        dataResgate,
+        origemId: contaInvestimentoId,
+        destinoId: contaDestinoId
+      });
+
+      await supabase
+        .from("investimento_resgates")
+        .update({ transferencia_id: transferenciaId })
+        .in("id", rows.map(r => r.id))
+        .eq("user_id", state.user.id);
+    } catch (transferError) {
+      await supabase
+        .from("investimento_resgates")
+        .delete()
+        .in("id", rows.map(r => r.id))
+        .eq("user_id", state.user.id);
+      throw transferError;
+    }
+
+    event.target.reset();
+    el("resgate-data").value = isoToday();
+    el("resgate-valor").value = "0,00";
+
+    await loadContas();
+    await loadInvestimentos();
+    setResgateMessage("Resgate registrado com sucesso.", true);
+  } catch (error) {
+    console.error(error);
+    setResgateMessage(error.message || "Erro ao registrar resgate.");
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function boot() {
   el("btn-voltar").onclick = () => { window.location.href = "../app.html"; };
   el("btn-sair").onclick = async () => {
@@ -599,8 +1062,15 @@ async function boot() {
   };
   el("btn-criar-conta-investimento").onclick = criarContaInvestimento;
   el("form-investimento").addEventListener("submit", handleSubmit);
+  el("form-resgate").addEventListener("submit", handleResgateSubmit);
+  el("invest-produto-existente").addEventListener("change", preencherProdutoExistente);
   el("invest-liquidez").addEventListener("change", toggleCarenciaFields);
+  ["resgate-produto", "resgate-valor", "resgate-data"].forEach((id) => {
+    el(id).addEventListener("input", renderResgatePreview);
+    el(id).addEventListener("change", renderResgatePreview);
+  });
   el("invest-data").value = isoToday();
+  el("resgate-data").value = isoToday();
   toggleCarenciaFields();
 
   try {

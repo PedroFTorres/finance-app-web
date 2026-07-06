@@ -807,6 +807,28 @@ button:hover { opacity: .9; }
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
+.conta-card-investimento {
+  border: 1px solid rgba(122, 77, 255, 0.32);
+  background: linear-gradient(180deg, #fff, #fbf9ff);
+}
+
+.conta-title-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.conta-tipo-badge {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f1ecff;
+  color: #5c32d8;
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .conta-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 26px rgba(0,0,0,0.12);
