@@ -12,7 +12,8 @@ const state = {
   profile: null,
   contas: [],
   investimentos: [],
-  resgates: []
+  resgates: [],
+  formMode: "novo"
 };
 
 const el = (id) => document.getElementById(id);
@@ -318,6 +319,63 @@ function setResgateMessage(text, success = false) {
   msg.style.color = success ? "#16a34a" : "#dc2626";
 }
 
+function activateInvestmentTab(tabName, mode = null) {
+  document.querySelectorAll(".invest-tab").forEach((button) => {
+    const isActive = button.dataset.investTab === tabName &&
+      (!button.dataset.investMode || button.dataset.investMode === mode);
+    button.classList.toggle("active", isActive);
+  });
+
+  document.querySelectorAll(".invest-tab-panel").forEach((panel) => {
+    panel.classList.toggle("hidden", panel.id !== `panel-${tabName}`);
+    panel.classList.toggle("active", panel.id === `panel-${tabName}`);
+  });
+
+  if (tabName === "aplicacao") {
+    setInvestmentFormMode(mode || "novo");
+  }
+}
+
+function setInvestmentFormMode(mode) {
+  state.formMode = mode === "aporte" ? "aporte" : "novo";
+  const isAporte = state.formMode === "aporte";
+  const group = el("grupo-produto-existente");
+  const title = el("invest-form-title");
+  const saveButton = el("btn-salvar-investimento");
+
+  group.classList.toggle("hidden", !isAporte);
+  title.textContent = isAporte ? "Novo aporte em CDB existente" : "Nova aplicação CDB";
+  saveButton.textContent = isAporte ? "Salvar aporte" : "Salvar aplicação";
+
+  if (!isAporte) {
+    el("invest-produto-existente").value = "";
+    el("invest-nome").disabled = false;
+    el("invest-cnpj").disabled = false;
+  } else {
+    preencherProdutoExistente();
+  }
+
+  setMessage("");
+}
+
+function setupCleanMoneyInput(input) {
+  if (!input) return;
+
+  input.addEventListener("focus", () => {
+    if (parseMoneyBR(input.value) === 0) {
+      input.value = "";
+      return;
+    }
+    input.select();
+  });
+
+  input.addEventListener("blur", () => {
+    if (!input.value.trim()) {
+      input.value = "0,00";
+    }
+  });
+}
+
 function setAccessAlert(text) {
   const alert = el("access-alert");
   alert.textContent = text;
@@ -511,7 +569,7 @@ function renderProdutoOptions() {
   if (aporteSelect) {
     const current = aporteSelect.value;
     aporteSelect.innerHTML = "";
-    aporteSelect.append(new Option("Novo produto CDB", ""));
+    aporteSelect.append(new Option("Selecione o produto para aporte", ""));
     produtos.forEach((produto) => {
       aporteSelect.append(new Option(`${produto.base.nome} — disponível ${money(produto.principalDisponivel)}`, produto.id));
     });
@@ -536,6 +594,10 @@ function preencherProdutoExistente() {
   if (!produtoId) {
     el("invest-nome").disabled = false;
     el("invest-cnpj").disabled = false;
+    if (state.formMode === "aporte") {
+      el("invest-nome").value = "";
+      el("invest-cnpj").value = "";
+    }
     return;
   }
 
@@ -879,7 +941,7 @@ async function handleSubmit(event) {
 
   try {
     const nome = el("invest-nome").value.trim();
-    const produtoExistenteId = el("invest-produto-existente").value || null;
+    const produtoExistenteId = state.formMode === "aporte" ? (el("invest-produto-existente").value || null) : null;
     const produtoExistente = produtoExistenteId
       ? buildProductGroups().find(p => p.id === produtoExistenteId)
       : null;
@@ -894,6 +956,10 @@ async function handleSubmit(event) {
 
     if (!nome || !valor || valor <= 0 || !dataAplicacao) {
       throw new Error("Informe nome, valor e data da aplicação.");
+    }
+
+    if (state.formMode === "aporte" && !produtoExistente) {
+      throw new Error("Selecione o produto CDB que receberá este aporte.");
     }
 
     if (liquidez === "carencia" && !dataCarencia && !diasCarencia) {
@@ -957,6 +1023,7 @@ async function handleSubmit(event) {
     el("invest-cdi-anual").value = "10,65";
     el("invest-gerar-transferencia").checked = true;
     toggleCarenciaFields();
+    setInvestmentFormMode(state.formMode);
 
     await loadContas();
     await loadInvestimentos();
@@ -1065,6 +1132,13 @@ async function boot() {
   el("form-resgate").addEventListener("submit", handleResgateSubmit);
   el("invest-produto-existente").addEventListener("change", preencherProdutoExistente);
   el("invest-liquidez").addEventListener("change", toggleCarenciaFields);
+  document.querySelectorAll(".invest-tab").forEach((button) => {
+    button.addEventListener("click", () => {
+      activateInvestmentTab(button.dataset.investTab, button.dataset.investMode || null);
+    });
+  });
+  setupCleanMoneyInput(el("invest-valor"));
+  setupCleanMoneyInput(el("resgate-valor"));
   ["resgate-produto", "resgate-valor", "resgate-data"].forEach((id) => {
     el(id).addEventListener("input", renderResgatePreview);
     el(id).addEventListener("change", renderResgatePreview);
@@ -1072,6 +1146,7 @@ async function boot() {
   el("invest-data").value = isoToday();
   el("resgate-data").value = isoToday();
   toggleCarenciaFields();
+  activateInvestmentTab("aplicacao", "novo");
 
   try {
     const ok = await loadSession();

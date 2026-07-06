@@ -36,17 +36,26 @@
 
     <section id="access-alert" class="alert hidden"></section>
 
-    <section class="grid">
-      <form id="form-investimento" class="panel">
-        <h2>Nova aplicação / aporte CDB</h2>
+    <nav class="invest-tabs" aria-label="Menu do módulo de investimentos">
+      <button class="invest-tab active" type="button" data-invest-tab="aplicacao" data-invest-mode="novo">Nova aplicação</button>
+      <button class="invest-tab" type="button" data-invest-tab="aplicacao" data-invest-mode="aporte">Aporte</button>
+      <button class="invest-tab" type="button" data-invest-tab="resgate">Resgate</button>
+      <button class="invest-tab" type="button" data-invest-tab="carteira">Carteira</button>
+    </nav>
 
-        <label>Produto CDB</label>
-        <select id="invest-produto-existente">
-          <option value="">Novo produto CDB</option>
-        </select>
-        <p class="field-help">
-          Para aportar novamente no mesmo CDB, selecione o produto existente. O app mantém cada aporte com sua própria data para calcular IOF e IR.
-        </p>
+    <section id="panel-aplicacao" class="grid invest-tab-panel active">
+      <form id="form-investimento" class="panel">
+        <h2 id="invest-form-title">Nova aplicação CDB</h2>
+
+        <div id="grupo-produto-existente" class="hidden">
+          <label>Produto CDB</label>
+          <select id="invest-produto-existente">
+            <option value="">Selecione o produto para aporte</option>
+          </select>
+          <p class="field-help">
+            Selecione o CDB que receberá o novo aporte. Cada aporte mantém sua própria data para calcular IOF e IR.
+          </p>
+        </div>
 
         <label>Nome do investimento</label>
         <input id="invest-nome" required placeholder="Ex: CDB Santander Liquidez Diária">
@@ -116,7 +125,7 @@
         <label>Observações</label>
         <textarea id="invest-observacoes" rows="3" placeholder="Ex: aplicação feita pelo app Santander"></textarea>
 
-        <button class="btn-primary" type="submit">Salvar aplicação</button>
+        <button id="btn-salvar-investimento" class="btn-primary" type="submit">Salvar aplicação</button>
         <p id="form-msg" class="msg"></p>
       </form>
 
@@ -153,7 +162,7 @@
       </section>
     </section>
 
-    <section class="panel">
+    <section id="panel-resgate" class="panel invest-tab-panel hidden">
       <h2>Resgate de investimento</h2>
       <form id="form-resgate" class="resgate-form">
         <div class="row">
@@ -190,7 +199,7 @@
       </form>
     </section>
 
-    <section class="panel">
+    <section id="panel-carteira" class="panel invest-tab-panel hidden">
       <div class="section-title">
         <h2>Produtos e aportes cadastrados</h2>
         <button id="btn-recarregar" class="btn-secondary">Recarregar</button>
