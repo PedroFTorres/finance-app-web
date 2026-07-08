@@ -370,6 +370,16 @@
   <!-- CONTEÚDO PRINCIPAL -->
   <div class="lanc-content">
     <div class="listas">
+      <div class="box" id="box-pendencias">
+        <div class="lanc-box-title">
+          <div>
+            <h3>Agenda de pendências</h3>
+            <p>Receitas, despesas e faturas abertas em ordem de vencimento.</p>
+          </div>
+        </div>
+        <ul id="list-pendencias"></ul>
+      </div>
+
       <div class="box" id="box-receitas">
         <h3>Receitas</h3>
         <ul id="list-receitas"></ul>
@@ -567,7 +577,7 @@
   <script src="config.js"></script>
   <script src="supabase.js"></script>
   <script src="security.js?v=20260702-1"></script>
-  <script src="app.js?v=20260708-2"></script>
+  <script src="app.js?v=20260708-3"></script>
   <script src="secure-summary-client.js"></script>
   <script src="premium-access-client.js?v=20260621-1"></script>
 
@@ -576,23 +586,32 @@
     
   <!-- MODAL — Escopo de edição de recorrência -->
 <div id="modal-escopo-recorrencia" class="modal hidden">
-  <div class="modal-content" style="max-width:420px;">
+  <div class="modal-content modal-recorrencia" style="max-width:520px;">
     <h3>Editar lançamento recorrente</h3>
-    <p>Este lançamento faz parte de uma recorrência. O que deseja editar?</p>
+    <p>Escolha o alcance da alteração. Assim você evita mudar parcelas futuras sem querer.</p>
 
-    <label style="display:block;margin-top:10px;">
+    <label class="recurrence-option">
       <input type="radio" name="escopo-rec" value="one" checked>
-      Apenas este lançamento
+      <span>
+        <strong>Apenas este lançamento</strong>
+        <small>Muda somente o item selecionado.</small>
+      </span>
     </label>
 
-    <label style="display:block;margin-top:6px;">
+    <label class="recurrence-option">
       <input type="radio" name="escopo-rec" value="next">
-      Este e os próximos
+      <span>
+        <strong>Este e os próximos</strong>
+        <small>Aplica a partir deste vencimento.</small>
+      </span>
     </label>
 
-    <label style="display:block;margin-top:6px;">
+    <label class="recurrence-option">
       <input type="radio" name="escopo-rec" value="all">
-      Todos da recorrência
+      <span>
+        <strong>Todos da recorrência</strong>
+        <small>Altera toda a série recorrente.</small>
+      </span>
     </label>
 
     <div class="actions-row" style="margin-top:16px;">

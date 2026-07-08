@@ -199,6 +199,10 @@ let FILTRO_LANCAMENTOS = "pendencias";
   function getCategoriaNome(id) {
     return STATE.categorias.find(c => c.id === id)?.nome || 'Sem categoria';
   }
+  function isFaturaCartaoLancamento(item) {
+    const descricao = String(item?.descricao || "").toLowerCase();
+    return Boolean(item?.provisorio_cartao) || descricao.startsWith("fatura ") || descricao.includes("fatura aberta");
+  }
   function setTextById(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
@@ -1142,26 +1146,43 @@ renderContasCards() {
     // renders the lists of receipts and expenses in the lanc screen
     renderLancamentos({ receitas, despesas, totais }) {
       const ulR = $(IDS.listReceitas); const ulD = $(IDS.listDespesas);
+      const ulP = document.getElementById("list-pendencias");
       if (ulR) ulR.innerHTML = '';
       if (ulD) ulD.innerHTML = '';
+      if (ulP) ulP.innerHTML = '';
 
       let totalR = 0, totalD = 0;
 
       (receitas || []).forEach(r => {
         totalR += Number(r.valor || 0);
-        if (ulR) ulR.appendChild(UI._createLancItem(r, 'receita'));
+        if (ulR && FILTRO_LANCAMENTOS !== "pendencias") ulR.appendChild(UI._createLancItem(r, 'receita'));
       });
 
       (despesas || []).forEach(d => {
         totalD += Number(d.valor || 0);
-        if (ulD) ulD.appendChild(UI._createLancItem(d, 'despesa'));
+        if (ulD && FILTRO_LANCAMENTOS !== "pendencias") ulD.appendChild(UI._createLancItem(d, 'despesa'));
       });
 
-      if (ulR && (!receitas || receitas.length === 0)) {
+      if (ulP && FILTRO_LANCAMENTOS === "pendencias") {
+        const pendencias = [
+          ...(receitas || []).map(item => ({ ...item, __tipo_lancamento: "receita" })),
+          ...(despesas || []).map(item => ({ ...item, __tipo_lancamento: "despesa" }))
+        ].sort((a, b) => new Date(a.data_baixa || a.data) - new Date(b.data_baixa || b.data));
+
+        pendencias.forEach(item => {
+          ulP.appendChild(UI._createLancItem(item, item.__tipo_lancamento));
+        });
+
+        if (pendencias.length === 0) {
+          ulP.appendChild(UI._createEmptyLancItem('Nenhuma pendência neste período.'));
+        }
+      }
+
+      if (ulR && FILTRO_LANCAMENTOS !== "pendencias" && (!receitas || receitas.length === 0)) {
         ulR.appendChild(UI._createEmptyLancItem('Nenhuma receita neste filtro.'));
       }
 
-      if (ulD && (!despesas || despesas.length === 0)) {
+      if (ulD && FILTRO_LANCAMENTOS !== "pendencias" && (!despesas || despesas.length === 0)) {
         ulD.appendChild(UI._createEmptyLancItem('Nenhuma despesa neste filtro.'));
       }
 
@@ -1246,6 +1267,7 @@ body.appendChild(meta);
 left.appendChild(body);
 
 const valueEl = createTextElement("strong", fmtMoney(item.valor), `lanc-value ${valueClass}`);
+const bloqueiaEdicaoCartao = isFaturaCartaoLancamento(item);
       
 // ================================// TRANSFERÊNCIA — AÇÃO ESPECIAL// ================================
 if (item.transferencia_id) {
@@ -1274,13 +1296,17 @@ if (item.transferencia_id) {
   right.className = "lanc-actions";
 
   // ✏️ EDITAR
-  const btnEdit = document.createElement("button");
-  btnEdit.textContent = "Editar";
-  btnEdit.classList.add("edit");
-  btnEdit.addEventListener("click", () => {
-    UI.openModalEdit(item, tipo);
-  });
-  right.appendChild(btnEdit);
+  if (!bloqueiaEdicaoCartao) {
+    const btnEdit = document.createElement("button");
+    btnEdit.textContent = "Editar";
+    btnEdit.classList.add("edit");
+    btnEdit.addEventListener("click", () => {
+      UI.openModalEdit(item, tipo);
+    });
+    right.appendChild(btnEdit);
+  } else {
+    meta.appendChild(createTextElement("span", "Editar no cartão", "lanc-chip lanc-chip-card-lock"));
+  }
 
   // =========================// BAIXAR / CANCELAR BAIXA// =========================
   if (!item.baixado) {
@@ -2425,19 +2451,28 @@ UI.renderLancamentos({
 
 const boxReceitas = document.getElementById("box-receitas");
 const boxDespesas = document.getElementById("box-despesas");
+const boxPendencias = document.getElementById("box-pendencias");
 const listas = document.querySelector(".listas");
 
 if (boxReceitas && boxDespesas && listas) {
 
   // RESET GERAL (sempre começa limpo)
+  if (boxPendencias) boxPendencias.style.display = "none";
   boxReceitas.style.display = "";
   boxDespesas.style.display = "";
   listas.classList.remove("single-column");
 
+  if (FILTRO_LANCAMENTOS === "pendencias") {
+    if (boxPendencias) boxPendencias.style.display = "";
+    boxReceitas.style.display = "none";
+    boxDespesas.style.display = "none";
+    listas.classList.add("single-column");
+  }
+
   // ================================// FILTROS QUE MOSTRAM APENAS UM TIPO// ================================
 
   // Receitas / Recebidos → mostra só receitas
-  if (
+  else if (
     FILTRO_LANCAMENTOS === "receitas" ||
     FILTRO_LANCAMENTOS === "recebidos"
   ) {
@@ -2446,7 +2481,7 @@ if (boxReceitas && boxDespesas && listas) {
   }
 
   // Despesas / Pagos → mostra só despesas
-  if (
+  else if (
     FILTRO_LANCAMENTOS === "despesas" ||
     FILTRO_LANCAMENTOS === "pagos"
   ) {
@@ -2454,7 +2489,6 @@ if (boxReceitas && boxDespesas && listas) {
     listas.classList.add("single-column");
   }
 
-  // Pendências → mostra os dois (layout padrão)
 }
 
        } catch (e) {
