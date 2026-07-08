@@ -118,11 +118,14 @@
     <select id="edit-cartao"></select>
 
     <h4 style="margin-top:16px">Parcelas</h4>
+    <p class="parcelas-help">
+      Altere os valores e datas das parcelas aqui. Depois clique em salvar uma única vez para gravar tudo.
+    </p>
     <ul id="lista-parcelas-editar" class="lista-parcelas"></ul>
 
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
       <button id="btn-salvar-edicao" class="btn-primary">
-        Salvar alterações
+        Salvar compra e parcelas
       </button>
       <button id="btn-excluir-compra" class="btn-danger">
         Excluir compra
@@ -239,7 +242,7 @@
       };
 
       try {
-        await import("./cartao.js?v=20260621-1");
+        await import("./cartao.js?v=20260708-1");
       } finally {
         document.addEventListener = originalAddEventListener;
       }

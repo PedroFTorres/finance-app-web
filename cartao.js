@@ -170,6 +170,49 @@ if (contaFaturaConfirmar) {
     return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
 
+  function formatDateBR(value) {
+    if (!value) return "-";
+    const date = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleDateString("pt-BR");
+  }
+
+  function limparDescricaoParcela(descricao = "") {
+    return String(descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
+  }
+
+  function distribuirValorEmParcelas(total, quantidade) {
+    const totalCentavos = Math.round(Number(total || 0) * 100);
+    const qtd = Math.max(Number(quantidade || 1), 1);
+    const base = Math.floor(totalCentavos / qtd);
+    const resto = totalCentavos - base * qtd;
+
+    return Array.from({ length: qtd }, (_, index) => {
+      const centavos = base + (index < resto ? 1 : 0);
+      return Number((centavos / 100).toFixed(2));
+    });
+  }
+
+  function atualizarTotalEdicaoAPartirParcelas() {
+    const elValor = document.getElementById("edit-valor-total");
+    if (!elValor) return;
+    const total = (state.editingPurchaseParcels || []).reduce((s, p) => s + Number(p.valor || 0), 0);
+    elValor.value = total.toFixed(2);
+  }
+
+  function recalcularParcelasPeloTotal() {
+    const elValor = document.getElementById("edit-valor-total");
+    const parcelas = state.editingPurchaseParcels || [];
+    if (!elValor || parcelas.length <= 1) return;
+
+    const novosValores = distribuirValorEmParcelas(elValor.value, parcelas.length);
+    state.editingPurchaseParcels = parcelas.map((p, index) => ({
+      ...p,
+      valor: novosValores[index] ?? 0
+    }));
+    renderParcelasEdicao();
+  }
+
   function formatISO(d) {
     return new Date(d).toISOString().slice(0,10);
   }
@@ -567,7 +610,8 @@ async function loadFaturaForSelected() {
     .eq("user_id", state.user.id)
     .gte("data_fatura", inicio)
     .lte("data_fatura", fim)
-    .order("data_fatura");
+    .order("data_compra", { ascending: true })
+    .order("data_fatura", { ascending: true });
 
   const card = state.cards.find(c => c.id === cartao_id);
 
@@ -584,7 +628,7 @@ async function loadFaturaForSelected() {
 
   if (!compras || compras.length === 0) {
     listaComprasFatura.innerHTML = `
-      <li style="opacity:.7;font-style:italic">
+      <li class="fatura-empty">
         Nenhuma compra lançada nesta fatura
       </li>
     `;
@@ -592,6 +636,7 @@ async function loadFaturaForSelected() {
    compras.forEach(c => {
 
   const li = document.createElement("li");
+  li.className = c.tipo === "pagamento" ? "fatura-row fatura-row-pagamento" : "fatura-row";
 
   const valorFormatado = Number(c.valor).toLocaleString("pt-BR", {
     style: "currency",
@@ -600,10 +645,29 @@ async function loadFaturaForSelected() {
 
   const valorClasse = c.tipo === "pagamento"
     ? "valor-pagamento"
-    : "";
+    : "fatura-valor";
 
-  li.appendChild(createTextElement("span", c.descricao));
-  li.appendChild(createTextElement("span", valorFormatado, valorClasse));
+  const dataCompra = formatDateBR(c.data_compra || c.data_fatura);
+  const dataFatura = formatDateBR(c.data_fatura);
+  const descricaoBase = limparDescricaoParcela(c.descricao);
+  const parcelaLabel = Number(c.parcelas || 1) > 1
+    ? `${c.parcela_atual || 1}/${c.parcelas}`
+    : "À vista";
+
+  const dataEl = createTextElement("span", dataCompra, "fatura-data");
+
+  const infoEl = document.createElement("span");
+  infoEl.className = "fatura-info";
+  infoEl.appendChild(createTextElement("strong", descricaoBase, "fatura-desc"));
+  const meta = c.tipo === "pagamento"
+    ? "Pagamento / abatimento na fatura"
+    : `Compra em ${dataCompra}${dataFatura !== dataCompra ? ` • Fatura ${dataFatura}` : ""}`;
+  infoEl.appendChild(createTextElement("small", meta, "fatura-meta"));
+
+  const parcelaEl = createTextElement("span", parcelaLabel, "fatura-parcela");
+  const valorEl = createTextElement("strong", valorFormatado, valorClasse);
+
+  li.append(dataEl, infoEl, parcelaEl, valorEl);
 
   li.onclick = () => abrirFluxoEdicaoCompra(c);
 
@@ -1415,23 +1479,17 @@ async function abrirEdicaoAvista(l) {
       return;
     }
 
-    // descrição base (remove "(x/y)")
-    const base = (c.descricao || "")
-      .replace(/\s*\(\d+\/\d+\)\s*$/, "")
-      .trim();
-
-    // 🔒 data mínima para edição:
-    // usa fatura atual se existir, senão usa a data da parcela clicada
-    const dataInicioEdicao = state.faturaAtual?.inicio || c.data_fatura;
+    // descrição base (remove "(x/y)") para encontrar todas as parcelas da mesma compra
+    const base = limparDescricaoParcela(c.descricao);
 
     const { data: parcelas, error } = await supabase
       .from("cartao_lancamentos")
       .select("*")
       .eq("cartao_id", c.cartao_id)
       .eq("user_id", state.user.id)
-      .ilike("descricao", `${base}%`)
-      .gte("data_fatura", dataInicioEdicao)
-      .order("data_fatura", { ascending: true });
+      .eq("data_compra", c.data_compra)
+      .eq("parcelas", c.parcelas)
+      .order("parcela_atual", { ascending: true });
 
     if (error) {
       console.error(error);
@@ -1439,24 +1497,26 @@ async function abrirEdicaoAvista(l) {
       return;
     }
 
-    if (!parcelas || parcelas.length === 0) {
+    const parcelasDaCompra = (parcelas || []).filter((p) => limparDescricaoParcela(p.descricao) === base);
+
+    if (!parcelasDaCompra || parcelasDaCompra.length === 0) {
       showToast("Nenhuma parcela disponível para edição.", "warning");
       return;
     }
 
     // estado global
-    state.editingPurchaseParcels = parcelas;
-    state.editingPurchaseFull = parcelas[0];
+    state.editingPurchaseParcels = parcelasDaCompra;
+    state.editingPurchaseFull = parcelasDaCompra[0];
 
     // preencher campos principais
     elDesc.value = base;
-    elValor.value = parcelas.reduce((s, p) => s + Number(p.valor || 0), 0);
-    elData.value = parcelas[0].data_compra || "";
-    elParcelas.value = parcelas.length;
+    elValor.value = parcelasDaCompra.reduce((s, p) => s + Number(p.valor || 0), 0).toFixed(2);
+    elData.value = parcelasDaCompra[0].data_compra || "";
+    elParcelas.value = parcelasDaCompra.length;
 
     // popular selects
-    await popularSelectCategoriaEdicao(parcelas[0].categoria_id);
-    await popularSelectCartaoEdicao(parcelas[0].cartao_id);
+    await popularSelectCategoriaEdicao(parcelasDaCompra[0].categoria_id);
+    await popularSelectCartaoEdicao(parcelasDaCompra[0].cartao_id);
 
     // renderizar parcelas (somente atuais + futuras)
     renderParcelasEdicao();
@@ -1481,37 +1541,55 @@ async function abrirEdicaoAvista(l) {
   const parcelas = state.editingPurchaseParcels || [];
   const total = parcelas.length;
 
-  parcelas.forEach((p) => {
+  parcelas.forEach((p, index) => {
     const li = document.createElement("li");
     li.className = "parcela-item";
     li.dataset.parcelaId = p.id;
 
-    const dataCompra = p.data_compra
-      ? new Date(p.data_compra + "T00:00:00").toLocaleDateString("pt-BR")
-      : "-";
+    const info = document.createElement("div");
+    info.className = "parcela-info";
+    info.appendChild(createTextElement("strong", `Parcela ${p.parcela_atual || index + 1}/${total}`, "parcela-title"));
+    info.appendChild(createTextElement("small", `Compra: ${formatDateBR(p.data_compra)}`, "parcela-meta"));
 
-    const dataFatura = p.data_fatura
-      ? new Date(p.data_fatura + "T00:00:00").toLocaleDateString("pt-BR")
-      : "-";
+    const fields = document.createElement("div");
+    fields.className = "parcela-fields";
 
-    li.appendChild(createTextElement(
-      "span",
-      `(${p.parcela_atual}/${total}) — Compra: ${dataCompra} — Fatura: ${dataFatura} — ${formatReal(p.valor)}`
-    ));
+    const valorWrap = document.createElement("label");
+    valorWrap.textContent = "Valor";
+    const valorInput = document.createElement("input");
+    valorInput.type = "number";
+    valorInput.step = "0.01";
+    valorInput.min = "0";
+    valorInput.value = Number(p.valor || 0).toFixed(2);
+    valorInput.addEventListener("focus", () => valorInput.select());
+    valorInput.addEventListener("input", () => {
+      state.editingPurchaseParcels[index].valor = Number(valorInput.value || 0);
+      atualizarTotalEdicaoAPartirParcelas();
+    });
+    valorWrap.appendChild(valorInput);
+
+    const dataWrap = document.createElement("label");
+    dataWrap.textContent = "Fatura";
+    const dataInput = document.createElement("input");
+    dataInput.type = "date";
+    dataInput.value = p.data_fatura || p.data_compra || "";
+    dataInput.addEventListener("change", () => {
+      state.editingPurchaseParcels[index].data_fatura = dataInput.value;
+    });
+    dataWrap.appendChild(dataInput);
+
+    fields.append(valorWrap, dataWrap);
 
     const actions = document.createElement("div");
     actions.className = "parcela-actions";
-    const editButton = createTextElement("button", "Editar", "btn-secondary btn-edit");
     const deleteButton = createTextElement("button", "Excluir", "btn-danger btn-del");
     const anticipateButton = createTextElement("button", "Antecipar", "btn-primary btn-ant");
-    editButton.type = "button";
     deleteButton.type = "button";
     anticipateButton.type = "button";
-    editButton.onclick = () => abrirModalEditarParcela(p);
     deleteButton.onclick = () => excluirParcela(p.id);
     anticipateButton.onclick = () => anteciparParcela(p.id);
-    actions.append(editButton, deleteButton, anticipateButton);
-    li.appendChild(actions);
+    actions.append(deleteButton, anticipateButton);
+    li.append(info, fields, actions);
 
     lista.appendChild(li);
   });
@@ -1590,6 +1668,9 @@ if (modalParcelaCancelar) {
       return showToast("Erro ao excluir parcela.", "error");
     }
 
+    state.editingPurchaseParcels = (state.editingPurchaseParcels || []).filter((p) => p.id !== id);
+    atualizarTotalEdicaoAPartirParcelas();
+    renderParcelasEdicao();
     await loadFaturaForSelected();
     showToast("Parcela excluída.");
   }
@@ -1651,37 +1732,60 @@ if (modalParcelaCancelar) {
   }
 
   // ===========================// SALVAR/EXCLUIR EDIÇÃO PARCELADA// ===========================
+  const editValorTotalInput = document.getElementById("edit-valor-total");
+  if (editValorTotalInput) {
+    editValorTotalInput.addEventListener("focus", () => editValorTotalInput.select());
+    editValorTotalInput.addEventListener("input", recalcularParcelasPeloTotal);
+  }
+
   if (document.getElementById("btn-salvar-edicao"))
     document.getElementById("btn-salvar-edicao").onclick = async () => {
       try {
-        const idFull = state.editingPurchaseFull.id;
         const desc = document.getElementById("edit-desc").value.trim();
         const total = Number(document.getElementById("edit-valor-total").value || 0);
         const dataIni = document.getElementById("edit-data-inicial").value;
         const totalParcelas = Number(document.getElementById("edit-total-parcelas").value || 1);
         const categoria = document.getElementById("edit-categoria").value;
         const cartao = document.getElementById("edit-cartao").value;
+        const parcelas = state.editingPurchaseParcels || [];
+
+        if (!desc || !total || !dataIni || !parcelas.length) {
+          return showToast("Preencha os dados da compra antes de salvar.", "warning");
+        }
 
         // limpar "(x/y)" da descrição
-        const descLimpa = desc.replace(/\s*\(\d+\/\d+\)\s*$/, "");
+        const descLimpa = limparDescricaoParcela(desc);
 
-        // atualizar apenas o registro base da compra
-        const { error } = await supabase
-          .from("cartao_lancamentos")
-          .update({
-            descricao: descLimpa,
-            categoria_id: categoria,
-            cartao_id: cartao
-          })
-          .eq("id", idFull)
-          .eq("user_id", state.user.id);
+        const updates = parcelas.map((parcela, index) => {
+          const numeroParcela = Number(parcela.parcela_atual || index + 1);
+          const descricaoParcela = totalParcelas > 1
+            ? `${descLimpa} (${numeroParcela}/${totalParcelas})`
+            : descLimpa;
+
+          return supabase
+            .from("cartao_lancamentos")
+            .update({
+              descricao: descricaoParcela,
+              valor: Number(parcela.valor || 0),
+              data_compra: dataIni,
+              data_fatura: parcela.data_fatura || dataIni,
+              categoria_id: categoria || null,
+              cartao_id: cartao
+            })
+            .eq("id", parcela.id)
+            .eq("user_id", state.user.id);
+        });
+
+        const results = await Promise.all(updates);
+        const error = results.find((r) => r.error)?.error;
 
         if (error) {
           console.error(error);
           return showToast("Erro ao salvar edição.", "error");
         }
 
-        showToast("Alterações aplicadas (parcial). Atualize valores individuais se necessário.");
+        showToast("Compra e parcelas atualizadas.");
+        modalEditarCompra.classList.add("hidden");
         await loadFaturaForSelected();
        
 
