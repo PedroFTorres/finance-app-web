@@ -720,6 +720,61 @@ const CategoriasService = {
     }
   };
 
+  async function calcularResumoFinanceiroPeriodo({ conta_id = 'all', inicio, fim } = {}) {
+    const [
+      receitasPeriodo,
+      despesasPeriodo,
+      receitasRecebidas,
+      despesasPagas,
+      cartoesAbertos
+    ] = await Promise.all([
+      LancService.fetch('receita', conta_id, inicio, fim),
+      LancService.fetch('despesa', conta_id, inicio, fim),
+      LancService.fetchBaixadosComValorReal('receita', conta_id, inicio, fim),
+      LancService.fetchBaixadosComValorReal('despesa', conta_id, inicio, fim),
+      LancService.fetchPrevisoesCartao(conta_id, inicio, fim)
+    ]);
+
+    const sum = (lista) => (lista || []).reduce((s, item) => s + Number(item.valor || 0), 0);
+    const pendentesReceita = (receitasPeriodo || []).filter(item => item.baixado !== true);
+    const pendentesDespesa = (despesasPeriodo || []).filter(item => item.baixado !== true);
+    const cartoesAbertosLista = (cartoesAbertos || []).map(item => ({
+      ...item,
+      categoria_nome: item.categoria_nome || 'Cartão de crédito aberto'
+    }));
+
+    const totalRecebido = sum(receitasRecebidas);
+    const totalPago = sum(despesasPagas);
+    const totalAReceber = sum(pendentesReceita);
+    const totalDespesasPendentes = sum(pendentesDespesa);
+    const totalCartoesAbertos = sum(cartoesAbertosLista);
+    const totalAPagar = totalDespesasPendentes + totalCartoesAbertos;
+    const saldoRealizado = totalRecebido - totalPago;
+    const saldoPendencias = totalAReceber - totalAPagar;
+
+    return {
+      receitasPeriodo: receitasPeriodo || [],
+      despesasPeriodo: despesasPeriodo || [],
+      receitasRecebidas: receitasRecebidas || [],
+      despesasPagas: despesasPagas || [],
+      pendentesReceita,
+      pendentesDespesa,
+      cartoesAbertos: cartoesAbertosLista,
+      despesasComPrevisao: [...(despesasPeriodo || []), ...cartoesAbertosLista],
+      totalRecebido,
+      totalPago,
+      totalAReceber,
+      totalDespesasPendentes,
+      totalCartoesAbertos,
+      totalAPagar,
+      totalReceitas: totalRecebido + totalAReceber,
+      totalDespesas: totalPago + totalAPagar,
+      saldoRealizado,
+      saldoPendencias,
+      saldoPrevisto: saldoRealizado + saldoPendencias
+    };
+  }
+
   const MovService = {
     async insert(m) {
       try {
@@ -1903,64 +1958,25 @@ function abrirModalEditarConta(conta) {
 
   async function carregarDadosDashboard(inicio, fim) {
     try {
-      const [
-        { data: receitas },
-        { data: despesas },
-        receitasBaixadas,
-        despesasBaixadas,
-        previsoesCartao
-      ] = await Promise.all([
-        supabase
-          .from('receitas')
-          .select('*')
-          .eq('user_id', STATE.user.id)
-          .gte('data', inicio)
-          .lte('data', fim),
-        supabase
-          .from('despesas')
-          .select('*')
-          .eq('user_id', STATE.user.id)
-          .gte('data', inicio)
-          .lte('data', fim),
-        LancService.fetchBaixadosComValorReal('receita', 'all', inicio, fim),
-        LancService.fetchBaixadosComValorReal('despesa', 'all', inicio, fim),
-        LancService.fetchPrevisoesCartao('all', inicio, fim)
-      ]);
-
-      const receitasLista = receitas || [];
-      const despesasLista = despesas || [];
-      const receitasBaixadasLista = receitasBaixadas || [];
-      const despesasBaixadasLista = despesasBaixadas || [];
-      const cartaoLista = (previsoesCartao || []).map(item => ({
-        ...item,
-        categoria_nome: 'Cartão de crédito aberto'
-      }));
-      const despesasComPrevisao = [...despesasLista, ...cartaoLista];
-
-      const totalReceitas = receitasLista.reduce((s, x) => s + Number(x.valor || 0), 0);
-      const totalDespesas = despesasComPrevisao.reduce((s, x) => s + Number(x.valor || 0), 0);
-      const totalRecebido = receitasBaixadasLista.reduce((s, x) => s + Number(x.valor || 0), 0);
-      const totalPago = despesasBaixadasLista.reduce((s, x) => s + Number(x.valor || 0), 0);
-      const totalAReceber = receitasLista.filter(x => x.baixado !== true).reduce((s, x) => s + Number(x.valor || 0), 0);
-      const totalAPagar = despesasComPrevisao.filter(x => x.baixado !== true).reduce((s, x) => s + Number(x.valor || 0), 0);
+      const resumo = await calcularResumoFinanceiroPeriodo({ conta_id: 'all', inicio, fim });
 
       return {
         inicio,
         fim,
-        receitas: receitasLista,
-        despesas: despesasLista,
-        receitasBaixadas: receitasBaixadasLista,
-        despesasBaixadas: despesasBaixadasLista,
-        previsoesCartao: cartaoLista,
-        despesasComPrevisao,
-        totalReceitas,
-        totalDespesas,
-        totalRecebido,
-        totalPago,
-        totalAReceber,
-        totalAPagar,
-        saldoRealizado: totalRecebido - totalPago,
-        saldoPrevisto: totalReceitas - totalDespesas
+        receitas: resumo.receitasPeriodo,
+        despesas: resumo.despesasPeriodo,
+        receitasBaixadas: resumo.receitasRecebidas,
+        despesasBaixadas: resumo.despesasPagas,
+        previsoesCartao: resumo.cartoesAbertos,
+        despesasComPrevisao: resumo.despesasComPrevisao,
+        totalReceitas: resumo.totalReceitas,
+        totalDespesas: resumo.totalDespesas,
+        totalRecebido: resumo.totalRecebido,
+        totalPago: resumo.totalPago,
+        totalAReceber: resumo.totalAReceber,
+        totalAPagar: resumo.totalAPagar,
+        saldoRealizado: resumo.saldoRealizado,
+        saldoPrevisto: resumo.saldoPrevisto
       };
     } catch (e) {
       console.error('carregarDadosDashboard', e);
@@ -2322,40 +2338,19 @@ if (!inicio || !fim) {
   fim = new Date(ano, mes + 1, 0).toISOString().slice(0,10);
 }
 
-        const [
-          receitasPeriodoResumo,
-          despesasPeriodoResumo,
-          receitasRecebidasResumo,
-          despesasPagasResumo,
-          cartoesAbertosResumo
-        ] = await Promise.all([
-          LancService.fetch('receita', conta_id, inicio, fim),
-          LancService.fetch('despesa', conta_id, inicio, fim),
-          LancService.fetchBaixadosComValorReal('receita', conta_id, inicio, fim),
-          LancService.fetchBaixadosComValorReal('despesa', conta_id, inicio, fim),
-          LancService.fetchPrevisoesCartao(conta_id, inicio, fim)
-        ]);
+        const resumoPeriodo = await calcularResumoFinanceiroPeriodo({ conta_id, inicio, fim });
 
-        const pendentesReceitaResumo = (receitasPeriodoResumo || []).filter(i => !i.baixado);
-        const pendentesDespesaResumo = (despesasPeriodoResumo || []).filter(i => !i.baixado);
-        const sum = (lista) => (lista || []).reduce((s, i) => s + Number(i.valor || 0), 0);
-        const totalRecebidoResumo = sum(receitasRecebidasResumo);
-        const totalPagoResumo = sum(despesasPagasResumo);
-        const totalReceberResumo = sum(pendentesReceitaResumo);
-        const totalPagarResumo = sum(pendentesDespesaResumo);
-        const totalCartaoResumo = sum(cartoesAbertosResumo);
+        setTextById("lanc-resumo-recebido", fmtMoney(resumoPeriodo.totalRecebido));
+        setTextById("lanc-resumo-pago", fmtMoney(resumoPeriodo.totalPago));
+        setTextById("lanc-resumo-pendente", fmtMoney(resumoPeriodo.saldoPendencias));
+        setTextById("lanc-resumo-cartao", fmtMoney(resumoPeriodo.totalCartoesAbertos));
 
-        setTextById("lanc-resumo-recebido", fmtMoney(totalRecebidoResumo));
-        setTextById("lanc-resumo-pago", fmtMoney(totalPagoResumo));
-        setTextById("lanc-resumo-pendente", fmtMoney(totalReceberResumo - totalPagarResumo - totalCartaoResumo));
-        setTextById("lanc-resumo-cartao", fmtMoney(totalCartaoResumo));
-
-        setTextById("count-receitas", String(pendentesReceitaResumo.length));
-        setTextById("count-despesas", String(pendentesDespesaResumo.length + (cartoesAbertosResumo || []).length));
-        setTextById("count-recebidos", String((receitasRecebidasResumo || []).length));
-        setTextById("count-pagos", String((despesasPagasResumo || []).length));
+        setTextById("count-receitas", String(resumoPeriodo.pendentesReceita.length));
+        setTextById("count-despesas", String(resumoPeriodo.pendentesDespesa.length + resumoPeriodo.cartoesAbertos.length));
+        setTextById("count-recebidos", String(resumoPeriodo.receitasRecebidas.length));
+        setTextById("count-pagos", String(resumoPeriodo.despesasPagas.length));
         setTextById("count-pendencias", String(
-          pendentesReceitaResumo.length + pendentesDespesaResumo.length + (cartoesAbertosResumo || []).length
+          resumoPeriodo.pendentesReceita.length + resumoPeriodo.pendentesDespesa.length + resumoPeriodo.cartoesAbertos.length
         ));
 
         let r, d;
