@@ -259,60 +259,77 @@
 <!-- ============================================================ TELA LANÇAMENTOS  ============================================================ -->
 <section class="screen hidden" data-screen="lanc">
 
-  <div class="card-panel">
-    <h2>Lançamentos</h2>
-
-    <!-- FILTROS - topo -->
-   <!-- FILTRO DE PERÍODO (NOVO MODELO) -->
-<div class="filtro-periodo" style="display:flex;gap:14px;align-items:center;">
-
-  <!-- Navegação por mês -->
-  <div class="mes-nav" style="display:flex;align-items:center;gap:8px;">
-    <button id="lanc-prev" class="btn-secondary">◀</button>
-    <strong id="lanc-mes-label"></strong>
-    <button id="lanc-next" class="btn-secondary">▶</button>
-  </div>
-
-  <!-- Abrir período personalizado -->
-  <button id="btn-periodo-custom" class="btn-secondary">
-    Período personalizado
-  </button>
-
-</div>
-
-<!-- Período personalizado (oculto) -->
-<div id="periodo-custom-box" class="hidden" style="margin-top:10px;display:flex;gap:10px;align-items:end;">
-
-  <div>
-    <label>De</label>
-    <input type="date" id="lanc-inicio">
-  </div>
-
-  <div>
-    <label>Até</label>
-    <input type="date" id="lanc-fim">
-  </div>
-
-  <button id="aplicar-periodo" class="btn-primary">
-    Aplicar
-  </button>
-
-  <button id="cancelar-periodo" class="btn-secondary">
-    Cancelar
-  </button>
-
-</div>
-
-      <div style="display:flex;flex-direction:column;">
-        <label>Conta</label>
-        <select id="select-contas" style="min-width:200px;"></select>
+  <div class="card-panel lanc-panel">
+    <div class="lanc-header">
+      <div>
+        <h2>Lançamentos</h2>
+        <p>Central do mês para acompanhar realizado, pendências e faturas abertas.</p>
       </div>
 
-      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
-        <button id="btn-filtrar-lanc" class="btn-secondary">Filtrar</button>
-        <button id="btn-open-add-lanc" class="btn-primary">Adicionar</button>
+      <div class="lanc-header-actions">
+        <button id="btn-filtrar-lanc" class="btn-secondary">Atualizar</button>
+        <button id="btn-open-add-lanc" class="btn-primary">Adicionar lançamento</button>
       </div>
     </div>
+
+    <div class="lanc-toolbar">
+      <div class="lanc-period-card">
+        <button id="lanc-prev" class="btn-secondary">◀</button>
+        <strong id="lanc-mes-label"></strong>
+        <button id="lanc-next" class="btn-secondary">▶</button>
+      </div>
+
+      <button id="btn-periodo-custom" class="btn-secondary">
+        Período personalizado
+      </button>
+
+      <div class="lanc-account-filter">
+        <label>Conta</label>
+        <select id="select-contas"></select>
+      </div>
+    </div>
+
+    <div id="periodo-custom-box" class="hidden lanc-custom-period">
+      <div>
+        <label>De</label>
+        <input type="date" id="lanc-inicio">
+      </div>
+
+      <div>
+        <label>Até</label>
+        <input type="date" id="lanc-fim">
+      </div>
+
+      <button id="aplicar-periodo" class="btn-primary">Aplicar</button>
+      <button id="cancelar-periodo" class="btn-secondary">Cancelar</button>
+    </div>
+
+    <div class="lanc-summary-grid">
+      <div class="lanc-summary-card summary-income">
+        <span>Recebido</span>
+        <strong id="lanc-resumo-recebido">R$ 0,00</strong>
+        <small>Entrou no período</small>
+      </div>
+
+      <div class="lanc-summary-card summary-expense">
+        <span>Pago</span>
+        <strong id="lanc-resumo-pago">R$ 0,00</strong>
+        <small>Saiu no período</small>
+      </div>
+
+      <div class="lanc-summary-card summary-pending">
+        <span>Pendências</span>
+        <strong id="lanc-resumo-pendente">R$ 0,00</strong>
+        <small>A receber menos a pagar</small>
+      </div>
+
+      <div class="lanc-summary-card summary-card-open">
+        <span>Cartões abertos</span>
+        <strong id="lanc-resumo-cartao">R$ 0,00</strong>
+        <small>Previsão de faturas</small>
+      </div>
+    </div>
+  </div>
 <!-- MENU + CONTEÚDO LATERAL -->
 <div class="lanc-layout">
 
@@ -321,28 +338,28 @@
 
     <!-- MENU -->
     <aside class="lanc-menu">
-      <button data-lanc-tab="pendencias" class="active">Pendências</button>
-      <button data-lanc-tab="receitas">Receitas</button>
-      <button data-lanc-tab="despesas">Despesas</button>
-      <button data-lanc-tab="recebidos">Recebidos</button>
-      <button data-lanc-tab="pagos">Pagos</button>
+      <button data-lanc-tab="pendencias" class="active"><span>Pendências</span><small id="count-pendencias">0</small></button>
+      <button data-lanc-tab="receitas"><span>A receber</span><small id="count-receitas">0</small></button>
+      <button data-lanc-tab="despesas"><span>A pagar</span><small id="count-despesas">0</small></button>
+      <button data-lanc-tab="recebidos"><span>Recebidos</span><small id="count-recebidos">0</small></button>
+      <button data-lanc-tab="pagos"><span>Pagos</span><small id="count-pagos">0</small></button>
     </aside>
 
     <!-- TOTAIS (AGORA ABAIXO DO MENU) -->
     <div class="card-panel card-totais">
       <h3>Totais do Período</h3>
 
-      <div style="display:flex;justify-content:space-between;padding:6px 0;">
+      <div class="totais-row">
         <strong>Total de receitas</strong>
         <span id="total-receitas">R$ 0,00</span>
       </div>
 
-      <div style="display:flex;justify-content:space-between;padding:6px 0;">
+      <div class="totais-row">
         <strong>Total de despesas</strong>
         <span id="total-despesas">R$ 0,00</span>
       </div>
 
-      <div style="display:flex;justify-content:space-between;padding:6px 0;">
+      <div class="totais-row totais-row-saldo">
         <strong>Saldo do período</strong>
         <span id="saldo-atual">—</span>
       </div>
@@ -550,7 +567,7 @@
   <script src="config.js"></script>
   <script src="supabase.js"></script>
   <script src="security.js?v=20260702-1"></script>
-  <script src="app.js?v=20260621-1"></script>
+  <script src="app.js?v=20260708-2"></script>
   <script src="secure-summary-client.js"></script>
   <script src="premium-access-client.js?v=20260621-1"></script>
 

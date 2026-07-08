@@ -193,6 +193,16 @@ let FILTRO_LANCAMENTOS = "pendencias";
       ? `💼 ${conta.nome} (Investimento)`
       : conta.nome;
   }
+  function getContaNome(id) {
+    return STATE.contas.find(c => c.id === id)?.nome || '';
+  }
+  function getCategoriaNome(id) {
+    return STATE.categorias.find(c => c.id === id)?.nome || 'Sem categoria';
+  }
+  function setTextById(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
   function isoToday() { return new Date().toISOString().slice(0,10); }
  function uid() { if (typeof crypto !== "undefined" && crypto.randomUUID) {return crypto.randomUUID();}
   // fallback seguro (gera UUID válido)
@@ -1147,6 +1157,14 @@ renderContasCards() {
         if (ulD) ulD.appendChild(UI._createLancItem(d, 'despesa'));
       });
 
+      if (ulR && (!receitas || receitas.length === 0)) {
+        ulR.appendChild(UI._createEmptyLancItem('Nenhuma receita neste filtro.'));
+      }
+
+      if (ulD && (!despesas || despesas.length === 0)) {
+        ulD.appendChild(UI._createEmptyLancItem('Nenhuma despesa neste filtro.'));
+      }
+
       if (totais) {
         totalR = Number(totais.receitas || 0);
         totalD = Number(totais.despesas || 0);
@@ -1159,57 +1177,81 @@ renderContasCards() {
       safeText($(IDS.saldoAtual), fmtMoney(totalR - totalD));
     },
 
+   _createEmptyLancItem(text) {
+    const li = document.createElement("li");
+    li.className = "lanc-empty";
+    li.textContent = text;
+    return li;
+   },
+
    _createLancItem(item, tipo) {
   const li = document.createElement("li");
-  li.style.display = "flex";
-  li.style.justifyContent = "space-between";
-  li.style.padding = "6px 0";
+  li.className = `lanc-item lanc-${tipo}`;
 
   // =========================// TEXTO DO LANÇAMENTO// =========================
       
  const left = document.createElement("div");
+ left.className = "lanc-item-main";
 
 if (item.provisorio_cartao) {
   li.classList.add("lanc-provisorio-cartao");
   li.title = "Previsão da fatura aberta. O lançamento real será criado quando a fatura for fechada.";
 
-  left.textContent =
-    `${fmtDateBR(item.data)} — ` +
-    `${item.descricao} — ` +
-    `${fmtMoney(item.valor)}`;
+  left.appendChild(createTextElement("span", fmtDateBR(item.data), "lanc-date"));
+
+  const body = document.createElement("div");
+  body.className = "lanc-body";
+  body.appendChild(createTextElement("strong", item.descricao, "lanc-title"));
+  body.appendChild(createTextElement("small", `${item.movimentos || 0} movimento(s) do cartão`, "lanc-subtitle"));
+  left.appendChild(body);
+
+  const valueEl = createTextElement("strong", fmtMoney(item.valor), "lanc-value lanc-value-card");
 
   const badge = document.createElement("span");
   badge.className = "lanc-badge-provisorio";
   badge.textContent = "Fatura aberta";
 
-  const detalhe = document.createElement("small");
-  detalhe.textContent = `${item.movimentos || 0} movimento(s) do cartão`;
-
   const right = document.createElement("div");
   right.className = "lanc-provisorio-info";
   right.appendChild(badge);
-  right.appendChild(detalhe);
 
-  li.appendChild(left);
-  li.appendChild(right);
+  li.append(left, valueEl, right);
   return li;
 }
 
-left.textContent =
-  `${fmtDateBR(item.data_baixa || item.data)} — ` +
-  `${item.descricao} — ` +
-  `${fmtMoney(item.valor)}` +
-  (item.ajuste_baixa
-    ? ` (ajuste na baixa ${item.ajuste_baixa > 0 ? "+" : ""}${fmtMoney(item.ajuste_baixa)})`
-    : "") +
-  (item.baixado ? " (BAIXADO)" : "");
+const dataReferencia = item.data_baixa || item.data;
+const statusLabel = item.baixado
+  ? (tipo === "receita" ? "Recebido" : "Pago")
+  : (tipo === "receita" ? "A receber" : "A pagar");
+const statusClass = item.baixado ? "lanc-status-done" : "lanc-status-open";
+const valueClass = tipo === "receita" ? "lanc-value-income" : "lanc-value-expense";
+const ajuste = item.ajuste_baixa
+  ? `Ajuste na baixa ${item.ajuste_baixa > 0 ? "+" : ""}${fmtMoney(item.ajuste_baixa)}`
+  : "";
+
+left.appendChild(createTextElement("span", fmtDateBR(dataReferencia), "lanc-date"));
+
+const body = document.createElement("div");
+body.className = "lanc-body";
+body.appendChild(createTextElement("strong", item.descricao, "lanc-title"));
+
+const meta = document.createElement("div");
+meta.className = "lanc-meta";
+meta.appendChild(createTextElement("span", getCategoriaNome(item.categoria_id), "lanc-chip"));
+const contaNome = getContaNome(item.conta_id);
+if (contaNome) meta.appendChild(createTextElement("span", contaNome, "lanc-chip lanc-chip-muted"));
+meta.appendChild(createTextElement("span", statusLabel, `lanc-chip ${statusClass}`));
+if (ajuste) meta.appendChild(createTextElement("span", ajuste, "lanc-chip lanc-chip-adjust"));
+body.appendChild(meta);
+left.appendChild(body);
+
+const valueEl = createTextElement("strong", fmtMoney(item.valor), `lanc-value ${valueClass}`);
       
 // ================================// TRANSFERÊNCIA — AÇÃO ESPECIAL// ================================
 if (item.transferencia_id) {
 
   const right = document.createElement("div");
-  right.style.display = "flex";
-  right.style.gap = "6px";
+  right.className = "lanc-actions";
 
   const btnExcluir = document.createElement("button");
   btnExcluir.textContent = "Excluir transferência";
@@ -1219,7 +1261,7 @@ if (item.transferencia_id) {
     excluirTransferencia(item.transferencia_id);
   });
 
-  li.appendChild(left);
+  li.append(left, valueEl);
   right.appendChild(btnExcluir);
   li.appendChild(right);
 
@@ -1229,8 +1271,7 @@ if (item.transferencia_id) {
 
   // ========================= // AÇÕES (SEM EXCLUIR)// =========================
   const right = document.createElement("div");
-  right.style.display = "flex";
-  right.style.gap = "6px";
+  right.className = "lanc-actions";
 
   // ✏️ EDITAR
   const btnEdit = document.createElement("button");
@@ -1290,8 +1331,7 @@ if (item.transferencia_id) {
     right.appendChild(btnCancelar);
   }
 
-  li.appendChild(left);
-  li.appendChild(right);
+  li.append(left, valueEl, right);
   return li;
 },
     // open add modal (clean)
@@ -2255,6 +2295,43 @@ if (!inicio || !fim) {
   inicio = new Date(ano, mes, 1).toISOString().slice(0,10);
   fim = new Date(ano, mes + 1, 0).toISOString().slice(0,10);
 }
+
+        const [
+          receitasPeriodoResumo,
+          despesasPeriodoResumo,
+          receitasRecebidasResumo,
+          despesasPagasResumo,
+          cartoesAbertosResumo
+        ] = await Promise.all([
+          LancService.fetch('receita', conta_id, inicio, fim),
+          LancService.fetch('despesa', conta_id, inicio, fim),
+          LancService.fetchBaixadosComValorReal('receita', conta_id, inicio, fim),
+          LancService.fetchBaixadosComValorReal('despesa', conta_id, inicio, fim),
+          LancService.fetchPrevisoesCartao(conta_id, inicio, fim)
+        ]);
+
+        const pendentesReceitaResumo = (receitasPeriodoResumo || []).filter(i => !i.baixado);
+        const pendentesDespesaResumo = (despesasPeriodoResumo || []).filter(i => !i.baixado);
+        const sum = (lista) => (lista || []).reduce((s, i) => s + Number(i.valor || 0), 0);
+        const totalRecebidoResumo = sum(receitasRecebidasResumo);
+        const totalPagoResumo = sum(despesasPagasResumo);
+        const totalReceberResumo = sum(pendentesReceitaResumo);
+        const totalPagarResumo = sum(pendentesDespesaResumo);
+        const totalCartaoResumo = sum(cartoesAbertosResumo);
+
+        setTextById("lanc-resumo-recebido", fmtMoney(totalRecebidoResumo));
+        setTextById("lanc-resumo-pago", fmtMoney(totalPagoResumo));
+        setTextById("lanc-resumo-pendente", fmtMoney(totalReceberResumo - totalPagarResumo - totalCartaoResumo));
+        setTextById("lanc-resumo-cartao", fmtMoney(totalCartaoResumo));
+
+        setTextById("count-receitas", String(pendentesReceitaResumo.length));
+        setTextById("count-despesas", String(pendentesDespesaResumo.length + (cartoesAbertosResumo || []).length));
+        setTextById("count-recebidos", String((receitasRecebidasResumo || []).length));
+        setTextById("count-pagos", String((despesasPagasResumo || []).length));
+        setTextById("count-pendencias", String(
+          pendentesReceitaResumo.length + pendentesDespesaResumo.length + (cartoesAbertosResumo || []).length
+        ));
+
         let r, d;
         let previsoesCartao = [];
 
