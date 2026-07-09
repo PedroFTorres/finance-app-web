@@ -212,6 +212,63 @@ let FILTRO_LANCAMENTOS = "pendencias";
     if (el) el.textContent = text;
   }
   function isoToday() { return new Date().toISOString().slice(0,10); }
+  const IOF_TABLE_INVESTIMENTOS = {
+    0: 96, 1: 96, 2: 93, 3: 90, 4: 86, 5: 83, 6: 80, 7: 76, 8: 73, 9: 70,
+    10: 66, 11: 63, 12: 60, 13: 56, 14: 53, 15: 50, 16: 46, 17: 43, 18: 40,
+    19: 36, 20: 33, 21: 30, 22: 26, 23: 23, 24: 20, 25: 16, 26: 13, 27: 10,
+    28: 6, 29: 3, 30: 0
+  };
+  function parseISODateSafe(iso) {
+    if (!iso) return null;
+    const [y, m, d] = String(iso).slice(0, 10).split("-").map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  }
+  function daysBetweenISO(startISO, endISO) {
+    const start = parseISODateSafe(startISO);
+    const end = parseISODateSafe(endISO);
+    if (!start || !end) return 0;
+    return Math.max(0, Math.floor((end - start) / 86400000));
+  }
+  function businessDaysBetweenISO(startISO, endISO) {
+    const start = parseISODateSafe(startISO);
+    const end = parseISODateSafe(endISO);
+    if (!start || !end || end <= start) return 0;
+    let count = 0;
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const day = cursor.getDay();
+      if (day !== 0 && day !== 6) count += 1;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return Math.max(0, count - 1);
+  }
+  function irRateByDaysInvestimentos(days) {
+    if (days <= 180) return 22.5;
+    if (days <= 360) return 20;
+    if (days <= 720) return 17.5;
+    return 15;
+  }
+  function calcularCdbEstimadoDashboard(investimento, endDate = isoToday()) {
+    const principal = Number(investimento.valor_aplicado || 0);
+    const percentualCdi = Number(investimento.percentual_cdi || 0) / 100;
+    const cdiAnnual = Number(investimento.cdi_anual_referencia || 0) / 100;
+    const diasCorridos = daysBetweenISO(investimento.data_aplicacao, endDate);
+    const diasUteis = businessDaysBetweenISO(investimento.data_aplicacao, endDate);
+    const dailyCdi = Math.pow(1 + cdiAnnual, 1 / 252) - 1;
+    const rendimentoBruto = principal * (Math.pow(1 + (dailyCdi * percentualCdi), diasUteis) - 1);
+    const iofRate = diasCorridos <= 30 ? IOF_TABLE_INVESTIMENTOS[diasCorridos] || 0 : 0;
+    const iof = Math.max(0, rendimentoBruto * (iofRate / 100));
+    const baseIr = Math.max(0, rendimentoBruto - iof);
+    const ir = baseIr * (irRateByDaysInvestimentos(diasCorridos) / 100);
+    return {
+      principal,
+      rendimentoBruto,
+      iof,
+      ir,
+      valorLiquido: principal + rendimentoBruto - iof - ir
+    };
+  }
  function uid() { if (typeof crypto !== "undefined" && crypto.randomUUID) {return crypto.randomUUID();}
   // fallback seguro (gera UUID válido)
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -792,11 +849,24 @@ const CategoriasService = {
       rendimentoBruto: 0,
       iof: 0,
       ir: 0,
-      netInvestido: 0
+      netInvestido: 0,
+      carteira: {
+        aportes: [],
+        totalInvestido: 0,
+        saldoAtualizado: 0,
+        rendimentoBruto: 0,
+        iof: 0,
+        ir: 0
+      }
     };
 
     try {
-      const [{ data: aplicacoes, error: errAplicacoes }, { data: resgates, error: errResgates }] = await Promise.all([
+      const [
+        { data: aplicacoes, error: errAplicacoes },
+        { data: resgates, error: errResgates },
+        { data: carteiraAportes, error: errCarteiraAportes },
+        { data: carteiraResgates, error: errCarteiraResgates }
+      ] = await Promise.all([
         supabase
           .from('investimentos')
           .select('id,nome,valor_aplicado,data_aplicacao,status')
@@ -809,10 +879,23 @@ const CategoriasService = {
           .select('id,valor_liquido,rendimento_bruto,iof,ir,data_resgate')
           .eq('user_id', STATE.user.id)
           .gte('data_resgate', inicio)
-          .lte('data_resgate', fim)
+          .lte('data_resgate', fim),
+        supabase
+          .from('investimentos')
+          .select('id,nome,valor_aplicado,data_aplicacao,percentual_cdi,cdi_anual_referencia,status')
+          .eq('user_id', STATE.user.id)
+          .neq('status', 'cancelado')
+          .lte('data_aplicacao', isoToday()),
+        supabase
+          .from('investimento_resgates')
+          .select('investimento_id,valor_principal_resgatado,valor_liquido,rendimento_bruto,iof,ir,data_resgate')
+          .eq('user_id', STATE.user.id)
+          .lte('data_resgate', isoToday())
       ]);
 
-      if (errAplicacoes || errResgates) throw (errAplicacoes || errResgates);
+      if (errAplicacoes || errResgates || errCarteiraAportes || errCarteiraResgates) {
+        throw (errAplicacoes || errResgates || errCarteiraAportes || errCarteiraResgates);
+      }
 
       const aplicacoesLista = aplicacoes || [];
       const resgatesLista = resgates || [];
@@ -821,6 +904,33 @@ const CategoriasService = {
       const rendimentoBruto = resgatesLista.reduce((s, item) => s + Number(item.rendimento_bruto || 0), 0);
       const iof = resgatesLista.reduce((s, item) => s + Number(item.iof || 0), 0);
       const ir = resgatesLista.reduce((s, item) => s + Number(item.ir || 0), 0);
+      const resgatadoPorAporte = (carteiraResgates || []).reduce((acc, item) => {
+        const id = item.investimento_id;
+        if (!id) return acc;
+        acc[id] = (acc[id] || 0) + Number(item.valor_principal_resgatado || 0);
+        return acc;
+      }, {});
+
+      const carteira = (carteiraAportes || []).reduce((acc, aporte) => {
+        const principalDisponivel = Math.max(0, Number(aporte.valor_aplicado || 0) - Number(resgatadoPorAporte[aporte.id] || 0));
+        if (principalDisponivel <= 0.009) return acc;
+
+        const calculo = calcularCdbEstimadoDashboard({ ...aporte, valor_aplicado: principalDisponivel }, isoToday());
+        acc.aportes.push({ ...aporte, principalDisponivel, saldoAtualizado: calculo.valorLiquido });
+        acc.totalInvestido += principalDisponivel;
+        acc.saldoAtualizado += calculo.valorLiquido;
+        acc.rendimentoBruto += calculo.rendimentoBruto;
+        acc.iof += calculo.iof;
+        acc.ir += calculo.ir;
+        return acc;
+      }, {
+        aportes: [],
+        totalInvestido: 0,
+        saldoAtualizado: 0,
+        rendimentoBruto: 0,
+        iof: 0,
+        ir: 0
+      });
 
       return {
         aplicacoes: aplicacoesLista,
@@ -830,7 +940,8 @@ const CategoriasService = {
         rendimentoBruto,
         iof,
         ir,
-        netInvestido: totalAplicado - totalResgatado
+        netInvestido: totalAplicado - totalResgatado,
+        carteira
       };
     } catch (e) {
       console.warn('fetchResumoInvestimentosPeriodo', e);
@@ -2205,13 +2316,13 @@ function abrirModalEditarConta(conta) {
   function drawInvestimentosDashboard(dados) {
     try {
       const inv = dados.investimentosPeriodo || {};
-      const aplicado = Number(inv.totalAplicado || 0);
-      const resgatado = Number(inv.totalResgatado || 0);
-      const liquido = Number(inv.netInvestido || 0);
+      const aplicadoPeriodo = Number(inv.totalAplicado || 0);
+      const totalInvestido = Number(inv.carteira?.totalInvestido || 0);
+      const saldoAtualizado = Number(inv.carteira?.saldoAtualizado || 0);
 
-      safeText($(IDS.dashInvestAplicado), fmtMoney(aplicado));
-      safeText($(IDS.dashInvestResgatado), fmtMoney(resgatado));
-      safeText($(IDS.dashInvestLiquido), fmtMoney(liquido));
+      safeText($(IDS.dashInvestAplicado), fmtMoney(aplicadoPeriodo));
+      safeText($(IDS.dashInvestResgatado), fmtMoney(totalInvestido));
+      safeText($(IDS.dashInvestLiquido), fmtMoney(saldoAtualizado));
 
       const ctx = document.getElementById(IDS.chartInvestimentos);
       if (!ctx || !window.Chart) return;
@@ -2220,11 +2331,11 @@ function abrirModalEditarConta(conta) {
       STATE.charts.investimentos = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ['Aplicado', 'Resgatado', 'Investido líquido'],
+          labels: ['Aplicado no período', 'Total investido', 'Saldo atualizado'],
           datasets: [{
-            label: 'Investimentos no período',
-            data: [aplicado, resgatado, liquido],
-            backgroundColor: ['#7c4dff', '#14b8a6', liquido >= 0 ? '#6366f1' : '#f97316'],
+            label: 'Investimentos',
+            data: [aplicadoPeriodo, totalInvestido, saldoAtualizado],
+            backgroundColor: ['#7c4dff', '#6366f1', saldoAtualizado >= totalInvestido ? '#14b8a6' : '#f97316'],
             borderRadius: 12,
             borderSkipped: false
           }]
