@@ -28,7 +28,7 @@
     despesas: [],
     cartaoPrevistos: [],
     movimentacoes: [],
-    charts: { recCat: null, desCat: null, resumo: null },
+    charts: { recCat: null, desCat: null, resumo: null, investimentos: null },
     subs: [] // para armazenar channels se quiser unsub later
   };
      function isPro() {
@@ -69,6 +69,7 @@ async function atualizarDashboardPorMes() {
   drawResumo(dadosDashboard);
   drawReceitasPorCategoria(dadosDashboard);
   drawDespesasPorCategoria(dadosDashboard);
+  drawInvestimentosDashboard(dadosDashboard);
 
   renderMesDashboard();
 }
@@ -112,11 +113,15 @@ let FILTRO_LANCAMENTOS = "pendencias";
     chartRecCat: 'chart-receitas-categorias',
     chartDesCat: 'chart-despesas-categorias',
     chartResumo: 'chart-dashboard',
+    chartInvestimentos: 'chart-investimentos-dashboard',
     dashPeriod: 'dash-period',
     dashReceber: 'dash-receber',
     dashPagar: 'dash-pagar',
     dashSaldoAtual: 'dash-saldo-atual',
     dashSaldoPrevisto: 'dash-saldo-previsto',
+    dashInvestAplicado: 'dash-invest-aplicado',
+    dashInvestResgatado: 'dash-invest-resgatado',
+    dashInvestLiquido: 'dash-invest-liquido',
 
     // contas (tabs)
     btnAddConta: 'btn-add-conta',
@@ -146,7 +151,6 @@ let FILTRO_LANCAMENTOS = "pendencias";
     dataInicioLanc: 'data-inicio-lanc',
     dataFimLanc: 'data-fim-lanc',
     selectContas: 'select-contas',
-    btnFiltrarLanc: 'btn-filtrar-lanc',
     btnOpenAdd: 'btn-open-add-lanc',
     listReceitas: 'list-receitas',
     listDespesas: 'list-despesas',
@@ -749,8 +753,10 @@ const CategoriasService = {
     const totalDespesasPendentes = sum(pendentesDespesa);
     const totalCartoesAbertos = sum(cartoesAbertosLista);
     const totalAPagar = totalDespesasPendentes + totalCartoesAbertos;
+    const investimentosPeriodo = await fetchResumoInvestimentosPeriodo(inicio, fim);
     const saldoRealizado = totalRecebido - totalPago;
     const saldoPendencias = totalAReceber - totalAPagar;
+    const saldoDisponivelRealizado = saldoRealizado - investimentosPeriodo.netInvestido;
 
     return {
       receitasPeriodo: receitasPeriodo || [],
@@ -770,9 +776,66 @@ const CategoriasService = {
       totalReceitas: totalRecebido + totalAReceber,
       totalDespesas: totalPago + totalAPagar,
       saldoRealizado,
+      saldoDisponivelRealizado,
       saldoPendencias,
-      saldoPrevisto: saldoRealizado + saldoPendencias
+      investimentosPeriodo,
+      saldoPrevisto: saldoDisponivelRealizado + saldoPendencias
     };
+  }
+
+  async function fetchResumoInvestimentosPeriodo(inicio, fim) {
+    const empty = {
+      aplicacoes: [],
+      resgates: [],
+      totalAplicado: 0,
+      totalResgatado: 0,
+      rendimentoBruto: 0,
+      iof: 0,
+      ir: 0,
+      netInvestido: 0
+    };
+
+    try {
+      const [{ data: aplicacoes, error: errAplicacoes }, { data: resgates, error: errResgates }] = await Promise.all([
+        supabase
+          .from('investimentos')
+          .select('id,nome,valor_aplicado,data_aplicacao,status')
+          .eq('user_id', STATE.user.id)
+          .neq('status', 'cancelado')
+          .gte('data_aplicacao', inicio)
+          .lte('data_aplicacao', fim),
+        supabase
+          .from('investimento_resgates')
+          .select('id,valor_liquido,rendimento_bruto,iof,ir,data_resgate')
+          .eq('user_id', STATE.user.id)
+          .gte('data_resgate', inicio)
+          .lte('data_resgate', fim)
+      ]);
+
+      if (errAplicacoes || errResgates) throw (errAplicacoes || errResgates);
+
+      const aplicacoesLista = aplicacoes || [];
+      const resgatesLista = resgates || [];
+      const totalAplicado = aplicacoesLista.reduce((s, item) => s + Number(item.valor_aplicado || 0), 0);
+      const totalResgatado = resgatesLista.reduce((s, item) => s + Number(item.valor_liquido || 0), 0);
+      const rendimentoBruto = resgatesLista.reduce((s, item) => s + Number(item.rendimento_bruto || 0), 0);
+      const iof = resgatesLista.reduce((s, item) => s + Number(item.iof || 0), 0);
+      const ir = resgatesLista.reduce((s, item) => s + Number(item.ir || 0), 0);
+
+      return {
+        aplicacoes: aplicacoesLista,
+        resgates: resgatesLista,
+        totalAplicado,
+        totalResgatado,
+        rendimentoBruto,
+        iof,
+        ir,
+        netInvestido: totalAplicado - totalResgatado
+      };
+    } catch (e) {
+      console.warn('fetchResumoInvestimentosPeriodo', e);
+      return empty;
+    }
   }
 
   const MovService = {
@@ -822,6 +885,21 @@ const UI = {
     b.addEventListener('click', () => {
       const t = b.dataset.target;
       if (t) App.showScreen(t);
+    });
+  });
+
+  document.querySelectorAll("[data-dashboard-tab]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tab = btn.dataset.dashboardTab;
+      document.querySelectorAll("[data-dashboard-tab]").forEach(item => item.classList.remove("active"));
+      document.querySelectorAll("[data-dashboard-panel]").forEach(panel => panel.classList.add("hidden"));
+      btn.classList.add("active");
+      document.querySelector(`[data-dashboard-panel="${tab}"]`)?.classList.remove("hidden");
+      setTimeout(() => {
+        Object.values(STATE.charts || {}).forEach(chart => {
+          try { chart?.resize?.(); } catch (e) {}
+        });
+      }, 80);
     });
   });
 
@@ -1976,6 +2054,8 @@ function abrirModalEditarConta(conta) {
         totalAReceber: resumo.totalAReceber,
         totalAPagar: resumo.totalAPagar,
         saldoRealizado: resumo.saldoRealizado,
+        saldoDisponivelRealizado: resumo.saldoDisponivelRealizado,
+        investimentosPeriodo: resumo.investimentosPeriodo,
         saldoPrevisto: resumo.saldoPrevisto
       };
     } catch (e) {
@@ -1994,6 +2074,17 @@ function abrirModalEditarConta(conta) {
         totalAReceber: 0,
         totalAPagar: 0,
         saldoRealizado: 0,
+        saldoDisponivelRealizado: 0,
+        investimentosPeriodo: {
+          aplicacoes: [],
+          resgates: [],
+          totalAplicado: 0,
+          totalResgatado: 0,
+          rendimentoBruto: 0,
+          iof: 0,
+          ir: 0,
+          netInvestido: 0
+        },
         saldoPrevisto: 0
       };
     }
@@ -2068,7 +2159,7 @@ function abrirModalEditarConta(conta) {
       safeText($(IDS.dashPeriod), `${fmtDateBR(dados.inicio)} a ${fmtDateBR(dados.fim)}`);
       safeText($(IDS.dashReceber), fmtMoney(dados.totalAReceber));
       safeText($(IDS.dashPagar), fmtMoney(dados.totalAPagar));
-      safeText($(IDS.dashSaldoAtual), fmtMoney(dados.saldoRealizado));
+      safeText($(IDS.dashSaldoAtual), fmtMoney(dados.saldoDisponivelRealizado ?? dados.saldoRealizado));
       safeText($(IDS.dashSaldoPrevisto), fmtMoney(dados.saldoPrevisto));
 
       const ctx = document.getElementById(IDS.chartResumo);
@@ -2077,10 +2168,10 @@ function abrirModalEditarConta(conta) {
       STATE.charts.resumo = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ['Realizado', 'A receber', 'A pagar', 'Saldo previsto'],
+          labels: ['Realizado disponível', 'A receber', 'A pagar', 'Saldo previsto'],
           datasets: [{
             label: 'Resumo do período',
-            data: [dados.saldoRealizado, dados.totalAReceber, dados.totalAPagar, dados.saldoPrevisto],
+            data: [dados.saldoDisponivelRealizado ?? dados.saldoRealizado, dados.totalAReceber, dados.totalAPagar, dados.saldoPrevisto],
             backgroundColor: ['#6366f1', '#22c55e', '#ef4444', dados.saldoPrevisto >= 0 ? '#14b8a6' : '#f97316'],
             borderRadius: 10,
             borderSkipped: false
@@ -2109,6 +2200,52 @@ function abrirModalEditarConta(conta) {
         }
       });
     } catch (e) { console.error('drawResumo', e); }
+  }
+
+  function drawInvestimentosDashboard(dados) {
+    try {
+      const inv = dados.investimentosPeriodo || {};
+      const aplicado = Number(inv.totalAplicado || 0);
+      const resgatado = Number(inv.totalResgatado || 0);
+      const liquido = Number(inv.netInvestido || 0);
+
+      safeText($(IDS.dashInvestAplicado), fmtMoney(aplicado));
+      safeText($(IDS.dashInvestResgatado), fmtMoney(resgatado));
+      safeText($(IDS.dashInvestLiquido), fmtMoney(liquido));
+
+      const ctx = document.getElementById(IDS.chartInvestimentos);
+      if (!ctx || !window.Chart) return;
+      try { if (STATE.charts.investimentos) STATE.charts.investimentos.destroy(); } catch (e) {}
+
+      STATE.charts.investimentos = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Aplicado', 'Resgatado', 'Investido líquido'],
+          datasets: [{
+            label: 'Investimentos no período',
+            data: [aplicado, resgatado, liquido],
+            backgroundColor: ['#7c4dff', '#14b8a6', liquido >= 0 ? '#6366f1' : '#f97316'],
+            borderRadius: 12,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: context => `${context.label}: ${fmtMoney(context.parsed.y || 0)}` } }
+          },
+          scales: {
+            y: {
+              ticks: { callback: value => fmtMoney(Number(value)).replace('R$', 'R$ ') },
+              grid: { color: '#eef0f4' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    } catch (e) { console.error('drawInvestimentosDashboard', e); }
   }
 async function transferirEntreContas({
   contaOrigem,

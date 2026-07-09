@@ -81,7 +81,7 @@
           <div class="kpi-card kpi-realized">
             <span>Realizado</span>
             <strong id="dash-saldo-atual">R$ 0,00</strong>
-            <small>Recebido menos pago</small>
+            <small>Disponível após investimentos</small>
           </div>
 
           <div class="kpi-card kpi-forecast">
@@ -91,7 +91,12 @@
           </div>
         </div>
 
-        <div class="dashboard-grid">
+        <div class="dashboard-tabs" aria-label="Seções do dashboard">
+          <button type="button" class="dashboard-tab active" data-dashboard-tab="geral">Geral</button>
+          <button type="button" class="dashboard-tab" data-dashboard-tab="investimentos">Investimentos</button>
+        </div>
+
+        <div class="dashboard-grid dashboard-tab-panel" data-dashboard-panel="geral">
 
           <div class="card">
             <h3>Receitas por Categoria</h3>
@@ -112,6 +117,35 @@
             </div>
           </div>
 
+        </div>
+
+        <div class="dashboard-grid dashboard-tab-panel hidden" data-dashboard-panel="investimentos">
+          <div class="card dashboard-invest-card">
+            <div class="dashboard-card-title-row">
+              <div>
+                <h3>Investimentos no período</h3>
+                <p>Aplicações e resgates ficam separados do dinheiro disponível para gastos.</p>
+              </div>
+              <button type="button" class="btn-secondary" onclick="window.location.href='investimentos/index.html'">Abrir módulo</button>
+            </div>
+
+            <div class="dashboard-invest-kpis">
+              <div>
+                <span>Aplicado</span>
+                <strong id="dash-invest-aplicado">R$ 0,00</strong>
+              </div>
+              <div>
+                <span>Resgatado</span>
+                <strong id="dash-invest-resgatado">R$ 0,00</strong>
+              </div>
+              <div>
+                <span>Investido líquido</span>
+                <strong id="dash-invest-liquido">R$ 0,00</strong>
+              </div>
+            </div>
+
+            <canvas id="chart-investimentos-dashboard"></canvas>
+          </div>
         </div>
       </section>
 
@@ -267,7 +301,6 @@
       </div>
 
       <div class="lanc-header-actions">
-        <button id="btn-filtrar-lanc" class="btn-secondary">Atualizar</button>
         <button id="btn-open-add-lanc" class="btn-primary">Adicionar lançamento</button>
       </div>
     </div>

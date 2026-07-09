@@ -189,6 +189,36 @@ h1, h2, h3 {
 .kpi-realized { border-left: 5px solid #6366f1; }
 .kpi-forecast { border-left: 5px solid #14b8a6; }
 
+.dashboard-tabs {
+  display: inline-flex;
+  gap: 8px;
+  background: #f5f3ff;
+  border: 1px solid #e8ddff;
+  border-radius: 999px;
+  padding: 6px;
+  margin: 0 0 18px;
+}
+
+.dashboard-tab {
+  border: 0;
+  background: transparent;
+  color: #6b5f91;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 10px 18px;
+}
+
+.dashboard-tab.active {
+  background: var(--roxo);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(124, 77, 255, .22);
+}
+
+.dashboard-tab-panel.hidden {
+  display: none;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -221,6 +251,48 @@ h1, h2, h3 {
   color: var(--muted);
   font-size: 13px;
   text-align: center;
+}
+
+.dashboard-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.dashboard-card-title-row p {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+.dashboard-invest-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.dashboard-invest-kpis > div {
+  background: #faf9ff;
+  border: 1px solid #ede9fe;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.dashboard-invest-kpis span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.dashboard-invest-kpis strong {
+  color: #1f2937;
+  display: block;
+  font-size: 20px;
+  margin-top: 6px;
 }
 
 /* =============================================================INPUTS / SELECT ============================================================= */
@@ -441,11 +513,6 @@ button:hover { opacity: .9; }
 .filtros-lanc input,
 .filtros-lanc select {
   max-width: 220px;
-}
-
-#btn-filtrar-lanc {
-  margin-left: 0 !important;
-  height: 40px;
 }
 
 /* ============================================================= EXTRATO ============================================================= */
