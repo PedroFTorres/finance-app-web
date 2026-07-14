@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Sicredi">
-  <rect width="96" height="96" rx="24" fill="#effaf0"/>
-  <circle cx="48" cy="48" r="25" fill="#39a935"/>
-  <path d="M48 25v46M25 48h46M32 32l32 32M64 32L32 64" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
-</svg>
