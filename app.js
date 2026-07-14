@@ -194,21 +194,21 @@ let FILTRO_LANCAMENTOS = "pendencias";
 
   const BANK_CATALOG = [
     { code: '', name: 'Selecione o banco', aliases: [], initials: '🏦', color: '#7c4dff', bg: '#f4f0ff' },
-    { code: 'santander', name: 'Santander', aliases: ['santander'], initials: 'S', color: '#e1251b', bg: '#fff1f1' },
-    { code: 'bb', name: 'Banco do Brasil', aliases: ['banco do brasil', 'bb'], initials: 'BB', color: '#f8d117', bg: '#fff8cc' },
-    { code: 'caixa', name: 'Caixa Econômica Federal', aliases: ['caixa', 'cef', 'caixa economica'], initials: 'CX', color: '#005ca9', bg: '#eaf5ff' },
-    { code: 'itau', name: 'Itaú', aliases: ['itau', 'itaú'], initials: 'IT', color: '#ec7000', bg: '#fff2e8' },
-    { code: 'bradesco', name: 'Bradesco', aliases: ['bradesco'], initials: 'BR', color: '#cc092f', bg: '#fff0f3' },
-    { code: 'nubank', name: 'Nubank', aliases: ['nubank', 'nu bank', 'nu'], initials: 'NU', color: '#820ad1', bg: '#f7edff' },
-    { code: 'inter', name: 'Inter', aliases: ['inter', 'banco inter'], initials: 'IN', color: '#ff7a00', bg: '#fff3e6' },
-    { code: 'c6', name: 'C6 Bank', aliases: ['c6', 'c6 bank'], initials: 'C6', color: '#111827', bg: '#f3f4f6' },
-    { code: 'btg', name: 'BTG Pactual', aliases: ['btg', 'btg pactual'], initials: 'BTG', color: '#0b1f3a', bg: '#edf4ff' },
-    { code: 'safra', name: 'Safra', aliases: ['safra', 'banco safra'], initials: 'SF', color: '#0f3b82', bg: '#edf3ff' },
-    { code: 'sicredi', name: 'Sicredi', aliases: ['sicredi'], initials: 'SI', color: '#39a935', bg: '#effaf0' },
-    { code: 'sicoob', name: 'Sicoob', aliases: ['sicoob'], initials: 'SC', color: '#00a091', bg: '#e9fbf8' },
-    { code: 'mercadopago', name: 'Mercado Pago', aliases: ['mercado pago', 'mercadopago'], initials: 'MP', color: '#00a7e1', bg: '#e9f8ff' },
-    { code: 'picpay', name: 'PicPay', aliases: ['picpay', 'pic pay'], initials: 'PP', color: '#21c25e', bg: '#ecfff3' },
-    { code: 'xp', name: 'XP Investimentos', aliases: ['xp', 'xp investimentos'], initials: 'XP', color: '#111827', bg: '#fff7d6' },
+    { code: 'santander', name: 'Santander', aliases: ['santander'], initials: 'S', domain: 'santander.com.br', color: '#e1251b', bg: '#fff1f1' },
+    { code: 'bb', name: 'Banco do Brasil', aliases: ['banco do brasil', 'bb'], initials: 'BB', domain: 'bb.com.br', color: '#f8d117', bg: '#fff8cc' },
+    { code: 'caixa', name: 'Caixa Econômica Federal', aliases: ['caixa', 'cef', 'caixa economica'], initials: 'CX', domain: 'caixa.gov.br', color: '#005ca9', bg: '#eaf5ff' },
+    { code: 'itau', name: 'Itaú', aliases: ['itau', 'itaú'], initials: 'IT', domain: 'itau.com.br', color: '#ec7000', bg: '#fff2e8' },
+    { code: 'bradesco', name: 'Bradesco', aliases: ['bradesco'], initials: 'BR', domain: 'bradesco.com.br', color: '#cc092f', bg: '#fff0f3' },
+    { code: 'nubank', name: 'Nubank', aliases: ['nubank', 'nu bank', 'nu'], initials: 'NU', domain: 'nubank.com.br', color: '#820ad1', bg: '#f7edff' },
+    { code: 'inter', name: 'Inter', aliases: ['inter', 'banco inter'], initials: 'IN', domain: 'bancointer.com.br', color: '#ff7a00', bg: '#fff3e6' },
+    { code: 'c6', name: 'C6 Bank', aliases: ['c6', 'c6 bank'], initials: 'C6', domain: 'c6bank.com.br', color: '#111827', bg: '#f3f4f6' },
+    { code: 'btg', name: 'BTG Pactual', aliases: ['btg', 'btg pactual'], initials: 'BTG', domain: 'btgpactual.com', color: '#0b1f3a', bg: '#edf4ff' },
+    { code: 'safra', name: 'Safra', aliases: ['safra', 'banco safra'], initials: 'SF', domain: 'safra.com.br', color: '#0f3b82', bg: '#edf3ff' },
+    { code: 'sicredi', name: 'Sicredi', aliases: ['sicredi'], initials: 'SI', domain: 'sicredi.com.br', color: '#39a935', bg: '#effaf0' },
+    { code: 'sicoob', name: 'Sicoob', aliases: ['sicoob'], initials: 'SC', domain: 'sicoob.com.br', color: '#00a091', bg: '#e9fbf8' },
+    { code: 'mercadopago', name: 'Mercado Pago', aliases: ['mercado pago', 'mercadopago'], initials: 'MP', domain: 'mercadopago.com.br', color: '#00a7e1', bg: '#e9f8ff' },
+    { code: 'picpay', name: 'PicPay', aliases: ['picpay', 'pic pay'], initials: 'PP', domain: 'picpay.com', color: '#21c25e', bg: '#ecfff3' },
+    { code: 'xp', name: 'XP Investimentos', aliases: ['xp', 'xp investimentos'], initials: 'XP', domain: 'xpi.com.br', color: '#111827', bg: '#fff7d6' },
     { code: 'wallet', name: 'Carteira', aliases: ['carteira', 'dinheiro', 'cash'], initials: '💵', color: '#16a34a', bg: '#ecfdf3' },
     { code: 'other', name: 'Outro banco', aliases: [], initials: '🏦', color: '#7c4dff', bg: '#f4f0ff' }
   ];
@@ -245,6 +245,21 @@ let FILTRO_LANCAMENTOS = "pendencias";
     logo.style.setProperty('--bank-color', bank.color || '#7c4dff');
     logo.style.setProperty('--bank-bg', bank.bg || '#f4f0ff');
     logo.textContent = bank.initials || '🏦';
+    if (bank.domain) {
+      const img = document.createElement('img');
+      img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(bank.domain)}&sz=64`;
+      img.alt = `Logo ${bank.name}`;
+      img.loading = 'lazy';
+      img.referrerPolicy = 'no-referrer';
+      img.addEventListener('load', () => {
+        logo.textContent = '';
+        logo.classList.add('bank-logo-with-image');
+        logo.appendChild(img);
+      }, { once: true });
+      img.addEventListener('error', () => {
+        logo.classList.remove('bank-logo-with-image');
+      }, { once: true });
+    }
     logo.setAttribute('aria-hidden', 'true');
     return logo;
   }
