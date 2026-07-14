@@ -194,21 +194,21 @@ let FILTRO_LANCAMENTOS = "pendencias";
 
   const BANK_CATALOG = [
     { code: '', name: 'Selecione o banco', aliases: [], initials: '🏦', color: '#7c4dff', bg: '#f4f0ff' },
-    { code: 'santander', name: 'Santander', aliases: ['santander'], initials: 'S', domain: 'santander.com.br', color: '#e1251b', bg: '#fff1f1' },
-    { code: 'bb', name: 'Banco do Brasil', aliases: ['banco do brasil', 'bb'], initials: 'BB', domain: 'bb.com.br', color: '#f8d117', bg: '#fff8cc' },
-    { code: 'caixa', name: 'Caixa Econômica Federal', aliases: ['caixa', 'cef', 'caixa economica'], initials: 'CX', domain: 'caixa.gov.br', color: '#005ca9', bg: '#eaf5ff' },
-    { code: 'itau', name: 'Itaú', aliases: ['itau', 'itaú'], initials: 'IT', domain: 'itau.com.br', color: '#ec7000', bg: '#fff2e8' },
-    { code: 'bradesco', name: 'Bradesco', aliases: ['bradesco'], initials: 'BR', domain: 'bradesco.com.br', color: '#cc092f', bg: '#fff0f3' },
-    { code: 'nubank', name: 'Nubank', aliases: ['nubank', 'nu bank', 'nu'], initials: 'NU', domain: 'nubank.com.br', color: '#820ad1', bg: '#f7edff' },
-    { code: 'inter', name: 'Inter', aliases: ['inter', 'banco inter'], initials: 'IN', domain: 'bancointer.com.br', color: '#ff7a00', bg: '#fff3e6' },
-    { code: 'c6', name: 'C6 Bank', aliases: ['c6', 'c6 bank'], initials: 'C6', domain: 'c6bank.com.br', color: '#111827', bg: '#f3f4f6' },
-    { code: 'btg', name: 'BTG Pactual', aliases: ['btg', 'btg pactual'], initials: 'BTG', domain: 'btgpactual.com', color: '#0b1f3a', bg: '#edf4ff' },
-    { code: 'safra', name: 'Safra', aliases: ['safra', 'banco safra'], initials: 'SF', domain: 'safra.com.br', color: '#0f3b82', bg: '#edf3ff' },
-    { code: 'sicredi', name: 'Sicredi', aliases: ['sicredi'], initials: 'SI', domain: 'sicredi.com.br', color: '#39a935', bg: '#effaf0' },
-    { code: 'sicoob', name: 'Sicoob', aliases: ['sicoob'], initials: 'SC', domain: 'sicoob.com.br', color: '#00a091', bg: '#e9fbf8' },
-    { code: 'mercadopago', name: 'Mercado Pago', aliases: ['mercado pago', 'mercadopago'], initials: 'MP', domain: 'mercadopago.com.br', color: '#00a7e1', bg: '#e9f8ff' },
-    { code: 'picpay', name: 'PicPay', aliases: ['picpay', 'pic pay'], initials: 'PP', domain: 'picpay.com', color: '#21c25e', bg: '#ecfff3' },
-    { code: 'xp', name: 'XP Investimentos', aliases: ['xp', 'xp investimentos'], initials: 'XP', domain: 'xpi.com.br', color: '#111827', bg: '#fff7d6' },
+    { code: 'santander', name: 'Santander', aliases: ['santander'], initials: 'S', logo: 'assets/banks/santander.svg', color: '#e1251b', bg: '#fff1f1' },
+    { code: 'bb', name: 'Banco do Brasil', aliases: ['banco do brasil', 'bb'], initials: 'BB', logo: 'assets/banks/bb.svg', color: '#f8d117', bg: '#fff8cc' },
+    { code: 'caixa', name: 'Caixa Econômica Federal', aliases: ['caixa', 'cef', 'caixa economica'], initials: 'CX', logo: 'assets/banks/caixa.svg', color: '#005ca9', bg: '#eaf5ff' },
+    { code: 'itau', name: 'Itaú', aliases: ['itau', 'itaú'], initials: 'IT', logo: 'assets/banks/itau.svg', color: '#ec7000', bg: '#fff2e8' },
+    { code: 'bradesco', name: 'Bradesco', aliases: ['bradesco'], initials: 'BR', logo: 'assets/banks/bradesco.svg', color: '#cc092f', bg: '#fff0f3' },
+    { code: 'nubank', name: 'Nubank', aliases: ['nubank', 'nu bank', 'nu'], initials: 'NU', logo: 'assets/banks/nubank.svg', color: '#820ad1', bg: '#f7edff' },
+    { code: 'inter', name: 'Inter', aliases: ['inter', 'banco inter'], initials: 'IN', logo: 'assets/banks/inter.svg', color: '#ff7a00', bg: '#fff3e6' },
+    { code: 'c6', name: 'C6 Bank', aliases: ['c6', 'c6 bank'], initials: 'C6', logo: 'assets/banks/c6.svg', color: '#111827', bg: '#f3f4f6' },
+    { code: 'btg', name: 'BTG Pactual', aliases: ['btg', 'btg pactual'], initials: 'BTG', logo: 'assets/banks/btg.svg', color: '#0b1f3a', bg: '#edf4ff' },
+    { code: 'safra', name: 'Safra', aliases: ['safra', 'banco safra'], initials: 'SF', logo: 'assets/banks/safra.svg', color: '#0f3b82', bg: '#edf3ff' },
+    { code: 'sicredi', name: 'Sicredi', aliases: ['sicredi'], initials: 'SI', logo: 'assets/banks/sicredi.svg', color: '#39a935', bg: '#effaf0' },
+    { code: 'sicoob', name: 'Sicoob', aliases: ['sicoob'], initials: 'SC', logo: 'assets/banks/sicoob.svg', color: '#00a091', bg: '#e9fbf8' },
+    { code: 'mercadopago', name: 'Mercado Pago', aliases: ['mercado pago', 'mercadopago'], initials: 'MP', logo: 'assets/banks/mercadopago.svg', color: '#00a7e1', bg: '#e9f8ff' },
+    { code: 'picpay', name: 'PicPay', aliases: ['picpay', 'pic pay'], initials: 'PP', logo: 'assets/banks/picpay.svg', color: '#21c25e', bg: '#ecfff3' },
+    { code: 'xp', name: 'XP Investimentos', aliases: ['xp', 'xp investimentos'], initials: 'XP', logo: 'assets/banks/xp.svg', color: '#111827', bg: '#fff7d6' },
     { code: 'wallet', name: 'Carteira', aliases: ['carteira', 'dinheiro', 'cash'], initials: '💵', color: '#16a34a', bg: '#ecfdf3' },
     { code: 'other', name: 'Outro banco', aliases: [], initials: '🏦', color: '#7c4dff', bg: '#f4f0ff' }
   ];
@@ -245,12 +245,11 @@ let FILTRO_LANCAMENTOS = "pendencias";
     logo.style.setProperty('--bank-color', bank.color || '#7c4dff');
     logo.style.setProperty('--bank-bg', bank.bg || '#f4f0ff');
     logo.textContent = bank.initials || '🏦';
-    if (bank.domain) {
+    if (bank.logo) {
       const img = document.createElement('img');
-      img.src = `https://logo.clearbit.com/${bank.domain}`;
+      img.src = bank.logo;
       img.alt = `Logo ${bank.name}`;
       img.loading = 'lazy';
-      img.referrerPolicy = 'no-referrer';
       img.addEventListener('load', () => {
         logo.textContent = '';
         logo.classList.add('bank-logo-with-image');
@@ -547,6 +546,36 @@ if (emailEl) {
         return [];
       }
     },
+    async applyComputedBalances() {
+      try {
+        if (!STATE.user?.id || !Array.isArray(STATE.contas) || STATE.contas.length === 0) return;
+
+        const { data: movs, error } = await supabase
+          .from('movimentacoes')
+          .select('conta_id,tipo,valor,descricao,data')
+          .eq('user_id', STATE.user.id);
+
+        if (error) throw error;
+
+        const movsByConta = new Map();
+        (movs || []).forEach(m => {
+          if (!m.conta_id) return;
+          if (!movsByConta.has(m.conta_id)) movsByConta.set(m.conta_id, []);
+          movsByConta.get(m.conta_id).push(m);
+        });
+
+        STATE.contas = STATE.contas.map(conta => {
+          const computed = computeContaBalance(conta, movsByConta.get(conta.id) || []);
+          return {
+            ...conta,
+            saldo_calculado: computed,
+            saldo_atual: computed
+          };
+        });
+      } catch (e) {
+        console.error('ContasService.applyComputedBalances', e);
+      }
+    },
    async create({ nome, agencia, numero_conta, gerente, contato, saldo_inicial, data_saldo, tipo_conta }) {
   try {
     const item = {
@@ -601,37 +630,13 @@ if (emailEl) {
           .eq('id', conta_id)
           .eq('user_id', STATE.user.id)
           .maybeSingle();
-        const si = Number(conta?.saldo_inicial || 0);
-         const dataSaldo = conta?.data_saldo || null;
-
         const { data: movs } = await supabase
           .from('movimentacoes')
           .select('tipo,valor,descricao,data')
           .eq('conta_id', conta_id)
           .eq('user_id', STATE.user.id);
 
-        let saldo = si;
-        let saldoInicialJaDescontado = false;
-         const moneyEq = (a, b) => Math.abs(Number(a || 0) - Number(b || 0)) < 0.000001;
-        
-
-        (movs || []).forEach(m => {
-          const valor = Number(m.valor || 0);
-          const isSaldoInicialDuplicado =
-            !saldoInicialJaDescontado &&
-             m.tipo === 'credito' &&
-            (m.descricao || '').trim().toLowerCase() === 'saldo inicial' &&
-            moneyEq(valor, si) &&
-            (!dataSaldo || m.data === dataSaldo);
-
-          if (isSaldoInicialDuplicado) {
-            saldoInicialJaDescontado = true;
-            return;
-          }
-
-          if (m.tipo === 'credito') saldo += valor;
-          else saldo -= valor;
-        });
+        const saldo = computeContaBalance(conta, movs || []);
 
         await supabase
           .from('contas_bancarias')
@@ -645,6 +650,33 @@ if (emailEl) {
       } catch (e) { console.error('ContasService.recalc', e); return null; }
     }
   };
+
+  function computeContaBalance(conta, movs = []) {
+    const saldoInicial = Number(conta?.saldo_inicial || 0);
+    const dataSaldo = conta?.data_saldo || null;
+    const moneyEq = (a, b) => Math.abs(Number(a || 0) - Number(b || 0)) < 0.000001;
+    let saldo = saldoInicial;
+    let saldoInicialJaRepresentadoNoCampo = false;
+
+    (movs || []).forEach(m => {
+      const valor = Number(m.valor || 0);
+      const isSaldoInicialDuplicado =
+        !saldoInicialJaRepresentadoNoCampo &&
+        m.tipo === 'credito' &&
+        String(m.descricao || '').trim().toLowerCase() === 'saldo inicial' &&
+        moneyEq(valor, saldoInicial) &&
+        (!dataSaldo || m.data === dataSaldo);
+
+      if (isSaldoInicialDuplicado) {
+        saldoInicialJaRepresentadoNoCampo = true;
+        return;
+      }
+
+      saldo += m.tipo === 'credito' ? valor : -valor;
+    });
+
+    return saldo;
+  }
 
 const CategoriasService = {
   async load() {
@@ -1505,7 +1537,7 @@ renderContasCards() {
     const balance = document.createElement("div");
     balance.className = "conta-balance";
     balance.appendChild(createTextElement("small", "Saldo atual"));
-    balance.appendChild(createTextElement("strong", fmtMoney(conta.saldo_atual ?? conta.saldo_inicial)));
+    balance.appendChild(createTextElement("strong", fmtMoney(conta.saldo_calculado ?? conta.saldo_atual ?? conta.saldo_inicial)));
     header.appendChild(balance);
     info.appendChild(header);
 
@@ -2620,6 +2652,7 @@ const App = {
    
   async reloadAll() {
   await Promise.all([ CategoriasService.load(), ContasService.load() ]);
+  await ContasService.applyComputedBalances();
   UI.populateSelects();
   UI.renderCategorias();
   UI.renderContasCards(); 
@@ -3350,6 +3383,7 @@ if (btnConfirmar) {
       CategoriasService.load(),
       ContasService.load()
     ]);
+    await ContasService.applyComputedBalances();
 
     UI.populateSelects();
     UI.renderCategorias();

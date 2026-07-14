@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Banco do Brasil">
+  <rect width="96" height="96" rx="24" fill="#fff5bf"/>
+  <rect x="17" y="21" width="62" height="54" rx="12" fill="#f8d117"/>
+  <path d="M28 35h18l8 8-8 8H28l8-8-8-8Zm22 0h18l-8 8 8 8H50l8-8-8-8ZM28 53h18l8 8-8 8H28l8-8-8-8Zm22 0h18l-8 8 8 8H50l8-8-8-8Z" fill="#1f4aa8"/>
+</svg>
