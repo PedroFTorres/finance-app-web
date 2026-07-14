@@ -247,7 +247,7 @@ let FILTRO_LANCAMENTOS = "pendencias";
     logo.textContent = bank.initials || '🏦';
     if (bank.domain) {
       const img = document.createElement('img');
-      img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(bank.domain)}&sz=64`;
+      img.src = `https://logo.clearbit.com/${bank.domain}`;
       img.alt = `Logo ${bank.name}`;
       img.loading = 'lazy';
       img.referrerPolicy = 'no-referrer';
