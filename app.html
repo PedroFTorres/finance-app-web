@@ -610,7 +610,7 @@
   <script src="config.js"></script>
   <script src="supabase.js"></script>
   <script src="security.js?v=20260702-1"></script>
-  <script src="app.js?v=20260708-3"></script>
+  <script src="app.js?v=20260714-1"></script>
   <script src="secure-summary-client.js"></script>
   <script src="premium-access-client.js?v=20260621-1"></script>
 
@@ -699,7 +699,13 @@
 
     <h3>Cadastrar conta</h3>
 
-    <label>Nome da conta</label>
+    <label>Banco</label>
+    <select id="modal-conta-banco"></select>
+    <small class="field-hint">
+      Usado para personalizar o cartão da conta. Contas antigas são reconhecidas pelo nome.
+    </small>
+
+    <label>Nome para exibição</label>
     <input id="modal-conta-nome">
 
     <label>Agência</label>

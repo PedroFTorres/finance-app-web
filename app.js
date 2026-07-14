@@ -191,6 +191,98 @@ let FILTRO_LANCAMENTOS = "pendencias";
   }
   function fmtMoney(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
   function fmtDateBR(d) { if (!d) return ''; const x = new Date(d + 'T00:00:00'); return `${String(x.getDate()).padStart(2,'0')}/${String(x.getMonth()+1).padStart(2,'0')}/${x.getFullYear()}`; }
+
+  const BANK_CATALOG = [
+    { code: '', name: 'Selecione o banco', aliases: [], initials: '🏦', color: '#7c4dff', bg: '#f4f0ff' },
+    { code: 'santander', name: 'Santander', aliases: ['santander'], initials: 'S', color: '#e1251b', bg: '#fff1f1' },
+    { code: 'bb', name: 'Banco do Brasil', aliases: ['banco do brasil', 'bb'], initials: 'BB', color: '#f8d117', bg: '#fff8cc' },
+    { code: 'caixa', name: 'Caixa Econômica Federal', aliases: ['caixa', 'cef', 'caixa economica'], initials: 'CX', color: '#005ca9', bg: '#eaf5ff' },
+    { code: 'itau', name: 'Itaú', aliases: ['itau', 'itaú'], initials: 'IT', color: '#ec7000', bg: '#fff2e8' },
+    { code: 'bradesco', name: 'Bradesco', aliases: ['bradesco'], initials: 'BR', color: '#cc092f', bg: '#fff0f3' },
+    { code: 'nubank', name: 'Nubank', aliases: ['nubank', 'nu bank', 'nu'], initials: 'NU', color: '#820ad1', bg: '#f7edff' },
+    { code: 'inter', name: 'Inter', aliases: ['inter', 'banco inter'], initials: 'IN', color: '#ff7a00', bg: '#fff3e6' },
+    { code: 'c6', name: 'C6 Bank', aliases: ['c6', 'c6 bank'], initials: 'C6', color: '#111827', bg: '#f3f4f6' },
+    { code: 'btg', name: 'BTG Pactual', aliases: ['btg', 'btg pactual'], initials: 'BTG', color: '#0b1f3a', bg: '#edf4ff' },
+    { code: 'safra', name: 'Safra', aliases: ['safra', 'banco safra'], initials: 'SF', color: '#0f3b82', bg: '#edf3ff' },
+    { code: 'sicredi', name: 'Sicredi', aliases: ['sicredi'], initials: 'SI', color: '#39a935', bg: '#effaf0' },
+    { code: 'sicoob', name: 'Sicoob', aliases: ['sicoob'], initials: 'SC', color: '#00a091', bg: '#e9fbf8' },
+    { code: 'mercadopago', name: 'Mercado Pago', aliases: ['mercado pago', 'mercadopago'], initials: 'MP', color: '#00a7e1', bg: '#e9f8ff' },
+    { code: 'picpay', name: 'PicPay', aliases: ['picpay', 'pic pay'], initials: 'PP', color: '#21c25e', bg: '#ecfff3' },
+    { code: 'xp', name: 'XP Investimentos', aliases: ['xp', 'xp investimentos'], initials: 'XP', color: '#111827', bg: '#fff7d6' },
+    { code: 'wallet', name: 'Carteira', aliases: ['carteira', 'dinheiro', 'cash'], initials: '💵', color: '#16a34a', bg: '#ecfdf3' },
+    { code: 'other', name: 'Outro banco', aliases: [], initials: '🏦', color: '#7c4dff', bg: '#f4f0ff' }
+  ];
+
+  function normalizeBankText(text) {
+    return String(text || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function findBankByCode(code) {
+    return BANK_CATALOG.find(bank => bank.code === code) || BANK_CATALOG[BANK_CATALOG.length - 1];
+  }
+
+  function detectBankFromName(name) {
+    const normalized = normalizeBankText(name);
+    return BANK_CATALOG.find(bank => bank.code && bank.aliases.some(alias => normalized.includes(normalizeBankText(alias))))
+      || BANK_CATALOG[BANK_CATALOG.length - 1];
+  }
+
+  function getBankFromConta(conta) {
+    if (!conta) return findBankByCode('other');
+    if (conta.tipo_conta === 'investimento' && !normalizeBankText(conta.nome).includes('santander')) {
+      return { code: 'investimento', name: 'Investimento', aliases: [], initials: '💼', color: '#7c4dff', bg: '#f4f0ff' };
+    }
+    return detectBankFromName(conta.nome);
+  }
+
+  function createBankLogo(bank) {
+    const logo = document.createElement('span');
+    logo.className = 'bank-logo';
+    logo.style.setProperty('--bank-color', bank.color || '#7c4dff');
+    logo.style.setProperty('--bank-bg', bank.bg || '#f4f0ff');
+    logo.textContent = bank.initials || '🏦';
+    logo.setAttribute('aria-hidden', 'true');
+    return logo;
+  }
+
+  function populateBankSelect(selectedCode = '') {
+    const select = document.getElementById('modal-conta-banco');
+    if (!select) return;
+    select.innerHTML = '';
+    BANK_CATALOG.forEach(bank => {
+      const option = new Option(bank.name, bank.code);
+      select.appendChild(option);
+    });
+    select.value = selectedCode;
+  }
+
+  function applyBankNameSuggestion() {
+    const select = document.getElementById('modal-conta-banco');
+    const input = document.getElementById('modal-conta-nome');
+    if (!select || !input) return;
+    const bank = findBankByCode(select.value);
+    if (!bank.code || bank.code === 'other') return;
+    const current = input.value.trim();
+    const previous = input.dataset.bankSuggestion || '';
+    if (!current || current === previous) {
+      input.value = bank.name;
+      input.dataset.bankSuggestion = bank.name;
+    }
+  }
+
+  function buildContaNomeWithBank(nome, bankCode) {
+    const bank = findBankByCode(bankCode);
+    const cleanName = String(nome || '').trim();
+    if (!bank.code || bank.code === 'other') return cleanName;
+    if (!cleanName) return bank.name;
+    if (detectBankFromName(cleanName).code === bank.code) return cleanName;
+    return `${bank.name} - ${cleanName}`;
+  }
+
   function contaLabel(conta) {
     if (!conta) return '';
     return conta.tipo_conta === 'investimento'
@@ -440,11 +532,16 @@ if (emailEl) {
         return [];
       }
     },
-   async create({ nome, saldo_inicial, data_saldo }) {
+   async create({ nome, agencia, numero_conta, gerente, contato, saldo_inicial, data_saldo, tipo_conta }) {
   try {
     const item = {
       id: uid(),
       nome,
+      agencia: agencia || null,
+      numero_conta: numero_conta || null,
+      gerente: gerente || null,
+      contato: contato || null,
+      tipo_conta: tipo_conta || 'corrente',
       saldo_inicial: Number(saldo_inicial||0),
       saldo_atual: Number(saldo_inicial||0),
       data_saldo,
@@ -1033,6 +1130,8 @@ const UI = {
     // ===================== MODAL CONTA =====================
 
     const modal = document.getElementById("modal-conta");
+    populateBankSelect();
+    document.getElementById("modal-conta-banco")?.addEventListener("change", applyBankNameSuggestion);
 
     const btnOpen = document.getElementById("btn-open-modal-conta");
     const btnCancel = document.getElementById("btn-cancelar-conta");
@@ -1047,6 +1146,17 @@ const UI = {
     const modal = document.getElementById("modal-conta");
 
     // 🔓 MODO CRIAÇÃO — libera todos os campos
+    populateBankSelect("");
+    document.getElementById("modal-conta-banco").disabled = false;
+    document.getElementById("modal-conta-banco").value = "";
+    document.getElementById("modal-conta-nome").value = "";
+    document.getElementById("modal-conta-agencia").value = "";
+    document.getElementById("modal-conta-numero").value = "";
+    document.getElementById("modal-conta-gerente").value = "";
+    document.getElementById("modal-conta-contato").value = "";
+    document.getElementById("modal-conta-saldo").value = "";
+    document.getElementById("modal-conta-data").value = isoToday();
+    delete document.getElementById("modal-conta-nome").dataset.bankSuggestion;
     document.getElementById("modal-conta-nome").disabled = false;
     document.getElementById("modal-conta-agencia").disabled = false;
     document.getElementById("modal-conta-numero").disabled = false;
@@ -1087,9 +1197,10 @@ if (!hasPremiumAccess() && STATE.contas.length >= 2) {
   return;
 }
     const editId = btnSave.dataset.editId;
+    const bankCode = document.getElementById("modal-conta-banco")?.value || "";
 
     const conta = {
-      nome: document.getElementById("modal-conta-nome").value,
+      nome: buildContaNomeWithBank(document.getElementById("modal-conta-nome").value, bankCode),
       agencia: document.getElementById("modal-conta-agencia").value,
       numero_conta: document.getElementById("modal-conta-numero").value,
       gerente: document.getElementById("modal-conta-gerente").value,
@@ -1357,6 +1468,14 @@ renderContasCards() {
 
     const info = document.createElement("div");
     info.className = "conta-info";
+
+    const bank = getBankFromConta(conta);
+    const header = document.createElement("div");
+    header.className = "conta-card-head";
+    header.appendChild(createBankLogo(bank));
+
+    const titleBlock = document.createElement("div");
+    titleBlock.className = "conta-title-block";
     const title = document.createElement("div");
     title.className = "conta-title-line";
     title.appendChild(createTextElement("strong", conta.nome));
@@ -1364,11 +1483,32 @@ renderContasCards() {
       title.appendChild(createTextElement("span", "Investimento", "conta-tipo-badge"));
       div.classList.add("conta-card-investimento");
     }
-    info.appendChild(title);
-    info.appendChild(createTextElement("small", `Agência: ${conta.agencia || "-"}`));
-    info.appendChild(createTextElement("small", `Conta: ${conta.numero_conta || "-"}`));
-    info.appendChild(createTextElement("small", `Gerente: ${conta.gerente || "-"}`));
-    info.appendChild(createTextElement("small", `Contato: ${conta.contato || "-"}`));
+    titleBlock.appendChild(title);
+    titleBlock.appendChild(createTextElement("small", bank.name, "conta-bank-name"));
+    header.appendChild(titleBlock);
+
+    const balance = document.createElement("div");
+    balance.className = "conta-balance";
+    balance.appendChild(createTextElement("small", "Saldo atual"));
+    balance.appendChild(createTextElement("strong", fmtMoney(conta.saldo_atual ?? conta.saldo_inicial)));
+    header.appendChild(balance);
+    info.appendChild(header);
+
+    const meta = document.createElement("div");
+    meta.className = "conta-meta-grid";
+    [
+      ["Agência", conta.agencia || "-"],
+      ["Conta", conta.numero_conta || "-"],
+      ["Gerente", conta.gerente || "-"],
+      ["Contato", conta.contato || "-"]
+    ].forEach(([label, value]) => {
+      const pill = document.createElement("span");
+      pill.className = "conta-meta-pill";
+      pill.appendChild(createTextElement("small", label));
+      pill.appendChild(createTextElement("strong", value));
+      meta.appendChild(pill);
+    });
+    info.appendChild(meta);
 
     const actions = document.createElement("div");
     actions.className = "conta-actions";
@@ -2056,6 +2196,9 @@ function abrirModalEditarConta(conta) {
   const modal = document.getElementById("modal-conta");
 
   // Preenche campos
+  const bank = getBankFromConta(conta);
+  populateBankSelect(bank.code && bank.code !== 'investimento' ? bank.code : '');
+  document.getElementById("modal-conta-banco").disabled = false;
   document.getElementById("modal-conta-nome").value = conta.nome || "";
   document.getElementById("modal-conta-agencia").value = conta.agencia || "";
   document.getElementById("modal-conta-numero").value = conta.numero_conta || "";

@@ -1334,6 +1334,7 @@ button:hover { opacity: .9; }
   background: #fff;
   border-radius: 14px;
   padding: 16px;
+  border: 1px solid rgba(124, 77, 255, 0.08);
   box-shadow: 0 6px 18px rgba(0,0,0,0.08);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1348,6 +1349,60 @@ button:hover { opacity: .9; }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.conta-card-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.bank-logo {
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: var(--bank-bg, #f4f0ff);
+  color: var(--bank-color, #7c4dff);
+  border: 1px solid color-mix(in srgb, var(--bank-color, #7c4dff) 25%, transparent);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  box-shadow: inset 0 -10px 22px rgba(255,255,255,0.35);
+}
+
+.conta-title-block {
+  min-width: 0;
+}
+
+.conta-title-block .conta-title-line strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conta-bank-name {
+  color: #8b8b9a;
+  font-weight: 700;
+}
+
+.conta-balance {
+  text-align: right;
+  min-width: 110px;
+}
+
+.conta-balance small {
+  color: #8b8b9a;
+  font-weight: 700;
+}
+
+.conta-balance strong {
+  color: #28223d;
+  font-size: 16px;
+  margin: 0;
 }
 
 .conta-tipo-badge {
@@ -1378,6 +1433,38 @@ button:hover { opacity: .9; }
   color: #666;
 }
 
+.conta-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.conta-meta-pill {
+  display: block;
+  border-radius: 12px;
+  background: #f8f7ff;
+  border: 1px solid #eee9ff;
+  padding: 8px 10px;
+  min-width: 0;
+}
+
+.conta-meta-pill small {
+  color: #8b8b9a;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.conta-meta-pill strong {
+  color: #3b3450;
+  font-size: 13px;
+  margin: 2px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .conta-actions {
   margin-top: 12px;
 }
@@ -1386,6 +1473,14 @@ button:hover { opacity: .9; }
   font-size: 12px;
   padding: 6px 12px;
   border-radius: 8px;
+}
+
+.field-hint {
+  display: block;
+  margin: -4px 0 10px;
+  color: #8b8b9a;
+  font-size: 12px;
+  line-height: 1.35;
 }
 /* ========================= BOTÃO ADICIONAR CONTA (DESTAQUE) ========================= */
 
