@@ -32,6 +32,39 @@ function initCartaoPage() {
     return el;
   }
 
+  function isContaInvestimento(conta) {
+    return String(conta?.tipo_conta || "").toLowerCase() === "investimento";
+  }
+
+  function contaPagamentoLabel(conta, todas = []) {
+    const nome = String(conta?.nome || "");
+    const nomeRepetido = (todas || []).filter(c => String(c.nome || "") === nome).length > 1;
+    const tipo = String(conta?.tipo_conta || "corrente").toLowerCase();
+
+    if (tipo === "investimento") return `${nome} (Investimento)`;
+    if (!nomeRepetido) return nome;
+    if (tipo === "poupanca" || tipo === "poupança") return `${nome} (Poupança)`;
+    return `${nome} (Conta corrente)`;
+  }
+
+  function popularSelectContasPagamento(select, contas = [], { mostrarSaldo = false } = {}) {
+    if (!select) return [];
+
+    const contasPagamento = (contas || []).filter(c => !isContaInvestimento(c));
+    select.innerHTML = "";
+
+    contasPagamento.forEach(c => {
+      const saldo = mostrarSaldo ? ` - ${formatReal(c.saldo_atual || 0)}` : "";
+      select.appendChild(new Option(`${contaPagamentoLabel(c, contasPagamento)}${saldo}`, c.id));
+    });
+
+    if (contasPagamento.length === 0) {
+      select.appendChild(new Option("Nenhuma conta de pagamento disponível", ""));
+    }
+
+    return contasPagamento;
+  }
+
   // ===========================// ESTADO // ===========================
   const state = {
     user: null,
@@ -718,23 +751,11 @@ async function loadFaturaForSelected() {
 
   const { data: contas } = await supabase
     .from("contas_bancarias")
-    .select("id, nome")
+    .select("id, nome, tipo_conta")
     .eq("user_id", state.user.id)
     .order("nome");
 
-  contaFaturaSelect.innerHTML = "";
-
-  (contas || []).forEach(c => {
-    contaFaturaSelect.appendChild(
-      new Option(c.nome, c.id)
-    );
-  });
-
-  if ((contas || []).length === 0) {
-    contaFaturaSelect.appendChild(
-      new Option("Nenhuma conta disponível", "")
-    );
-  }
+  popularSelectContasPagamento(contaFaturaSelect, contas || []);
 }
 
 async function fecharFaturaComConta(conta_id) {
@@ -1136,15 +1157,11 @@ if (btnPagParcial) {
 
     const { data: contas } = await supabase
       .from("contas_bancarias")
-      .select("id, nome")
+      .select("id, nome, tipo_conta")
       .eq("user_id", state.user.id)
       .order("nome");
 
-    selectConta.innerHTML = "";
-
-    (contas || []).forEach(c => {
-      selectConta.appendChild(new Option(c.nome, c.id));
-    });
+    popularSelectContasPagamento(selectConta, contas || []);
 
     document.getElementById("pag-parcial-valor").value = "";
     document.getElementById("pag-parcial-data").value =
@@ -1304,10 +1321,7 @@ function popularFaturasLancamento() {
     await loadCategorias();
     const { data: contas } = await supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id);
 
-    selectContaPagamento.innerHTML = "";
-    (contas || []).forEach((c) =>
-      selectContaPagamento.appendChild(new Option(`${c.nome} (${formatReal(c.saldo_atual)})`, c.id))
-    );
+    popularSelectContasPagamento(selectContaPagamento, contas || [], { mostrarSaldo: true });
   }
 
   // ===========================// EDIÇÃO À VISTA DINÂMICA// ===========================
@@ -1826,15 +1840,7 @@ if (modalParcelaCancelar) {
     await loadCategorias();
     const { data: contas } = await supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id);
 
-   if (selectContaPagamento) {
-  selectContaPagamento.innerHTML = "";
-
-  (contas || []).forEach((c) =>
-   selectContaPagamento.appendChild(
-  new Option(c.nome, c.id)
-     )
-);
-}
+   popularSelectContasPagamento(selectContaPagamento, contas || []);
 
     // popular selectFaturaInicial com base no mesLanc atual e próximos 24 meses (exemplo)
     if (selectFaturaInicial) {
