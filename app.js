@@ -368,6 +368,28 @@ let FILTRO_LANCAMENTOS = "pendencias";
       list.appendChild(option);
     });
   }
+  function renderTransferContaPicker(selectId, listId) {
+    const select = document.getElementById(selectId);
+    const list = document.getElementById(listId);
+    if (!select || !list) return;
+
+    list.innerHTML = "";
+    if (!STATE.contas || STATE.contas.length === 0) {
+      list.innerHTML = '<p class="conta-visual-empty">Nenhuma conta cadastrada.</p>';
+      return;
+    }
+
+    (STATE.contas || []).forEach(conta => {
+      const option = renderContaVisualOption(conta, { selected: select.value === conta.id });
+      option.addEventListener("click", () => {
+        select.value = conta.id;
+        list
+          .querySelectorAll(".conta-visual-option")
+          .forEach(item => item.classList.toggle("selected", item.dataset.contaId === conta.id));
+      });
+      list.appendChild(option);
+    });
+  }
   function getContaNome(id) {
     return STATE.contas.find(c => c.id === id)?.nome || '';
   }
@@ -3474,6 +3496,13 @@ if (btnTransferir) {
       selOrigem.appendChild(new Option(contaLabel(c), c.id));
       selDestino.appendChild(new Option(contaLabel(c), c.id));
     });
+
+    if (STATE.contas?.length > 1 && selOrigem.value === selDestino.value) {
+      selDestino.value = STATE.contas.find(c => c.id !== selOrigem.value)?.id || selDestino.value;
+    }
+
+    renderTransferContaPicker("transf-origem", "transf-origem-list");
+    renderTransferContaPicker("transf-destino", "transf-destino-list");
 
     document.getElementById("transf-valor").value = "";
     document.getElementById("transf-desc").value = "";
