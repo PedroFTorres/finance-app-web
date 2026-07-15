@@ -853,6 +853,41 @@ const CategoriasService = {
         return [];
       }
     },
+    async fetchBaixasParciais(tipo, conta_id='all', inicio, fim) {
+      try {
+        let q = supabase
+          .from('movimentacoes')
+          .select('*')
+          .eq('user_id', STATE.user.id)
+          .eq('tipo', tipo === 'receita' ? 'credito' : 'debito')
+          .is('lancamento_id', null)
+          .gte('data', inicio)
+          .lte('data', fim)
+          .ilike('descricao', '%Baixa parcial%')
+          .order('data', { ascending: true });
+
+        if (conta_id && conta_id !== 'all') q = q.eq('conta_id', conta_id);
+
+        const { data, error } = await q;
+        if (error) throw error;
+
+        return (data || []).map(item => ({
+          id: item.id,
+          user_id: item.user_id,
+          descricao: item.descricao,
+          valor: Number(item.valor || 0),
+          data: item.data,
+          data_baixa: item.data,
+          conta_id: item.conta_id,
+          categoria_nome: tipo === 'receita' ? 'Baixa parcial recebida' : 'Baixa parcial paga',
+          baixado: true,
+          baixa_parcial: true
+        }));
+      } catch (e) {
+        console.error('LancService.fetchBaixasParciais', e);
+        return [];
+      }
+    },
     async insert(t) {
       try {
         const tabela = t.tipo === 'receita' ? 'receitas' : 'despesas';
@@ -996,12 +1031,16 @@ const CategoriasService = {
       despesasPeriodo,
       receitasRecebidas,
       despesasPagas,
+      receitasParciais,
+      despesasParciais,
       cartoesAbertos
     ] = await Promise.all([
       LancService.fetch('receita', conta_id, inicio, fim),
       LancService.fetch('despesa', conta_id, inicio, fim),
       LancService.fetchBaixadosComValorReal('receita', conta_id, inicio, fim),
       LancService.fetchBaixadosComValorReal('despesa', conta_id, inicio, fim),
+      LancService.fetchBaixasParciais('receita', conta_id, inicio, fim),
+      LancService.fetchBaixasParciais('despesa', conta_id, inicio, fim),
       LancService.fetchPrevisoesCartao(conta_id, inicio, fim)
     ]);
 
@@ -1013,8 +1052,10 @@ const CategoriasService = {
       categoria_nome: item.categoria_nome || 'Cartão de crédito aberto'
     }));
 
-    const totalRecebido = sum(receitasRecebidas);
-    const totalPago = sum(despesasPagas);
+    const receitasRealizadas = [...(receitasRecebidas || []), ...(receitasParciais || [])];
+    const despesasRealizadas = [...(despesasPagas || []), ...(despesasParciais || [])];
+    const totalRecebido = sum(receitasRealizadas);
+    const totalPago = sum(despesasRealizadas);
     const totalAReceber = sum(pendentesReceita);
     const totalDespesasPendentes = sum(pendentesDespesa);
     const totalCartoesAbertos = sum(cartoesAbertosLista);
@@ -1027,8 +1068,10 @@ const CategoriasService = {
     return {
       receitasPeriodo: receitasPeriodo || [],
       despesasPeriodo: despesasPeriodo || [],
-      receitasRecebidas: receitasRecebidas || [],
-      despesasPagas: despesasPagas || [],
+      receitasRecebidas: receitasRealizadas,
+      despesasPagas: despesasRealizadas,
+      receitasParciais: receitasParciais || [],
+      despesasParciais: despesasParciais || [],
       pendentesReceita,
       pendentesDespesa,
       cartoesAbertos: cartoesAbertosLista,
