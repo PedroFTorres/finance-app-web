@@ -121,6 +121,7 @@ function initCartaoPage() {
     const container = document.getElementById(containerId);
     if (!select || !container) return;
 
+    select.classList.add('hidden');
     container.innerHTML = '';
     container.classList.add('conta-logo-select');
 
