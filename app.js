@@ -319,18 +319,13 @@ let FILTRO_LANCAMENTOS = "pendencias";
   function getContasPagamento() {
     return (STATE.contas || []).filter(conta => !isContaInvestimento(conta));
   }
-  function renderContaVisualOption(conta, { selected = false } = {}) {
+  function createContaOptionContent(conta) {
     const banco = getBankFromConta(conta);
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "conta-visual-option";
-    btn.dataset.contaId = conta.id;
-    if (selected) btn.classList.add("selected");
-
-    btn.appendChild(createBankLogo(banco));
+    const frag = document.createDocumentFragment();
+    frag.appendChild(createBankLogo(banco));
 
     const text = document.createElement("span");
-    text.className = "conta-visual-text";
+    text.className = "conta-logo-select-text";
 
     const nome = document.createElement("strong");
     nome.textContent = conta.nome;
@@ -340,54 +335,87 @@ let FILTRO_LANCAMENTOS = "pendencias";
     detalhe.textContent = isContaInvestimento(conta) ? "Investimento" : banco.name;
     text.appendChild(detalhe);
 
-    btn.appendChild(text);
-    return btn;
+    frag.appendChild(text);
+    return frag;
+  }
+  function renderContaLogoSelect({ selectId, containerId, contas, emptyText = "Nenhuma conta cadastrada.", onChange }) {
+    const select = document.getElementById(selectId);
+    const container = document.getElementById(containerId);
+    if (!select || !container) return;
+
+    container.innerHTML = "";
+    container.classList.add("conta-logo-select");
+
+    if (!contas || contas.length === 0) {
+      container.innerHTML = `<p class="conta-logo-select-empty">${emptyText}</p>`;
+      return;
+    }
+
+    if (!select.value || !contas.some(conta => conta.id === select.value)) {
+      select.value = contas[0].id;
+    }
+
+    const selectedConta = contas.find(conta => conta.id === select.value) || contas[0];
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "conta-logo-select-button";
+    button.appendChild(createContaOptionContent(selectedConta));
+
+    const arrow = document.createElement("span");
+    arrow.className = "conta-logo-select-arrow";
+    arrow.textContent = "▾";
+    button.appendChild(arrow);
+
+    const menu = document.createElement("div");
+    menu.className = "conta-logo-select-menu hidden";
+
+    contas.forEach(conta => {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "conta-logo-select-option";
+      option.dataset.contaId = conta.id;
+      if (conta.id === select.value) option.classList.add("selected");
+      option.appendChild(createContaOptionContent(conta));
+      option.addEventListener("click", () => {
+        select.value = conta.id;
+        menu.classList.add("hidden");
+        renderContaLogoSelect({ selectId, containerId, contas, emptyText, onChange });
+        if (typeof onChange === "function") onChange(conta);
+      });
+      menu.appendChild(option);
+    });
+
+    button.addEventListener("click", () => {
+      document
+        .querySelectorAll(".conta-logo-select-menu")
+        .forEach(item => {
+          if (item !== menu) item.classList.add("hidden");
+        });
+      menu.classList.toggle("hidden");
+    });
+
+    container.appendChild(button);
+    container.appendChild(menu);
   }
   function renderExtratoContaPicker() {
     const select = document.getElementById("select-contas-extrato");
-    const list = document.getElementById("select-contas-extrato-list");
-    if (!select || !list) return;
-
-    list.innerHTML = "";
-    if (!STATE.contas || STATE.contas.length === 0) {
-      list.innerHTML = '<p class="conta-visual-empty">Nenhuma conta cadastrada.</p>';
-      return;
-    }
-
-    (STATE.contas || []).forEach(conta => {
-      const option = renderContaVisualOption(conta, { selected: select.value === conta.id });
-      option.addEventListener("click", () => {
-        select.value = conta.id;
-        list
-          .querySelectorAll(".conta-visual-option")
-          .forEach(item => item.classList.toggle("selected", item.dataset.contaId === conta.id));
+    if (!select) return;
+    renderContaLogoSelect({
+      selectId: "select-contas-extrato",
+      containerId: "select-contas-extrato-list",
+      contas: STATE.contas || [],
+      onChange: () => {
         modoPeriodoExtrato = "mes";
         renderMesExtrato();
         App.renderExtrato();
-      });
-      list.appendChild(option);
+      }
     });
   }
   function renderTransferContaPicker(selectId, listId) {
-    const select = document.getElementById(selectId);
-    const list = document.getElementById(listId);
-    if (!select || !list) return;
-
-    list.innerHTML = "";
-    if (!STATE.contas || STATE.contas.length === 0) {
-      list.innerHTML = '<p class="conta-visual-empty">Nenhuma conta cadastrada.</p>';
-      return;
-    }
-
-    (STATE.contas || []).forEach(conta => {
-      const option = renderContaVisualOption(conta, { selected: select.value === conta.id });
-      option.addEventListener("click", () => {
-        select.value = conta.id;
-        list
-          .querySelectorAll(".conta-visual-option")
-          .forEach(item => item.classList.toggle("selected", item.dataset.contaId === conta.id));
-      });
-      list.appendChild(option);
+    renderContaLogoSelect({
+      selectId,
+      containerId: listId,
+      contas: STATE.contas || []
     });
   }
   function getContaNome(id) {
@@ -2157,22 +2185,12 @@ if (lancamento.conta_id && contasPagamento.some(c => c.id === lancamento.conta_i
 }
 
 if (listaContaBaixa) {
-  if (contasPagamento.length === 0) {
-    listaContaBaixa.innerHTML = '<p class="conta-visual-empty">Nenhuma conta de pagamento cadastrada.</p>';
-  } else {
-    contasPagamento.forEach(c => {
-      const btn = renderContaVisualOption(c, { selected: selectConta.value === c.id });
-
-      btn.addEventListener("click", () => {
-        selectConta.value = c.id;
-        listaContaBaixa
-          .querySelectorAll(".conta-visual-option")
-          .forEach(opt => opt.classList.toggle("selected", opt.dataset.contaId === c.id));
-      });
-
-      listaContaBaixa.appendChild(btn);
-    });
-  }
+  renderContaLogoSelect({
+    selectId: "conta-baixa-select",
+    containerId: "conta-baixa-list",
+    contas: contasPagamento,
+    emptyText: "Nenhuma conta de pagamento cadastrada."
+  });
 }
 
   const modal = document.getElementById("modal-baixa");
@@ -3392,6 +3410,11 @@ document.getElementById("valor-pago-baixa")
 // ================================// LANÇAMENTOS — EVENTOS (DELEGAÇÃO)// ================================
    
 document.addEventListener("click", (e) => {
+  if (!e.target.closest(".conta-logo-select")) {
+    document
+      .querySelectorAll(".conta-logo-select-menu")
+      .forEach(menu => menu.classList.add("hidden"));
+  }
 
  if (e.target.closest("#lanc-prev")) {
   modoPeriodoLanc = "mes";
