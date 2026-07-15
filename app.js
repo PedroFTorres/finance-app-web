@@ -313,6 +313,61 @@ let FILTRO_LANCAMENTOS = "pendencias";
       ? `💼 ${conta.nome} (Investimento)`
       : conta.nome;
   }
+  function isContaInvestimento(conta) {
+    return String(conta?.tipo_conta || '').toLowerCase() === 'investimento';
+  }
+  function getContasPagamento() {
+    return (STATE.contas || []).filter(conta => !isContaInvestimento(conta));
+  }
+  function renderContaVisualOption(conta, { selected = false } = {}) {
+    const banco = getBankFromConta(conta);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "conta-visual-option";
+    btn.dataset.contaId = conta.id;
+    if (selected) btn.classList.add("selected");
+
+    btn.appendChild(createBankLogo(banco));
+
+    const text = document.createElement("span");
+    text.className = "conta-visual-text";
+
+    const nome = document.createElement("strong");
+    nome.textContent = conta.nome;
+    text.appendChild(nome);
+
+    const detalhe = document.createElement("small");
+    detalhe.textContent = isContaInvestimento(conta) ? "Investimento" : banco.name;
+    text.appendChild(detalhe);
+
+    btn.appendChild(text);
+    return btn;
+  }
+  function renderExtratoContaPicker() {
+    const select = document.getElementById("select-contas-extrato");
+    const list = document.getElementById("select-contas-extrato-list");
+    if (!select || !list) return;
+
+    list.innerHTML = "";
+    if (!STATE.contas || STATE.contas.length === 0) {
+      list.innerHTML = '<p class="conta-visual-empty">Nenhuma conta cadastrada.</p>';
+      return;
+    }
+
+    (STATE.contas || []).forEach(conta => {
+      const option = renderContaVisualOption(conta, { selected: select.value === conta.id });
+      option.addEventListener("click", () => {
+        select.value = conta.id;
+        list
+          .querySelectorAll(".conta-visual-option")
+          .forEach(item => item.classList.toggle("selected", item.dataset.contaId === conta.id));
+        modoPeriodoExtrato = "mes";
+        renderMesExtrato();
+        App.renderExtrato();
+      });
+      list.appendChild(option);
+    });
+  }
   function getContaNome(id) {
     return STATE.contas.find(c => c.id === id)?.nome || '';
   }
@@ -1473,6 +1528,8 @@ if (btnCartao) {
 
   if (selExtr && (!selExtr.value || selExtr.value.trim() === ''))
     selExtr.value = 'all';
+
+  renderExtratoContaPicker();
 },
     renderCategorias() {
       const ul = $(IDS.listaCategorias);
@@ -2020,49 +2077,31 @@ openModalEditSemEscopo(item, tipo) {
 selectConta.innerHTML = "";
 if (listaContaBaixa) listaContaBaixa.innerHTML = "";
 
+  const contasPagamento = getContasPagamento();
+
 // popular contas
-(STATE.contas || []).forEach(c => {
+contasPagamento.forEach(c => {
   selectConta.appendChild(new Option(contaLabel(c), c.id));
 });
 
 // ✅ selecionar automaticamente a conta do lançamento
-if (lancamento.conta_id) {
+if (lancamento.conta_id && contasPagamento.some(c => c.id === lancamento.conta_id)) {
   selectConta.value = lancamento.conta_id;
+} else if (contasPagamento.length > 0) {
+  selectConta.value = contasPagamento[0].id;
 }
 
 if (listaContaBaixa) {
-  if (!STATE.contas || STATE.contas.length === 0) {
-    listaContaBaixa.innerHTML = '<p class="conta-baixa-empty">Nenhuma conta cadastrada.</p>';
+  if (contasPagamento.length === 0) {
+    listaContaBaixa.innerHTML = '<p class="conta-visual-empty">Nenhuma conta de pagamento cadastrada.</p>';
   } else {
-    (STATE.contas || []).forEach(c => {
-      const banco = getBankFromConta(c);
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "conta-baixa-option";
-      btn.dataset.contaId = c.id;
-
-      const selected = selectConta.value === c.id;
-      if (selected) btn.classList.add("selected");
-
-      btn.appendChild(createBankLogo(banco));
-
-      const text = document.createElement("span");
-      text.className = "conta-baixa-text";
-
-      const nome = document.createElement("strong");
-      nome.textContent = c.nome;
-      text.appendChild(nome);
-
-      const detalhe = document.createElement("small");
-      detalhe.textContent = c.tipo_conta === "investimento" ? "Investimento" : banco.name;
-      text.appendChild(detalhe);
-
-      btn.appendChild(text);
+    contasPagamento.forEach(c => {
+      const btn = renderContaVisualOption(c, { selected: selectConta.value === c.id });
 
       btn.addEventListener("click", () => {
         selectConta.value = c.id;
         listaContaBaixa
-          .querySelectorAll(".conta-baixa-option")
+          .querySelectorAll(".conta-visual-option")
           .forEach(opt => opt.classList.toggle("selected", opt.dataset.contaId === c.id));
       });
 

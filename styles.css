@@ -1389,7 +1389,8 @@ button:hover { opacity: .9; }
   border-radius: 0;
 }
 
-.conta-baixa-list {
+.conta-baixa-list,
+.extrato-conta-list {
   display: grid;
   gap: 8px;
   max-height: 220px;
@@ -1397,7 +1398,12 @@ button:hover { opacity: .9; }
   padding: 4px 2px;
 }
 
-.conta-baixa-option {
+.extrato-conta-list {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin: 6px 0 16px;
+}
+
+.conta-visual-option {
   width: 100%;
   display: grid;
   grid-template-columns: 46px minmax(0, 1fr);
@@ -1411,38 +1417,38 @@ button:hover { opacity: .9; }
   text-align: left;
 }
 
-.conta-baixa-option.selected {
+.conta-visual-option.selected {
   border-color: var(--roxo);
   background: #f5f0ff;
   box-shadow: 0 0 0 2px rgba(122, 77, 255, 0.12);
 }
 
-.conta-baixa-option .bank-logo {
+.conta-visual-option .bank-logo {
   width: 40px;
   height: 40px;
   border-radius: 14px;
 }
 
-.conta-baixa-text {
+.conta-visual-text {
   min-width: 0;
   display: grid;
   gap: 2px;
 }
 
-.conta-baixa-text strong,
-.conta-baixa-text small {
+.conta-visual-text strong,
+.conta-visual-text small {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.conta-baixa-text small {
+.conta-visual-text small {
   color: #747286;
   font-size: 12px;
   font-weight: 700;
 }
 
-.conta-baixa-empty {
+.conta-visual-empty {
   margin: 0;
   color: #747286;
   font-weight: 700;
