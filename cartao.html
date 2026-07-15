@@ -257,7 +257,8 @@
     <h3>Fechar fatura</h3>
 
     <label>Conta para pagamento</label>
-    <select id="conta-fatura-select"></select>
+    <select id="conta-fatura-select" class="hidden"></select>
+    <div id="conta-fatura-select-ui"></div>
 
     <label style="margin-top:10px">Vencimento</label>
     <input type="date" id="conta-fatura-vencimento" />
@@ -333,7 +334,8 @@
     <input id="pag-parcial-data" type="date">
 
     <label>Conta</label>
-<select id="pag-parcial-conta"></select>
+<select id="pag-parcial-conta" class="hidden"></select>
+<div id="pag-parcial-conta-ui"></div>
 
     <div style="margin-top:16px;display:flex;gap:10px">
       <button id="btn-confirmar-pag-parcial" class="btn-primary">

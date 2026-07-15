@@ -47,6 +47,131 @@ function initCartaoPage() {
     return `${nome} (Conta corrente)`;
   }
 
+  const BANK_CATALOG = [
+    { code: 'santander', name: 'Santander', aliases: ['santander'], initials: 'S', logo: 'assets/banks/santander.svg', color: '#e1251b', bg: '#fff1f1' },
+    { code: 'bb', name: 'Banco do Brasil', aliases: ['banco do brasil', 'bb'], initials: 'BB', logo: 'assets/banks/bb.svg', color: '#f8d117', bg: '#fff8cc' },
+    { code: 'caixa', name: 'Caixa Econômica Federal', aliases: ['caixa', 'cef', 'caixa economica'], initials: 'CX', logo: 'assets/banks/caixa.svg', color: '#005ca9', bg: '#eaf5ff' },
+    { code: 'itau', name: 'Itaú', aliases: ['itau', 'itaú'], initials: 'IT', color: '#ec7000', bg: '#fff2e8' },
+    { code: 'bradesco', name: 'Bradesco', aliases: ['bradesco'], initials: 'BR', color: '#cc092f', bg: '#fff0f3' },
+    { code: 'nubank', name: 'Nubank', aliases: ['nubank', 'nu bank', 'nu'], initials: 'NU', color: '#820ad1', bg: '#f7edff' },
+    { code: 'inter', name: 'Inter', aliases: ['inter', 'banco inter'], initials: 'IN', color: '#ff7a00', bg: '#fff3e6' },
+    { code: 'wallet', name: 'Carteira', aliases: ['carteira', 'dinheiro', 'cash'], initials: '💵', color: '#16a34a', bg: '#ecfdf3' },
+    { code: 'other', name: 'Outro banco', aliases: [], initials: '🏦', color: '#7c4dff', bg: '#f4f0ff' }
+  ];
+
+  function normalizeBankText(text) {
+    return String(text || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function detectBankFromName(name) {
+    const normalized = normalizeBankText(name);
+    return BANK_CATALOG.find(bank => bank.aliases.some(alias => normalized.includes(normalizeBankText(alias))))
+      || BANK_CATALOG[BANK_CATALOG.length - 1];
+  }
+
+  function createBankLogo(bank) {
+    const logo = document.createElement('span');
+    logo.className = 'bank-logo';
+    logo.style.setProperty('--bank-color', bank.color || '#7c4dff');
+    logo.style.setProperty('--bank-bg', bank.bg || '#f4f0ff');
+    logo.textContent = bank.initials || '🏦';
+
+    if (bank.logo) {
+      const img = document.createElement('img');
+      img.src = bank.logo;
+      img.alt = `Logo ${bank.name}`;
+      img.loading = 'lazy';
+      img.addEventListener('load', () => {
+        logo.textContent = '';
+        logo.classList.add('bank-logo-with-image');
+        logo.appendChild(img);
+      }, { once: true });
+    }
+
+    logo.setAttribute('aria-hidden', 'true');
+    return logo;
+  }
+
+  function createContaOptionContent(conta, todas = []) {
+    const frag = document.createDocumentFragment();
+    const bank = detectBankFromName(conta?.nome);
+    frag.appendChild(createBankLogo(bank));
+
+    const text = document.createElement('span');
+    text.className = 'conta-logo-select-text';
+
+    const nome = document.createElement('strong');
+    nome.textContent = contaPagamentoLabel(conta, todas);
+    text.appendChild(nome);
+
+    const detalhe = document.createElement('small');
+    detalhe.textContent = bank.name;
+    text.appendChild(detalhe);
+
+    frag.appendChild(text);
+    return frag;
+  }
+
+  function renderContaLogoSelect({ selectId, containerId, contas, emptyText = 'Nenhuma conta de pagamento disponível' }) {
+    const select = document.getElementById(selectId);
+    const container = document.getElementById(containerId);
+    if (!select || !container) return;
+
+    container.innerHTML = '';
+    container.classList.add('conta-logo-select');
+
+    if (!contas || contas.length === 0) {
+      container.innerHTML = `<p class="conta-logo-select-empty">${emptyText}</p>`;
+      return;
+    }
+
+    if (!select.value || !contas.some(conta => conta.id === select.value)) {
+      select.value = contas[0].id;
+    }
+
+    const selected = contas.find(conta => conta.id === select.value) || contas[0];
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'conta-logo-select-button';
+    button.appendChild(createContaOptionContent(selected, contas));
+
+    const arrow = document.createElement('span');
+    arrow.className = 'conta-logo-select-arrow';
+    arrow.textContent = '▾';
+    button.appendChild(arrow);
+
+    const menu = document.createElement('div');
+    menu.className = 'conta-logo-select-menu hidden';
+
+    contas.forEach(conta => {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'conta-logo-select-option';
+      if (conta.id === select.value) option.classList.add('selected');
+      option.appendChild(createContaOptionContent(conta, contas));
+      option.addEventListener('click', () => {
+        select.value = conta.id;
+        menu.classList.add('hidden');
+        renderContaLogoSelect({ selectId, containerId, contas, emptyText });
+      });
+      menu.appendChild(option);
+    });
+
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.conta-logo-select-menu').forEach(item => {
+        if (item !== menu) item.classList.add('hidden');
+      });
+      menu.classList.toggle('hidden');
+    });
+
+    container.appendChild(button);
+    container.appendChild(menu);
+  }
+
   function popularSelectContasPagamento(select, contas = [], { mostrarSaldo = false } = {}) {
     if (!select) return [];
 
@@ -136,6 +261,13 @@ function initCartaoPage() {
 
   const btnAddPurchase = document.getElementById("btn-add-purchase");
   const btnCancelPurchase = document.getElementById("btn-cancel-purchase");
+ document.addEventListener("click", (event) => {
+  if (!event.target.closest(".conta-logo-select")) {
+    document
+      .querySelectorAll(".conta-logo-select-menu")
+      .forEach(menu => menu.classList.add("hidden"));
+  }
+});
  if (btnCancelPurchase) {
   btnCancelPurchase.onclick = () => {
 
@@ -755,7 +887,12 @@ async function loadFaturaForSelected() {
     .eq("user_id", state.user.id)
     .order("nome");
 
-  popularSelectContasPagamento(contaFaturaSelect, contas || []);
+  const contasPagamento = popularSelectContasPagamento(contaFaturaSelect, contas || []);
+  renderContaLogoSelect({
+    selectId: "conta-fatura-select",
+    containerId: "conta-fatura-select-ui",
+    contas: contasPagamento
+  });
 }
 
 async function fecharFaturaComConta(conta_id) {
@@ -1161,7 +1298,12 @@ if (btnPagParcial) {
       .eq("user_id", state.user.id)
       .order("nome");
 
-    popularSelectContasPagamento(selectConta, contas || []);
+    const contasPagamento = popularSelectContasPagamento(selectConta, contas || []);
+    renderContaLogoSelect({
+      selectId: "pag-parcial-conta",
+      containerId: "pag-parcial-conta-ui",
+      contas: contasPagamento
+    });
 
     document.getElementById("pag-parcial-valor").value = "";
     document.getElementById("pag-parcial-data").value =
