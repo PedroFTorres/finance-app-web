@@ -100,21 +100,6 @@ async function atualizarDashboardPorMes() {
   }
 }
 
-function getBancoIcone(nome = "") {
-  const n = nome.toLowerCase();
-  if (n.includes("santander")) return "🔴";
-  if (n.includes("brasil") || n.includes("bb")) return "🟡";
-  if (n.includes("caixa")) return "🔵";
-  if (n.includes("itau") || n.includes("itaú")) return "🟠";
-  if (n.includes("bradesco")) return "🔴";
-  if (n.includes("nubank")) return "🟣";
-  if (n.includes("inter")) return "🟧";
-  if (n.includes("sicredi")) return "🟢";
-  if (n.includes("sicoob")) return "🟢";
-  if (n.includes("carteira") || n.includes("dinheiro")) return "💼";
-  return "🏦";
-}
-
 // ================================ // CONTROLE DE PERÍODO — LANÇAMENTOS // ================================
 let modoPeriodoLanc = "mes";   // "mes" | "custom"
 let mesLancAtual = new Date();
@@ -2031,16 +2016,59 @@ openModalEditSemEscopo(item, tipo) {
  atualizarValorFinalBaixa();
 
   const selectConta = document.getElementById("conta-baixa-select");
+  const listaContaBaixa = document.getElementById("conta-baixa-list");
 selectConta.innerHTML = "";
+if (listaContaBaixa) listaContaBaixa.innerHTML = "";
 
 // popular contas
 (STATE.contas || []).forEach(c => {
-  selectConta.appendChild(new Option(`${getBancoIcone(c.nome)} ${c.nome}`, c.id));
+  selectConta.appendChild(new Option(contaLabel(c), c.id));
 });
 
 // ✅ selecionar automaticamente a conta do lançamento
 if (lancamento.conta_id) {
   selectConta.value = lancamento.conta_id;
+}
+
+if (listaContaBaixa) {
+  if (!STATE.contas || STATE.contas.length === 0) {
+    listaContaBaixa.innerHTML = '<p class="conta-baixa-empty">Nenhuma conta cadastrada.</p>';
+  } else {
+    (STATE.contas || []).forEach(c => {
+      const banco = getBankFromConta(c);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "conta-baixa-option";
+      btn.dataset.contaId = c.id;
+
+      const selected = selectConta.value === c.id;
+      if (selected) btn.classList.add("selected");
+
+      btn.appendChild(createBankLogo(banco));
+
+      const text = document.createElement("span");
+      text.className = "conta-baixa-text";
+
+      const nome = document.createElement("strong");
+      nome.textContent = c.nome;
+      text.appendChild(nome);
+
+      const detalhe = document.createElement("small");
+      detalhe.textContent = c.tipo_conta === "investimento" ? "Investimento" : banco.name;
+      text.appendChild(detalhe);
+
+      btn.appendChild(text);
+
+      btn.addEventListener("click", () => {
+        selectConta.value = c.id;
+        listaContaBaixa
+          .querySelectorAll(".conta-baixa-option")
+          .forEach(opt => opt.classList.toggle("selected", opt.dataset.contaId === c.id));
+      });
+
+      listaContaBaixa.appendChild(btn);
+    });
+  }
 }
 
   const modal = document.getElementById("modal-baixa");
