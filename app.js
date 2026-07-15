@@ -94,7 +94,7 @@ async function atualizarDashboardPorMes() {
   renderMesDashboard();
 }
    
-   function atualizarValorFinalBaixa() {
+function atualizarValorFinalBaixa() {
   if (!BAIXA_ATUAL) return;
 
   const valor = parseMoneyValue(BAIXA_ATUAL.lancamento.valor);
