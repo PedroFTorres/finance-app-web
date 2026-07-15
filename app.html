@@ -549,6 +549,9 @@
     <label>Data da baixa</label>
     <input type="date" id="data-baixa">
 
+    <label>Valor pago agora</label>
+    <input type="number" id="valor-pago-baixa" step="0.01" min="0">
+
     <label>Juros / Multa (opcional)</label>
     <input type="number" id="juros-baixa" step="0.01">
 
@@ -557,6 +560,9 @@
     
     <div style="margin-top:10px;font-weight:700;color:#7a4dff;">
   Valor final: <span id="valor-final-baixa">R$ 0,00</span>
+</div>
+    <div style="margin-top:6px;font-weight:700;color:#e83f5b;">
+  Saldo restante: <span id="saldo-restante-baixa">R$ 0,00</span>
 </div>
 
     <label>Conta para baixar</label>

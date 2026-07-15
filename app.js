@@ -78,16 +78,41 @@ async function atualizarDashboardPorMes() {
   if (!BAIXA_ATUAL) return;
 
   const valor = Number(BAIXA_ATUAL.lancamento.valor || 0);
+  const valorPago = Number(document.getElementById("valor-pago-baixa")?.value || 0);
   const juros = Number(document.getElementById("juros-baixa").value || 0);
   const desconto = Number(document.getElementById("desconto-baixa").value || 0);
 
   const final = valor + juros - desconto;
+  const restante = Math.max(final - valorPago, 0);
 
   document.getElementById("valor-final-baixa").textContent =
     final.toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL"
     });
+
+  const saldoRestante = document.getElementById("saldo-restante-baixa");
+  if (saldoRestante) {
+    saldoRestante.textContent = restante.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    });
+  }
+}
+
+function getBancoIcone(nome = "") {
+  const n = nome.toLowerCase();
+  if (n.includes("santander")) return "🔴";
+  if (n.includes("brasil") || n.includes("bb")) return "🟡";
+  if (n.includes("caixa")) return "🔵";
+  if (n.includes("itau") || n.includes("itaú")) return "🟠";
+  if (n.includes("bradesco")) return "🔴";
+  if (n.includes("nubank")) return "🟣";
+  if (n.includes("inter")) return "🟧";
+  if (n.includes("sicredi")) return "🟢";
+  if (n.includes("sicoob")) return "🟢";
+  if (n.includes("carteira") || n.includes("dinheiro")) return "💼";
+  return "🏦";
 }
 
 // ================================ // CONTROLE DE PERÍODO — LANÇAMENTOS // ================================
@@ -1995,6 +2020,8 @@ openModalEditSemEscopo(item, tipo) {
 
   document.getElementById("juros-baixa").value = "";
   document.getElementById("desconto-baixa").value = "";
+  const valorPagoInput = document.getElementById("valor-pago-baixa");
+  if (valorPagoInput) valorPagoInput.value = Number(lancamento.valor || 0).toFixed(2);
 
  document.getElementById("valor-original-baixa").textContent =
   Number(lancamento.valor).toLocaleString("pt-BR", {
@@ -2008,7 +2035,7 @@ selectConta.innerHTML = "";
 
 // popular contas
 (STATE.contas || []).forEach(c => {
-  selectConta.appendChild(new Option(contaLabel(c), c.id));
+  selectConta.appendChild(new Option(`${getBancoIcone(c.nome)} ${c.nome}`, c.id));
 });
 
 // ✅ selecionar automaticamente a conta do lançamento
@@ -3105,6 +3132,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     const { tipo, lancamento } = BAIXA_ATUAL;
 
     const dataBaixa = document.getElementById("data-baixa").value;
+    const valorPago = Number(document.getElementById("valor-pago-baixa")?.value || 0);
     const juros = Number(document.getElementById("juros-baixa").value || 0);
     const desconto = Number(document.getElementById("desconto-baixa").value || 0);
     const contaId = document.getElementById("conta-baixa-select").value;
@@ -3116,54 +3144,92 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
 
     const valorOriginal = Number(lancamento.valor);
     const valorFinal = valorOriginal + juros - desconto;
-     // 🔒 bloqueia baixa duplicada no banco
-const { data: jaBaixado } = await supabase
-  .from("movimentacoes")
-  .select("id")
-  .eq("lancamento_id", lancamento.id)
-  .eq("user_id", STATE.user.id)
-  .limit(1);
+    const restante = Number((valorFinal - valorPago).toFixed(2));
+    const baixaParcial = restante > 0.009;
 
-if (jaBaixado && jaBaixado.length > 0) {
-  alert("Este lançamento já foi baixado.");
-  return;
-}
+    if (valorFinal <= 0) {
+      alert("O valor final da baixa precisa ser maior que zero.");
+      return;
+    }
+
+    if (valorPago <= 0) {
+      alert("Informe o valor pago agora.");
+      return;
+    }
+
+    if (valorPago > valorFinal + 0.009) {
+      alert("O valor pago não pode ser maior que o valor final.");
+      return;
+    }
+
+    const valorMovimentacao = Number(valorPago.toFixed(2));
+
+    // 🔒 bloqueia baixa duplicada no banco
+    if (!baixaParcial) {
+      const { data: jaBaixado } = await supabase
+        .from("movimentacoes")
+        .select("id")
+        .eq("lancamento_id", lancamento.id)
+        .eq("user_id", STATE.user.id)
+        .limit(1);
+
+      if (jaBaixado && jaBaixado.length > 0) {
+        alert("Este lançamento já foi baixado.");
+        return;
+      }
+    }
 
     // 🔹 cria movimentação (extrato)
-const { error: insertErr } = await supabase
-  .from("movimentacoes")
-  .insert([{
-    id:uid() ,
-    user_id: STATE.user.id,
-    conta_id: contaId,
-    tipo: tipo === "receita" ? "credito" : "debito",
-    valor: valorFinal,
-    descricao:
-      lancamento.descricao +
-      (juros ? ` (+Juros ${fmtMoney(juros)})` : "") +
-      (desconto ? ` (-Desc ${fmtMoney(desconto)})` : ""),
-    data: dataBaixa,
-    lancamento_id: lancamento.id
-  }]);
+    const { error: insertErr } = await supabase
+      .from("movimentacoes")
+      .insert([{
+        id: uid(),
+        user_id: STATE.user.id,
+        conta_id: contaId,
+        tipo: tipo === "receita" ? "credito" : "debito",
+        valor: valorMovimentacao,
+        descricao:
+          lancamento.descricao +
+          (baixaParcial ? ` (Baixa parcial, restante ${fmtMoney(restante)})` : "") +
+          (juros ? ` (+Juros ${fmtMoney(juros)})` : "") +
+          (desconto ? ` (-Desc ${fmtMoney(desconto)})` : ""),
+        data: dataBaixa,
+        lancamento_id: baixaParcial ? null : lancamento.id
+      }]);
 
-// 🔒 trata erro de duplicidade do UNIQUE no banco
-if (insertErr) {
-  if (insertErr.code === "23505") {
-    alert("Este lançamento já foi baixado.");
-    return;
-  }
-  throw insertErr;
-}
+    // 🔒 trata erro de duplicidade do UNIQUE no banco
+    if (insertErr) {
+      if (!baixaParcial && insertErr.code === "23505") {
+        alert("Este lançamento já foi baixado.");
+        return;
+      }
+      throw insertErr;
+    }
 
-    // 🔹 marca lançamento como baixado
-    await supabase
-      .from(tipo === "receita" ? "receitas" : "despesas")
-      .update({
-        baixado: true,
-        data_baixa: dataBaixa
-      })
-      .eq("id", lancamento.id)
-      .eq("user_id", STATE.user.id);
+    const tabelaLancamento = tipo === "receita" ? "receitas" : "despesas";
+
+    if (baixaParcial) {
+      // 🔹 mantém em aberto apenas o saldo restante
+      await supabase
+        .from(tabelaLancamento)
+        .update({
+          valor: restante,
+          baixado: false,
+          data_baixa: null
+        })
+        .eq("id", lancamento.id)
+        .eq("user_id", STATE.user.id);
+    } else {
+      // 🔹 marca lançamento como baixado
+      await supabase
+        .from(tabelaLancamento)
+        .update({
+          baixado: true,
+          data_baixa: dataBaixa
+        })
+        .eq("id", lancamento.id)
+        .eq("user_id", STATE.user.id);
+    }
 
     // 🔹 fecha modal e limpa estado
     document.getElementById("modal-baixa").classList.add("hidden");
@@ -3186,6 +3252,9 @@ if (insertErr) {
   ?.addEventListener("input", atualizarValorFinalBaixa);
 
 document.getElementById("desconto-baixa")
+  ?.addEventListener("input", atualizarValorFinalBaixa);
+
+document.getElementById("valor-pago-baixa")
   ?.addEventListener("input", atualizarValorFinalBaixa);
 
 // ================================// LANÇAMENTOS — EVENTOS (DELEGAÇÃO)// ================================
