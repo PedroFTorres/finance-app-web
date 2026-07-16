@@ -1330,6 +1330,7 @@ const btnPagParcial = document.getElementById("btn-pagamento-parcial");
 const modalPagParcial = document.getElementById("modal-pagamento-parcial");
 const btnConfirmarPagParcial = document.getElementById("btn-confirmar-pag-parcial");
 const btnCancelarPagParcial = document.getElementById("btn-cancelar-pag-parcial");
+let pagamentoParcialEmProcessamento = false;
 
 // 🔹 ABRIR MODAL
 if (btnPagParcial) {
@@ -1373,6 +1374,7 @@ if (btnCancelarPagParcial) {
 // 🔹 CONFIRMAR PAGAMENTO
 if (btnConfirmarPagParcial) {
   btnConfirmarPagParcial.onclick = async () => {
+    if (pagamentoParcialEmProcessamento) return;
 
     const valor = Number(document.getElementById("pag-parcial-valor").value);
     const data = document.getElementById("pag-parcial-data").value;
@@ -1388,9 +1390,58 @@ if (btnConfirmarPagParcial) {
       return;
     }
 
-    const ano = mesFatura.getFullYear();
-    const mes = mesFatura.getMonth() + 1;
-    const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
+    const dataFatura = new Date(
+      mesFatura.getFullYear(),
+      mesFatura.getMonth(),
+      1
+    ).toISOString().slice(0,10);
+
+    pagamentoParcialEmProcessamento = true;
+    btnConfirmarPagParcial.disabled = true;
+
+    try {
+      const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
+
+      const { data: pagamentosExistentes, error: erroBuscaPagamento } = await supabase
+        .from("cartao_lancamentos")
+        .select("id, valor")
+        .eq("user_id", state.user.id)
+        .eq("cartao_id", activeCardId)
+        .eq("tipo", "pagamento")
+        .eq("descricao", "Pagamento parcial da fatura")
+        .eq("data_compra", data)
+        .eq("data_fatura", dataFatura);
+
+      if (erroBuscaPagamento) throw erroBuscaPagamento;
+
+      const pagamentoDuplicado = (pagamentosExistentes || []).some(item =>
+        Math.abs(Number(item.valor || 0) + Math.abs(valor)) < 0.000001
+      );
+
+      if (pagamentoDuplicado) {
+        showToast("Este pagamento parcial já foi registrado para esta fatura.", "warning");
+        return;
+      }
+
+      const { data: despesasExistentes, error: erroBuscaDespesa } = await supabase
+        .from("despesas")
+        .select("id, valor")
+        .eq("user_id", state.user.id)
+        .eq("conta_id", contaId)
+        .eq("descricao", "Pagamento parcial cartão")
+        .eq("data_baixa", data)
+        .eq("cartao_pagamento_parcial", true);
+
+      if (erroBuscaDespesa) throw erroBuscaDespesa;
+
+      const despesaDuplicada = (despesasExistentes || []).some(item =>
+        Math.abs(Number(item.valor || 0) - Math.abs(valor)) < 0.000001
+      );
+
+      if (despesaDuplicada) {
+        showToast("Este pagamento parcial já existe nos lançamentos.", "warning");
+        return;
+      }
 
     // 🔥 1️⃣ Criar DESPESA real
     const { data: despesa, error: erroDesp } = await supabase
@@ -1416,7 +1467,7 @@ if (btnConfirmarPagParcial) {
     }
 
     // 🔥 2️⃣ Criar movimentação vinculada
-    await supabase.from("movimentacoes").insert([{
+    const { error: erroMov } = await supabase.from("movimentacoes").insert([{
       id: crypto.randomUUID(),
       user_id: state.user.id,
       conta_id: contaId,
@@ -1427,21 +1478,19 @@ if (btnConfirmarPagParcial) {
       lancamento_id: despesa.id
     }]);
 
+    if (erroMov) throw erroMov;
+
     await recalcularSaldoConta(contaId);
 
     // 🔥 4️⃣ Inserir abatimento na fatura
-    await supabase.from("cartao_lancamentos").insert([{
+    const { error: erroCartaoLanc } = await supabase.from("cartao_lancamentos").insert([{
   id: crypto.randomUUID(),
   user_id: state.user.id,
   cartao_id: activeCardId,
   descricao: "Pagamento parcial da fatura",
   valor: -Math.abs(valor),
   data_compra: data,
-  data_fatura: new Date(
-    mesFatura.getFullYear(),
-    mesFatura.getMonth(),
-    1
-  ).toISOString().slice(0,10),
+  data_fatura: dataFatura,
   parcelas: 1,
   parcela_atual: 0,
   tipo: "pagamento",
@@ -1449,11 +1498,20 @@ if (btnConfirmarPagParcial) {
   despesa_id: despesa.id
 }]);
 
+    if (erroCartaoLanc) throw erroCartaoLanc;
+
     modalPagParcial.classList.add("hidden");
 
     await loadFaturaForSelected();
 
     showToast("Pagamento parcial realizado com sucesso.");
+    } catch (err) {
+      console.error("Erro no pagamento parcial:", err);
+      showToast("Erro ao registrar pagamento parcial.", "error");
+    } finally {
+      pagamentoParcialEmProcessamento = false;
+      btnConfirmarPagParcial.disabled = false;
+    }
   };
 }
 
