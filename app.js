@@ -2976,10 +2976,14 @@ if (!inicio || !fim) {
 if (FILTRO_LANCAMENTOS === "pagos" || FILTRO_LANCAMENTOS === "recebidos") {
 
   // 🔥 FILTRA PELO PERÍODO DA BAIXA E USA O VALOR REAL DO EXTRATO
-  [r, d] = await Promise.all([
+  const [receitasBaixadas, despesasBaixadas, receitasParciais, despesasParciais] = await Promise.all([
     LancService.fetchBaixadosComValorReal('receita', conta_id, inicio, fim),
-    LancService.fetchBaixadosComValorReal('despesa', conta_id, inicio, fim)
+    LancService.fetchBaixadosComValorReal('despesa', conta_id, inicio, fim),
+    LancService.fetchBaixasParciais('receita', conta_id, inicio, fim),
+    LancService.fetchBaixasParciais('despesa', conta_id, inicio, fim)
   ]);
+  r = [...(receitasBaixadas || []), ...(receitasParciais || [])];
+  d = [...(despesasBaixadas || []), ...(despesasParciais || [])];
 
 } else {
 
