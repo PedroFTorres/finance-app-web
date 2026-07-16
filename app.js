@@ -1138,7 +1138,7 @@ const CategoriasService = {
       saldoDisponivelRealizado,
       saldoPendencias,
       investimentosPeriodo,
-      saldoPrevisto: saldoDisponivelRealizado + saldoPendencias
+      saldoPrevisto: saldoRealizado + saldoPendencias
     };
   }
 
@@ -2637,7 +2637,7 @@ function abrirModalEditarConta(conta) {
       safeText($(IDS.dashPeriod), `${fmtDateBR(dados.inicio)} a ${fmtDateBR(dados.fim)}`);
       safeText($(IDS.dashReceber), fmtMoney(dados.totalAReceber));
       safeText($(IDS.dashPagar), fmtMoney(dados.totalAPagar));
-      safeText($(IDS.dashSaldoAtual), fmtMoney(dados.saldoDisponivelRealizado ?? dados.saldoRealizado));
+      safeText($(IDS.dashSaldoAtual), fmtMoney(dados.saldoRealizado));
       safeText($(IDS.dashSaldoPrevisto), fmtMoney(dados.saldoPrevisto));
 
       const ctx = document.getElementById(IDS.chartResumo);
@@ -2646,10 +2646,10 @@ function abrirModalEditarConta(conta) {
       STATE.charts.resumo = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ['Realizado disponível', 'A receber', 'A pagar', 'Saldo previsto'],
+          labels: ['Realizado', 'A receber', 'A pagar', 'Saldo previsto'],
           datasets: [{
             label: 'Resumo do período',
-            data: [dados.saldoDisponivelRealizado ?? dados.saldoRealizado, dados.totalAReceber, dados.totalAPagar, dados.saldoPrevisto],
+            data: [dados.saldoRealizado, dados.totalAReceber, dados.totalAPagar, dados.saldoPrevisto],
             backgroundColor: ['#6366f1', '#22c55e', '#ef4444', dados.saldoPrevisto >= 0 ? '#14b8a6' : '#f97316'],
             borderRadius: 10,
             borderSkipped: false
