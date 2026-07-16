@@ -458,6 +458,66 @@ if (contaFaturaConfirmar) {
   return created.id;
 }
 
+function computeContaBalance(conta, movs = []) {
+  const saldoInicial = Number(conta?.saldo_inicial || 0);
+  const dataSaldo = conta?.data_saldo || null;
+  const moneyEq = (a, b) => Math.abs(Number(a || 0) - Number(b || 0)) < 0.000001;
+  let saldo = saldoInicial;
+  let saldoInicialJaRepresentadoNoCampo = false;
+
+  (movs || []).forEach(m => {
+    const valor = Number(m.valor || 0);
+    const isSaldoInicialDuplicado =
+      !saldoInicialJaRepresentadoNoCampo &&
+      m.tipo === "credito" &&
+      String(m.descricao || "").trim().toLowerCase() === "saldo inicial" &&
+      moneyEq(valor, saldoInicial) &&
+      (!dataSaldo || m.data === dataSaldo);
+
+    if (isSaldoInicialDuplicado) {
+      saldoInicialJaRepresentadoNoCampo = true;
+      return;
+    }
+
+    saldo += m.tipo === "credito" ? valor : -valor;
+  });
+
+  return saldo;
+}
+
+async function recalcularSaldoConta(contaId) {
+  if (!contaId) return null;
+
+  const { data: conta, error: errConta } = await supabase
+    .from("contas_bancarias")
+    .select("saldo_inicial,data_saldo")
+    .eq("id", contaId)
+    .eq("user_id", state.user.id)
+    .maybeSingle();
+
+  if (errConta) throw errConta;
+
+  const { data: movs, error: errMovs } = await supabase
+    .from("movimentacoes")
+    .select("tipo,valor,descricao,data")
+    .eq("conta_id", contaId)
+    .eq("user_id", state.user.id);
+
+  if (errMovs) throw errMovs;
+
+  const saldo = computeContaBalance(conta, movs || []);
+
+  const { error: errUpdate } = await supabase
+    .from("contas_bancarias")
+    .update({ saldo_atual: saldo })
+    .eq("id", contaId)
+    .eq("user_id", state.user.id);
+
+  if (errUpdate) throw errUpdate;
+
+  return saldo;
+}
+
   function hideAllViews() {
   [
     viewNewCard,
@@ -1054,13 +1114,16 @@ if (btnPagarFatura) {
         return;
       }
 
+      const categoriaId = desp.categoria_id || await getOrCreateCategoria("Cartão de Crédito");
+
       // 🔹 baixa despesa
       await supabase
         .from("despesas")
         .update({
           baixado: true,
           conta_id: contaId,
-          data_baixa: venc
+          data_baixa: venc,
+          categoria_id: categoriaId
         })
         .eq("id", desp.id)
         .eq("user_id", state.user.id);
@@ -1077,21 +1140,7 @@ if (btnPagarFatura) {
         lancamento_id: desp.id
       }]);
 
-      // 🔹 atualizar saldo
-      const { data: conta } = await supabase
-        .from("contas_bancarias")
-        .select("*")
-        .eq("id", contaId)
-        .eq("user_id", state.user.id)
-        .single();
-
-      const novoSaldo = Number(conta.saldo_atual || 0) - total;
-
-      await supabase
-        .from("contas_bancarias")
-        .update({ saldo_atual: novoSaldo })
-        .eq("id", contaId)
-        .eq("user_id", state.user.id);
+      await recalcularSaldoConta(contaId);
 
       // 🔹 marcar fatura como PAGA
       await supabase
@@ -1341,6 +1390,7 @@ if (btnConfirmarPagParcial) {
 
     const ano = mesFatura.getFullYear();
     const mes = mesFatura.getMonth() + 1;
+    const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
 
     // 🔥 1️⃣ Criar DESPESA real
     const { data: despesa, error: erroDesp } = await supabase
@@ -1352,6 +1402,7 @@ if (btnConfirmarPagParcial) {
         descricao: "Pagamento parcial cartão",
         valor: valor,
         data: data,
+        categoria_id: categoriaId,
         baixado: true,
         data_baixa: data,
         cartao_pagamento_parcial: true
@@ -1376,21 +1427,7 @@ if (btnConfirmarPagParcial) {
       lancamento_id: despesa.id
     }]);
 
-    // 🔥 3️⃣ Atualizar saldo da conta
-    const { data: conta } = await supabase
-      .from("contas_bancarias")
-      .select("saldo_atual")
-      .eq("id", contaId)
-      .eq("user_id", state.user.id)
-      .single();
-
-    await supabase
-      .from("contas_bancarias")
-      .update({
-        saldo_atual: Number(conta.saldo_atual || 0) - valor
-      })
-      .eq("id", contaId)
-      .eq("user_id", state.user.id);
+    await recalcularSaldoConta(contaId);
 
     // 🔥 4️⃣ Inserir abatimento na fatura
     await supabase.from("cartao_lancamentos").insert([{

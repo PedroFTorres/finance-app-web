@@ -2930,6 +2930,7 @@ if (name === 'contas') {
 
     async reloadCatsContas() {
       await Promise.all([ CategoriasService.load(), ContasService.load() ]);
+      await ContasService.applyComputedBalances();
       UI.populateSelects();
     },
 
