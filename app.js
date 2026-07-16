@@ -1138,7 +1138,7 @@ const CategoriasService = {
       saldoDisponivelRealizado,
       saldoPendencias,
       investimentosPeriodo,
-      saldoPrevisto: saldoRealizado + saldoPendencias
+      saldoPrevisto: saldoDisponivelRealizado + saldoPendencias
     };
   }
 
