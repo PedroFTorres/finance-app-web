@@ -441,18 +441,41 @@ async function contasComSaldoCalculado(contas) {
   });
 
   return contas.map((conta) => {
+    const saldo = computeContaBalance(conta, movsPorConta.get(conta.id) || []);
+    return {
+      ...conta,
+      saldo_calculado: Number(saldo.toFixed(2))
+    };
+  });
+}
+
+function computeContaBalance(conta, movs = []) {
     const saldoInicial = Number(conta.saldo_inicial || 0);
     const dataSaldo = conta.data_saldo || null;
+    const moneyEq = (a, b) => Math.abs(Number(a || 0) - Number(b || 0)) < 0.000001;
+    const sumMovs = (lista) => (lista || []).reduce((total, mov) => {
+      const valor = Number(mov.valor || 0);
+      return total + (mov.tipo === "credito" ? valor : -valor);
+    }, 0);
+    const movsAteDataSaldo = dataSaldo
+      ? (movs || []).filter(mov => mov.data && mov.data <= dataSaldo)
+      : [];
+    const saldoAteDataSaldo = sumMovs(movsAteDataSaldo);
+
+    if (dataSaldo && movsAteDataSaldo.length > 0 && moneyEq(saldoAteDataSaldo, saldoInicial)) {
+      return sumMovs(movs || []);
+    }
+
     let saldo = saldoInicial;
     let saldoInicialJaDescontado = false;
 
-    (movsPorConta.get(conta.id) || []).forEach((mov) => {
+    (movs || []).forEach((mov) => {
       const valor = Number(mov.valor || 0);
       const isSaldoInicialDuplicado =
         !saldoInicialJaDescontado &&
         mov.tipo === "credito" &&
         String(mov.descricao || "").trim().toLowerCase() === "saldo inicial" &&
-        Math.abs(valor - saldoInicial) < 0.000001 &&
+        moneyEq(valor, saldoInicial) &&
         (!dataSaldo || mov.data === dataSaldo);
 
       if (isSaldoInicialDuplicado) {
@@ -463,11 +486,7 @@ async function contasComSaldoCalculado(contas) {
       saldo += mov.tipo === "credito" ? valor : -valor;
     });
 
-    return {
-      ...conta,
-      saldo_calculado: Number(saldo.toFixed(2))
-    };
-  });
+    return saldo;
 }
 
 function renderContaOptions() {
@@ -775,25 +794,7 @@ async function recalcConta(contaId) {
 
   if (error) throw error;
 
-  let saldo = saldoInicial;
-  let saldoInicialJaDescontado = false;
-
-  (movs || []).forEach((m) => {
-    const valor = Number(m.valor || 0);
-    const isSaldoInicialDuplicado =
-      !saldoInicialJaDescontado &&
-      m.tipo === "credito" &&
-      String(m.descricao || "").trim().toLowerCase() === "saldo inicial" &&
-      Math.abs(valor - saldoInicial) < 0.000001 &&
-      (!dataSaldo || m.data === dataSaldo);
-
-    if (isSaldoInicialDuplicado) {
-      saldoInicialJaDescontado = true;
-      return;
-    }
-
-    saldo += m.tipo === "credito" ? valor : -valor;
-  });
+  const saldo = computeContaBalance({ saldo_inicial: saldoInicial, data_saldo: dataSaldo }, movs || []);
 
   await supabase
     .from("contas_bancarias")

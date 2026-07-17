@@ -771,6 +771,19 @@ if (emailEl) {
     const saldoInicial = Number(conta?.saldo_inicial || 0);
     const dataSaldo = conta?.data_saldo || null;
     const moneyEq = (a, b) => Math.abs(Number(a || 0) - Number(b || 0)) < 0.000001;
+    const sumMovs = (lista) => (lista || []).reduce((total, m) => {
+      const valor = Number(m.valor || 0);
+      return total + (m.tipo === 'credito' ? valor : -valor);
+    }, 0);
+    const movsAteDataSaldo = dataSaldo
+      ? (movs || []).filter(m => m.data && m.data <= dataSaldo)
+      : [];
+    const saldoAteDataSaldo = sumMovs(movsAteDataSaldo);
+
+    if (dataSaldo && movsAteDataSaldo.length > 0 && moneyEq(saldoAteDataSaldo, saldoInicial)) {
+      return sumMovs(movs || []);
+    }
+
     let saldo = saldoInicial;
     let saldoInicialJaRepresentadoNoCampo = false;
 
