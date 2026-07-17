@@ -664,6 +664,7 @@ if (emailEl) {
     async applyComputedBalances() {
       try {
         if (!STATE.user?.id || !Array.isArray(STATE.contas) || STATE.contas.length === 0) return;
+        await syncMovimentacoesBaixadasSemExtrato();
 
         const { data: movs, error } = await supabase
           .from('movimentacoes')
@@ -793,69 +794,70 @@ if (emailEl) {
     return saldo;
   }
 
-  async function syncSaldoInicialMovimento(contaId, saldoInicial, dataSaldo) {
-    const saldo = Number(saldoInicial || 0);
+  let sincronizandoMovimentosBaixados = false;
 
-    const { data: existentes, error: errBusca } = await supabase
-      .from('movimentacoes')
-      .select('id')
-      .eq('conta_id', contaId)
-      .eq('user_id', STATE.user.id)
-      .eq('descricao', 'Saldo inicial');
+  async function syncMovimentacoesBaixadasSemExtrato() {
+    if (sincronizandoMovimentosBaixados || !STATE.user?.id) return;
+    sincronizandoMovimentosBaixados = true;
 
-    if (errBusca) throw errBusca;
+    try {
+      const [receitasResp, despesasResp] = await Promise.all([
+        supabase
+          .from('receitas')
+          .select('id,conta_id,descricao,valor,data_baixa')
+          .eq('user_id', STATE.user.id)
+          .eq('baixado', true)
+          .not('conta_id', 'is', null),
+        supabase
+          .from('despesas')
+          .select('id,conta_id,descricao,valor,data_baixa')
+          .eq('user_id', STATE.user.id)
+          .eq('baixado', true)
+          .not('conta_id', 'is', null)
+      ]);
 
-    const movimentos = existentes || [];
+      if (receitasResp.error) throw receitasResp.error;
+      if (despesasResp.error) throw despesasResp.error;
 
-    if (saldo === 0) {
-      if (movimentos.length > 0) {
-        const { error } = await supabase
-          .from('movimentacoes')
-          .delete()
-          .in('id', movimentos.map(m => m.id))
-          .eq('user_id', STATE.user.id);
-        if (error) throw error;
-      }
-      return;
-    }
+      const baixados = [
+        ...(receitasResp.data || []).map(item => ({ ...item, tipo_mov: 'credito' })),
+        ...(despesasResp.data || []).map(item => ({ ...item, tipo_mov: 'debito' }))
+      ].filter(item => item.id && item.conta_id && item.data_baixa);
 
-    if (movimentos.length === 0) {
-      const { error } = await supabase.from('movimentacoes').insert([{
-        id: uid(),
-        user_id: STATE.user.id,
-        conta_id: contaId,
-        tipo: 'credito',
-        valor: saldo,
-        data: dataSaldo,
-        descricao: 'Saldo inicial'
-      }]);
-      if (error) throw error;
-      return;
-    }
+      if (baixados.length === 0) return;
 
-    const [principal, ...duplicados] = movimentos;
-
-    const { error: errUpdate } = await supabase
-      .from('movimentacoes')
-      .update({
-        tipo: 'credito',
-        valor: saldo,
-        data: dataSaldo,
-        descricao: 'Saldo inicial'
-      })
-      .eq('id', principal.id)
-      .eq('user_id', STATE.user.id);
-
-    if (errUpdate) throw errUpdate;
-
-    if (duplicados.length > 0) {
-      const { error: errDelete } = await supabase
+      const ids = baixados.map(item => item.id);
+      const { data: movs, error: errMovs } = await supabase
         .from('movimentacoes')
-        .delete()
-        .in('id', duplicados.map(m => m.id))
-        .eq('user_id', STATE.user.id);
+        .select('lancamento_id')
+        .eq('user_id', STATE.user.id)
+        .in('lancamento_id', ids);
 
-      if (errDelete) throw errDelete;
+      if (errMovs) throw errMovs;
+
+      const idsComMovimento = new Set((movs || []).map(m => m.lancamento_id).filter(Boolean));
+      const faltantes = baixados.filter(item => !idsComMovimento.has(item.id));
+
+      if (faltantes.length === 0) return;
+
+      const { error: errInsert } = await supabase
+        .from('movimentacoes')
+        .insert(faltantes.map(item => ({
+          id: uid(),
+          user_id: STATE.user.id,
+          conta_id: item.conta_id,
+          tipo: item.tipo_mov,
+          valor: Number(item.valor || 0),
+          descricao: item.descricao || (item.tipo_mov === 'credito' ? 'Recebimento' : 'Pagamento'),
+          data: item.data_baixa,
+          lancamento_id: item.id
+        })));
+
+      if (errInsert && errInsert.code !== '23505') throw errInsert;
+    } catch (e) {
+      console.error('syncMovimentacoesBaixadasSemExtrato', e);
+    } finally {
+      sincronizandoMovimentosBaixados = false;
     }
   }
 
@@ -1494,14 +1496,11 @@ if (!editId && !hasPremiumAccess() && STATE.contas.length >= 2) {
     agencia: conta.agencia,
     numero_conta: conta.numero_conta,
     gerente: conta.gerente,
-    contato: conta.contato,
-    saldo_inicial: conta.saldo_inicial,
-    data_saldo: conta.data_saldo
+    contato: conta.contato
   })
   .eq("id", editId)
   .eq("user_id", STATE.user.id);
 
-      await syncSaldoInicialMovimento(editId, conta.saldo_inicial, conta.data_saldo);
       await ContasService.recalc(editId);
 
       delete btnSave.dataset.editId;
@@ -1545,6 +1544,12 @@ if (!editId && !hasPremiumAccess() && STATE.contas.length >= 2) {
         const custom = pL.value === 'personalizado';
         $(IDS.dataInicioLanc).classList.toggle('hidden', !custom);
         $(IDS.dataFimLanc).classList.toggle('hidden', !custom);
+        App.refreshLancamentos();
+      });
+
+      const contaLanc = $(IDS.selectContas);
+      if (contaLanc) contaLanc.addEventListener('change', () => {
+        App.refreshLancamentos();
       });
 
      
@@ -2501,9 +2506,9 @@ function abrirModalEditarConta(conta) {
   document.getElementById("modal-conta-saldo").value = conta.saldo_inicial || 0;
   document.getElementById("modal-conta-data").value = conta.data_saldo || "";
 
-  // permite corrigir saldo inicial quando a conta cadastrada ficou inconsistente
-  document.getElementById("modal-conta-saldo").disabled = false;
-  document.getElementById("modal-conta-data").disabled = false;
+  // saldo inicial é a base histórica da conta e não deve ser alterado na edição comum
+  document.getElementById("modal-conta-saldo").disabled = true;
+  document.getElementById("modal-conta-data").disabled = true;
 
   // 🔓 Libera os demais campos
   document.getElementById("modal-conta-nome").disabled = false;
@@ -2940,8 +2945,8 @@ showScreen(name) {
       LANC_INIT = true;
     }
 
-    renderMesLanc(); // 🔥 só atualiza o label
-    // ❌ NÃO chama refresh aqui
+    renderMesLanc();
+    this.refreshLancamentos();
   }
 
   // =========================// CONTAS// =========================
@@ -2978,6 +2983,7 @@ if (name === 'contas') {
     payload => {
       console.debug('realtime mov', payload);
       this.refreshLancamentos();
+      this.reloadCatsContas();
     }
   )
   .subscribe();
@@ -3002,6 +3008,7 @@ if (name === 'contas') {
       await Promise.all([ CategoriasService.load(), ContasService.load() ]);
       await ContasService.applyComputedBalances();
       UI.populateSelects();
+      UI.renderContasCards();
     },
 
     async refreshLancamentos() {
