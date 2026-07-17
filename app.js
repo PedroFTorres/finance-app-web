@@ -793,6 +793,72 @@ if (emailEl) {
     return saldo;
   }
 
+  async function syncSaldoInicialMovimento(contaId, saldoInicial, dataSaldo) {
+    const saldo = Number(saldoInicial || 0);
+
+    const { data: existentes, error: errBusca } = await supabase
+      .from('movimentacoes')
+      .select('id')
+      .eq('conta_id', contaId)
+      .eq('user_id', STATE.user.id)
+      .eq('descricao', 'Saldo inicial');
+
+    if (errBusca) throw errBusca;
+
+    const movimentos = existentes || [];
+
+    if (saldo === 0) {
+      if (movimentos.length > 0) {
+        const { error } = await supabase
+          .from('movimentacoes')
+          .delete()
+          .in('id', movimentos.map(m => m.id))
+          .eq('user_id', STATE.user.id);
+        if (error) throw error;
+      }
+      return;
+    }
+
+    if (movimentos.length === 0) {
+      const { error } = await supabase.from('movimentacoes').insert([{
+        id: uid(),
+        user_id: STATE.user.id,
+        conta_id: contaId,
+        tipo: 'credito',
+        valor: saldo,
+        data: dataSaldo,
+        descricao: 'Saldo inicial'
+      }]);
+      if (error) throw error;
+      return;
+    }
+
+    const [principal, ...duplicados] = movimentos;
+
+    const { error: errUpdate } = await supabase
+      .from('movimentacoes')
+      .update({
+        tipo: 'credito',
+        valor: saldo,
+        data: dataSaldo,
+        descricao: 'Saldo inicial'
+      })
+      .eq('id', principal.id)
+      .eq('user_id', STATE.user.id);
+
+    if (errUpdate) throw errUpdate;
+
+    if (duplicados.length > 0) {
+      const { error: errDelete } = await supabase
+        .from('movimentacoes')
+        .delete()
+        .in('id', duplicados.map(m => m.id))
+        .eq('user_id', STATE.user.id);
+
+      if (errDelete) throw errDelete;
+    }
+  }
+
 const CategoriasService = {
   async load() {
     try {
@@ -1396,12 +1462,12 @@ const UI = {
 
    if (btnSave) {
   btnSave.addEventListener("click", async function () {
+    const editId = btnSave.dataset.editId;
      // 🔥 BLOQUEIO PLANO FREE
-if (!hasPremiumAccess() && STATE.contas.length >= 2) {
+if (!editId && !hasPremiumAccess() && STATE.contas.length >= 2) {
   goToUpgrade("Plano Free permite até 2 contas.");
   return;
 }
-    const editId = btnSave.dataset.editId;
     const bankCode = document.getElementById("modal-conta-banco")?.value || "";
 
     const conta = {
@@ -1428,11 +1494,15 @@ if (!hasPremiumAccess() && STATE.contas.length >= 2) {
     agencia: conta.agencia,
     numero_conta: conta.numero_conta,
     gerente: conta.gerente,
-    contato: conta.contato
+    contato: conta.contato,
+    saldo_inicial: conta.saldo_inicial,
+    data_saldo: conta.data_saldo
   })
   .eq("id", editId)
   .eq("user_id", STATE.user.id);
 
+      await syncSaldoInicialMovimento(editId, conta.saldo_inicial, conta.data_saldo);
+      await ContasService.recalc(editId);
 
       delete btnSave.dataset.editId;
 
@@ -2431,9 +2501,9 @@ function abrirModalEditarConta(conta) {
   document.getElementById("modal-conta-saldo").value = conta.saldo_inicial || 0;
   document.getElementById("modal-conta-data").value = conta.data_saldo || "";
 
-  // 🔒 BLOQUEIA SOMENTE SALDO E DATA
-  document.getElementById("modal-conta-saldo").disabled = true;
-  document.getElementById("modal-conta-data").disabled = true;
+  // permite corrigir saldo inicial quando a conta cadastrada ficou inconsistente
+  document.getElementById("modal-conta-saldo").disabled = false;
+  document.getElementById("modal-conta-data").disabled = false;
 
   // 🔓 Libera os demais campos
   document.getElementById("modal-conta-nome").disabled = false;
