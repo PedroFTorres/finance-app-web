@@ -3301,6 +3301,7 @@ if (modoPeriodoExtrato === "custom") {
   const tr = document.createElement("tr");
 
   const tdAcoes = document.createElement("td");
+  tdAcoes.className = "extrato-actions-cell";
 
   // 🔥 AÇÃO EXCLUSIVA PARA TRANSFERÊNCIA
   if (m.transferencia_id) {
@@ -3318,23 +3319,24 @@ if (modoPeriodoExtrato === "custom") {
   const movementClass = m.tipo === "credito" ? "extrato-credito" : "extrato-debito";
   tr.appendChild(createTextElement(
     "td",
-    new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR")
+    new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR"),
+    "extrato-date-cell"
   ));
-  tr.appendChild(createTextElement("td", m.descricao));
+  tr.appendChild(createTextElement("td", m.descricao, "extrato-description-cell"));
   tr.appendChild(createTextElement(
     "td",
     m.tipo === "credito" ? "Crédito" : "Débito",
-    movementClass
+    `${movementClass} extrato-type-cell`
   ));
   tr.appendChild(createTextElement(
     "td",
     Number(m.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
-    movementClass
+    `${movementClass} extrato-money-cell`
   ));
   tr.appendChild(createTextElement(
     "td",
     saldo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
-    saldo >= 0 ? "extrato-saldo-positivo" : "extrato-saldo-negativo"
+    `${saldo >= 0 ? "extrato-saldo-positivo" : "extrato-saldo-negativo"} extrato-money-cell`
   ));
 
   tr.appendChild(tdAcoes);

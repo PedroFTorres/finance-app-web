@@ -518,29 +518,152 @@ button:hover { opacity: .9; }
 /* ============================================================= EXTRATO ============================================================= */
 
 .table-wrap {
-  margin-top: 20px;
+  margin-top: 28px;
   overflow-x: auto;
+  border: 1px solid #eee9fb;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(54, 38, 104, 0.06);
 }
 
 #table-extrato {
   width: 100%;
-  border-collapse: collapse;
-  background: var(--panel);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
+  min-width: 940px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  font-size: 15px;
 }
 
 #table-extrato th {
-  background: var(--roxo-claro);
-  padding: 12px;
-  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f4efff;
+  color: #3a2b72;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e4dcfb;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .04em;
   text-align: left;
+  text-transform: uppercase;
 }
 
 #table-extrato td {
-  padding: 12px;
-  border-bottom: 1px solid #eee;
+  padding: 18px;
+  border-bottom: 1px solid #f0eef6;
+  color: #292b39;
+  font-size: 15px;
+  line-height: 1.35;
+  vertical-align: middle;
+}
+
+#table-extrato tbody tr {
+  transition: background .16s ease, box-shadow .16s ease;
+}
+
+#table-extrato tbody tr:hover {
+  background: #fbf9ff;
+}
+
+#table-extrato tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+#table-extrato th:nth-child(1),
+#table-extrato td:nth-child(1) {
+  width: 130px;
+}
+
+#table-extrato th:nth-child(3),
+#table-extrato td:nth-child(3) {
+  width: 130px;
+}
+
+#table-extrato th:nth-child(4),
+#table-extrato td:nth-child(4),
+#table-extrato th:nth-child(5),
+#table-extrato td:nth-child(5) {
+  width: 150px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+#table-extrato th:nth-child(6),
+#table-extrato td:nth-child(6) {
+  width: 132px;
+  text-align: right;
+}
+
+.extrato-date-cell {
+  color: #4b3da3 !important;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.extrato-description-cell {
+  color: #242433 !important;
+  font-weight: 650;
+}
+
+.extrato-type-cell {
+  text-align: left !important;
+}
+
+.extrato-type-cell::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 999px;
+  vertical-align: 1px;
+  background: currentColor;
+}
+
+.extrato-money-cell {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+}
+
+.extrato-actions-cell .btn-danger {
+  min-width: 86px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.extrato-totals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.extrato-totals p {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid #eee9fb;
+  border-radius: 14px;
+  background: #fbfaff;
+  color: #7b748c;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.extrato-totals span {
+  display: block;
+  margin-top: 6px;
+  color: #2f2463;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.extrato-totals p:last-child {
+  background: #f1edff;
+  border-color: #d7ccff;
 }
 
 /* ============================================================= LOGIN PAGE ============================================================= */
@@ -707,25 +830,31 @@ button:hover { opacity: .9; }
 /* Crédito (verde) */
 .extrato-credito {
   color: #1da83a;
-  font-weight: 600;
+  font-weight: 800;
 }
 
 /* Débito (vermelho) */
 .extrato-debito {
   color: #d93025;
-  font-weight: 600;
+  font-weight: 800;
 }
 
 /* Saldo positivo */
 .extrato-saldo-positivo {
   color: #1da83a;
-  font-weight: 600;
+  font-weight: 800;
 }
 
 /* Saldo negativo */
 .extrato-saldo-negativo {
   color: #d93025;
-  font-weight: 600;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .extrato-totals {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 /* ===================================================== MODAL — IMPLEMENTAÇÃO FINAL E ESTÁVEL ===================================================== */
