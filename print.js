@@ -1,4 +1,4 @@
-// print.js — versão que limpa colunas de ação antes de imprimir
+// print.js — relatórios de impressão/PDF
 
 function cloneAndStripActions(selectorTable) {
   const original = document.querySelector(selectorTable);
@@ -41,16 +41,128 @@ function cloneAndStripActions(selectorTable) {
   return clone.outerHTML;
 }
 
+function escapeHTML(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatDateBR(value) {
+  if (!value) return "-";
+  const [year, month, day] = String(value).split("-");
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year}`;
+}
+
+function getSelectedExtratoContaInfo() {
+  const select = document.querySelector("#select-contas-extrato");
+  const option = select?.selectedOptions?.[0];
+  if (!option) return null;
+
+  return {
+    nome: option.dataset.nome || option.textContent || "-",
+    banco: option.dataset.banco || "-",
+    agencia: option.dataset.agencia || "-",
+    conta: option.dataset.conta || "-",
+    tipoConta: option.dataset.tipoConta || "-",
+    saldoInicial: option.dataset.saldoInicial || "-",
+    dataSaldo: option.dataset.dataSaldo || "",
+    saldoAtual: option.dataset.saldoAtual || "-"
+  };
+}
+
+function buildExtratoInfoHTML() {
+  const conta = getSelectedExtratoContaInfo();
+  const extrato = document.querySelector("#tab-extrato");
+  const inicio = extrato?.dataset.inicio || "";
+  const fim = extrato?.dataset.fim || "";
+  const periodo = inicio || fim
+    ? `${formatDateBR(inicio)} a ${formatDateBR(fim)}`
+    : (document.querySelector("#extrato-mes-label")?.textContent || "-");
+
+  if (!conta) {
+    return `
+      <section class="print-info-grid">
+        <div><span>Período</span><strong>${escapeHTML(periodo)}</strong></div>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="print-account-card">
+      <div>
+        <span>Conta</span>
+        <strong>${escapeHTML(conta.nome)}</strong>
+      </div>
+      <div>
+        <span>Banco</span>
+        <strong>${escapeHTML(conta.banco)}</strong>
+      </div>
+      <div>
+        <span>Agência</span>
+        <strong>${escapeHTML(conta.agencia)}</strong>
+      </div>
+      <div>
+        <span>Número da conta</span>
+        <strong>${escapeHTML(conta.conta)}</strong>
+      </div>
+      <div>
+        <span>Tipo</span>
+        <strong>${escapeHTML(conta.tipoConta || "-")}</strong>
+      </div>
+      <div>
+        <span>Período</span>
+        <strong>${escapeHTML(periodo)}</strong>
+      </div>
+      <div>
+        <span>Saldo inicial cadastrado</span>
+        <strong>${escapeHTML(conta.saldoInicial)}</strong>
+      </div>
+      <div>
+        <span>Data do saldo</span>
+        <strong>${escapeHTML(formatDateBR(conta.dataSaldo))}</strong>
+      </div>
+    </section>
+  `;
+}
+
+function buildExtratoResumoHTML() {
+  const extrato = document.querySelector("#tab-extrato");
+  const saldoAnterior = extrato?.dataset.saldoAnterior || "-";
+  const totalReceitas = extrato?.dataset.totalReceitas || document.querySelector("#total-receitas-extrato")?.textContent || "-";
+  const totalDespesas = extrato?.dataset.totalDespesas || document.querySelector("#total-despesas-extrato")?.textContent || "-";
+  const saldoPeriodo = extrato?.dataset.saldoPeriodo || document.querySelector("#saldo-periodo-extrato")?.textContent || "-";
+  const saldoFinal = extrato?.dataset.saldoFinal || document.querySelector("#saldo-atual-conta-extrato")?.textContent || "-";
+
+  return `
+    <section class="print-summary-grid">
+      <div><span>Saldo anterior</span><strong>${escapeHTML(saldoAnterior)}</strong></div>
+      <div><span>Total receitas</span><strong>${escapeHTML(totalReceitas)}</strong></div>
+      <div><span>Total despesas</span><strong>${escapeHTML(totalDespesas)}</strong></div>
+      <div><span>Saldo do período</span><strong>${escapeHTML(saldoPeriodo)}</strong></div>
+      <div><span>Saldo final</span><strong>${escapeHTML(saldoFinal)}</strong></div>
+    </section>
+  `;
+}
+
 function gerarPDF(tipo) {
     let titulo = "";
     let conteudoHTML = "";
 
     if (tipo === "extrato") {
         titulo = "Extrato da Conta";
-        // usa a função que clona e remove ações
         const tabelaLimpa = cloneAndStripActions("#table-extrato");
-        const totals = document.querySelector(".extrato-totals")?.outerHTML || "";
-        conteudoHTML = (tabelaLimpa || "<p>Nenhuma informação de extrato encontrada.</p>") + totals;
+        conteudoHTML = `
+          ${buildExtratoInfoHTML()}
+          ${buildExtratoResumoHTML()}
+          <section class="print-section">
+            <h2>Movimentações</h2>
+            ${tabelaLimpa || "<p>Nenhuma movimentação encontrada.</p>"}
+          </section>
+        `;
     }
 
     if (tipo === "receitas") {
@@ -125,4 +237,3 @@ document.addEventListener("DOMContentLoaded", () => {
     const b4 = document.getElementById("btn-print-fatura");
     if (b4) b4.onclick = () => gerarPDF("fatura");
 });
-

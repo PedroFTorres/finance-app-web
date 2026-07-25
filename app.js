@@ -1690,7 +1690,18 @@ if (btnCartao) {
   (STATE.contas || []).forEach(c => {
    const label = contaLabel(c);
     if (selFilter) selFilter.appendChild(new Option(label, c.id));
-    if (selExtr) selExtr.appendChild(new Option(label, c.id));
+    if (selExtr) {
+      const opt = new Option(label, c.id);
+      opt.dataset.nome = c.nome || "";
+      opt.dataset.banco = getBankFromConta(c).name || "";
+      opt.dataset.agencia = c.agencia || "";
+      opt.dataset.conta = c.numero_conta || "";
+      opt.dataset.tipoConta = c.tipo_conta || "";
+      opt.dataset.saldoInicial = fmtMoney(c.saldo_inicial || 0);
+      opt.dataset.dataSaldo = c.data_saldo || "";
+      opt.dataset.saldoAtual = fmtMoney(c.saldo_calculado ?? c.saldo_atual ?? c.saldo_inicial ?? 0);
+      selExtr.appendChild(opt);
+    }
     if (selLista) selLista.appendChild(new Option(label, c.id));
   });
 
@@ -3211,6 +3222,7 @@ if (!selectExtrato) return;
 const conta_id = selectExtrato.value;
 
 if (!conta_id || conta_id === "all") return;
+const extratoTab = document.getElementById("tab-extrato");
 
     // =========================// EXTRATO — DEFINIÇÃO DE DATAS // =========================
 let inicio, fim;
@@ -3249,6 +3261,7 @@ if (modoPeriodoExtrato === "custom") {
         ? Number(m.valor)
         : -Number(m.valor);
     });
+    const saldoAnterior = saldo;
 
     // =========================// MOVIMENTAÇÕES DO PERÍODO// =========================
      
@@ -3345,6 +3358,31 @@ if (modoPeriodoExtrato === "custom") {
         style: "currency",
         currency: "BRL"
       });
+
+    if (extratoTab) {
+      extratoTab.dataset.inicio = inicio || "";
+      extratoTab.dataset.fim = fim || "";
+      extratoTab.dataset.saldoAnterior = saldoAnterior.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      });
+      extratoTab.dataset.totalReceitas = totalCred.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      });
+      extratoTab.dataset.totalDespesas = totalDeb.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      });
+      extratoTab.dataset.saldoPeriodo = (totalCred - totalDeb).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      });
+      extratoTab.dataset.saldoFinal = saldo.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      });
+    }
 
   } catch (e) {
     console.error("renderExtrato", e);

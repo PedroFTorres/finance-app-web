@@ -1,41 +1,122 @@
 body {
   font-family: "Inter", sans-serif;
   background: #ffffff;
-  padding: 32px;
-  color: #333;
+  padding: 28px;
+  color: #202434;
+  font-size: 12px;
 }
 
 .print-header {
   text-align: center;
-  margin-bottom: 25px;
+  margin-bottom: 18px;
+  border-bottom: 2px solid #7a4dff;
+  padding-bottom: 14px;
 }
 
 .print-logo {
-  width: 140px;
+  width: 118px;
   margin-bottom: 8px;
 }
 
 h1 {
   color: #7a4dff;
   margin: 0;
+  font-size: 22px;
+}
+
+h2 {
+  color: #31245f;
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+
+.meta {
+  color: #6b7280;
+  margin: 6px 0 0;
+}
+
+.print-account-card,
+.print-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.print-account-card div,
+.print-summary-grid div {
+  border: 1px solid #e6e1f7;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+.print-account-card span,
+.print-summary-grid span {
+  display: block;
+  color: #6b7280;
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.print-account-card strong,
+.print-summary-grid strong {
+  display: block;
+  color: #202434;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.print-summary-grid {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.print-section {
+  margin-top: 16px;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
+  margin-top: 8px;
+  font-size: 11px;
 }
 
 th {
-  background: #efe9ff;
-  padding: 10px;
+  background: #f1edff;
+  color: #31245f;
+  padding: 8px;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  border: 1px solid #ded7f5;
 }
 
 td {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
+  padding: 7px 8px;
+  border: 1px solid #eeeeee;
+  background: #ffffff;
+}
+
+tbody tr:nth-child(even),
+tbody tr:nth-child(odd) {
+  background: #ffffff;
+}
+
+.extrato-credito,
+.extrato-saldo-positivo {
+  color: #138a35;
+  font-weight: 700;
+}
+
+.extrato-debito,
+.extrato-saldo-negativo {
+  color: #c62828;
+  font-weight: 700;
+}
+
+.extrato-totals {
+  display: none;
 }
 
 ul {
@@ -46,4 +127,27 @@ ul {
 ul li {
   padding: 10px;
   border-bottom: 1px solid #eee;
+}
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  body {
+    padding: 0;
+  }
+
+  .print-account-card,
+  .print-summary-grid {
+    break-inside: avoid;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
 }
