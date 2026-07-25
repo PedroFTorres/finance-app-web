@@ -57,6 +57,251 @@ function formatDateBR(value) {
   return `${day}/${month}/${year}`;
 }
 
+function buildPrintStyles() {
+  return `
+    <style>
+      :root {
+        --brand: #7c4dff;
+        --brand-dark: #2f2463;
+        --ink: #232634;
+        --muted: #6f7280;
+        --line: #e8e3f6;
+        --soft: #faf8ff;
+        --soft-strong: #f1ecff;
+        --green: #15803d;
+        --red: #c62828;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #f7f7fb;
+        color: var(--ink);
+        font-family: Inter, Arial, Helvetica, sans-serif;
+        font-size: 12px;
+      }
+
+      .report-page {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 24px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .print-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid var(--line);
+      }
+
+      .print-logo {
+        display: block;
+        width: 118px;
+        height: auto;
+        margin-bottom: 10px;
+      }
+
+      h1 {
+        margin: 0;
+        color: var(--brand);
+        font-size: 26px;
+        line-height: 1.1;
+      }
+
+      .meta {
+        min-width: 190px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+        text-align: right;
+      }
+
+      .meta strong {
+        display: block;
+        color: var(--brand-dark);
+        font-size: 13px;
+      }
+
+      .print-account-card {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr 1fr 1fr;
+        gap: 10px;
+        margin: 0 0 12px;
+      }
+
+      .print-account-card > div,
+      .print-summary-grid > div {
+        min-height: 56px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--soft);
+      }
+
+      .print-account-card > div:first-child {
+        grid-column: span 2;
+      }
+
+      .print-account-card span,
+      .print-summary-grid span {
+        display: block;
+        margin-bottom: 4px;
+        color: #85808f;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .04em;
+        line-height: 1.2;
+        text-transform: uppercase;
+      }
+
+      .print-account-card strong,
+      .print-summary-grid strong {
+        display: block;
+        color: var(--ink);
+        font-size: 13px;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+
+      .print-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        margin: 0 0 18px;
+      }
+
+      .print-summary-grid > div:last-child {
+        background: var(--soft-strong);
+        border-color: #cfc2ff;
+      }
+
+      .print-section {
+        margin-top: 18px;
+      }
+
+      .section-title-row {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 8px;
+      }
+
+      h2 {
+        margin: 0;
+        color: var(--brand-dark);
+        font-size: 17px;
+        line-height: 1.2;
+      }
+
+      .movement-count {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+
+      thead th {
+        padding: 9px 10px;
+        border-top: 1px solid #ded7f5;
+        border-bottom: 1px solid #ded7f5;
+        background: var(--soft-strong);
+        color: var(--brand-dark);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .03em;
+        text-align: left;
+        text-transform: uppercase;
+      }
+
+      tbody td {
+        padding: 9px 10px;
+        border-bottom: 1px solid #ececf2;
+        background: #fff !important;
+        vertical-align: top;
+      }
+
+      tbody tr:nth-child(even),
+      tbody tr:nth-child(odd) {
+        background: #fff !important;
+      }
+
+      th:nth-child(4),
+      th:nth-child(5),
+      td:nth-child(4),
+      td:nth-child(5) {
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .extrato-credito,
+      .extrato-saldo-positivo {
+        color: var(--green);
+        font-weight: 800;
+      }
+
+      .extrato-debito,
+      .extrato-saldo-negativo {
+        color: var(--red);
+        font-weight: 800;
+      }
+
+      .report-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 18px;
+        padding-top: 10px;
+        border-top: 1px solid var(--line);
+        color: #8a8497;
+        font-size: 10px;
+      }
+
+      @media print {
+        @page {
+          size: A4;
+          margin: 10mm;
+        }
+
+        body {
+          padding: 0;
+          background: #fff;
+        }
+
+        .report-page {
+          max-width: none;
+          padding: 0;
+          border: 0;
+          border-radius: 0;
+        }
+
+        .print-header,
+        .print-account-card,
+        .print-summary-grid,
+        tr {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  `;
+}
+
 function getSelectedExtratoContaInfo() {
   const select = document.querySelector("#select-contas-extrato");
   const option = select?.selectedOptions?.[0];
@@ -155,11 +400,15 @@ function gerarPDF(tipo) {
     if (tipo === "extrato") {
         titulo = "Extrato da Conta";
         const tabelaLimpa = cloneAndStripActions("#table-extrato");
+        const movimentoCount = document.querySelectorAll("#table-extrato tbody tr").length;
         conteudoHTML = `
           ${buildExtratoInfoHTML()}
           ${buildExtratoResumoHTML()}
           <section class="print-section">
-            <h2>Movimentações</h2>
+            <div class="section-title-row">
+              <h2>Movimentações</h2>
+              <span class="movement-count">${movimentoCount} movimento(s)</span>
+            </div>
             ${tabelaLimpa || "<p>Nenhuma movimentação encontrada.</p>"}
           </section>
         `;
@@ -198,22 +447,34 @@ function gerarPDF(tipo) {
     }
 
     const win = window.open("", "_blank");
+    const geradoEm = new Date().toLocaleString("pt-BR");
     win.document.write(`
         <html>
         <head>
             <meta charset="utf-8" />
-            <title>${titulo}</title>
-            <link rel="stylesheet" href="print.css">
+            <title>${escapeHTML(titulo)}</title>
+            ${buildPrintStyles()}
         </head>
         <body>
-            <div class="print-header">
-                <img src="logo-arolix.png" class="print-logo" alt="logo">
-                <h1>${titulo}</h1>
-                <p class="meta">Gerado em: ${new Date().toLocaleString("pt-BR")}</p>
-            </div>
-            <div class="print-content">
-                ${conteudoHTML}
-            </div>
+            <main class="report-page">
+                <header class="print-header">
+                    <div>
+                        <img src="logo-arolix.png" class="print-logo" alt="Arolix">
+                        <h1>${escapeHTML(titulo)}</h1>
+                    </div>
+                    <p class="meta">
+                        Gerado em
+                        <strong>${escapeHTML(geradoEm)}</strong>
+                    </p>
+                </header>
+                <div class="print-content">
+                    ${conteudoHTML}
+                </div>
+                <footer class="report-footer">
+                    <span>Arolix Finance</span>
+                    <span>Documento para conferência interna</span>
+                </footer>
+            </main>
         </body>
         </html>
     `);
