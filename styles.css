@@ -519,120 +519,146 @@ button:hover { opacity: .9; }
 
 .table-wrap {
   margin-top: 28px;
-  overflow-x: auto;
-  border: 1px solid #eee9fb;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 10px 28px rgba(54, 38, 104, 0.06);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 #table-extrato {
+  display: block;
   width: 100%;
-  min-width: 940px;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: #fff;
-  font-size: 15px;
+  min-width: 0;
+  border-collapse: collapse;
+  background: transparent;
 }
 
-#table-extrato th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: #f4efff;
-  color: #3a2b72;
-  padding: 16px 18px;
-  border-bottom: 1px solid #e4dcfb;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .04em;
-  text-align: left;
-  text-transform: uppercase;
+#table-extrato thead {
+  display: none;
+}
+
+#table-extrato tbody {
+  display: grid;
+  gap: 12px;
 }
 
 #table-extrato td {
-  padding: 18px;
-  border-bottom: 1px solid #f0eef6;
+  display: block;
+  padding: 0;
+  border: 0;
   color: #292b39;
-  font-size: 15px;
   line-height: 1.35;
-  vertical-align: middle;
 }
 
 #table-extrato tbody tr {
-  transition: background .16s ease, box-shadow .16s ease;
+  display: grid;
+  grid-template-columns: 132px minmax(260px, 1fr) 120px 155px 155px 104px;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 20px;
+  border: 1px solid #eee9fb;
+  border-left: 5px solid #d8cdfd;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(54, 38, 104, 0.06);
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
 }
 
 #table-extrato tbody tr:hover {
-  background: #fbf9ff;
+  border-color: #d7ccff;
+  box-shadow: 0 14px 32px rgba(54, 38, 104, 0.1);
+  transform: translateY(-1px);
+}
+
+#table-extrato tbody tr.extrato-row-credito {
+  border-left-color: #22c55e;
+}
+
+#table-extrato tbody tr.extrato-row-debito {
+  border-left-color: #ef4444;
 }
 
 #table-extrato tbody tr:last-child td {
   border-bottom: 0;
 }
 
-#table-extrato th:nth-child(1),
-#table-extrato td:nth-child(1) {
-  width: 130px;
+#table-extrato td[data-label]::before {
+  content: attr(data-label);
+  display: block;
+  margin-bottom: 4px;
+  color: #9189a4;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
-#table-extrato th:nth-child(3),
-#table-extrato td:nth-child(3) {
-  width: 130px;
-}
-
-#table-extrato th:nth-child(4),
-#table-extrato td:nth-child(4),
-#table-extrato th:nth-child(5),
-#table-extrato td:nth-child(5) {
-  width: 150px;
-  text-align: right;
-  white-space: nowrap;
-}
-
-#table-extrato th:nth-child(6),
-#table-extrato td:nth-child(6) {
-  width: 132px;
-  text-align: right;
+.extrato-date-cell::before,
+.extrato-description-cell::before,
+.extrato-type-cell::before {
+  display: none !important;
+  content: none !important;
 }
 
 .extrato-date-cell {
   color: #4b3da3 !important;
+  font-size: 15px !important;
   font-weight: 800;
   white-space: nowrap;
 }
 
 .extrato-description-cell {
   color: #242433 !important;
-  font-weight: 650;
+  font-size: 17px !important;
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
 .extrato-type-cell {
+  justify-self: start;
+  width: fit-content;
+  padding: 7px 11px !important;
+  border-radius: 999px !important;
+  background: #f6f3ff;
+  font-size: 13px !important;
+  font-weight: 800 !important;
   text-align: left !important;
 }
 
 .extrato-type-cell::before {
+  content: none !important;
+}
+
+.extrato-type-cell::after {
   content: "";
   display: inline-block;
   width: 8px;
   height: 8px;
-  margin-right: 8px;
+  margin-left: 8px;
   border-radius: 999px;
-  vertical-align: 1px;
+  vertical-align: 0;
   background: currentColor;
 }
 
 .extrato-money-cell {
-  font-size: 15px !important;
+  font-size: 16px !important;
   font-weight: 800 !important;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .extrato-actions-cell .btn-danger {
-  min-width: 86px;
-  padding: 10px 14px;
+  min-width: 82px;
+  padding: 10px 12px;
   border-radius: 12px;
   font-size: 14px;
   font-weight: 800;
+}
+
+.extrato-actions-cell:empty::before {
+  content: "";
 }
 
 .extrato-totals {
@@ -852,6 +878,19 @@ button:hover { opacity: .9; }
 }
 
 @media (max-width: 900px) {
+  #table-extrato tbody tr {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .extrato-money-cell {
+    text-align: left;
+  }
+
+  .extrato-actions-cell {
+    text-align: left;
+  }
+
   .extrato-totals {
     grid-template-columns: 1fr 1fr;
   }

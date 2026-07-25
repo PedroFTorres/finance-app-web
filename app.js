@@ -3299,6 +3299,7 @@ if (modoPeriodoExtrato === "custom") {
   }
 
   const tr = document.createElement("tr");
+  tr.className = m.tipo === "credito" ? "extrato-row-credito" : "extrato-row-debito";
 
   const tdAcoes = document.createElement("td");
   tdAcoes.className = "extrato-actions-cell";
@@ -3317,27 +3318,39 @@ if (modoPeriodoExtrato === "custom") {
   }
 
   const movementClass = m.tipo === "credito" ? "extrato-credito" : "extrato-debito";
-  tr.appendChild(createTextElement(
+  const tdData = createTextElement(
     "td",
     new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR"),
     "extrato-date-cell"
-  ));
-  tr.appendChild(createTextElement("td", m.descricao, "extrato-description-cell"));
-  tr.appendChild(createTextElement(
+  );
+  const tdDescricao = createTextElement("td", m.descricao, "extrato-description-cell");
+  const tdTipo = createTextElement(
     "td",
     m.tipo === "credito" ? "Crédito" : "Débito",
     `${movementClass} extrato-type-cell`
-  ));
-  tr.appendChild(createTextElement(
+  );
+  const tdValor = createTextElement(
     "td",
     Number(m.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
     `${movementClass} extrato-money-cell`
-  ));
-  tr.appendChild(createTextElement(
+  );
+  const tdSaldo = createTextElement(
     "td",
     saldo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
     `${saldo >= 0 ? "extrato-saldo-positivo" : "extrato-saldo-negativo"} extrato-money-cell`
-  ));
+  );
+
+  tdData.dataset.label = "Data";
+  tdDescricao.dataset.label = "Descrição";
+  tdTipo.dataset.label = "Tipo";
+  tdValor.dataset.label = "Valor";
+  tdSaldo.dataset.label = "Saldo";
+
+  tr.appendChild(tdData);
+  tr.appendChild(tdDescricao);
+  tr.appendChild(tdTipo);
+  tr.appendChild(tdValor);
+  tr.appendChild(tdSaldo);
 
   tr.appendChild(tdAcoes);
   tbody.appendChild(tr);
