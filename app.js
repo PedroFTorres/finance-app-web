@@ -2683,9 +2683,21 @@ function abrirModalEditarConta(conta) {
 
   function chartMoneyTooltip(context) {
     if (context.dataset?.metaVazio) return 'Sem dados no período';
-    const label = context.label || context.dataset?.label || '';
     const value = context.parsed?.x ?? context.parsed?.y ?? context.parsed ?? 0;
-    return `${label}: ${fmtMoney(value)}`;
+    return `Valor: ${fmtMoney(value)}`;
+  }
+
+  function chartCategoryTitle(items) {
+    const item = items?.[0];
+    return item?.chart?.data?.labels?.[item.dataIndex] || '';
+  }
+
+  function ajustarAlturaGraficoCategoria(canvas, serie) {
+    if (!canvas) return;
+    const totalCategorias = serie.vazio ? 1 : serie.labels.length;
+    const altura = Math.max(340, totalCategorias * 42 + 72);
+    canvas.style.setProperty('height', `${altura}px`, 'important');
+    canvas.parentElement?.style.setProperty('min-height', `${altura + 92}px`);
   }
 
   function barCategoryOptions(serie) {
@@ -2698,7 +2710,17 @@ function abrirModalEditarConta(conta) {
       },
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: chartMoneyTooltip } }
+        tooltip: {
+          callbacks: {
+            title: chartCategoryTitle,
+            label: chartMoneyTooltip
+          }
+        }
+      },
+      interaction: {
+        mode: 'nearest',
+        axis: 'y',
+        intersect: true
       },
       scales: {
         x: {
@@ -2811,6 +2833,7 @@ function abrirModalEditarConta(conta) {
       const serie = prepararSerieGrafico(agruparPorCategoria(dados.receitas));
       const ctx = document.getElementById(IDS.chartRecCat);
       if (!ctx || !window.Chart) return;
+      ajustarAlturaGraficoCategoria(ctx, serie);
       try { if (STATE.charts.recCat) STATE.charts.recCat.destroy(); } catch (e) {}
       STATE.charts.recCat = new Chart(ctx, {
         type: 'bar',
@@ -2829,6 +2852,7 @@ function abrirModalEditarConta(conta) {
       const serie = prepararSerieGrafico(agruparPorCategoria(baseCategorias));
       const ctx = document.getElementById(IDS.chartDesCat);
       if (!ctx || !window.Chart) return;
+      ajustarAlturaGraficoCategoria(ctx, serie);
       try { if (STATE.charts.desCat) STATE.charts.desCat.destroy(); } catch (e) {}
       STATE.charts.desCat = new Chart(ctx, {
         type: 'bar',
