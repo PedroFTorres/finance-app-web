@@ -2068,6 +2068,12 @@ if (item.transferencia_id) {
   if (saveBtn) {
     delete saveBtn.dataset.edit;
     delete saveBtn.dataset.editId;
+    delete saveBtn.dataset.editTipo;
+    delete saveBtn.dataset.baixado;
+    delete saveBtn.dataset.baixaParcial;
+    delete saveBtn.dataset.editScope;
+    delete saveBtn.dataset.recorrenciaId;
+    delete saveBtn.dataset.dataBase;
     saveBtn.textContent = 'Salvar';
   }
 
@@ -2198,6 +2204,9 @@ openModalEditSemEscopo(item, tipo) {
   const saveBtn = $(IDS.modalSave);
   saveBtn.dataset.edit = 'true';
   saveBtn.dataset.editId = item.id;
+  saveBtn.dataset.editTipo = tipo;
+  saveBtn.dataset.baixado = item.baixado === true ? 'true' : 'false';
+  saveBtn.dataset.baixaParcial = item.baixa_parcial === true ? 'true' : 'false';
   saveBtn.textContent = 'Salvar alteração';
 
   // =========================// BOTÃO EXCLUIR // =========================
@@ -2244,7 +2253,17 @@ openModalEditSemEscopo(item, tipo) {
     closeAddModal() {
       const modal = $(IDS.modalAdd); if (!modal) return;
       modal.classList.add('hidden'); modal.setAttribute('aria-hidden','true');
-      const saveBtn = $(IDS.modalSave); if (saveBtn) { delete saveBtn.dataset.edit; delete saveBtn.dataset.editId; saveBtn.textContent = 'Salvar'; }
+      const saveBtn = $(IDS.modalSave); if (saveBtn) {
+        delete saveBtn.dataset.edit;
+        delete saveBtn.dataset.editId;
+        delete saveBtn.dataset.editTipo;
+        delete saveBtn.dataset.baixado;
+        delete saveBtn.dataset.baixaParcial;
+        delete saveBtn.dataset.editScope;
+        delete saveBtn.dataset.recorrenciaId;
+        delete saveBtn.dataset.dataBase;
+        saveBtn.textContent = 'Salvar';
+      }
     },
      abrirModalBaixa(tipo, lancamento) {
   BAIXA_ATUAL = { tipo, lancamento };
@@ -2379,6 +2398,12 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
   const dataBase = saveBtn.dataset.dataBase;
 
   const tabelaLanc = tipo === "receita" ? "receitas" : "despesas";
+  const isBaixaParcial = saveBtn.dataset.baixaParcial === 'true';
+
+  if (isBaixaParcial) {
+    alert('Baixa parcial não possui categoria própria para editar. Edite a categoria do lançamento original.');
+    return;
+  }
 
   const patchBase = {
     descricao,
@@ -2389,26 +2414,36 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
 
   // 1️⃣ Atualiza lançamento(s)
   if (escopo === 'one' || !recorrenciaId) {
-    await supabase
+    const { data: updatedLanc, error: errUpdateLanc } = await supabase
       .from(tabelaLanc)
       .update({ ...patchBase, data })
       .eq('id', editId)
-      .eq('user_id', STATE.user.id);
+      .eq('user_id', STATE.user.id)
+      .select('id, baixado')
+      .maybeSingle();
+
+    if (errUpdateLanc) throw errUpdateLanc;
+    if (!updatedLanc) {
+      alert('Não encontrei o lançamento original para salvar a categoria.');
+      return;
+    }
 
   } else if (escopo === 'next') {
-    await supabase
+    const { error: errUpdateLanc } = await supabase
       .from(tabelaLanc)
       .update(patchBase)
       .eq('recorrencia_id', recorrenciaId)
       .eq('user_id', STATE.user.id)
       .gte('data', dataBase);
+    if (errUpdateLanc) throw errUpdateLanc;
 
   } else if (escopo === 'all') {
-    await supabase
+    const { error: errUpdateLanc } = await supabase
       .from(tabelaLanc)
       .update(patchBase)
       .eq('recorrencia_id', recorrenciaId)
       .eq('user_id', STATE.user.id);
+    if (errUpdateLanc) throw errUpdateLanc;
   }
 
   // ==================================================// 🔄 SINCRONIZA EXTRATO (SOMENTE SE FOR "ONE")// ==================================================
@@ -2430,7 +2465,7 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
         .maybeSingle();
 
      if (mov) {
-  await supabase
+  const { error: errUpdateMov } = await supabase
     .from('movimentacoes')
     .update({
       descricao,
@@ -2440,6 +2475,7 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
     })
     .eq('id', mov.id)
     .eq('user_id', STATE.user.id);
+  if (errUpdateMov) throw errUpdateMov;
 }
     }
   }
@@ -2637,15 +2673,10 @@ function abrirModalEditarConta(conta) {
       };
     }
 
-    const top = itens.slice(0, 7);
-    const restante = itens.slice(7).reduce((s, [, valor]) => s + Number(valor || 0), 0);
-
-    if (restante > 0) top.push(['Outros', restante]);
-
     return {
-      labels: top.map(([label]) => label),
-      values: top.map(([, valor]) => Number(Number(valor || 0).toFixed(2))),
-      colors: top.map((_, i) => DASH_COLORS[i % DASH_COLORS.length]),
+      labels: itens.map(([label]) => label),
+      values: itens.map(([, valor]) => Number(Number(valor || 0).toFixed(2))),
+      colors: itens.map((_, i) => DASH_COLORS[i % DASH_COLORS.length]),
       vazio: false
     };
   }
