@@ -2687,77 +2687,55 @@ function abrirModalEditarConta(conta) {
     return `Valor: ${fmtMoney(value)}`;
   }
 
-  function chartCategoryTitle(items) {
-    const item = items?.[0];
-    return item?.chart?.data?.labels?.[item.dataIndex] || '';
-  }
+  function renderCategoryBars(containerId, serie) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
-  function ajustarAlturaGraficoCategoria(canvas, serie) {
-    if (!canvas) return;
-    const totalCategorias = serie.vazio ? 1 : serie.labels.length;
-    const altura = Math.max(340, totalCategorias * 42 + 72);
-    canvas.style.setProperty('height', `${altura}px`, 'important');
-    canvas.parentElement?.style.setProperty('min-height', `${altura + 92}px`);
-  }
+    container.innerHTML = '';
 
-  function barCategoryOptions(serie) {
-    return {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: {
-        padding: { top: 8, right: 18, bottom: 4, left: 4 }
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            title: chartCategoryTitle,
-            label: chartMoneyTooltip
-          }
-        }
-      },
-      interaction: {
-        mode: 'nearest',
-        axis: 'y',
-        intersect: true
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          ticks: {
-            color: '#7b748c',
-            callback: value => fmtMoney(Number(value)).replace('R$', 'R$ ')
-          },
-          grid: { color: '#f0edf8' },
-          border: { display: false }
-        },
-        y: {
-          ticks: {
-            color: '#2f2463',
-            font: { weight: 700, size: 12 }
-          },
-          grid: { display: false },
-          border: { display: false }
-        }
-      },
-      animation: serie.vazio ? false : { duration: 500 }
-    };
-  }
+    if (serie.vazio) {
+      container.classList.add('category-bars-empty');
+      container.innerHTML = '<p>Sem dados no período</p>';
+      return;
+    }
 
-  function buildCategoryBarDataset(label, serie) {
-    return {
-      label,
-      data: serie.values,
-      backgroundColor: serie.vazio ? '#e5e7eb' : serie.colors.map(color => `${color}dd`),
-      borderColor: serie.vazio ? '#e5e7eb' : serie.colors,
-      borderWidth: 1,
-      borderRadius: 8,
-      borderSkipped: false,
-      barThickness: 18,
-      maxBarThickness: 22,
-      metaVazio: serie.vazio
-    };
+    container.classList.remove('category-bars-empty');
+    const max = Math.max(...serie.values.map(v => Math.abs(Number(v || 0))), 1);
+
+    serie.labels.forEach((label, index) => {
+      const value = Number(serie.values[index] || 0);
+      const percent = Math.max((Math.abs(value) / max) * 100, 2);
+      const color = serie.colors[index % serie.colors.length] || '#7a4dff';
+
+      const row = document.createElement('div');
+      row.className = 'category-bar-row';
+      row.title = `${label}: ${fmtMoney(value)}`;
+
+      const top = document.createElement('div');
+      top.className = 'category-bar-top';
+
+      const name = document.createElement('span');
+      name.className = 'category-bar-label';
+      name.textContent = label;
+
+      const amount = document.createElement('strong');
+      amount.className = 'category-bar-value';
+      amount.textContent = fmtMoney(value);
+
+      top.append(name, amount);
+
+      const track = document.createElement('div');
+      track.className = 'category-bar-track';
+
+      const fill = document.createElement('div');
+      fill.className = 'category-bar-fill';
+      fill.style.width = `${percent}%`;
+      fill.style.background = `linear-gradient(90deg, ${color}, ${color}cc)`;
+
+      track.appendChild(fill);
+      row.append(top, track);
+      container.appendChild(row);
+    });
   }
 
   async function carregarDadosDashboard(inicio, fim) {
@@ -2831,18 +2809,9 @@ function abrirModalEditarConta(conta) {
   function drawReceitasPorCategoria(dados) {
     try {
       const serie = prepararSerieGrafico(agruparPorCategoria(dados.receitas));
-      const ctx = document.getElementById(IDS.chartRecCat);
-      if (!ctx || !window.Chart) return;
-      ajustarAlturaGraficoCategoria(ctx, serie);
       try { if (STATE.charts.recCat) STATE.charts.recCat.destroy(); } catch (e) {}
-      STATE.charts.recCat = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: serie.labels,
-          datasets: [buildCategoryBarDataset('Receitas', serie)]
-        },
-        options: barCategoryOptions(serie)
-      });
+      STATE.charts.recCat = null;
+      renderCategoryBars(IDS.chartRecCat, serie);
     } catch (e) { console.error('drawReceitasPorCategoria', e); }
   }
 
@@ -2850,18 +2819,9 @@ function abrirModalEditarConta(conta) {
     try {
       const baseCategorias = dados.despesasCategoriasGerenciais || dados.despesasComPrevisao;
       const serie = prepararSerieGrafico(agruparPorCategoria(baseCategorias));
-      const ctx = document.getElementById(IDS.chartDesCat);
-      if (!ctx || !window.Chart) return;
-      ajustarAlturaGraficoCategoria(ctx, serie);
       try { if (STATE.charts.desCat) STATE.charts.desCat.destroy(); } catch (e) {}
-      STATE.charts.desCat = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: serie.labels,
-          datasets: [buildCategoryBarDataset('Despesas', serie)]
-        },
-        options: barCategoryOptions(serie)
-      });
+      STATE.charts.desCat = null;
+      renderCategoryBars(IDS.chartDesCat, serie);
     } catch (e) { console.error('drawDespesasPorCategoria', e); }
   }
 
