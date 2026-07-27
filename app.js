@@ -2684,8 +2684,58 @@ function abrirModalEditarConta(conta) {
   function chartMoneyTooltip(context) {
     if (context.dataset?.metaVazio) return 'Sem dados no período';
     const label = context.label || context.dataset?.label || '';
-    const value = context.parsed?.y ?? context.parsed ?? 0;
+    const value = context.parsed?.x ?? context.parsed?.y ?? context.parsed ?? 0;
     return `${label}: ${fmtMoney(value)}`;
+  }
+
+  function barCategoryOptions(serie) {
+    return {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: { top: 8, right: 18, bottom: 4, left: 4 }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: chartMoneyTooltip } }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            color: '#7b748c',
+            callback: value => fmtMoney(Number(value)).replace('R$', 'R$ ')
+          },
+          grid: { color: '#f0edf8' },
+          border: { display: false }
+        },
+        y: {
+          ticks: {
+            color: '#2f2463',
+            font: { weight: 700, size: 12 }
+          },
+          grid: { display: false },
+          border: { display: false }
+        }
+      },
+      animation: serie.vazio ? false : { duration: 500 }
+    };
+  }
+
+  function buildCategoryBarDataset(label, serie) {
+    return {
+      label,
+      data: serie.values,
+      backgroundColor: serie.vazio ? '#e5e7eb' : serie.colors.map(color => `${color}dd`),
+      borderColor: serie.vazio ? '#e5e7eb' : serie.colors,
+      borderWidth: 1,
+      borderRadius: 8,
+      borderSkipped: false,
+      barThickness: 18,
+      maxBarThickness: 22,
+      metaVazio: serie.vazio
+    };
   }
 
   async function carregarDadosDashboard(inicio, fim) {
@@ -2763,27 +2813,12 @@ function abrirModalEditarConta(conta) {
       if (!ctx || !window.Chart) return;
       try { if (STATE.charts.recCat) STATE.charts.recCat.destroy(); } catch (e) {}
       STATE.charts.recCat = new Chart(ctx, {
-        type: 'doughnut',
+        type: 'bar',
         data: {
           labels: serie.labels,
-          datasets: [{
-            label: 'Receitas',
-            data: serie.values,
-            backgroundColor: serie.colors,
-            borderColor: '#ffffff',
-            borderWidth: 3,
-            metaVazio: serie.vazio
-          }]
+          datasets: [buildCategoryBarDataset('Receitas', serie)]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '62%',
-          plugins: {
-            legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
-            tooltip: { callbacks: { label: chartMoneyTooltip } }
-          }
-        }
+        options: barCategoryOptions(serie)
       });
     } catch (e) { console.error('drawReceitasPorCategoria', e); }
   }
@@ -2796,27 +2831,12 @@ function abrirModalEditarConta(conta) {
       if (!ctx || !window.Chart) return;
       try { if (STATE.charts.desCat) STATE.charts.desCat.destroy(); } catch (e) {}
       STATE.charts.desCat = new Chart(ctx, {
-        type: 'doughnut',
+        type: 'bar',
         data: {
           labels: serie.labels,
-          datasets: [{
-            label: 'Despesas',
-            data: serie.values,
-            backgroundColor: serie.colors,
-            borderColor: '#ffffff',
-            borderWidth: 3,
-            metaVazio: serie.vazio
-          }]
+          datasets: [buildCategoryBarDataset('Despesas', serie)]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '62%',
-          plugins: {
-            legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
-            tooltip: { callbacks: { label: chartMoneyTooltip } }
-          }
-        }
+        options: barCategoryOptions(serie)
       });
     } catch (e) { console.error('drawDespesasPorCategoria', e); }
   }
