@@ -2577,6 +2577,52 @@ function abrirModalEditarConta(conta) {
     return grupos;
   }
 
+  function isDespesaTecnicaCartao(item) {
+    return Boolean(item?.cartao_fatura_id || item?.provisorio_cartao || item?.cartao_pagamento_parcial);
+  }
+
+  function isCompraCartaoGerencial(item) {
+    const valor = Number(item?.valor || 0);
+    const tipo = String(item?.tipo || '').toLowerCase();
+    const descricao = String(item?.descricao || '').toLowerCase();
+
+    if (valor <= 0) return false;
+    if (tipo === 'pagamento') return false;
+    if (descricao.includes('pagamento parcial da fatura')) return false;
+    if (descricao.startsWith('antecipação') || descricao.startsWith('antecipacao')) return false;
+
+    return true;
+  }
+
+  async function fetchComprasCartaoPorCategoria(inicio, fim) {
+    try {
+      const { data, error } = await supabase
+        .from('cartao_lancamentos')
+        .select('id, descricao, valor, data_fatura, categoria_id, tipo, cartao_id')
+        .eq('user_id', STATE.user.id)
+        .gte('data_fatura', inicio)
+        .lte('data_fatura', fim)
+        .order('data_fatura', { ascending: true });
+
+      if (error) throw error;
+
+      return (data || [])
+        .filter(isCompraCartaoGerencial)
+        .map(item => ({
+          id: `cartao-categoria-${item.id}`,
+          descricao: item.descricao || 'Compra no cartão',
+          valor: Number(item.valor || 0),
+          data: item.data_fatura,
+          categoria_id: item.categoria_id || null,
+          origem_categoria: 'cartao_lancamento',
+          cartao_id: item.cartao_id
+        }));
+    } catch (e) {
+      console.error('fetchComprasCartaoPorCategoria', e);
+      return [];
+    }
+  }
+
   function prepararSerieGrafico(grupos) {
     const itens = Object.entries(grupos || {})
       .filter(([, valor]) => Math.abs(Number(valor || 0)) > 0.009)
@@ -2613,7 +2659,15 @@ function abrirModalEditarConta(conta) {
 
   async function carregarDadosDashboard(inicio, fim) {
     try {
-      const resumo = await calcularResumoFinanceiroPeriodo({ conta_id: 'all', inicio, fim });
+      const [resumo, comprasCartaoCategorias] = await Promise.all([
+        calcularResumoFinanceiroPeriodo({ conta_id: 'all', inicio, fim }),
+        fetchComprasCartaoPorCategoria(inicio, fim)
+      ]);
+
+      const despesasCategoriasGerenciais = [
+        ...(resumo.despesasComPrevisao || []).filter(item => !isDespesaTecnicaCartao(item)),
+        ...(comprasCartaoCategorias || [])
+      ];
 
       return {
         inicio,
@@ -2624,6 +2678,8 @@ function abrirModalEditarConta(conta) {
         despesasBaixadas: resumo.despesasPagas,
         previsoesCartao: resumo.cartoesAbertos,
         despesasComPrevisao: resumo.despesasComPrevisao,
+        comprasCartaoCategorias,
+        despesasCategoriasGerenciais,
         totalReceitas: resumo.totalReceitas,
         totalDespesas: resumo.totalDespesas,
         totalRecebido: resumo.totalRecebido,
@@ -2644,6 +2700,8 @@ function abrirModalEditarConta(conta) {
         despesas: [],
         previsoesCartao: [],
         despesasComPrevisao: [],
+        comprasCartaoCategorias: [],
+        despesasCategoriasGerenciais: [],
         totalReceitas: 0,
         totalDespesas: 0,
         totalRecebido: 0,
@@ -2701,7 +2759,8 @@ function abrirModalEditarConta(conta) {
 
   function drawDespesasPorCategoria(dados) {
     try {
-      const serie = prepararSerieGrafico(agruparPorCategoria(dados.despesasComPrevisao));
+      const baseCategorias = dados.despesasCategoriasGerenciais || dados.despesasComPrevisao;
+      const serie = prepararSerieGrafico(agruparPorCategoria(baseCategorias));
       const ctx = document.getElementById(IDS.chartDesCat);
       if (!ctx || !window.Chart) return;
       try { if (STATE.charts.desCat) STATE.charts.desCat.destroy(); } catch (e) {}
