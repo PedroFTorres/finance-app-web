@@ -1232,14 +1232,18 @@ const CategoriasService = {
 
         return faturas.map(fatura => {
           const despesa = despesasPorFatura.get(fatura.id);
-          const valorMovimentos = (lancamentosCartao || [])
+          if (despesa?.baixado === true) return null;
+
+          const movimentosDaFatura = (lancamentosCartao || [])
             .filter(l => {
               if (l.cartao_id !== fatura.cartao_id || !l.data_fatura) return false;
               const data = new Date(`${l.data_fatura}T00:00:00`);
               return data.getFullYear() === Number(fatura.ano) && data.getMonth() + 1 === Number(fatura.mes);
-            })
-            .reduce((s, l) => s + Number(l.valor || 0), 0);
-          const valorBase = Number(valorMovimentos || despesa?.valor || fatura.valor_total || 0);
+            });
+          const valorMovimentos = movimentosDaFatura.reduce((s, l) => s + Number(l.valor || 0), 0);
+          const valorBase = despesa
+            ? Number(despesa.valor || 0)
+            : Number(movimentosDaFatura.length ? valorMovimentos : fatura.valor_total || 0);
           const nomeCartao = cartoesPorId.get(fatura.cartao_id)?.nome || 'Cartão';
 
           return {
@@ -1260,7 +1264,7 @@ const CategoriasService = {
             movimentos: 1,
             categoria_nome: 'Cartão de crédito transportado'
           };
-        }).filter(item => Math.abs(Number(item.valor || 0)) > 0.009);
+        }).filter(item => item && Math.abs(Number(item.valor || 0)) > 0.009);
       } catch (e) {
         console.error('LancService.fetchCartoesTransportados', e);
         return [];
