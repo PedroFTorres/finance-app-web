@@ -132,6 +132,7 @@ let FILTRO_LANCAMENTOS = "pendencias";
     dashInvestAplicado: 'dash-invest-aplicado',
     dashInvestResgatado: 'dash-invest-resgatado',
     dashInvestLiquido: 'dash-invest-liquido',
+    dashPendenciasAlert: 'dashboard-pendencias-alert',
 
     // contas (tabs)
     btnAddConta: 'btn-add-conta',
@@ -933,6 +934,36 @@ const CategoriasService = {
         return [];
       }
     },
+    async fetchTransportados(tipo, conta_id = 'all', inicio) {
+      try {
+        const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
+        let q = supabase
+          .from(tabela)
+          .select('*')
+          .eq('user_id', STATE.user.id)
+          .neq('baixado', true)
+          .lt('data', inicio)
+          .order('data', { ascending: true });
+
+        if (conta_id && conta_id !== 'all') q = q.eq('conta_id', conta_id);
+
+        const { data, error } = await q;
+        if (error) throw error;
+
+        return (data || [])
+          .filter(item => !(tipo === 'despesa' && item.cartao_fatura_id))
+          .map(item => ({
+            ...item,
+            transportado: true,
+            data_original: item.data,
+            data_competencia: inicio,
+            categoria_nome: item.categoria_nome || categoriaNome(item.categoria_id)
+          }));
+      } catch (e) {
+        console.error('LancService.fetchTransportados', e);
+        return [];
+      }
+    },
     async fetchBaixadosComValorReal(tipo, conta_id='all', inicio, fim) {
       try {
         const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
@@ -1153,6 +1184,87 @@ const CategoriasService = {
         console.error('LancService.fetchPrevisoesCartao', e);
         return [];
       }
+    },
+    async fetchCartoesTransportados(conta_id = 'all', inicio) {
+      try {
+        if (conta_id && conta_id !== 'all') return [];
+
+        const { data: faturas, error: errFaturas } = await supabase
+          .from('cartao_faturas')
+          .select('id, cartao_id, mes, ano, status, pago, valor_total, data_vencimento')
+          .eq('user_id', STATE.user.id)
+          .neq('pago', true)
+          .lt('data_vencimento', inicio)
+          .order('data_vencimento', { ascending: true });
+
+        if (errFaturas) throw errFaturas;
+        if (!faturas || faturas.length === 0) return [];
+
+        const faturaIds = faturas.map(f => f.id).filter(Boolean);
+        const cartaoIds = [...new Set(faturas.map(f => f.cartao_id).filter(Boolean))];
+
+        const [{ data: cartoes, error: errCartoes }, { data: despesas, error: errDespesas }, { data: lancamentosCartao, error: errLancCartao }] = await Promise.all([
+          cartaoIds.length
+            ? supabase
+                .from('cartoes_credito')
+                .select('id, nome')
+                .eq('user_id', STATE.user.id)
+                .in('id', cartaoIds)
+            : Promise.resolve({ data: [], error: null }),
+          supabase
+            .from('despesas')
+            .select('id, cartao_fatura_id, valor, baixado')
+            .eq('user_id', STATE.user.id)
+            .in('cartao_fatura_id', faturaIds),
+          supabase
+            .from('cartao_lancamentos')
+            .select('id, cartao_id, valor, data_fatura')
+            .eq('user_id', STATE.user.id)
+            .in('cartao_id', cartaoIds)
+        ]);
+
+        if (errCartoes) throw errCartoes;
+        if (errDespesas) throw errDespesas;
+        if (errLancCartao) throw errLancCartao;
+
+        const cartoesPorId = new Map((cartoes || []).map(c => [c.id, c]));
+        const despesasPorFatura = new Map((despesas || []).map(d => [d.cartao_fatura_id, d]));
+
+        return faturas.map(fatura => {
+          const despesa = despesasPorFatura.get(fatura.id);
+          const valorMovimentos = (lancamentosCartao || [])
+            .filter(l => {
+              if (l.cartao_id !== fatura.cartao_id || !l.data_fatura) return false;
+              const data = new Date(`${l.data_fatura}T00:00:00`);
+              return data.getFullYear() === Number(fatura.ano) && data.getMonth() + 1 === Number(fatura.mes);
+            })
+            .reduce((s, l) => s + Number(l.valor || 0), 0);
+          const valorBase = Number(valorMovimentos || despesa?.valor || fatura.valor_total || 0);
+          const nomeCartao = cartoesPorId.get(fatura.cartao_id)?.nome || 'Cartão';
+
+          return {
+            id: `cartao-transportado-${fatura.id}`,
+            user_id: STATE.user.id,
+            descricao: `Fatura transportada ${nomeCartao} — ${String(fatura.mes).padStart(2, '0')}/${fatura.ano}`,
+            valor: Number(Number(valorBase || 0).toFixed(2)),
+            data: fatura.data_vencimento,
+            baixado: false,
+            provisorio_cartao: true,
+            cartao_transportado: true,
+            transportado: true,
+            data_original: fatura.data_vencimento,
+            data_competencia: inicio,
+            cartao_id: fatura.cartao_id,
+            cartao_fatura_id: fatura.id,
+            nome_cartao: nomeCartao,
+            movimentos: 1,
+            categoria_nome: 'Cartão de crédito transportado'
+          };
+        }).filter(item => Math.abs(Number(item.valor || 0)) > 0.009);
+      } catch (e) {
+        console.error('LancService.fetchCartoesTransportados', e);
+        return [];
+      }
     }
   };
 
@@ -1160,28 +1272,45 @@ const CategoriasService = {
     const [
       receitasPeriodo,
       despesasPeriodo,
+      receitasTransportadas,
+      despesasTransportadas,
       receitasRecebidas,
       despesasPagas,
       receitasParciais,
       despesasParciais,
-      cartoesAbertos
+      cartoesAbertos,
+      cartoesTransportados
     ] = await Promise.all([
       LancService.fetch('receita', conta_id, inicio, fim),
       LancService.fetch('despesa', conta_id, inicio, fim),
+      LancService.fetchTransportados('receita', conta_id, inicio),
+      LancService.fetchTransportados('despesa', conta_id, inicio),
       LancService.fetchBaixadosComValorReal('receita', conta_id, inicio, fim),
       LancService.fetchBaixadosComValorReal('despesa', conta_id, inicio, fim),
       LancService.fetchBaixasParciais('receita', conta_id, inicio, fim),
       LancService.fetchBaixasParciais('despesa', conta_id, inicio, fim),
-      LancService.fetchPrevisoesCartao(conta_id, inicio, fim)
+      LancService.fetchPrevisoesCartao(conta_id, inicio, fim),
+      LancService.fetchCartoesTransportados(conta_id, inicio)
     ]);
 
     const sum = (lista) => (lista || []).reduce((s, item) => s + Number(item.valor || 0), 0);
-    const pendentesReceita = (receitasPeriodo || []).filter(item => item.baixado !== true);
-    const pendentesDespesa = (despesasPeriodo || []).filter(item => item.baixado !== true);
+    const pendentesReceita = [
+      ...(receitasTransportadas || []),
+      ...(receitasPeriodo || []).filter(item => item.baixado !== true)
+    ];
+    const pendentesDespesa = [
+      ...(despesasTransportadas || []),
+      ...(despesasPeriodo || []).filter(item => item.baixado !== true)
+    ];
     const cartoesAbertosLista = (cartoesAbertos || []).map(item => ({
       ...item,
       categoria_nome: item.categoria_nome || 'Cartão de crédito aberto'
     }));
+    const cartoesTransportadosLista = (cartoesTransportados || []).map(item => ({
+      ...item,
+      categoria_nome: item.categoria_nome || 'Cartão de crédito transportado'
+    }));
+    const cartoesPendentesLista = [...cartoesTransportadosLista, ...cartoesAbertosLista];
 
     const receitasRealizadas = [...(receitasRecebidas || []), ...(receitasParciais || [])];
     const despesasRealizadas = [...(despesasPagas || []), ...(despesasParciais || [])];
@@ -1190,7 +1319,10 @@ const CategoriasService = {
     const totalAReceber = sum(pendentesReceita);
     const totalDespesasPendentes = sum(pendentesDespesa);
     const totalCartoesAbertos = sum(cartoesAbertosLista);
-    const totalAPagar = totalDespesasPendentes + totalCartoesAbertos;
+    const totalCartoesTransportados = sum(cartoesTransportadosLista);
+    const totalTransportadoReceber = sum(receitasTransportadas);
+    const totalTransportadoPagar = sum(despesasTransportadas) + totalCartoesTransportados;
+    const totalAPagar = totalDespesasPendentes + totalCartoesAbertos + totalCartoesTransportados;
     const investimentosPeriodo = await fetchResumoInvestimentosPeriodo(inicio, fim);
     const saldoRealizado = totalRecebido - totalPago;
     const saldoPendencias = totalAReceber - totalAPagar;
@@ -1203,15 +1335,22 @@ const CategoriasService = {
       despesasPagas: despesasRealizadas,
       receitasParciais: receitasParciais || [],
       despesasParciais: despesasParciais || [],
+      receitasTransportadas: receitasTransportadas || [],
+      despesasTransportadas: despesasTransportadas || [],
+      cartoesTransportados: cartoesTransportadosLista,
       pendentesReceita,
       pendentesDespesa,
       cartoesAbertos: cartoesAbertosLista,
-      despesasComPrevisao: [...(despesasPeriodo || []), ...cartoesAbertosLista],
+      cartoesPendentes: cartoesPendentesLista,
+      despesasComPrevisao: [...(despesasPeriodo || []), ...(despesasTransportadas || []), ...cartoesPendentesLista],
       totalRecebido,
       totalPago,
       totalAReceber,
       totalDespesasPendentes,
       totalCartoesAbertos,
+      totalCartoesTransportados,
+      totalTransportadoReceber,
+      totalTransportadoPagar,
       totalAPagar,
       totalReceitas: totalRecebido + totalAReceber,
       totalDespesas: totalPago + totalAPagar,
@@ -1835,8 +1974,10 @@ renderContasCards() {
 
     // renders the lists of receipts and expenses in the lanc screen
     renderLancamentos({ receitas, despesas, totais }) {
-      const ulR = $(IDS.listReceitas); const ulD = $(IDS.listDespesas);
+      const ulR = $(IDS.listReceitas);
+      const ulD = $(IDS.listDespesas);
       const ulP = document.getElementById("list-pendencias");
+      const usaAgendaPendencias = FILTRO_LANCAMENTOS === "pendencias" || FILTRO_LANCAMENTOS === "transportadas";
       if (ulR) ulR.innerHTML = '';
       if (ulD) ulD.innerHTML = '';
       if (ulP) ulP.innerHTML = '';
@@ -1845,15 +1986,15 @@ renderContasCards() {
 
       (receitas || []).forEach(r => {
         totalR += Number(r.valor || 0);
-        if (ulR && FILTRO_LANCAMENTOS !== "pendencias") ulR.appendChild(UI._createLancItem(r, 'receita'));
+        if (ulR && !usaAgendaPendencias) ulR.appendChild(UI._createLancItem(r, 'receita'));
       });
 
       (despesas || []).forEach(d => {
         totalD += Number(d.valor || 0);
-        if (ulD && FILTRO_LANCAMENTOS !== "pendencias") ulD.appendChild(UI._createLancItem(d, 'despesa'));
+        if (ulD && !usaAgendaPendencias) ulD.appendChild(UI._createLancItem(d, 'despesa'));
       });
 
-      if (ulP && FILTRO_LANCAMENTOS === "pendencias") {
+      if (ulP && usaAgendaPendencias) {
         const pendencias = [
           ...(receitas || []).map(item => ({ ...item, __tipo_lancamento: "receita" })),
           ...(despesas || []).map(item => ({ ...item, __tipo_lancamento: "despesa" }))
@@ -1862,17 +2003,19 @@ renderContasCards() {
         pendencias.forEach(item => {
           ulP.appendChild(UI._createLancItem(item, item.__tipo_lancamento));
         });
-
         if (pendencias.length === 0) {
-          ulP.appendChild(UI._createEmptyLancItem('Nenhuma pendência neste período.'));
+          const mensagem = FILTRO_LANCAMENTOS === "transportadas"
+            ? 'Nenhuma pendência transportada para este período.'
+            : 'Nenhuma pendência neste período.';
+          ulP.appendChild(UI._createEmptyLancItem(mensagem));
         }
       }
 
-      if (ulR && FILTRO_LANCAMENTOS !== "pendencias" && (!receitas || receitas.length === 0)) {
+      if (ulR && !usaAgendaPendencias && (!receitas || receitas.length === 0)) {
         ulR.appendChild(UI._createEmptyLancItem('Nenhuma receita neste filtro.'));
       }
 
-      if (ulD && FILTRO_LANCAMENTOS !== "pendencias" && (!despesas || despesas.length === 0)) {
+      if (ulD && !usaAgendaPendencias && (!despesas || despesas.length === 0)) {
         ulD.appendChild(UI._createEmptyLancItem('Nenhuma despesa neste filtro.'));
       }
 
@@ -1906,7 +2049,10 @@ renderContasCards() {
 
 if (item.provisorio_cartao) {
   li.classList.add("lanc-provisorio-cartao");
-  li.title = "Previsão da fatura aberta. O lançamento real será criado quando a fatura for fechada.";
+  if (item.transportado) li.classList.add("lanc-transportado");
+  li.title = item.transportado
+    ? "Fatura não paga em mês anterior e transportada para este período."
+    : "Previsão da fatura aberta. O lançamento real será criado quando a fatura for fechada.";
 
   left.appendChild(createTextElement("span", fmtDateBR(item.data), "lanc-date"));
 
@@ -1920,7 +2066,7 @@ if (item.provisorio_cartao) {
 
   const badge = document.createElement("span");
   badge.className = "lanc-badge-provisorio";
-  badge.textContent = "Fatura aberta";
+  badge.textContent = item.transportado ? "Transportada" : "Fatura aberta";
 
   const right = document.createElement("div");
   right.className = "lanc-provisorio-info";
@@ -1952,6 +2098,13 @@ meta.appendChild(createTextElement("span", getCategoriaNome(item.categoria_id), 
 const contaNome = getContaNome(item.conta_id);
 if (contaNome) meta.appendChild(createTextElement("span", contaNome, "lanc-chip lanc-chip-muted"));
 meta.appendChild(createTextElement("span", statusLabel, `lanc-chip ${statusClass}`));
+if (item.transportado) {
+  meta.appendChild(createTextElement(
+    "span",
+    `Transportado desde ${fmtDateBR(item.data_original || item.data)}`,
+    "lanc-chip lanc-chip-transportado"
+  ));
+}
 if (ajuste) meta.appendChild(createTextElement("span", ajuste, "lanc-chip lanc-chip-adjust"));
 body.appendChild(meta);
 left.appendChild(body);
@@ -2758,6 +2911,7 @@ function abrirModalEditarConta(conta) {
         receitasBaixadas: resumo.receitasRecebidas,
         despesasBaixadas: resumo.despesasPagas,
         previsoesCartao: resumo.cartoesAbertos,
+        cartoesTransportados: resumo.cartoesTransportados,
         despesasComPrevisao: resumo.despesasComPrevisao,
         comprasCartaoCategorias,
         despesasCategoriasGerenciais,
@@ -2770,7 +2924,9 @@ function abrirModalEditarConta(conta) {
         saldoRealizado: resumo.saldoRealizado,
         saldoDisponivelRealizado: resumo.saldoDisponivelRealizado,
         investimentosPeriodo: resumo.investimentosPeriodo,
-        saldoPrevisto: resumo.saldoPrevisto
+        saldoPrevisto: resumo.saldoPrevisto,
+        totalTransportadoReceber: resumo.totalTransportadoReceber,
+        totalTransportadoPagar: resumo.totalTransportadoPagar
       };
     } catch (e) {
       console.error('carregarDadosDashboard', e);
@@ -2780,6 +2936,7 @@ function abrirModalEditarConta(conta) {
         receitas: [],
         despesas: [],
         previsoesCartao: [],
+        cartoesTransportados: [],
         despesasComPrevisao: [],
         comprasCartaoCategorias: [],
         despesasCategoriasGerenciais: [],
@@ -2801,7 +2958,9 @@ function abrirModalEditarConta(conta) {
           ir: 0,
           netInvestido: 0
         },
-        saldoPrevisto: 0
+        saldoPrevisto: 0,
+        totalTransportadoReceber: 0,
+        totalTransportadoPagar: 0
       };
     }
   }
@@ -2832,6 +2991,23 @@ function abrirModalEditarConta(conta) {
       safeText($(IDS.dashPagar), fmtMoney(dados.totalAPagar));
       safeText($(IDS.dashSaldoAtual), fmtMoney(dados.saldoRealizado));
       safeText($(IDS.dashSaldoPrevisto), fmtMoney(dados.saldoPrevisto));
+
+      const alert = $(IDS.dashPendenciasAlert);
+      const totalTransportadoPagar = Number(dados.totalTransportadoPagar || 0);
+      const totalTransportadoReceber = Number(dados.totalTransportadoReceber || 0);
+      const totalTransportado = totalTransportadoPagar + totalTransportadoReceber;
+      if (alert) {
+        if (totalTransportado > 0.009) {
+          alert.classList.remove('hidden');
+          alert.innerHTML = `
+            <strong>Pendências transportadas</strong>
+            <span>${fmtMoney(totalTransportadoPagar)} a pagar e ${fmtMoney(totalTransportadoReceber)} a receber vieram de meses anteriores.</span>
+          `;
+        } else {
+          alert.classList.add('hidden');
+          alert.innerHTML = '';
+        }
+      }
 
       const ctx = document.getElementById(IDS.chartResumo);
       if (!ctx || !window.Chart) return;
@@ -3158,11 +3334,14 @@ if (!inicio || !fim) {
         setTextById("lanc-resumo-cartao", fmtMoney(resumoPeriodo.totalCartoesAbertos));
 
         setTextById("count-receitas", String(resumoPeriodo.pendentesReceita.length));
-        setTextById("count-despesas", String(resumoPeriodo.pendentesDespesa.length + resumoPeriodo.cartoesAbertos.length));
+        setTextById("count-despesas", String(resumoPeriodo.pendentesDespesa.length + resumoPeriodo.cartoesPendentes.length));
         setTextById("count-recebidos", String(resumoPeriodo.receitasRecebidas.length));
         setTextById("count-pagos", String(resumoPeriodo.despesasPagas.length));
+        setTextById("count-transportadas", String(
+          resumoPeriodo.receitasTransportadas.length + resumoPeriodo.despesasTransportadas.length + resumoPeriodo.cartoesTransportados.length
+        ));
         setTextById("count-pendencias", String(
-          resumoPeriodo.pendentesReceita.length + resumoPeriodo.pendentesDespesa.length + resumoPeriodo.cartoesAbertos.length
+          resumoPeriodo.pendentesReceita.length + resumoPeriodo.pendentesDespesa.length + resumoPeriodo.cartoesPendentes.length
         ));
 
         let r, d;
@@ -3182,12 +3361,9 @@ if (FILTRO_LANCAMENTOS === "pagos" || FILTRO_LANCAMENTOS === "recebidos") {
 
 } else {
 
-  // 🔵 FILTRA PELO VENCIMENTO (COMPORTAMENTO NORMAL)
-  [r, d, previsoesCartao] = await Promise.all([
-    LancService.fetch('receita', conta_id, inicio, fim),
-    LancService.fetch('despesa', conta_id, inicio, fim),
-    LancService.fetchPrevisoesCartao(conta_id, inicio, fim)
-  ]);
+  r = resumoPeriodo.pendentesReceita || [];
+  d = resumoPeriodo.pendentesDespesa || [];
+  previsoesCartao = resumoPeriodo.cartoesPendentes || [];
 }
 
 
@@ -3225,6 +3401,9 @@ const filtrar = (lista, tipo) => {
 
       case "despesas":
         return tipo === "despesa" && !item.baixado;
+
+      case "transportadas":
+        return item.transportado === true;
 
       case "recebidos":
         return tipo === "receita" && item.baixado;
@@ -3264,42 +3443,39 @@ const boxReceitas = document.getElementById("box-receitas");
 const boxDespesas = document.getElementById("box-despesas");
 const boxPendencias = document.getElementById("box-pendencias");
 const listas = document.querySelector(".listas");
+const usaAgendaPendencias = FILTRO_LANCAMENTOS === "pendencias" || FILTRO_LANCAMENTOS === "transportadas";
+const pendenciasTitulo = boxPendencias?.querySelector(".lanc-box-title h3");
+const pendenciasTexto = boxPendencias?.querySelector(".lanc-box-title p");
+
+if (pendenciasTitulo) {
+  pendenciasTitulo.textContent = FILTRO_LANCAMENTOS === "transportadas"
+    ? "Pendências transportadas"
+    : "Agenda de pendências";
+}
+if (pendenciasTexto) {
+  pendenciasTexto.textContent = FILTRO_LANCAMENTOS === "transportadas"
+    ? "Valores vencidos em meses anteriores e considerados neste período."
+    : "Receitas, despesas e faturas abertas em ordem de vencimento.";
+}
 
 if (boxReceitas && boxDespesas && listas) {
-
-  // RESET GERAL (sempre começa limpo)
   if (boxPendencias) boxPendencias.style.display = "none";
   boxReceitas.style.display = "";
   boxDespesas.style.display = "";
   listas.classList.remove("single-column");
 
-  if (FILTRO_LANCAMENTOS === "pendencias") {
+  if (usaAgendaPendencias) {
     if (boxPendencias) boxPendencias.style.display = "";
     boxReceitas.style.display = "none";
     boxDespesas.style.display = "none";
     listas.classList.add("single-column");
-  }
-
-  // ================================// FILTROS QUE MOSTRAM APENAS UM TIPO// ================================
-
-  // Receitas / Recebidos → mostra só receitas
-  else if (
-    FILTRO_LANCAMENTOS === "receitas" ||
-    FILTRO_LANCAMENTOS === "recebidos"
-  ) {
+  } else if (FILTRO_LANCAMENTOS === "receitas" || FILTRO_LANCAMENTOS === "recebidos") {
     boxDespesas.style.display = "none";
     listas.classList.add("single-column");
-  }
-
-  // Despesas / Pagos → mostra só despesas
-  else if (
-    FILTRO_LANCAMENTOS === "despesas" ||
-    FILTRO_LANCAMENTOS === "pagos"
-  ) {
+  } else if (FILTRO_LANCAMENTOS === "despesas" || FILTRO_LANCAMENTOS === "pagos") {
     boxReceitas.style.display = "none";
     listas.classList.add("single-column");
   }
-
 }
 
        } catch (e) {

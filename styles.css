@@ -93,6 +93,32 @@ h1, h2, h3 {
   line-height: 1.4;
 }
 
+.dashboard-carry-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid #fed7aa;
+  border-radius: 14px;
+  background: #fff7ed;
+  color: #7c2d12;
+}
+
+.dashboard-carry-alert strong {
+  color: #9a3412;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.dashboard-carry-alert span {
+  color: #7c2d12;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+}
+
 /* ============================================================= PAINÉIS / BOXES ============================================================= */
 
 .card-panel, .box {
@@ -502,6 +528,11 @@ button:hover { opacity: .9; }
   background: #fff8e1;
   border: 1px dashed #f6b73c;
   color: #5f4700;
+}
+
+.listas li.lanc-transportado {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
 }
 
 .lanc-provisorio-info {
@@ -1371,6 +1402,11 @@ button:hover { opacity: .9; }
 .lanc-chip-adjust {
   background: #fef3c7;
   color: #92400e;
+}
+
+.lanc-chip-transportado {
+  background: #ffedd5;
+  color: #c2410c;
 }
 
 .lanc-value {

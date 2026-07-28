@@ -6,7 +6,7 @@
   <title> Arolix </title>
    <link rel="icon" type="image/png" href="favicon.png">
 
-  <link rel="stylesheet" href="styles.css?v=20260727-5" />
+  <link rel="stylesheet" href="styles.css?v=20260728-1" />
 </head>
 
 <body>
@@ -64,6 +64,8 @@
             <button id="dash-next" class="btn-secondary">▶</button>
           </div>
         </div>
+
+        <div id="dashboard-pendencias-alert" class="dashboard-carry-alert hidden"></div>
 
         <div class="dashboard-kpis">
           <div class="kpi-card kpi-income">
@@ -374,6 +376,7 @@
     <!-- MENU -->
     <aside class="lanc-menu">
       <button data-lanc-tab="pendencias" class="active"><span>Pendências</span><small id="count-pendencias">0</small></button>
+      <button data-lanc-tab="transportadas"><span>Transportadas</span><small id="count-transportadas">0</small></button>
       <button data-lanc-tab="receitas"><span>A receber</span><small id="count-receitas">0</small></button>
       <button data-lanc-tab="despesas"><span>A pagar</span><small id="count-despesas">0</small></button>
       <button data-lanc-tab="recebidos"><span>Recebidos</span><small id="count-recebidos">0</small></button>
@@ -621,7 +624,7 @@
   <script src="config.js"></script>
   <script src="supabase.js"></script>
   <script src="security.js?v=20260702-1"></script>
-  <script src="app.js?v=20260727-5"></script>
+  <script src="app.js?v=20260728-1"></script>
   <script src="secure-summary-client.js"></script>
   <script src="premium-access-client.js?v=20260621-1"></script>
 
