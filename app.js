@@ -950,9 +950,7 @@ const CategoriasService = {
         const { data, error } = await q;
         if (error) throw error;
 
-        return (data || [])
-          .filter(item => !(tipo === 'despesa' && item.cartao_fatura_id))
-          .map(item => ({
+        return (data || []).map(item => ({
             ...item,
             transportado: true,
             data_original: item.data,
@@ -1185,90 +1183,11 @@ const CategoriasService = {
         return [];
       }
     },
-    async fetchCartoesTransportados(conta_id = 'all', inicio) {
-      try {
-        if (conta_id && conta_id !== 'all') return [];
-
-        const { data: faturas, error: errFaturas } = await supabase
-          .from('cartao_faturas')
-          .select('id, cartao_id, mes, ano, status, pago, valor_total, data_vencimento')
-          .eq('user_id', STATE.user.id)
-          .neq('pago', true)
-          .lt('data_vencimento', inicio)
-          .order('data_vencimento', { ascending: true });
-
-        if (errFaturas) throw errFaturas;
-        if (!faturas || faturas.length === 0) return [];
-
-        const faturaIds = faturas.map(f => f.id).filter(Boolean);
-        const cartaoIds = [...new Set(faturas.map(f => f.cartao_id).filter(Boolean))];
-
-        const [{ data: cartoes, error: errCartoes }, { data: despesas, error: errDespesas }, { data: lancamentosCartao, error: errLancCartao }] = await Promise.all([
-          cartaoIds.length
-            ? supabase
-                .from('cartoes_credito')
-                .select('id, nome')
-                .eq('user_id', STATE.user.id)
-                .in('id', cartaoIds)
-            : Promise.resolve({ data: [], error: null }),
-          supabase
-            .from('despesas')
-            .select('id, cartao_fatura_id, valor, baixado')
-            .eq('user_id', STATE.user.id)
-            .in('cartao_fatura_id', faturaIds),
-          supabase
-            .from('cartao_lancamentos')
-            .select('id, cartao_id, valor, data_fatura')
-            .eq('user_id', STATE.user.id)
-            .in('cartao_id', cartaoIds)
-        ]);
-
-        if (errCartoes) throw errCartoes;
-        if (errDespesas) throw errDespesas;
-        if (errLancCartao) throw errLancCartao;
-
-        const cartoesPorId = new Map((cartoes || []).map(c => [c.id, c]));
-        const despesasPorFatura = new Map((despesas || []).map(d => [d.cartao_fatura_id, d]));
-
-        return faturas.map(fatura => {
-          const despesa = despesasPorFatura.get(fatura.id);
-          if (despesa?.baixado === true) return null;
-
-          const movimentosDaFatura = (lancamentosCartao || [])
-            .filter(l => {
-              if (l.cartao_id !== fatura.cartao_id || !l.data_fatura) return false;
-              const data = new Date(`${l.data_fatura}T00:00:00`);
-              return data.getFullYear() === Number(fatura.ano) && data.getMonth() + 1 === Number(fatura.mes);
-            });
-          const valorMovimentos = movimentosDaFatura.reduce((s, l) => s + Number(l.valor || 0), 0);
-          const valorBase = despesa
-            ? Number(despesa.valor || 0)
-            : Number(movimentosDaFatura.length ? valorMovimentos : fatura.valor_total || 0);
-          const nomeCartao = cartoesPorId.get(fatura.cartao_id)?.nome || 'Cartão';
-
-          return {
-            id: `cartao-transportado-${fatura.id}`,
-            user_id: STATE.user.id,
-            descricao: `Fatura transportada ${nomeCartao} — ${String(fatura.mes).padStart(2, '0')}/${fatura.ano}`,
-            valor: Number(Number(valorBase || 0).toFixed(2)),
-            data: fatura.data_vencimento,
-            baixado: false,
-            provisorio_cartao: true,
-            cartao_transportado: true,
-            transportado: true,
-            data_original: fatura.data_vencimento,
-            data_competencia: inicio,
-            cartao_id: fatura.cartao_id,
-            cartao_fatura_id: fatura.id,
-            nome_cartao: nomeCartao,
-            movimentos: 1,
-            categoria_nome: 'Cartão de crédito transportado'
-          };
-        }).filter(item => item && Math.abs(Number(item.valor || 0)) > 0.009);
-      } catch (e) {
-        console.error('LancService.fetchCartoesTransportados', e);
-        return [];
-      }
+    async fetchCartoesTransportados() {
+      // Faturas fechadas já são representadas como despesas em lançamentos.
+      // Transportar direto de cartao_faturas é arriscado porque registros
+      // antigos podem estar sem o campo pago sincronizado.
+      return [];
     }
   };
 
