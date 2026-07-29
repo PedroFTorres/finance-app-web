@@ -1530,6 +1530,42 @@ const CategoriasService = {
     };
   }
 
+  async function sincronizarSaldosContasAuditadas(divergencias) {
+    const contasParaCorrigir = (divergencias || []).filter(conta => conta.id && !conta.ok);
+    if (!contasParaCorrigir.length) {
+      alert('Nenhuma divergência de saldo para corrigir.');
+      return;
+    }
+
+    const mensagem = [
+      `Sincronizar ${contasParaCorrigir.length} saldo(s) de conta pelo extrato?`,
+      '',
+      'Isso atualiza apenas o saldo atual salvo da conta.',
+      'Não altera saldo inicial, lançamentos, movimentações, cartão ou investimentos.'
+    ].join('\n');
+
+    if (!confirm(mensagem)) return;
+
+    try {
+      await Promise.all(contasParaCorrigir.map(conta =>
+        supabase
+          .from('contas_bancarias')
+          .update({ saldo_atual: roundCurrency(conta.saldoCalculado) })
+          .eq('id', conta.id)
+          .eq('user_id', STATE.user.id)
+      ));
+
+      await ContasService.load();
+      UI.renderContasCards();
+      await atualizarDashboardPorMes();
+      await App.renderExtrato();
+      alert('Saldos sincronizados pelo extrato.');
+    } catch (e) {
+      console.error('sincronizarSaldosContasAuditadas', e);
+      alert('Não foi possível sincronizar os saldos agora.');
+    }
+  }
+
   const MovService = {
     async insert(m) {
       try {
@@ -3143,6 +3179,16 @@ function abrirModalEditarConta(conta) {
         details.appendChild(createTextElement('span', `Mais ${divergencias.length - 4} conta(s) com diferença.`));
       }
       contasCard.appendChild(details);
+
+      const actions = document.createElement('div');
+      actions.className = 'dashboard-audit-actions';
+      const syncButton = document.createElement('button');
+      syncButton.type = 'button';
+      syncButton.className = 'btn-secondary dashboard-audit-sync';
+      syncButton.textContent = 'Sincronizar saldos pelo extrato';
+      syncButton.addEventListener('click', () => sincronizarSaldosContasAuditadas(divergencias));
+      actions.appendChild(syncButton);
+      contasCard.appendChild(actions);
     }
 
     grid.appendChild(contasCard);

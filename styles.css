@@ -257,6 +257,20 @@ h1, h2, h3 {
   line-height: 1.35;
 }
 
+.dashboard-audit-actions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 6px;
+}
+
+.dashboard-audit-sync {
+  min-height: 38px;
+  border-color: #fdba74;
+  background: #fff7ed;
+  color: #9a3412;
+  font-weight: 900;
+}
+
 @media (max-width: 760px) {
   .dashboard-audit-header {
     display: grid;
