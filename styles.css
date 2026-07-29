@@ -121,7 +121,7 @@ h1, h2, h3 {
 
 .dashboard-audit {
   margin: 18px 0 24px;
-  padding: 16px;
+  padding: 12px 14px;
   border: 1px solid #e8e2ff;
   border-radius: 16px;
   background: #fff;
@@ -141,6 +141,10 @@ h1, h2, h3 {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  cursor: pointer;
+}
+
+.dashboard-audit:not(.dashboard-audit-collapsed) .dashboard-audit-header {
   margin-bottom: 14px;
 }
 
@@ -190,6 +194,27 @@ h1, h2, h3 {
   color: #5b5470;
   font-size: 13px;
   font-weight: 800;
+}
+
+.dashboard-audit-hint {
+  color: #8b83a0;
+  font-size: 12px;
+}
+
+.dashboard-audit-collapsed .dashboard-audit-header {
+  align-items: center;
+}
+
+.dashboard-audit-collapsed .dashboard-audit-header strong,
+.dashboard-audit-collapsed .dashboard-audit-header small,
+.dashboard-audit-collapsed .dashboard-audit-grid {
+  display: none;
+}
+
+.dashboard-audit-collapsed .dashboard-audit-resume {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .dashboard-audit-grid {

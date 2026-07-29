@@ -3098,9 +3098,12 @@ function abrirModalEditarConta(conta) {
     container.innerHTML = '';
     container.classList.toggle('dashboard-audit-ok', ok);
     container.classList.toggle('dashboard-audit-warn', !ok);
+    container.classList.toggle('dashboard-audit-collapsed', ok);
 
     const header = document.createElement('div');
     header.className = 'dashboard-audit-header';
+    header.setAttribute('role', 'button');
+    header.setAttribute('tabindex', '0');
 
     const title = document.createElement('div');
     title.appendChild(createTextElement('span', ok ? 'Auditoria aprovada' : 'Auditoria com atenção', `dashboard-audit-status ${ok ? 'ok' : 'warn'}`));
@@ -3116,6 +3119,7 @@ function abrirModalEditarConta(conta) {
         ? 'Saldos das contas indisponíveis'
         : `${contas.length} contas conferidas${divergencias.length ? `, ${divergencias.length} divergência(s)` : ''}`
     ));
+    resume.appendChild(createTextElement('span', ok ? 'Clique para ver detalhes' : 'Detalhes abertos para revisão', 'dashboard-audit-hint'));
 
     header.append(title, resume);
     container.appendChild(header);
@@ -3193,6 +3197,17 @@ function abrirModalEditarConta(conta) {
 
     grid.appendChild(contasCard);
     container.appendChild(grid);
+
+    const toggleAudit = () => {
+      container.classList.toggle('dashboard-audit-collapsed');
+    };
+    header.addEventListener('click', toggleAudit);
+    header.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleAudit();
+      }
+    });
   }
 
   function drawResumo(dados) {
