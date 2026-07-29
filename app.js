@@ -1469,7 +1469,156 @@ const CategoriasService = {
     }
   }
 
-  function gerarAuditoriaResumo(resumo, auditoriaContas) {
+  async function fetchAuditoriaCartoesPeriodo(inicio, fim) {
+    try {
+      const inicioDate = new Date(`${inicio}T00:00:00`);
+      const ano = inicioDate.getFullYear();
+      const mes = inicioDate.getMonth() + 1;
+
+      const [
+        { data: faturas, error: errFaturas },
+        { data: lancamentos, error: errLancamentos },
+        { data: despesas, error: errDespesas }
+      ] = await Promise.all([
+        supabase
+          .from('cartao_faturas')
+          .select('id,cartao_id,mes,ano,status,pago,valor_total,data_vencimento,cartoes_credito(nome)')
+          .eq('user_id', STATE.user.id)
+          .eq('ano', ano)
+          .eq('mes', mes),
+        supabase
+          .from('cartao_lancamentos')
+          .select('id,cartao_id,descricao,valor,data_compra,data_fatura,tipo,despesa_id,categoria_id')
+          .eq('user_id', STATE.user.id)
+          .gte('data_fatura', inicio)
+          .lte('data_fatura', fim),
+        supabase
+          .from('despesas')
+          .select('id,descricao,valor,data,data_baixa,baixado,cartao_fatura_id,cartao_pagamento_parcial,categoria_id,conta_id')
+          .eq('user_id', STATE.user.id)
+      ]);
+
+      if (errFaturas || errLancamentos || errDespesas) throw (errFaturas || errLancamentos || errDespesas);
+
+      const faturasLista = faturas || [];
+      const lancamentosLista = lancamentos || [];
+      const despesasLista = despesas || [];
+      const divergencias = [];
+      const alertas = [];
+      const isDateInPeriodo = value => {
+        if (!value) return false;
+        const date = String(value).slice(0, 10);
+        return date >= inicio && date <= fim;
+      };
+      const pagamentosParciaisCartao = lancamentosLista.filter(item =>
+        String(item.tipo || '').toLowerCase() === 'pagamento' ||
+        String(item.descricao || '').toLowerCase().includes('pagamento parcial da fatura')
+      );
+      const despesasParciais = despesasLista.filter(item => item.cartao_pagamento_parcial === true);
+      const despesasParciaisPeriodo = despesasParciais.filter(item => isDateInPeriodo(item.data_baixa || item.data));
+
+      const lancamentosPorFatura = lancamentosLista.reduce((acc, item) => {
+        if (!item.cartao_id || !item.data_fatura) return acc;
+        const dataFatura = new Date(`${item.data_fatura}T00:00:00`);
+        const chave = `${item.cartao_id}:${dataFatura.getFullYear()}-${String(dataFatura.getMonth() + 1).padStart(2, '0')}`;
+        if (!acc[chave]) acc[chave] = [];
+        acc[chave].push(item);
+        return acc;
+      }, {});
+
+      const despesasPorFatura = despesasLista.reduce((acc, item) => {
+        if (!item.cartao_fatura_id) return acc;
+        if (!acc[item.cartao_fatura_id]) acc[item.cartao_fatura_id] = [];
+        acc[item.cartao_fatura_id].push(item);
+        return acc;
+      }, {});
+
+      const partialKey = item => [
+        item.cartao_id || item.conta_id || '',
+        item.data_fatura || item.data_baixa || item.data || '',
+        item.data_compra || item.data_baixa || item.data || '',
+        roundCurrency(Math.abs(Number(item.valor || 0)))
+      ].join('|');
+
+      const pagamentosDuplicados = Object.values(pagamentosParciaisCartao.reduce((acc, item) => {
+        const key = partialKey(item);
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(item);
+        return acc;
+      }, {})).filter(lista => lista.length > 1);
+
+      pagamentosDuplicados.forEach(lista => {
+        divergencias.push(`Pagamento parcial duplicado no cartão: ${lista.length} registros de ${fmtMoney(Math.abs(Number(lista[0].valor || 0)))} em ${fmtDateBR(lista[0].data_compra || lista[0].data_fatura)}.`);
+      });
+
+      const despesasParciaisDuplicadas = Object.values(despesasParciaisPeriodo.reduce((acc, item) => {
+        const key = partialKey(item);
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(item);
+        return acc;
+      }, {})).filter(lista => lista.length > 1);
+
+      despesasParciaisDuplicadas.forEach(lista => {
+        divergencias.push(`Pagamento parcial duplicado em lançamentos: ${lista.length} despesas de ${fmtMoney(lista[0].valor)} em ${fmtDateBR(lista[0].data_baixa || lista[0].data)}.`);
+      });
+
+      pagamentosParciaisCartao.forEach(item => {
+        if (item.despesa_id) return;
+        alertas.push(`Pagamento parcial no cartão sem despesa vinculada: ${fmtMoney(Math.abs(Number(item.valor || 0)))} em ${fmtDateBR(item.data_compra || item.data_fatura)}.`);
+      });
+
+      const comprasSemCategoria = lancamentosLista.filter(item => isCompraCartaoGerencial(item) && !item.categoria_id);
+      if (comprasSemCategoria.length) {
+        alertas.push(`${comprasSemCategoria.length} compra(s) do cartão sem categoria no período.`);
+      }
+
+      const despesasParciaisSemCategoria = despesasParciaisPeriodo.filter(item => !item.categoria_id);
+      if (despesasParciaisSemCategoria.length) {
+        alertas.push(`${despesasParciaisSemCategoria.length} pagamento(s) parcial(is) sem categoria nos lançamentos.`);
+      }
+
+      faturasLista.forEach(fatura => {
+        const nomeCartao = fatura.cartoes_credito?.nome || 'Cartão';
+        const chave = `${fatura.cartao_id}:${fatura.ano}-${String(fatura.mes).padStart(2, '0')}`;
+        const movimentosFatura = lancamentosPorFatura[chave] || [];
+        const totalLiquido = roundCurrency(movimentosFatura.reduce((s, item) => s + Number(item.valor || 0), 0));
+        const valorFatura = roundCurrency(fatura.valor_total || 0);
+        const despesasFatura = despesasPorFatura[fatura.id] || [];
+        const faturaLabel = `${nomeCartao} ${String(fatura.mes).padStart(2, '0')}/${fatura.ano}`;
+
+        if (Math.abs(valorFatura - totalLiquido) > 0.01) {
+          divergencias.push(`${faturaLabel}: valor da fatura ${fmtMoney(valorFatura)} diferente do líquido das compras ${fmtMoney(totalLiquido)}.`);
+        }
+
+        if ((fatura.status === 'fechada' || fatura.pago === true) && despesasFatura.length === 0) {
+          divergencias.push(`${faturaLabel}: fatura fechada/paga sem despesa vinculada.`);
+        }
+
+        if (despesasFatura.length > 1) {
+          divergencias.push(`${faturaLabel}: ${despesasFatura.length} despesas vinculadas para a mesma fatura.`);
+        }
+
+        if (fatura.pago === true && despesasFatura.some(item => item.baixado !== true)) {
+          divergencias.push(`${faturaLabel}: fatura marcada como paga, mas a despesa vinculada não está baixada.`);
+        }
+      });
+
+      return {
+        faturas: faturasLista.length,
+        compras: lancamentosLista.filter(isCompraCartaoGerencial).length,
+        pagamentosParciais: pagamentosParciaisCartao.length,
+        despesasParciais: despesasParciaisPeriodo.length,
+        divergencias,
+        alertas,
+        ok: divergencias.length === 0 && alertas.length === 0
+      };
+    } catch (e) {
+      console.warn('fetchAuditoriaCartoesPeriodo', e);
+      return { faturas: 0, compras: 0, pagamentosParciais: 0, despesasParciais: 0, divergencias: [], alertas: [], erro: true, ok: false };
+    }
+  }
+
+  function gerarAuditoriaResumo(resumo, auditoriaContas, auditoriaCartoes) {
     const investimentoLiquido = Number(resumo.investimentosPeriodo?.netInvestido || 0);
     const saldoPendenciasCalculado = Number(resumo.totalAReceber || 0) - Number(resumo.totalAPagar || 0);
     const saldoDisponivelCalculado = Number(resumo.saldoRealizado || 0) - investimentoLiquido;
@@ -1524,9 +1673,11 @@ const CategoriasService = {
     return {
       checks,
       contas: auditoriaContas || { contas: [], divergencias: [] },
+      cartoes: auditoriaCartoes || { divergencias: [], alertas: [], erro: true, ok: false },
       ok: checks.every(item => item.ok) &&
         !(auditoriaContas?.divergencias || []).length &&
-        !Number(auditoriaContas?.movimentosSemContaValida || 0)
+        !Number(auditoriaContas?.movimentosSemContaValida || 0) &&
+        Boolean(auditoriaCartoes?.ok)
     };
   }
 
@@ -2988,12 +3139,13 @@ function abrirModalEditarConta(conta) {
 
   async function carregarDadosDashboard(inicio, fim) {
     try {
-      const [resumo, comprasCartaoCategorias, auditoriaContas] = await Promise.all([
+      const [resumo, comprasCartaoCategorias, auditoriaContas, auditoriaCartoes] = await Promise.all([
         calcularResumoFinanceiroPeriodo({ conta_id: 'all', inicio, fim }),
         fetchComprasCartaoPorCategoria(inicio, fim),
-        fetchAuditoriaSaldosContas()
+        fetchAuditoriaSaldosContas(),
+        fetchAuditoriaCartoesPeriodo(inicio, fim)
       ]);
-      const auditoria = gerarAuditoriaResumo(resumo, auditoriaContas);
+      const auditoria = gerarAuditoriaResumo(resumo, auditoriaContas, auditoriaCartoes);
 
       const despesasCategoriasGerenciais = [
         ...(resumo.despesasComPrevisao || []).filter(item => !isDespesaTecnicaCartao(item)),
@@ -3059,7 +3211,12 @@ function abrirModalEditarConta(conta) {
         saldoPrevisto: 0,
         totalTransportadoReceber: 0,
         totalTransportadoPagar: 0,
-        auditoria: { checks: [], contas: { contas: [], divergencias: [], erro: true }, ok: false }
+        auditoria: {
+          checks: [],
+          contas: { contas: [], divergencias: [], erro: true },
+          cartoes: { divergencias: [], alertas: [], erro: true, ok: false },
+          ok: false
+        }
       };
     }
   }
@@ -3093,6 +3250,10 @@ function abrirModalEditarConta(conta) {
     const contasComErro = Boolean(auditoria?.contas?.erro);
     const totalMovimentosAuditados = Number(auditoria?.contas?.movimentos || 0);
     const movimentosSemContaValida = Number(auditoria?.contas?.movimentosSemContaValida || 0);
+    const cartoes = auditoria?.cartoes || { divergencias: [], alertas: [], ok: false };
+    const cartoesComErro = Boolean(cartoes.erro);
+    const divergenciasCartoes = cartoes.divergencias || [];
+    const alertasCartoes = cartoes.alertas || [];
     const ok = Boolean(auditoria?.ok);
 
     container.innerHTML = '';
@@ -3118,6 +3279,12 @@ function abrirModalEditarConta(conta) {
       contasComErro
         ? 'Saldos das contas indisponíveis'
         : `${contas.length} contas conferidas${divergencias.length ? `, ${divergencias.length} divergência(s)` : ''}`
+    ));
+    resume.appendChild(createTextElement(
+      'span',
+      cartoesComErro
+        ? 'Cartões indisponíveis'
+        : `${Number(cartoes.faturas || 0)} fatura(s) conferida(s)${divergenciasCartoes.length || alertasCartoes.length ? `, ${divergenciasCartoes.length + alertasCartoes.length} alerta(s)` : ''}`
     ));
     const hint = createTextElement('span', ok ? 'Ver detalhes' : 'Fechar detalhes', 'dashboard-audit-hint');
     resume.appendChild(hint);
@@ -3197,6 +3364,40 @@ function abrirModalEditarConta(conta) {
     }
 
     grid.appendChild(contasCard);
+
+    const cartoesCard = document.createElement('div');
+    const cartoesOk = !cartoesComErro && divergenciasCartoes.length === 0 && alertasCartoes.length === 0;
+    cartoesCard.className = `dashboard-audit-card ${cartoesOk ? 'ok' : 'warn'}`;
+    cartoesCard.appendChild(createTextElement('span', cartoesOk ? 'OK' : 'Revisar', 'dashboard-audit-pill'));
+    cartoesCard.appendChild(createTextElement('strong', 'Cartões e faturas'));
+    cartoesCard.appendChild(createTextElement('small', 'Conferência de faturas, compras e pagamentos parciais.'));
+
+    const cartoesResumo = document.createElement('div');
+    cartoesResumo.className = 'dashboard-audit-values';
+    cartoesResumo.appendChild(createTextElement('span', cartoesComErro ? 'Não foi possível conferir' : `${Number(cartoes.faturas || 0)} fatura(s)`));
+    cartoesResumo.appendChild(createTextElement('span', `${Number(cartoes.compras || 0)} compra(s)`));
+    cartoesResumo.appendChild(createTextElement('span', `${Number(cartoes.pagamentosParciais || 0)} pagamento(s) parcial(is)`));
+    if (divergenciasCartoes.length) {
+      cartoesResumo.appendChild(createTextElement('span', `${divergenciasCartoes.length} divergência(s)`, 'audit-diff'));
+    }
+    cartoesCard.appendChild(cartoesResumo);
+
+    if (divergenciasCartoes.length || alertasCartoes.length || cartoesComErro) {
+      const details = document.createElement('div');
+      details.className = 'dashboard-audit-details';
+      if (cartoesComErro) {
+        details.appendChild(createTextElement('span', 'Não foi possível carregar todos os dados dos cartões para auditoria.'));
+      }
+      const itensExibidos = [...divergenciasCartoes, ...alertasCartoes].slice(0, 4);
+      itensExibidos.forEach(text => details.appendChild(createTextElement('span', text)));
+      const restante = divergenciasCartoes.length + alertasCartoes.length - itensExibidos.length;
+      if (restante > 0) {
+        details.appendChild(createTextElement('span', `Mais ${restante} alerta(s) de cartão.`));
+      }
+      cartoesCard.appendChild(details);
+    }
+
+    grid.appendChild(cartoesCard);
     container.appendChild(grid);
 
     const toggleAudit = () => {
