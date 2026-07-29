@@ -1423,22 +1423,26 @@ const CategoriasService = {
           .eq('user_id', STATE.user.id),
         supabase
           .from('movimentacoes')
-          .select('conta_id,tipo,valor,descricao,data')
+          .select('id,conta_id,tipo,valor,descricao,data')
           .eq('user_id', STATE.user.id)
       ]);
 
       if (errContas || errMovs) throw (errContas || errMovs);
+      const contaIds = new Set((contas || []).map(conta => conta.id));
+      const movsLista = movs || [];
 
-      const movsPorConta = (movs || []).reduce((acc, mov) => {
+      const movsPorConta = movsLista.reduce((acc, mov) => {
         if (!mov.conta_id) return acc;
         if (!acc[mov.conta_id]) acc[mov.conta_id] = [];
         acc[mov.conta_id].push(mov);
         return acc;
       }, {});
+      const movimentosSemContaValida = movsLista.filter(mov => !mov.conta_id || !contaIds.has(mov.conta_id));
 
       const contasAuditadas = (contas || []).map(conta => {
+        const movimentosConta = movsPorConta[conta.id] || [];
         const saldoSistema = roundCurrency(conta.saldo_atual ?? conta.saldo_inicial ?? 0);
-        const saldoCalculado = roundCurrency(computeContaBalance(conta, movsPorConta[conta.id] || []));
+        const saldoCalculado = roundCurrency(computeContaBalance(conta, movimentosConta));
         const diferenca = roundCurrency(saldoSistema - saldoCalculado);
         return {
           id: conta.id,
@@ -1447,13 +1451,17 @@ const CategoriasService = {
           saldoSistema,
           saldoCalculado,
           diferenca,
+          movimentos: movimentosConta.length,
+          semMovimentosComSaldo: movimentosConta.length === 0 && Math.abs(saldoSistema) > 0.01,
           ok: Math.abs(diferenca) <= 0.01
         };
       });
 
       return {
         contas: contasAuditadas,
-        divergencias: contasAuditadas.filter(item => !item.ok)
+        divergencias: contasAuditadas.filter(item => !item.ok),
+        movimentos: movsLista.length,
+        movimentosSemContaValida: movimentosSemContaValida.length
       };
     } catch (e) {
       console.warn('fetchAuditoriaSaldosContas', e);
@@ -1516,7 +1524,9 @@ const CategoriasService = {
     return {
       checks,
       contas: auditoriaContas || { contas: [], divergencias: [] },
-      ok: checks.every(item => item.ok) && !(auditoriaContas?.divergencias || []).length
+      ok: checks.every(item => item.ok) &&
+        !(auditoriaContas?.divergencias || []).length &&
+        !Number(auditoriaContas?.movimentosSemContaValida || 0)
     };
   }
 
@@ -3045,6 +3055,8 @@ function abrirModalEditarConta(conta) {
     const contas = auditoria?.contas?.contas || [];
     const divergencias = auditoria?.contas?.divergencias || [];
     const contasComErro = Boolean(auditoria?.contas?.erro);
+    const totalMovimentosAuditados = Number(auditoria?.contas?.movimentos || 0);
+    const movimentosSemContaValida = Number(auditoria?.contas?.movimentosSemContaValida || 0);
     const ok = Boolean(auditoria?.ok);
 
     container.innerHTML = '';
@@ -3108,16 +3120,23 @@ function abrirModalEditarConta(conta) {
     const contasResumo = document.createElement('div');
     contasResumo.className = 'dashboard-audit-values';
     contasResumo.appendChild(createTextElement('span', contasComErro ? 'Não foi possível conferir' : `${contas.length} conta(s) conferida(s)`));
+    contasResumo.appendChild(createTextElement('span', `${totalMovimentosAuditados} movimento(s) auditado(s)`));
     contasResumo.appendChild(createTextElement('span', `${divergencias.length} divergência(s)`));
+    if (movimentosSemContaValida > 0) {
+      contasResumo.appendChild(createTextElement('span', `${movimentosSemContaValida} movimento(s) sem conta válida`, 'audit-diff'));
+    }
     contasCard.appendChild(contasResumo);
 
     if (divergencias.length) {
       const details = document.createElement('div');
       details.className = 'dashboard-audit-details';
       divergencias.slice(0, 4).forEach(conta => {
+        const origem = conta.semMovimentosComSaldo
+          ? 'nenhum movimento encontrado para esta conta'
+          : `${conta.movimentos} movimento(s) encontrado(s)`;
         details.appendChild(createTextElement(
           'span',
-          `${conta.nome}: sistema ${fmtMoney(conta.saldoSistema)}, extrato ${fmtMoney(conta.saldoCalculado)}, diferença ${fmtMoney(conta.diferenca)}`
+          `${conta.nome}: sistema ${fmtMoney(conta.saldoSistema)}, extrato ${fmtMoney(conta.saldoCalculado)}, diferença ${fmtMoney(conta.diferenca)} (${origem})`
         ));
       });
       if (divergencias.length > 4) {
