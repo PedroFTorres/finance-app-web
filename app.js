@@ -3119,7 +3119,8 @@ function abrirModalEditarConta(conta) {
         ? 'Saldos das contas indisponíveis'
         : `${contas.length} contas conferidas${divergencias.length ? `, ${divergencias.length} divergência(s)` : ''}`
     ));
-    resume.appendChild(createTextElement('span', ok ? 'Clique para ver detalhes' : 'Detalhes abertos para revisão', 'dashboard-audit-hint'));
+    const hint = createTextElement('span', ok ? 'Clique para ver detalhes' : 'Fechar detalhes', 'dashboard-audit-hint');
+    resume.appendChild(hint);
 
     header.append(title, resume);
     container.appendChild(header);
@@ -3200,6 +3201,9 @@ function abrirModalEditarConta(conta) {
 
     const toggleAudit = () => {
       container.classList.toggle('dashboard-audit-collapsed');
+      hint.textContent = container.classList.contains('dashboard-audit-collapsed')
+        ? 'Clique para ver detalhes'
+        : 'Fechar detalhes';
     };
     header.addEventListener('click', toggleAudit);
     header.addEventListener('keydown', event => {
