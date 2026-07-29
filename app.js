@@ -133,6 +133,7 @@ let FILTRO_LANCAMENTOS = "pendencias";
     dashInvestResgatado: 'dash-invest-resgatado',
     dashInvestLiquido: 'dash-invest-liquido',
     dashPendenciasAlert: 'dashboard-pendencias-alert',
+    dashAudit: 'dashboard-audit',
 
     // contas (tabs)
     btnAddConta: 'btn-add-conta',
@@ -1392,6 +1393,131 @@ const CategoriasService = {
       console.warn('fetchResumoInvestimentosPeriodo', e);
       return empty;
     }
+  }
+
+  function roundCurrency(value) {
+    return Number(Number(value || 0).toFixed(2));
+  }
+
+  function auditCheck({ label, esperado, calculado, formula, detalhes = [] }) {
+    const esperadoRounded = roundCurrency(esperado);
+    const calculadoRounded = roundCurrency(calculado);
+    const diferenca = roundCurrency(calculadoRounded - esperadoRounded);
+    return {
+      label,
+      esperado: esperadoRounded,
+      calculado: calculadoRounded,
+      diferenca,
+      ok: Math.abs(diferenca) <= 0.01,
+      formula,
+      detalhes
+    };
+  }
+
+  async function fetchAuditoriaSaldosContas() {
+    try {
+      const [{ data: contas, error: errContas }, { data: movs, error: errMovs }] = await Promise.all([
+        supabase
+          .from('contas_bancarias')
+          .select('id,nome,saldo_atual,saldo_inicial,data_saldo,tipo_conta')
+          .eq('user_id', STATE.user.id),
+        supabase
+          .from('movimentacoes')
+          .select('conta_id,tipo,valor,descricao,data')
+          .eq('user_id', STATE.user.id)
+      ]);
+
+      if (errContas || errMovs) throw (errContas || errMovs);
+
+      const movsPorConta = (movs || []).reduce((acc, mov) => {
+        if (!mov.conta_id) return acc;
+        if (!acc[mov.conta_id]) acc[mov.conta_id] = [];
+        acc[mov.conta_id].push(mov);
+        return acc;
+      }, {});
+
+      const contasAuditadas = (contas || []).map(conta => {
+        const saldoSistema = roundCurrency(conta.saldo_atual ?? conta.saldo_inicial ?? 0);
+        const saldoCalculado = roundCurrency(computeContaBalance(conta, movsPorConta[conta.id] || []));
+        const diferenca = roundCurrency(saldoSistema - saldoCalculado);
+        return {
+          id: conta.id,
+          nome: conta.nome || 'Conta',
+          tipo_conta: conta.tipo_conta || 'corrente',
+          saldoSistema,
+          saldoCalculado,
+          diferenca,
+          ok: Math.abs(diferenca) <= 0.01
+        };
+      });
+
+      return {
+        contas: contasAuditadas,
+        divergencias: contasAuditadas.filter(item => !item.ok)
+      };
+    } catch (e) {
+      console.warn('fetchAuditoriaSaldosContas', e);
+      return { contas: [], divergencias: [], erro: true };
+    }
+  }
+
+  function gerarAuditoriaResumo(resumo, auditoriaContas) {
+    const investimentoLiquido = Number(resumo.investimentosPeriodo?.netInvestido || 0);
+    const saldoPendenciasCalculado = Number(resumo.totalAReceber || 0) - Number(resumo.totalAPagar || 0);
+    const saldoDisponivelCalculado = Number(resumo.saldoRealizado || 0) - investimentoLiquido;
+    const sum = (lista) => (lista || []).reduce((total, item) => total + Number(item.valor || 0), 0);
+
+    const checks = [
+      auditCheck({
+        label: 'A receber',
+        esperado: resumo.totalAReceber,
+        calculado: sum(resumo.pendentesReceita),
+        formula: 'Receitas pendentes do período + transportadas',
+        detalhes: [
+          `Pendentes: ${resumo.pendentesReceita?.length || 0}`,
+          `Transportadas: ${resumo.receitasTransportadas?.length || 0}`
+        ]
+      }),
+      auditCheck({
+        label: 'Realizado',
+        esperado: resumo.saldoRealizado,
+        calculado: Number(resumo.totalRecebido || 0) - Number(resumo.totalPago || 0),
+        formula: 'Recebido - Pago',
+        detalhes: [
+          `Recebido: ${fmtMoney(resumo.totalRecebido)}`,
+          `Pago: ${fmtMoney(resumo.totalPago)}`
+        ]
+      }),
+      auditCheck({
+        label: 'A pagar',
+        esperado: resumo.totalAPagar,
+        calculado: Number(resumo.totalDespesasPendentes || 0) + Number(resumo.totalCartoesAbertos || 0) + Number(resumo.totalCartoesTransportados || 0),
+        formula: 'Despesas abertas + faturas abertas + transportadas',
+        detalhes: [
+          `Despesas abertas: ${fmtMoney(resumo.totalDespesasPendentes)}`,
+          `Faturas abertas: ${fmtMoney(resumo.totalCartoesAbertos)}`,
+          `Transportadas: ${fmtMoney(resumo.totalCartoesTransportados)}`
+        ]
+      }),
+      auditCheck({
+        label: 'Saldo previsto',
+        esperado: resumo.saldoPrevisto,
+        calculado: saldoDisponivelCalculado + saldoPendenciasCalculado,
+        formula: 'Realizado - investimento líquido + pendências',
+        detalhes: [
+          `Realizado: ${fmtMoney(resumo.saldoRealizado)}`,
+          `Investimento líquido: ${fmtMoney(investimentoLiquido)}`,
+          `A receber: ${fmtMoney(resumo.totalAReceber)}`,
+          `A pagar: ${fmtMoney(resumo.totalAPagar)}`
+        ]
+      })
+    ];
+
+    return {
+      checks,
+      contas: auditoriaContas || { contas: [], divergencias: [] },
+      ok: checks.every(item => item.ok) && !(auditoriaContas?.divergencias || []).length
+    };
   }
 
   const MovService = {
@@ -2816,10 +2942,12 @@ function abrirModalEditarConta(conta) {
 
   async function carregarDadosDashboard(inicio, fim) {
     try {
-      const [resumo, comprasCartaoCategorias] = await Promise.all([
+      const [resumo, comprasCartaoCategorias, auditoriaContas] = await Promise.all([
         calcularResumoFinanceiroPeriodo({ conta_id: 'all', inicio, fim }),
-        fetchComprasCartaoPorCategoria(inicio, fim)
+        fetchComprasCartaoPorCategoria(inicio, fim),
+        fetchAuditoriaSaldosContas()
       ]);
+      const auditoria = gerarAuditoriaResumo(resumo, auditoriaContas);
 
       const despesasCategoriasGerenciais = [
         ...(resumo.despesasComPrevisao || []).filter(item => !isDespesaTecnicaCartao(item)),
@@ -2849,7 +2977,8 @@ function abrirModalEditarConta(conta) {
         investimentosPeriodo: resumo.investimentosPeriodo,
         saldoPrevisto: resumo.saldoPrevisto,
         totalTransportadoReceber: resumo.totalTransportadoReceber,
-        totalTransportadoPagar: resumo.totalTransportadoPagar
+        totalTransportadoPagar: resumo.totalTransportadoPagar,
+        auditoria
       };
     } catch (e) {
       console.error('carregarDadosDashboard', e);
@@ -2883,7 +3012,8 @@ function abrirModalEditarConta(conta) {
         },
         saldoPrevisto: 0,
         totalTransportadoReceber: 0,
-        totalTransportadoPagar: 0
+        totalTransportadoPagar: 0,
+        auditoria: { checks: [], contas: { contas: [], divergencias: [], erro: true }, ok: false }
       };
     }
   }
@@ -2907,6 +3037,99 @@ function abrirModalEditarConta(conta) {
     } catch (e) { console.error('drawDespesasPorCategoria', e); }
   }
 
+  function renderAuditoriaCalculos(auditoria) {
+    const container = $(IDS.dashAudit);
+    if (!container) return;
+
+    const checks = auditoria?.checks || [];
+    const contas = auditoria?.contas?.contas || [];
+    const divergencias = auditoria?.contas?.divergencias || [];
+    const contasComErro = Boolean(auditoria?.contas?.erro);
+    const ok = Boolean(auditoria?.ok);
+
+    container.innerHTML = '';
+    container.classList.toggle('dashboard-audit-ok', ok);
+    container.classList.toggle('dashboard-audit-warn', !ok);
+
+    const header = document.createElement('div');
+    header.className = 'dashboard-audit-header';
+
+    const title = document.createElement('div');
+    title.appendChild(createTextElement('span', ok ? 'Auditoria aprovada' : 'Auditoria com atenção', `dashboard-audit-status ${ok ? 'ok' : 'warn'}`));
+    title.appendChild(createTextElement('strong', 'Auditoria dos cálculos'));
+    title.appendChild(createTextElement('small', 'Conferência automática dos totais do período e saldos das contas.'));
+
+    const resume = document.createElement('div');
+    resume.className = 'dashboard-audit-resume';
+    resume.appendChild(createTextElement('span', `${checks.filter(item => item.ok).length}/${checks.length} fórmulas ok`));
+    resume.appendChild(createTextElement(
+      'span',
+      contasComErro
+        ? 'Saldos das contas indisponíveis'
+        : `${contas.length} contas conferidas${divergencias.length ? `, ${divergencias.length} divergência(s)` : ''}`
+    ));
+
+    header.append(title, resume);
+    container.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.className = 'dashboard-audit-grid';
+
+    checks.forEach(check => {
+      const card = document.createElement('div');
+      card.className = `dashboard-audit-card ${check.ok ? 'ok' : 'warn'}`;
+      card.appendChild(createTextElement('span', check.ok ? 'OK' : 'Revisar', 'dashboard-audit-pill'));
+      card.appendChild(createTextElement('strong', check.label));
+      card.appendChild(createTextElement('small', check.formula));
+
+      const values = document.createElement('div');
+      values.className = 'dashboard-audit-values';
+      values.appendChild(createTextElement('span', `Sistema ${fmtMoney(check.esperado)}`));
+      values.appendChild(createTextElement('span', `Recalculado ${fmtMoney(check.calculado)}`));
+      if (!check.ok) values.appendChild(createTextElement('span', `Diferença ${fmtMoney(check.diferenca)}`, 'audit-diff'));
+      card.appendChild(values);
+
+      if (check.detalhes?.length) {
+        const details = document.createElement('div');
+        details.className = 'dashboard-audit-details';
+        check.detalhes.forEach(text => details.appendChild(createTextElement('span', text)));
+        card.appendChild(details);
+      }
+
+      grid.appendChild(card);
+    });
+
+    const contasCard = document.createElement('div');
+    contasCard.className = `dashboard-audit-card ${divergencias.length || contasComErro ? 'warn' : 'ok'}`;
+    contasCard.appendChild(createTextElement('span', divergencias.length || contasComErro ? 'Revisar' : 'OK', 'dashboard-audit-pill'));
+    contasCard.appendChild(createTextElement('strong', 'Saldos das contas'));
+    contasCard.appendChild(createTextElement('small', 'Saldo salvo comparado com movimentações do extrato.'));
+
+    const contasResumo = document.createElement('div');
+    contasResumo.className = 'dashboard-audit-values';
+    contasResumo.appendChild(createTextElement('span', contasComErro ? 'Não foi possível conferir' : `${contas.length} conta(s) conferida(s)`));
+    contasResumo.appendChild(createTextElement('span', `${divergencias.length} divergência(s)`));
+    contasCard.appendChild(contasResumo);
+
+    if (divergencias.length) {
+      const details = document.createElement('div');
+      details.className = 'dashboard-audit-details';
+      divergencias.slice(0, 4).forEach(conta => {
+        details.appendChild(createTextElement(
+          'span',
+          `${conta.nome}: sistema ${fmtMoney(conta.saldoSistema)}, extrato ${fmtMoney(conta.saldoCalculado)}, diferença ${fmtMoney(conta.diferenca)}`
+        ));
+      });
+      if (divergencias.length > 4) {
+        details.appendChild(createTextElement('span', `Mais ${divergencias.length - 4} conta(s) com diferença.`));
+      }
+      contasCard.appendChild(details);
+    }
+
+    grid.appendChild(contasCard);
+    container.appendChild(grid);
+  }
+
   function drawResumo(dados) {
     try {
       safeText($(IDS.dashPeriod), `${fmtDateBR(dados.inicio)} a ${fmtDateBR(dados.fim)}`);
@@ -2914,6 +3137,7 @@ function abrirModalEditarConta(conta) {
       safeText($(IDS.dashPagar), fmtMoney(dados.totalAPagar));
       safeText($(IDS.dashSaldoAtual), fmtMoney(dados.saldoRealizado));
       safeText($(IDS.dashSaldoPrevisto), fmtMoney(dados.saldoPrevisto));
+      renderAuditoriaCalculos(dados.auditoria);
 
       const alert = $(IDS.dashPendenciasAlert);
       const totalTransportadoPagar = Number(dados.totalTransportadoPagar || 0);
