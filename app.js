@@ -3432,6 +3432,92 @@ function abrirModalEditarConta(conta) {
     } catch (e) { console.error('drawDespesasPorCategoria', e); }
   }
 
+  function montarRelatorioInconsistenciasAuditoria({ checks, contas, divergencias, contasComErro, cartoes, categorias, transportadas, movimentosSemContaValida }) {
+    const itens = [];
+    const pushItem = (origem, gravidade, mensagem, acao) => {
+      itens.push({ origem, gravidade, mensagem, acao });
+    };
+
+    checks.filter(check => !check.ok).forEach(check => {
+      pushItem(
+        'Fórmulas',
+        'critico',
+        `${check.label}: sistema ${fmtMoney(check.esperado)}, recalculado ${fmtMoney(check.calculado)}.`,
+        'Revisar os totais do período.'
+      );
+    });
+
+    if (contasComErro) {
+      pushItem('Contas', 'critico', 'Não foi possível conferir os saldos das contas.', 'Recarregar a página e tentar novamente.');
+    }
+
+    if (movimentosSemContaValida > 0) {
+      pushItem('Contas', 'critico', `${movimentosSemContaValida} movimento(s) sem conta válida.`, 'Revisar movimentações sem conta vinculada.');
+    }
+
+    (divergencias || []).forEach(conta => {
+      pushItem(
+        'Contas',
+        'revisar',
+        `${conta.nome}: saldo salvo ${fmtMoney(conta.saldoSistema)}, extrato ${fmtMoney(conta.saldoCalculado)}.`,
+        'Sincronizar saldo pelo extrato ou revisar movimentações.'
+      );
+    });
+
+    (cartoes.divergencias || []).forEach(text => pushItem('Cartões', 'critico', text, 'Revisar fatura, pagamento parcial ou despesa vinculada.'));
+    (cartoes.alertas || []).forEach(text => pushItem('Cartões', 'revisar', text, 'Completar vínculo, categoria ou conferência da fatura.'));
+    (categorias.divergencias || []).forEach(text => pushItem('Categorias', 'critico', text, 'Revisar a base dos gráficos de categoria.'));
+    (categorias.alertas || []).forEach(text => pushItem('Categorias', 'revisar', text, 'Classificar lançamentos ou compras sem categoria.'));
+    (transportadas.divergencias || []).forEach(text => pushItem('Transportadas', 'critico', text, 'Revisar pendência transportada ou status de fatura.'));
+    (transportadas.alertas || []).forEach(text => pushItem('Transportadas', 'revisar', text, 'Conferir item transportado antes do fechamento do mês.'));
+
+    return itens;
+  }
+
+  function renderRelatorioInconsistenciasAuditoria(itens) {
+    const card = document.createElement('div');
+    const temProblemas = (itens || []).length > 0;
+    card.className = `dashboard-audit-report ${temProblemas ? 'warn' : 'ok'}`;
+
+    const header = document.createElement('div');
+    header.className = 'dashboard-audit-report-header';
+    header.appendChild(createTextElement('span', temProblemas ? 'Relatório de inconsistências' : 'Tudo certo', `dashboard-audit-status ${temProblemas ? 'warn' : 'ok'}`));
+    header.appendChild(createTextElement('strong', temProblemas ? `${itens.length} ponto(s) para revisar` : 'Nenhuma inconsistência encontrada'));
+    header.appendChild(createTextElement(
+      'small',
+      temProblemas
+        ? 'Resumo prático do que precisa de atenção nos cálculos.'
+        : 'Fórmulas, saldos, cartões, categorias e transportadas estão coerentes no período.'
+    ));
+    card.appendChild(header);
+
+    if (temProblemas) {
+      const lista = document.createElement('div');
+      lista.className = 'dashboard-audit-report-list';
+      itens.slice(0, 8).forEach(item => {
+        const row = document.createElement('div');
+        row.className = `dashboard-audit-report-item ${item.gravidade}`;
+        row.appendChild(createTextElement('span', item.gravidade === 'critico' ? 'Crítico' : 'Revisar', 'dashboard-audit-report-severity'));
+
+        const body = document.createElement('div');
+        body.appendChild(createTextElement('strong', item.origem));
+        body.appendChild(createTextElement('span', item.mensagem));
+        if (item.acao) body.appendChild(createTextElement('small', item.acao));
+
+        row.appendChild(body);
+        lista.appendChild(row);
+      });
+
+      if (itens.length > 8) {
+        lista.appendChild(createTextElement('small', `Mais ${itens.length - 8} ponto(s) aparecem nos cards detalhados abaixo.`, 'dashboard-audit-report-more'));
+      }
+
+      card.appendChild(lista);
+    }
+
+    return card;
+  }
+
   function renderAuditoriaCalculos(auditoria) {
     const container = $(IDS.dashAudit);
     if (!container) return;
@@ -3455,6 +3541,16 @@ function abrirModalEditarConta(conta) {
     const divergenciasTransportadas = transportadas.divergencias || [];
     const alertasTransportadas = transportadas.alertas || [];
     const ok = Boolean(auditoria?.ok);
+    const relatorioInconsistencias = montarRelatorioInconsistenciasAuditoria({
+      checks,
+      contas,
+      divergencias,
+      contasComErro,
+      cartoes,
+      categorias,
+      transportadas,
+      movimentosSemContaValida
+    });
 
     container.innerHTML = '';
     container.classList.toggle('dashboard-audit-ok', ok);
@@ -3503,6 +3599,7 @@ function abrirModalEditarConta(conta) {
 
     header.append(title, resume);
     container.appendChild(header);
+    container.appendChild(renderRelatorioInconsistenciasAuditoria(relatorioInconsistencias));
 
     const grid = document.createElement('div');
     grid.className = 'dashboard-audit-grid';

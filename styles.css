@@ -245,6 +245,7 @@ h1, h2, h3 {
 
 .dashboard-audit-collapsed .dashboard-audit-header strong,
 .dashboard-audit-collapsed .dashboard-audit-header small,
+.dashboard-audit-collapsed .dashboard-audit-report,
 .dashboard-audit-collapsed .dashboard-audit-grid {
   display: none;
 }
@@ -332,6 +333,106 @@ h1, h2, h3 {
   background: #fff7ed;
   color: #9a3412;
   font-weight: 900;
+}
+
+.dashboard-audit-report {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid #eee9ff;
+  border-radius: 14px;
+  background: #fbfaff;
+}
+
+.dashboard-audit-report.ok {
+  border-color: #dcfce7;
+  background: #fbfffd;
+}
+
+.dashboard-audit-report.warn {
+  border-color: #fed7aa;
+  background: #fffaf5;
+}
+
+.dashboard-audit-report-header {
+  display: grid;
+  gap: 5px;
+}
+
+.dashboard-audit-report-header strong {
+  color: #2f2460;
+  font-size: 16px;
+}
+
+.dashboard-audit-report-header small {
+  color: #7d7891;
+  font-weight: 800;
+}
+
+.dashboard-audit-report-list {
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-audit-report-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px;
+  border: 1px solid #eee9ff;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.dashboard-audit-report-item.critico {
+  border-color: #fecaca;
+}
+
+.dashboard-audit-report-item.revisar {
+  border-color: #fed7aa;
+}
+
+.dashboard-audit-report-severity {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #ffedd5;
+  color: #9a3412;
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.dashboard-audit-report-item.critico .dashboard-audit-report-severity {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.dashboard-audit-report-item strong {
+  display: block;
+  color: #2f2460;
+  font-size: 13px;
+}
+
+.dashboard-audit-report-item span:not(.dashboard-audit-report-severity),
+.dashboard-audit-report-item small {
+  display: block;
+  margin-top: 3px;
+  color: #615a75;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.dashboard-audit-report-item small {
+  color: #8a8498;
+}
+
+.dashboard-audit-report-more {
+  color: #7d7891;
+  font-size: 12px;
+  font-weight: 850;
 }
 
 @media (max-width: 760px) {
