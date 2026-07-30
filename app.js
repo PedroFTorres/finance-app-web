@@ -1657,8 +1657,6 @@ const CategoriasService = {
       ].reduce((s, item) => s + Number(item.valor || 0), 0));
       const gruposReceitas = agruparPorCategoria(receitasBase);
       const gruposDespesas = agruparPorCategoria(despesasGerenciais);
-      const valorReceitasOutros = roundCurrency(gruposReceitas.Outros || 0);
-      const valorDespesasOutros = roundCurrency(gruposDespesas.Outros || 0);
       const valorReceitasSemCategoria = roundCurrency(gruposReceitas['Sem categoria'] || 0);
       const valorDespesasSemCategoria = roundCurrency(gruposDespesas['Sem categoria'] || 0);
 
@@ -1682,17 +1680,6 @@ const CategoriasService = {
         alertas.push(`${comprasCartaoSemCategoria.length} compra(s) do cartão sem categoria: ${resumirItensCategoria(comprasCartaoSemCategoria, 'compra do cartão').join('; ')}.`);
       }
 
-      const itensOutrosDespesa = despesasGerenciais.filter(item => (item.categoria_nome || categoriaNome(item.categoria_id)) === 'Outros');
-      const itensOutrosReceita = receitasBase.filter(item => (item.categoria_nome || categoriaNome(item.categoria_id)) === 'Outros');
-
-      if (valorDespesasOutros > 0.009) {
-        alertas.push(`Despesas em Outros: ${fmtMoney(valorDespesasOutros)} em ${itensOutrosDespesa.length} item(ns): ${resumirItensCategoria(itensOutrosDespesa, 'despesa').join('; ')}.`);
-      }
-
-      if (valorReceitasOutros > 0.009) {
-        alertas.push(`Receitas em Outros: ${fmtMoney(valorReceitasOutros)} em ${itensOutrosReceita.length} item(ns): ${resumirItensCategoria(itensOutrosReceita, 'receita').join('; ')}.`);
-      }
-
       return {
         receitasCategorias: Object.keys(gruposReceitas).filter(nome => Math.abs(Number(gruposReceitas[nome] || 0)) > 0.009).length,
         despesasCategorias: Object.keys(gruposDespesas).filter(nome => Math.abs(Number(gruposDespesas[nome] || 0)) > 0.009).length,
@@ -1701,8 +1688,6 @@ const CategoriasService = {
         comprasCartaoSemCategoria: comprasCartaoSemCategoria.length,
         valorReceitasSemCategoria,
         valorDespesasSemCategoria,
-        valorReceitasOutros,
-        valorDespesasOutros,
         divergencias,
         alertas,
         ok: divergencias.length === 0 && alertas.length === 0
@@ -3523,10 +3508,6 @@ function abrirModalEditarConta(conta) {
     categoriasResumo.appendChild(createTextElement('span', categoriasComErro ? 'Não foi possível conferir' : `${Number(categorias.receitasCategorias || 0)} categoria(s) de receita`));
     categoriasResumo.appendChild(createTextElement('span', `${Number(categorias.despesasCategorias || 0)} categoria(s) de despesa`));
     categoriasResumo.appendChild(createTextElement('span', `${Number(categorias.receitasSemCategoria || 0) + Number(categorias.despesasSemCategoria || 0) + Number(categorias.comprasCartaoSemCategoria || 0)} sem categoria`));
-    const totalOutros = Number(categorias.valorReceitasOutros || 0) + Number(categorias.valorDespesasOutros || 0);
-    if (Math.abs(totalOutros) > 0.009) {
-      categoriasResumo.appendChild(createTextElement('span', `Outros ${fmtMoney(totalOutros)}`, 'audit-diff'));
-    }
     if (divergenciasCategorias.length) {
       categoriasResumo.appendChild(createTextElement('span', `${divergenciasCategorias.length} divergência(s)`, 'audit-diff'));
     }
