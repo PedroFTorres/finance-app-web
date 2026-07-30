@@ -1698,7 +1698,138 @@ const CategoriasService = {
     }
   }
 
-  function gerarAuditoriaResumo(resumo, auditoriaContas, auditoriaCartoes, auditoriaCategorias) {
+  function hasDuplicadosPorId(lista) {
+    const vistos = new Set();
+    return (lista || []).filter(item => {
+      if (!item.id) return false;
+      if (vistos.has(item.id)) return true;
+      vistos.add(item.id);
+      return false;
+    });
+  }
+
+  function isFaturaAnteriorPeriodo(fatura, inicio) {
+    const ano = Number(fatura?.ano || 0);
+    const mes = Number(fatura?.mes || 0);
+    if (!ano || !mes) return false;
+    const inicioDate = new Date(`${inicio}T00:00:00`);
+    const faturaDate = new Date(ano, mes - 1, 1);
+    const inicioMesDate = new Date(inicioDate.getFullYear(), inicioDate.getMonth(), 1);
+    return faturaDate < inicioMesDate;
+  }
+
+  async function fetchAuditoriaTransportadasPeriodo(resumo, inicio) {
+    try {
+      const receitasTransportadas = resumo.receitasTransportadas || [];
+      const despesasTransportadas = resumo.despesasTransportadas || [];
+      const cartoesTransportados = resumo.cartoesTransportados || [];
+      const divergencias = [];
+      const alertas = [];
+      const totalReceitasTransportadas = roundCurrency(receitasTransportadas.reduce((s, item) => s + Number(item.valor || 0), 0));
+      const totalDespesasTransportadas = roundCurrency(despesasTransportadas.reduce((s, item) => s + Number(item.valor || 0), 0));
+      const totalCartoesTransportados = roundCurrency(cartoesTransportados.reduce((s, item) => s + Number(item.valor || 0), 0));
+
+      const validarLista = (lista, tipo) => {
+        (lista || []).forEach(item => {
+          const dataOriginal = item.data_original || item.data;
+          if (item.baixado === true) {
+            divergencias.push(`${tipo} transportada já está baixada: ${item.descricao || 'Sem descrição'}.`);
+          }
+          if (!dataOriginal || String(dataOriginal).slice(0, 10) >= inicio) {
+            divergencias.push(`${tipo} transportada fora da regra de mês anterior: ${item.descricao || 'Sem descrição'}.`);
+          }
+          if (item.transportado !== true) {
+            divergencias.push(`${tipo} antiga sem marcação de transportada: ${item.descricao || 'Sem descrição'}.`);
+          }
+        });
+
+        hasDuplicadosPorId(lista).forEach(item => {
+          divergencias.push(`${tipo} transportada duplicada: ${item.descricao || item.id}.`);
+        });
+      };
+
+      validarLista(receitasTransportadas, 'Receita');
+      validarLista(despesasTransportadas, 'Despesa');
+      validarLista(cartoesTransportados, 'Fatura de cartão');
+
+      if (Math.abs(totalReceitasTransportadas - Number(resumo.totalTransportadoReceber || 0)) > 0.01) {
+        divergencias.push(`Total transportado a receber ${fmtMoney(resumo.totalTransportadoReceber)} diferente da soma ${fmtMoney(totalReceitasTransportadas)}.`);
+      }
+
+      if (Math.abs(totalDespesasTransportadas + totalCartoesTransportados - Number(resumo.totalTransportadoPagar || 0)) > 0.01) {
+        divergencias.push(`Total transportado a pagar ${fmtMoney(resumo.totalTransportadoPagar)} diferente da soma ${fmtMoney(totalDespesasTransportadas + totalCartoesTransportados)}.`);
+      }
+
+      const { data: faturas, error: errFaturas } = await supabase
+        .from('cartao_faturas')
+        .select('id,cartao_id,mes,ano,status,pago,valor_total,cartoes_credito(nome)')
+        .eq('user_id', STATE.user.id);
+
+      if (errFaturas) throw errFaturas;
+
+      const faturasAnteriores = (faturas || []).filter(fatura => isFaturaAnteriorPeriodo(fatura, inicio));
+      const faturaIds = faturasAnteriores.map(fatura => fatura.id).filter(Boolean);
+      let despesasFaturas = [];
+
+      if (faturaIds.length) {
+        const { data: despesas, error: errDespesas } = await supabase
+          .from('despesas')
+          .select('id,descricao,valor,data,baixado,cartao_fatura_id')
+          .eq('user_id', STATE.user.id)
+          .in('cartao_fatura_id', faturaIds);
+
+        if (errDespesas) throw errDespesas;
+        despesasFaturas = despesas || [];
+      }
+
+      const despesasPorFatura = despesasFaturas.reduce((acc, despesa) => {
+        if (!despesa.cartao_fatura_id) return acc;
+        if (!acc[despesa.cartao_fatura_id]) acc[despesa.cartao_fatura_id] = [];
+        acc[despesa.cartao_fatura_id].push(despesa);
+        return acc;
+      }, {});
+
+      faturasAnteriores.forEach(fatura => {
+        const nome = fatura.cartoes_credito?.nome || 'Cartão';
+        const label = `${nome} ${String(fatura.mes).padStart(2, '0')}/${fatura.ano}`;
+        const despesasFatura = despesasPorFatura[fatura.id] || [];
+        const despesaAberta = despesasFatura.find(item => item.baixado !== true);
+
+        if (fatura.pago === true && cartoesTransportados.some(item => item.cartao_fatura_id === fatura.id)) {
+          divergencias.push(`${label}: fatura paga apareceu como transportada.`);
+        }
+
+        if (fatura.status === 'paga' && fatura.pago !== true) {
+          divergencias.push(`${label}: status está paga, mas o campo pago não está sincronizado.`);
+        }
+
+        if (fatura.pago !== true && fatura.status !== 'paga' && (fatura.status === 'fechada' || despesasFatura.length > 0) && !despesaAberta) {
+          divergencias.push(`${label}: fatura anterior não paga sem despesa aberta para transporte.`);
+        }
+
+        if (fatura.pago !== true && fatura.status === 'aberta' && despesasFatura.length === 0) {
+          alertas.push(`${label}: fatura anterior ainda aberta no cartão e sem despesa gerada.`);
+        }
+      });
+
+      return {
+        receitas: receitasTransportadas.length,
+        despesas: despesasTransportadas.length,
+        cartoes: cartoesTransportados.length,
+        totalReceber: totalReceitasTransportadas,
+        totalPagar: roundCurrency(totalDespesasTransportadas + totalCartoesTransportados),
+        faturasAnteriores: faturasAnteriores.length,
+        divergencias,
+        alertas,
+        ok: divergencias.length === 0 && alertas.length === 0
+      };
+    } catch (e) {
+      console.warn('fetchAuditoriaTransportadasPeriodo', e);
+      return { receitas: 0, despesas: 0, cartoes: 0, divergencias: [], alertas: [], erro: true, ok: false };
+    }
+  }
+
+  function gerarAuditoriaResumo(resumo, auditoriaContas, auditoriaCartoes, auditoriaCategorias, auditoriaTransportadas) {
     const investimentoLiquido = Number(resumo.investimentosPeriodo?.netInvestido || 0);
     const saldoPendenciasCalculado = Number(resumo.totalAReceber || 0) - Number(resumo.totalAPagar || 0);
     const saldoDisponivelCalculado = Number(resumo.saldoRealizado || 0) - investimentoLiquido;
@@ -1755,11 +1886,13 @@ const CategoriasService = {
       contas: auditoriaContas || { contas: [], divergencias: [] },
       cartoes: auditoriaCartoes || { divergencias: [], alertas: [], erro: true, ok: false },
       categorias: auditoriaCategorias || { divergencias: [], alertas: [], erro: true, ok: false },
+      transportadas: auditoriaTransportadas || { divergencias: [], alertas: [], erro: true, ok: false },
       ok: checks.every(item => item.ok) &&
         !(auditoriaContas?.divergencias || []).length &&
         !Number(auditoriaContas?.movimentosSemContaValida || 0) &&
         Boolean(auditoriaCartoes?.ok) &&
-        Boolean(auditoriaCategorias?.ok)
+        Boolean(auditoriaCategorias?.ok) &&
+        Boolean(auditoriaTransportadas?.ok)
     };
   }
 
@@ -3236,7 +3369,8 @@ function abrirModalEditarConta(conta) {
         comprasCartaoCategorias,
         despesasCategoriasGerenciais
       });
-      const auditoria = gerarAuditoriaResumo(resumo, auditoriaContas, auditoriaCartoes, auditoriaCategorias);
+      const auditoriaTransportadas = await fetchAuditoriaTransportadasPeriodo(resumo, inicio);
+      const auditoria = gerarAuditoriaResumo(resumo, auditoriaContas, auditoriaCartoes, auditoriaCategorias, auditoriaTransportadas);
 
       return {
         inicio,
@@ -3302,6 +3436,7 @@ function abrirModalEditarConta(conta) {
           contas: { contas: [], divergencias: [], erro: true },
           cartoes: { divergencias: [], alertas: [], erro: true, ok: false },
           categorias: { divergencias: [], alertas: [], erro: true, ok: false },
+          transportadas: { divergencias: [], alertas: [], erro: true, ok: false },
           ok: false
         }
       };
@@ -3345,6 +3480,10 @@ function abrirModalEditarConta(conta) {
     const categoriasComErro = Boolean(categorias.erro);
     const divergenciasCategorias = categorias.divergencias || [];
     const alertasCategorias = categorias.alertas || [];
+    const transportadas = auditoria?.transportadas || { divergencias: [], alertas: [], ok: false };
+    const transportadasComErro = Boolean(transportadas.erro);
+    const divergenciasTransportadas = transportadas.divergencias || [];
+    const alertasTransportadas = transportadas.alertas || [];
     const ok = Boolean(auditoria?.ok);
 
     container.innerHTML = '';
@@ -3382,6 +3521,12 @@ function abrirModalEditarConta(conta) {
       categoriasComErro
         ? 'Categorias indisponíveis'
         : `${Number(categorias.receitasCategorias || 0) + Number(categorias.despesasCategorias || 0)} categoria(s) auditada(s)${divergenciasCategorias.length || alertasCategorias.length ? `, ${divergenciasCategorias.length + alertasCategorias.length} alerta(s)` : ''}`
+    ));
+    resume.appendChild(createTextElement(
+      'span',
+      transportadasComErro
+        ? 'Transportadas indisponíveis'
+        : `${Number(transportadas.receitas || 0) + Number(transportadas.despesas || 0) + Number(transportadas.cartoes || 0)} transportada(s)${divergenciasTransportadas.length || alertasTransportadas.length ? `, ${divergenciasTransportadas.length + alertasTransportadas.length} alerta(s)` : ''}`
     ));
     const hint = createTextElement('span', ok ? 'Ver detalhes' : 'Fechar detalhes', 'dashboard-audit-hint');
     resume.appendChild(hint);
@@ -3529,6 +3674,42 @@ function abrirModalEditarConta(conta) {
     }
 
     grid.appendChild(categoriasCard);
+
+    const transportadasCard = document.createElement('div');
+    const transportadasOk = !transportadasComErro && divergenciasTransportadas.length === 0 && alertasTransportadas.length === 0;
+    transportadasCard.className = `dashboard-audit-card ${transportadasOk ? 'ok' : 'warn'}`;
+    transportadasCard.appendChild(createTextElement('span', transportadasOk ? 'OK' : 'Revisar', 'dashboard-audit-pill'));
+    transportadasCard.appendChild(createTextElement('strong', 'Transportadas'));
+    transportadasCard.appendChild(createTextElement('small', 'Pendências de meses anteriores e faturas antigas.'));
+
+    const transportadasResumo = document.createElement('div');
+    transportadasResumo.className = 'dashboard-audit-values';
+    transportadasResumo.appendChild(createTextElement('span', transportadasComErro ? 'Não foi possível conferir' : `${Number(transportadas.receitas || 0)} receita(s)`));
+    transportadasResumo.appendChild(createTextElement('span', `${Number(transportadas.despesas || 0)} despesa(s)`));
+    transportadasResumo.appendChild(createTextElement('span', `${Number(transportadas.cartoes || 0)} fatura(s)`));
+    transportadasResumo.appendChild(createTextElement('span', `A receber ${fmtMoney(transportadas.totalReceber || 0)}`));
+    transportadasResumo.appendChild(createTextElement('span', `A pagar ${fmtMoney(transportadas.totalPagar || 0)}`));
+    if (divergenciasTransportadas.length) {
+      transportadasResumo.appendChild(createTextElement('span', `${divergenciasTransportadas.length} divergência(s)`, 'audit-diff'));
+    }
+    transportadasCard.appendChild(transportadasResumo);
+
+    if (divergenciasTransportadas.length || alertasTransportadas.length || transportadasComErro) {
+      const details = document.createElement('div');
+      details.className = 'dashboard-audit-details';
+      if (transportadasComErro) {
+        details.appendChild(createTextElement('span', 'Não foi possível carregar dados de transportadas para auditoria.'));
+      }
+      const itensExibidos = [...divergenciasTransportadas, ...alertasTransportadas].slice(0, 5);
+      itensExibidos.forEach(text => details.appendChild(createTextElement('span', text)));
+      const restante = divergenciasTransportadas.length + alertasTransportadas.length - itensExibidos.length;
+      if (restante > 0) {
+        details.appendChild(createTextElement('span', `Mais ${restante} alerta(s) de transportadas.`));
+      }
+      transportadasCard.appendChild(details);
+    }
+
+    grid.appendChild(transportadasCard);
     container.appendChild(grid);
 
     const toggleAudit = () => {
