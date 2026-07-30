@@ -135,7 +135,6 @@ let FILTRO_LANCAMENTOS = "pendencias";
     dashInvestResgatado: 'dash-invest-resgatado',
     dashInvestLiquido: 'dash-invest-liquido',
     dashPendenciasAlert: 'dashboard-pendencias-alert',
-    dashAuditSummary: 'dashboard-audit-summary',
     dashAudit: 'dashboard-audit',
 
     // contas (tabs)
@@ -3521,47 +3520,6 @@ function abrirModalEditarConta(conta) {
     return card;
   }
 
-  function renderResumoAuditoriaDashboard(auditoria) {
-    const container = $(IDS.dashAuditSummary);
-    if (!container) return;
-
-    const checks = auditoria?.checks || [];
-    const contas = auditoria?.contas?.contas || [];
-    const divergencias = auditoria?.contas?.divergencias || [];
-    const cartoes = auditoria?.cartoes || { divergencias: [], alertas: [] };
-    const categorias = auditoria?.categorias || { divergencias: [], alertas: [] };
-    const transportadas = auditoria?.transportadas || { divergencias: [], alertas: [] };
-    const totalAlertas = divergencias.length
-      + (cartoes.divergencias || []).length
-      + (cartoes.alertas || []).length
-      + (categorias.divergencias || []).length
-      + (categorias.alertas || []).length
-      + (transportadas.divergencias || []).length
-      + (transportadas.alertas || []).length;
-    const ok = Boolean(auditoria?.ok);
-
-    container.innerHTML = '';
-    container.className = `dashboard-audit-summary ${ok ? 'ok' : 'warn'}`;
-
-    const copy = document.createElement('div');
-    copy.appendChild(createTextElement('span', ok ? 'Auditoria aprovada' : 'Auditoria com atenção', `dashboard-audit-status ${ok ? 'ok' : 'warn'}`));
-    copy.appendChild(createTextElement('strong', ok ? 'Cálculos conferidos' : `${totalAlertas || 1} ponto(s) para revisar`));
-    copy.appendChild(createTextElement(
-      'small',
-      ok
-        ? `${checks.filter(item => item.ok).length}/${checks.length} fórmulas ok, ${contas.length} contas conferidas.`
-        : 'Abra a auditoria para ver o relatório completo de inconsistências.'
-    ));
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'btn-secondary dashboard-audit-summary-button';
-    button.textContent = 'Ver auditoria';
-    button.addEventListener('click', () => App.showScreen('auditoria'));
-
-    container.append(copy, button);
-  }
-
   function renderAuditoriaCalculos(auditoria) {
     const container = $(IDS.dashAudit);
     if (!container) return;
@@ -3845,7 +3803,6 @@ function abrirModalEditarConta(conta) {
       safeText($(IDS.dashPagar), fmtMoney(dados.totalAPagar));
       safeText($(IDS.dashSaldoAtual), fmtMoney(dados.saldoRealizado));
       safeText($(IDS.dashSaldoPrevisto), fmtMoney(dados.saldoPrevisto));
-      renderResumoAuditoriaDashboard(dados.auditoria);
       renderAuditoriaCalculos(dados.auditoria);
 
       const alert = $(IDS.dashPendenciasAlert);

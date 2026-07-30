@@ -335,50 +335,6 @@ h1, h2, h3 {
   font-weight: 900;
 }
 
-.dashboard-audit-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  margin: 14px 0 8px;
-  padding: 13px 14px;
-  border: 1px solid #e8e2ff;
-  border-radius: 14px;
-  background: #fbfaff;
-}
-
-.dashboard-audit-summary.ok {
-  border-color: #bbf7d0;
-  background: #fbfffd;
-}
-
-.dashboard-audit-summary.warn {
-  border-color: #fed7aa;
-  background: #fffaf5;
-}
-
-.dashboard-audit-summary strong {
-  display: block;
-  margin-top: 5px;
-  color: #2f2460;
-  font-size: 15px;
-}
-
-.dashboard-audit-summary small {
-  display: block;
-  margin-top: 3px;
-  color: #7d7891;
-  font-weight: 800;
-}
-
-.dashboard-audit-summary-button {
-  min-height: 38px;
-  border-color: #c4b5fd;
-  color: #6d28d9;
-  font-weight: 950;
-  white-space: nowrap;
-}
-
 .dashboard-audit-report {
   display: grid;
   gap: 12px;
@@ -493,13 +449,6 @@ h1, h2, h3 {
     grid-template-columns: 1fr;
   }
 
-  .dashboard-audit-summary {
-    display: grid;
-  }
-
-  .dashboard-audit-summary-button {
-    width: 100%;
-  }
 }
 
 /* ============================================================= PAINÉIS / BOXES ============================================================= */
