@@ -1618,7 +1618,102 @@ const CategoriasService = {
     }
   }
 
-  function gerarAuditoriaResumo(resumo, auditoriaContas, auditoriaCartoes) {
+  function origemCategoriaItem(item, tipoBase) {
+    if (item?.origem_categoria === 'cartao_lancamento') return 'compra do cartão';
+    if (item?.transportado) return `${tipoBase} transportada`;
+    if (item?.baixa_parcial) return 'baixa parcial';
+    if (item?.cartao_fatura_id) return 'fatura do cartão';
+    if (item?.provisorio_cartao) return 'fatura aberta';
+    return tipoBase;
+  }
+
+  function resumirItensCategoria(itens, tipoBase, limite = 3) {
+    return (itens || []).slice(0, limite).map(item =>
+      `${item.descricao || 'Sem descrição'} (${origemCategoriaItem(item, tipoBase)}): ${fmtMoney(item.valor)}`
+    );
+  }
+
+  function gerarAuditoriaCategorias({ resumo, comprasCartaoCategorias, despesasCategoriasGerenciais }) {
+    try {
+      const receitasBase = resumo.receitasPeriodo || [];
+      const despesasPeriodo = resumo.despesasComPrevisao || [];
+      const comprasCartao = comprasCartaoCategorias || [];
+      const despesasGerenciais = despesasCategoriasGerenciais || [];
+      const alertas = [];
+      const divergencias = [];
+
+      const receitasSemCategoria = receitasBase.filter(item => !item.categoria_id && !item.categoria_nome);
+      const despesasSemCategoria = despesasGerenciais.filter(item =>
+        item.origem_categoria !== 'cartao_lancamento' &&
+        !item.categoria_id &&
+        !item.categoria_nome
+      );
+      const comprasCartaoSemCategoria = comprasCartao.filter(item => !item.categoria_id && !item.categoria_nome);
+      const despesasTecnicasNoGrafico = despesasGerenciais.filter(isDespesaTecnicaCartao);
+      const totalDespesasGerenciais = roundCurrency(despesasGerenciais.reduce((s, item) => s + Number(item.valor || 0), 0));
+      const totalDespesasEsperado = roundCurrency([
+        ...despesasPeriodo.filter(item => !isDespesaTecnicaCartao(item)),
+        ...comprasCartao
+      ].reduce((s, item) => s + Number(item.valor || 0), 0));
+      const gruposReceitas = agruparPorCategoria(receitasBase);
+      const gruposDespesas = agruparPorCategoria(despesasGerenciais);
+      const valorReceitasOutros = roundCurrency(gruposReceitas.Outros || 0);
+      const valorDespesasOutros = roundCurrency(gruposDespesas.Outros || 0);
+      const valorReceitasSemCategoria = roundCurrency(gruposReceitas['Sem categoria'] || 0);
+      const valorDespesasSemCategoria = roundCurrency(gruposDespesas['Sem categoria'] || 0);
+
+      if (Math.abs(totalDespesasGerenciais - totalDespesasEsperado) > 0.01) {
+        divergencias.push(`Gráfico de despesas ${fmtMoney(totalDespesasGerenciais)} diferente da base gerencial ${fmtMoney(totalDespesasEsperado)}.`);
+      }
+
+      if (despesasTecnicasNoGrafico.length) {
+        divergencias.push(`${despesasTecnicasNoGrafico.length} item(ns) técnico(s) do cartão entrou(aram) no gráfico de categorias.`);
+      }
+
+      if (receitasSemCategoria.length) {
+        alertas.push(`${receitasSemCategoria.length} receita(s) sem categoria: ${resumirItensCategoria(receitasSemCategoria, 'receita').join('; ')}.`);
+      }
+
+      if (despesasSemCategoria.length) {
+        alertas.push(`${despesasSemCategoria.length} despesa(s) sem categoria: ${resumirItensCategoria(despesasSemCategoria, 'despesa').join('; ')}.`);
+      }
+
+      if (comprasCartaoSemCategoria.length) {
+        alertas.push(`${comprasCartaoSemCategoria.length} compra(s) do cartão sem categoria: ${resumirItensCategoria(comprasCartaoSemCategoria, 'compra do cartão').join('; ')}.`);
+      }
+
+      const itensOutrosDespesa = despesasGerenciais.filter(item => (item.categoria_nome || categoriaNome(item.categoria_id)) === 'Outros');
+      const itensOutrosReceita = receitasBase.filter(item => (item.categoria_nome || categoriaNome(item.categoria_id)) === 'Outros');
+
+      if (valorDespesasOutros > 0.009) {
+        alertas.push(`Despesas em Outros: ${fmtMoney(valorDespesasOutros)} em ${itensOutrosDespesa.length} item(ns): ${resumirItensCategoria(itensOutrosDespesa, 'despesa').join('; ')}.`);
+      }
+
+      if (valorReceitasOutros > 0.009) {
+        alertas.push(`Receitas em Outros: ${fmtMoney(valorReceitasOutros)} em ${itensOutrosReceita.length} item(ns): ${resumirItensCategoria(itensOutrosReceita, 'receita').join('; ')}.`);
+      }
+
+      return {
+        receitasCategorias: Object.keys(gruposReceitas).filter(nome => Math.abs(Number(gruposReceitas[nome] || 0)) > 0.009).length,
+        despesasCategorias: Object.keys(gruposDespesas).filter(nome => Math.abs(Number(gruposDespesas[nome] || 0)) > 0.009).length,
+        receitasSemCategoria: receitasSemCategoria.length,
+        despesasSemCategoria: despesasSemCategoria.length,
+        comprasCartaoSemCategoria: comprasCartaoSemCategoria.length,
+        valorReceitasSemCategoria,
+        valorDespesasSemCategoria,
+        valorReceitasOutros,
+        valorDespesasOutros,
+        divergencias,
+        alertas,
+        ok: divergencias.length === 0 && alertas.length === 0
+      };
+    } catch (e) {
+      console.warn('gerarAuditoriaCategorias', e);
+      return { divergencias: [], alertas: [], erro: true, ok: false };
+    }
+  }
+
+  function gerarAuditoriaResumo(resumo, auditoriaContas, auditoriaCartoes, auditoriaCategorias) {
     const investimentoLiquido = Number(resumo.investimentosPeriodo?.netInvestido || 0);
     const saldoPendenciasCalculado = Number(resumo.totalAReceber || 0) - Number(resumo.totalAPagar || 0);
     const saldoDisponivelCalculado = Number(resumo.saldoRealizado || 0) - investimentoLiquido;
@@ -1674,10 +1769,12 @@ const CategoriasService = {
       checks,
       contas: auditoriaContas || { contas: [], divergencias: [] },
       cartoes: auditoriaCartoes || { divergencias: [], alertas: [], erro: true, ok: false },
+      categorias: auditoriaCategorias || { divergencias: [], alertas: [], erro: true, ok: false },
       ok: checks.every(item => item.ok) &&
         !(auditoriaContas?.divergencias || []).length &&
         !Number(auditoriaContas?.movimentosSemContaValida || 0) &&
-        Boolean(auditoriaCartoes?.ok)
+        Boolean(auditoriaCartoes?.ok) &&
+        Boolean(auditoriaCategorias?.ok)
     };
   }
 
@@ -3145,12 +3242,16 @@ function abrirModalEditarConta(conta) {
         fetchAuditoriaSaldosContas(),
         fetchAuditoriaCartoesPeriodo(inicio, fim)
       ]);
-      const auditoria = gerarAuditoriaResumo(resumo, auditoriaContas, auditoriaCartoes);
-
       const despesasCategoriasGerenciais = [
         ...(resumo.despesasComPrevisao || []).filter(item => !isDespesaTecnicaCartao(item)),
         ...(comprasCartaoCategorias || [])
       ];
+      const auditoriaCategorias = gerarAuditoriaCategorias({
+        resumo,
+        comprasCartaoCategorias,
+        despesasCategoriasGerenciais
+      });
+      const auditoria = gerarAuditoriaResumo(resumo, auditoriaContas, auditoriaCartoes, auditoriaCategorias);
 
       return {
         inicio,
@@ -3215,6 +3316,7 @@ function abrirModalEditarConta(conta) {
           checks: [],
           contas: { contas: [], divergencias: [], erro: true },
           cartoes: { divergencias: [], alertas: [], erro: true, ok: false },
+          categorias: { divergencias: [], alertas: [], erro: true, ok: false },
           ok: false
         }
       };
@@ -3254,6 +3356,10 @@ function abrirModalEditarConta(conta) {
     const cartoesComErro = Boolean(cartoes.erro);
     const divergenciasCartoes = cartoes.divergencias || [];
     const alertasCartoes = cartoes.alertas || [];
+    const categorias = auditoria?.categorias || { divergencias: [], alertas: [], ok: false };
+    const categoriasComErro = Boolean(categorias.erro);
+    const divergenciasCategorias = categorias.divergencias || [];
+    const alertasCategorias = categorias.alertas || [];
     const ok = Boolean(auditoria?.ok);
 
     container.innerHTML = '';
@@ -3285,6 +3391,12 @@ function abrirModalEditarConta(conta) {
       cartoesComErro
         ? 'Cartões indisponíveis'
         : `${Number(cartoes.faturas || 0)} fatura(s) conferida(s)${divergenciasCartoes.length || alertasCartoes.length ? `, ${divergenciasCartoes.length + alertasCartoes.length} alerta(s)` : ''}`
+    ));
+    resume.appendChild(createTextElement(
+      'span',
+      categoriasComErro
+        ? 'Categorias indisponíveis'
+        : `${Number(categorias.receitasCategorias || 0) + Number(categorias.despesasCategorias || 0)} categoria(s) auditada(s)${divergenciasCategorias.length || alertasCategorias.length ? `, ${divergenciasCategorias.length + alertasCategorias.length} alerta(s)` : ''}`
     ));
     const hint = createTextElement('span', ok ? 'Ver detalhes' : 'Fechar detalhes', 'dashboard-audit-hint');
     resume.appendChild(hint);
@@ -3398,6 +3510,44 @@ function abrirModalEditarConta(conta) {
     }
 
     grid.appendChild(cartoesCard);
+
+    const categoriasCard = document.createElement('div');
+    const categoriasOk = !categoriasComErro && divergenciasCategorias.length === 0 && alertasCategorias.length === 0;
+    categoriasCard.className = `dashboard-audit-card ${categoriasOk ? 'ok' : 'warn'}`;
+    categoriasCard.appendChild(createTextElement('span', categoriasOk ? 'OK' : 'Revisar', 'dashboard-audit-pill'));
+    categoriasCard.appendChild(createTextElement('strong', 'Categorias'));
+    categoriasCard.appendChild(createTextElement('small', 'Conferência da base dos gráficos e itens sem classificação.'));
+
+    const categoriasResumo = document.createElement('div');
+    categoriasResumo.className = 'dashboard-audit-values';
+    categoriasResumo.appendChild(createTextElement('span', categoriasComErro ? 'Não foi possível conferir' : `${Number(categorias.receitasCategorias || 0)} categoria(s) de receita`));
+    categoriasResumo.appendChild(createTextElement('span', `${Number(categorias.despesasCategorias || 0)} categoria(s) de despesa`));
+    categoriasResumo.appendChild(createTextElement('span', `${Number(categorias.receitasSemCategoria || 0) + Number(categorias.despesasSemCategoria || 0) + Number(categorias.comprasCartaoSemCategoria || 0)} sem categoria`));
+    const totalOutros = Number(categorias.valorReceitasOutros || 0) + Number(categorias.valorDespesasOutros || 0);
+    if (Math.abs(totalOutros) > 0.009) {
+      categoriasResumo.appendChild(createTextElement('span', `Outros ${fmtMoney(totalOutros)}`, 'audit-diff'));
+    }
+    if (divergenciasCategorias.length) {
+      categoriasResumo.appendChild(createTextElement('span', `${divergenciasCategorias.length} divergência(s)`, 'audit-diff'));
+    }
+    categoriasCard.appendChild(categoriasResumo);
+
+    if (divergenciasCategorias.length || alertasCategorias.length || categoriasComErro) {
+      const details = document.createElement('div');
+      details.className = 'dashboard-audit-details';
+      if (categoriasComErro) {
+        details.appendChild(createTextElement('span', 'Não foi possível carregar os dados de categorias para auditoria.'));
+      }
+      const itensExibidos = [...divergenciasCategorias, ...alertasCategorias].slice(0, 5);
+      itensExibidos.forEach(text => details.appendChild(createTextElement('span', text)));
+      const restante = divergenciasCategorias.length + alertasCategorias.length - itensExibidos.length;
+      if (restante > 0) {
+        details.appendChild(createTextElement('span', `Mais ${restante} alerta(s) de categoria.`));
+      }
+      categoriasCard.appendChild(details);
+    }
+
+    grid.appendChild(categoriasCard);
     container.appendChild(grid);
 
     const toggleAudit = () => {
