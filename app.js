@@ -1768,32 +1768,10 @@ const CategoriasService = {
       if (errFaturas) throw errFaturas;
 
       const faturasAnteriores = (faturas || []).filter(fatura => isFaturaAnteriorPeriodo(fatura, inicio));
-      const faturaIds = faturasAnteriores.map(fatura => fatura.id).filter(Boolean);
-      let despesasFaturas = [];
-
-      if (faturaIds.length) {
-        const { data: despesas, error: errDespesas } = await supabase
-          .from('despesas')
-          .select('id,descricao,valor,data,baixado,cartao_fatura_id')
-          .eq('user_id', STATE.user.id)
-          .in('cartao_fatura_id', faturaIds);
-
-        if (errDespesas) throw errDespesas;
-        despesasFaturas = despesas || [];
-      }
-
-      const despesasPorFatura = despesasFaturas.reduce((acc, despesa) => {
-        if (!despesa.cartao_fatura_id) return acc;
-        if (!acc[despesa.cartao_fatura_id]) acc[despesa.cartao_fatura_id] = [];
-        acc[despesa.cartao_fatura_id].push(despesa);
-        return acc;
-      }, {});
 
       faturasAnteriores.forEach(fatura => {
         const nome = fatura.cartoes_credito?.nome || 'Cartão';
         const label = `${nome} ${String(fatura.mes).padStart(2, '0')}/${fatura.ano}`;
-        const despesasFatura = despesasPorFatura[fatura.id] || [];
-        const despesaAberta = despesasFatura.find(item => item.baixado !== true);
 
         if (fatura.pago === true && cartoesTransportados.some(item => item.cartao_fatura_id === fatura.id)) {
           divergencias.push(`${label}: fatura paga apareceu como transportada.`);
@@ -1801,14 +1779,6 @@ const CategoriasService = {
 
         if (fatura.status === 'paga' && fatura.pago !== true) {
           divergencias.push(`${label}: status está paga, mas o campo pago não está sincronizado.`);
-        }
-
-        if (fatura.pago !== true && fatura.status !== 'paga' && (fatura.status === 'fechada' || despesasFatura.length > 0) && !despesaAberta) {
-          divergencias.push(`${label}: fatura anterior não paga sem despesa aberta para transporte.`);
-        }
-
-        if (fatura.pago !== true && fatura.status === 'aberta' && despesasFatura.length === 0) {
-          alertas.push(`${label}: fatura anterior ainda aberta no cartão e sem despesa gerada.`);
         }
       });
 
