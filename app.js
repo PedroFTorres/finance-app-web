@@ -47,14 +47,16 @@
 let mesDashboardAtual = new Date();
    function renderMesDashboard() {
   const el = document.getElementById("dash-mes-label");
+  const auditEl = document.getElementById("audit-mes-label");
 
   const meses = [
     "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
     "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
   ];
 
-  el.textContent =
-    `${meses[mesDashboardAtual.getMonth()]} ${mesDashboardAtual.getFullYear()}`;
+  const label = `${meses[mesDashboardAtual.getMonth()]} ${mesDashboardAtual.getFullYear()}`;
+  if (el) el.textContent = label;
+  if (auditEl) auditEl.textContent = label;
 }
 
 async function atualizarDashboardPorMes() {
@@ -133,6 +135,7 @@ let FILTRO_LANCAMENTOS = "pendencias";
     dashInvestResgatado: 'dash-invest-resgatado',
     dashInvestLiquido: 'dash-invest-liquido',
     dashPendenciasAlert: 'dashboard-pendencias-alert',
+    dashAuditSummary: 'dashboard-audit-summary',
     dashAudit: 'dashboard-audit',
 
     // contas (tabs)
@@ -3518,6 +3521,47 @@ function abrirModalEditarConta(conta) {
     return card;
   }
 
+  function renderResumoAuditoriaDashboard(auditoria) {
+    const container = $(IDS.dashAuditSummary);
+    if (!container) return;
+
+    const checks = auditoria?.checks || [];
+    const contas = auditoria?.contas?.contas || [];
+    const divergencias = auditoria?.contas?.divergencias || [];
+    const cartoes = auditoria?.cartoes || { divergencias: [], alertas: [] };
+    const categorias = auditoria?.categorias || { divergencias: [], alertas: [] };
+    const transportadas = auditoria?.transportadas || { divergencias: [], alertas: [] };
+    const totalAlertas = divergencias.length
+      + (cartoes.divergencias || []).length
+      + (cartoes.alertas || []).length
+      + (categorias.divergencias || []).length
+      + (categorias.alertas || []).length
+      + (transportadas.divergencias || []).length
+      + (transportadas.alertas || []).length;
+    const ok = Boolean(auditoria?.ok);
+
+    container.innerHTML = '';
+    container.className = `dashboard-audit-summary ${ok ? 'ok' : 'warn'}`;
+
+    const copy = document.createElement('div');
+    copy.appendChild(createTextElement('span', ok ? 'Auditoria aprovada' : 'Auditoria com atenção', `dashboard-audit-status ${ok ? 'ok' : 'warn'}`));
+    copy.appendChild(createTextElement('strong', ok ? 'Cálculos conferidos' : `${totalAlertas || 1} ponto(s) para revisar`));
+    copy.appendChild(createTextElement(
+      'small',
+      ok
+        ? `${checks.filter(item => item.ok).length}/${checks.length} fórmulas ok, ${contas.length} contas conferidas.`
+        : 'Abra a auditoria para ver o relatório completo de inconsistências.'
+    ));
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn-secondary dashboard-audit-summary-button';
+    button.textContent = 'Ver auditoria';
+    button.addEventListener('click', () => App.showScreen('auditoria'));
+
+    container.append(copy, button);
+  }
+
   function renderAuditoriaCalculos(auditoria) {
     const container = $(IDS.dashAudit);
     if (!container) return;
@@ -3555,7 +3599,7 @@ function abrirModalEditarConta(conta) {
     container.innerHTML = '';
     container.classList.toggle('dashboard-audit-ok', ok);
     container.classList.toggle('dashboard-audit-warn', !ok);
-    container.classList.toggle('dashboard-audit-collapsed', ok);
+    container.classList.remove('dashboard-audit-collapsed');
 
     const header = document.createElement('div');
     header.className = 'dashboard-audit-header';
@@ -3594,7 +3638,7 @@ function abrirModalEditarConta(conta) {
         ? 'Transportadas indisponíveis'
         : `${Number(transportadas.receitas || 0) + Number(transportadas.despesas || 0) + Number(transportadas.cartoes || 0)} transportada(s)${divergenciasTransportadas.length || alertasTransportadas.length ? `, ${divergenciasTransportadas.length + alertasTransportadas.length} alerta(s)` : ''}`
     ));
-    const hint = createTextElement('span', ok ? 'Ver detalhes' : 'Fechar detalhes', 'dashboard-audit-hint');
+    const hint = createTextElement('span', 'Fechar detalhes', 'dashboard-audit-hint');
     resume.appendChild(hint);
 
     header.append(title, resume);
@@ -3801,6 +3845,7 @@ function abrirModalEditarConta(conta) {
       safeText($(IDS.dashPagar), fmtMoney(dados.totalAPagar));
       safeText($(IDS.dashSaldoAtual), fmtMoney(dados.saldoRealizado));
       safeText($(IDS.dashSaldoPrevisto), fmtMoney(dados.saldoPrevisto));
+      renderResumoAuditoriaDashboard(dados.auditoria);
       renderAuditoriaCalculos(dados.auditoria);
 
       const alert = $(IDS.dashPendenciasAlert);
@@ -4872,6 +4917,16 @@ document.getElementById("select-contas-extrato")
 });
 
 document.getElementById("dash-next")?.addEventListener("click", async () => {
+  mesDashboardAtual.setMonth(mesDashboardAtual.getMonth() + 1);
+  await atualizarDashboardPorMes();
+});
+
+document.getElementById("audit-prev")?.addEventListener("click", async () => {
+  mesDashboardAtual.setMonth(mesDashboardAtual.getMonth() - 1);
+  await atualizarDashboardPorMes();
+});
+
+document.getElementById("audit-next")?.addEventListener("click", async () => {
   mesDashboardAtual.setMonth(mesDashboardAtual.getMonth() + 1);
   await atualizarDashboardPorMes();
 });

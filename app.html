@@ -6,7 +6,7 @@
   <title> Arolix </title>
    <link rel="icon" type="image/png" href="favicon.png">
 
-  <link rel="stylesheet" href="styles.css?v=20260730-1" />
+  <link rel="stylesheet" href="styles.css?v=20260730-2" />
 </head>
 
 <body>
@@ -22,6 +22,7 @@
       <button id="btn-transferir" class="btn-secondary">🔁 Transferir</button>
       <button class="menu-btn" id="btn-cartao">Cartão</button>
       <button class="menu-btn" id="btn-investimentos" onclick="window.location.href='investimentos/index.html'">Investimentos</button>
+      <button class="menu-btn" data-target="auditoria">Auditoria</button>
     </nav>
 
   <div class="top-bar" style="display:flex;align-items:center;gap:12px;">
@@ -93,7 +94,7 @@
           </div>
         </div>
 
-        <div id="dashboard-audit" class="dashboard-audit"></div>
+        <div id="dashboard-audit-summary" class="dashboard-audit-summary"></div>
 
         <div class="dashboard-tabs" aria-label="Seções do dashboard">
           <button type="button" class="dashboard-tab active" data-dashboard-tab="geral">Geral</button>
@@ -153,6 +154,25 @@
         </div>
       </section>
 
+    </section>
+
+    <!-- ============================================================ TELA AUDITORIA ============================================================ -->
+    <section class="screen hidden" data-screen="auditoria">
+      <section class="card-panel dashboard-panel">
+        <div class="dashboard-header">
+          <div>
+            <h2>Auditoria</h2>
+            <p class="dashboard-subtitle">Conferência automática dos cálculos, saldos, cartões, categorias e transportadas.</p>
+          </div>
+          <div class="dashboard-period-nav">
+            <button id="audit-prev" class="btn-secondary">◀</button>
+            <strong id="audit-mes-label"></strong>
+            <button id="audit-next" class="btn-secondary">▶</button>
+          </div>
+        </div>
+
+        <div id="dashboard-audit" class="dashboard-audit"></div>
+      </section>
     </section>
 
 
@@ -626,7 +646,7 @@
   <script src="config.js"></script>
   <script src="supabase.js"></script>
   <script src="security.js?v=20260702-1"></script>
-  <script src="app.js?v=20260730-5"></script>
+  <script src="app.js?v=20260730-6"></script>
   <script src="secure-summary-client.js"></script>
   <script src="premium-access-client.js?v=20260621-1"></script>
 
