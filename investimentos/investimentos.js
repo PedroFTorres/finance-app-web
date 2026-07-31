@@ -175,14 +175,24 @@ function isSchemaCacheError(error) {
   return error?.code === "PGRST204" || message.includes("schema cache");
 }
 
+function isConstraintError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return error?.code === "23514" || message.includes("violates check constraint");
+}
+
 function withFundDetailsInObservations(investimento) {
   const detalhes = [
+    isFundoInvestimento(investimento) ? "Tipo informado: Fundo de investimento" : "",
     investimento.classe_fundo ? `Classe do fundo: ${investimento.classe_fundo}` : "",
     investimento.administrador ? `Administrador/gestor: ${investimento.administrador}` : ""
   ].filter(Boolean).join(" | ");
   const { classe_fundo, administrador, ...compatInvestimento } = investimento;
   return {
     ...compatInvestimento,
+    tipo: "cdb",
+    indexador: "cdi",
+    percentual_cdi: Number(compatInvestimento.percentual_cdi || 0),
+    cdi_anual_referencia: Number(compatInvestimento.cdi_anual_referencia || 0),
     observacoes: appendObservation(compatInvestimento.observacoes, detalhes)
   };
 }
@@ -191,7 +201,7 @@ async function insertInvestimento(investimento) {
   const { error } = await supabase.from("investimentos").insert([investimento]);
   if (!error) return;
 
-  if (isSchemaCacheError(error) && (investimento.classe_fundo || investimento.administrador)) {
+  if ((isSchemaCacheError(error) || isConstraintError(error)) && isFundoInvestimento(investimento)) {
     const fallback = withFundDetailsInObservations(investimento);
     const { error: retryError } = await supabase.from("investimentos").insert([fallback]);
     if (!retryError) return;
@@ -230,7 +240,8 @@ function calculateCdb(investimento, endDate = isoToday()) {
   };
 }
 
-function investmentTypeLabel(tipo) {
+function investmentTypeLabel(tipo, investimento = null) {
+  if (isFundoInvestimento(investimento)) return "Fundo de investimento";
   const map = {
     cdb: "CDB",
     fundo_investimento: "Fundo de investimento"
@@ -239,7 +250,9 @@ function investmentTypeLabel(tipo) {
 }
 
 function isFundoInvestimento(investimento) {
-  return String(investimento?.tipo || "").toLowerCase() === "fundo_investimento";
+  const tipo = String(investimento?.tipo || "").toLowerCase();
+  const observacoes = String(investimento?.observacoes || "").toLowerCase();
+  return tipo === "fundo_investimento" || observacoes.includes("tipo informado: fundo de investimento");
 }
 
 function calculateInvestimento(investimento, endDate = isoToday()) {
@@ -478,7 +491,7 @@ function toggleInvestmentTypeFields() {
   if (grupoFundo) grupoFundo.classList.toggle("hidden", !isFundo);
   if (cnpjLabel) cnpjLabel.textContent = isFundo ? "CNPJ do fundo" : "CNPJ do emissor / produto";
   if (nome && !nome.value) {
-    nome.placeholder = isFundo ? "Ex: BB Renda Fixa Simples Reserva" : "Ex: CDB Santander Liquidez Diária";
+    nome.placeholder = isFundo ? "Ex: Nome do fundo" : "Ex: CDB Santander Liquidez Diária";
   }
 
   ["invest-vencimento", "invest-liquidez", "invest-data-carencia", "invest-dias-carencia", "invest-percentual-cdi", "invest-cdi-anual"].forEach((id) => {
@@ -737,7 +750,7 @@ function renderProdutoOptions() {
     aporteSelect.innerHTML = "";
     aporteSelect.append(new Option("Selecione o produto para aporte", ""));
     produtos.forEach((produto) => {
-      aporteSelect.append(new Option(`${investmentTypeLabel(produto.base.tipo)} — ${produto.base.nome} — disponível ${money(produto.principalDisponivel)}`, produto.id));
+      aporteSelect.append(new Option(`${investmentTypeLabel(produto.base.tipo, produto.base)} — ${produto.base.nome} — disponível ${money(produto.principalDisponivel)}`, produto.id));
     });
     aporteSelect.value = produtos.some(p => p.id === current) ? current : "";
   }
@@ -749,7 +762,7 @@ function renderProdutoOptions() {
     produtos
       .filter(p => p.principalDisponivel > 0)
       .forEach((produto) => {
-        resgateSelect.append(new Option(`${investmentTypeLabel(produto.base.tipo)} — ${produto.base.nome} — disponível ${money(produto.principalDisponivel)}`, produto.id));
+        resgateSelect.append(new Option(`${investmentTypeLabel(produto.base.tipo, produto.base)} — ${produto.base.nome} — disponível ${money(produto.principalDisponivel)}`, produto.id));
       });
     resgateSelect.value = produtos.some(p => p.id === current) ? current : "";
   }
@@ -887,8 +900,8 @@ function renderInvestimentos() {
 
     const card = document.createElement("article");
     card.className = "invest-card";
-    const tipoLabel = investmentTypeLabel(item.tipo);
     const isFundo = isFundoInvestimento(item);
+    const tipoLabel = investmentTypeLabel(item.tipo, item);
     const indicadorProduto = isFundo
       ? escapeHtml(item.classe_fundo || "Rentabilidade manual")
       : `${Number(item.percentual_cdi || 0).toLocaleString("pt-BR")}% do CDI`;
