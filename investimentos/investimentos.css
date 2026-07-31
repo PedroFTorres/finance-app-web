@@ -205,6 +205,18 @@ label {
   margin: 6px 0 10px;
 }
 
+.fund-fields {
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px solid rgba(122, 77, 255, 0.14);
+  border-radius: 14px;
+  background: #fbfaff;
+}
+
+.fund-disabled-field {
+  display: none;
+}
+
 input,
 select,
 textarea {
@@ -491,6 +503,15 @@ button:disabled {
 .invest-card p {
   margin: 4px 0;
   color: var(--muted);
+}
+
+.fund-note {
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #63677a !important;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .invest-meta {

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Investimentos - Arolix</title>
   <link rel="icon" type="image/png" href="../favicon.png">
-  <link rel="stylesheet" href="investimentos.css">
+  <link rel="stylesheet" href="investimentos.css?v=20260731-1">
 </head>
 <body>
   <header class="invest-header">
@@ -24,8 +24,8 @@
       <div>
         <h1>Investimentos</h1>
         <p>
-          Controle inicial para CDB atrelado ao CDI, com cálculo estimado de rendimento,
-          IOF e imposto de renda conforme a data da aplicação.
+          Controle de aplicações, aportes e resgates por tipo de produto: CDB, fundos de investimento
+          e outros ativos que ainda serão acompanhados por rentabilidade manual.
         </p>
       </div>
       <div class="hero-values">
@@ -45,23 +45,45 @@
 
     <section id="panel-aplicacao" class="grid invest-tab-panel active">
       <form id="form-investimento" class="panel">
-        <h2 id="invest-form-title">Nova aplicação CDB</h2>
+        <h2 id="invest-form-title">Nova aplicação</h2>
 
         <div id="grupo-produto-existente" class="hidden">
-          <label>Produto CDB</label>
+          <label>Produto</label>
           <select id="invest-produto-existente">
             <option value="">Selecione o produto para aporte</option>
           </select>
           <p class="field-help">
-            Selecione o CDB que receberá o novo aporte. Cada aporte mantém sua própria data para calcular IOF e IR.
+            Selecione o produto que receberá o novo aporte. Cada aporte mantém sua própria data.
           </p>
         </div>
 
-        <label>Nome do investimento</label>
-        <input id="invest-nome" required placeholder="Ex: CDB Santander Liquidez Diária">
+        <label>Tipo de investimento</label>
+        <select id="invest-tipo-produto">
+          <option value="cdb">CDB / Renda fixa bancária</option>
+          <option value="fundo_investimento">Fundo de investimento</option>
+        </select>
 
-        <label>CNPJ do emissor / produto</label>
-        <input id="invest-cnpj" inputmode="numeric" placeholder="Opcional nesta primeira versão">
+        <label>Nome do investimento</label>
+        <input id="invest-nome" required placeholder="Ex: BB Renda Fixa Simples Reserva">
+
+        <label id="invest-cnpj-label">CNPJ do emissor / produto</label>
+        <input id="invest-cnpj" inputmode="numeric" placeholder="Ex: 54.603.259/0001-56">
+
+        <div id="grupo-fundo" class="fund-fields hidden">
+          <div class="row">
+            <div>
+              <label>Classe do fundo</label>
+              <input id="invest-classe-fundo" placeholder="Ex: Renda Fixa Simples">
+            </div>
+            <div>
+              <label>Administrador / gestor</label>
+              <input id="invest-administrador" placeholder="Ex: Banco do Brasil">
+            </div>
+          </div>
+          <p class="field-help">
+            Nesta etapa o CNPJ identifica o fundo no cadastro. Rentabilidade automática, cota diária e histórico entram na próxima evolução.
+          </p>
+        </div>
 
         <div class="row">
           <div>
@@ -139,8 +161,8 @@
         </div>
 
         <div class="hint">
-          <strong>Como usar para o Santander:</strong>
-          crie uma conta “Investimentos Santander” abaixo, depois registre o CDB e seus aportes.
+          <strong>Como usar:</strong>
+          crie uma conta de investimento separada, depois registre CDBs, fundos e seus aportes.
           O módulo faz a transferência patrimonial,
           sem tratar isso como despesa.
         </div>
@@ -152,7 +174,7 @@
 
         <div class="quick-account">
           <h3>Criar conta de investimento</h3>
-          <p>Use quando ainda não existir uma conta destino para os CDBs.</p>
+          <p>Use quando ainda não existir uma conta destino para as aplicações.</p>
           <input id="nova-conta-investimento-nome" placeholder="Ex: Investimentos Santander">
           <button id="btn-criar-conta-investimento" class="btn-secondary" type="button">
             Criar conta investimento
@@ -211,6 +233,6 @@
   <script src="../vendor/supabase-2.108.2.js"></script>
   <script src="../config.js"></script>
   <script src="../supabase.js"></script>
-  <script src="investimentos.js?v=20260717-1"></script>
+  <script src="investimentos.js?v=20260731-1"></script>
 </body>
 </html>

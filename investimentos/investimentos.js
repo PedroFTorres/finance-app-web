@@ -16,6 +16,15 @@ const state = {
   formMode: "novo"
 };
 
+const FUNDOS_CONHECIDOS = {
+  "54603259000156": {
+    nome: "BB Renda Fixa Simples Reserva",
+    instituicao: "Banco do Brasil",
+    administrador: "Banco do Brasil",
+    classe_fundo: "Renda Fixa Simples"
+  }
+};
+
 const el = (id) => document.getElementById(id);
 
 function uid() {
@@ -124,6 +133,22 @@ function formatCnpj(value) {
   return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 }
 
+function preencherFundoPorCnpj() {
+  if (el("invest-tipo-produto")?.value !== "fundo_investimento") return;
+
+  const cnpj = normalizeCnpj(el("invest-cnpj")?.value || "");
+  const fundo = FUNDOS_CONHECIDOS[cnpj];
+  if (!fundo) return;
+
+  if (!el("invest-nome").value.trim()) el("invest-nome").value = fundo.nome;
+  if (!el("invest-classe-fundo").value.trim()) el("invest-classe-fundo").value = fundo.classe_fundo;
+  if (!el("invest-administrador").value.trim()) el("invest-administrador").value = fundo.administrador;
+  const observacoes = el("invest-observacoes");
+  if (observacoes && !observacoes.value.trim()) {
+    observacoes.value = `Instituição: ${fundo.instituicao}. Cadastro inicial identificado pelo CNPJ do fundo.`;
+  }
+}
+
 function calculateCdb(investimento, endDate = isoToday()) {
   const principal = Number(investimento.valor_aplicado || 0);
   const percentualCdi = Number(investimento.percentual_cdi || 0) / 100;
@@ -150,6 +175,35 @@ function calculateCdb(investimento, endDate = isoToday()) {
     irRate,
     ir,
     valorLiquido: liquido
+  };
+}
+
+function investmentTypeLabel(tipo) {
+  const map = {
+    cdb: "CDB",
+    fundo_investimento: "Fundo de investimento"
+  };
+  return map[String(tipo || "cdb")] || "Investimento";
+}
+
+function isFundoInvestimento(investimento) {
+  return String(investimento?.tipo || "").toLowerCase() === "fundo_investimento";
+}
+
+function calculateInvestimento(investimento, endDate = isoToday()) {
+  if (!isFundoInvestimento(investimento)) return calculateCdb(investimento, endDate);
+
+  const principal = Number(investimento.valor_aplicado || 0);
+  return {
+    principal,
+    diasCorridos: daysBetween(investimento.data_aplicacao, endDate),
+    diasUteis: businessDaysBetween(investimento.data_aplicacao, endDate),
+    rendimentoBruto: 0,
+    iofRate: 0,
+    iof: 0,
+    irRate: 0,
+    ir: 0,
+    valorLiquido: principal
   };
 }
 
@@ -221,7 +275,7 @@ function buildProductGroups() {
     group.aportes.forEach((aporte) => {
       const disponivel = principalDisponivel(aporte);
       const proportion = Number(aporte.valor_aplicado || 0) > 0 ? disponivel / Number(aporte.valor_aplicado || 0) : 0;
-      const calc = calculateCdb({ ...aporte, valor_aplicado: disponivel });
+      const calc = calculateInvestimento({ ...aporte, valor_aplicado: disponivel });
       group.principalAplicado += Number(aporte.valor_aplicado || 0);
       group.principalDisponivel += disponivel;
       group.rendimento += calc.rendimentoBruto;
@@ -268,7 +322,7 @@ function buildResgatePreview(produtoGrupoId, valorPrincipal, dataResgate = isoTo
 
     const principal = Math.min(disponivel, restante);
     const proporcao = principal / Number(aporte.valor_aplicado || 1);
-    const calcTotal = calculateCdb(aporte, dataResgate);
+    const calcTotal = calculateInvestimento(aporte, dataResgate);
     const rendimento = Math.max(0, calcTotal.rendimentoBruto * proporcao);
     const iof = Math.max(0, calcTotal.iof * proporcao);
     const ir = Math.max(0, calcTotal.ir * proporcao);
@@ -344,18 +398,58 @@ function setInvestmentFormMode(mode) {
   const saveButton = el("btn-salvar-investimento");
 
   group.classList.toggle("hidden", !isAporte);
-  title.textContent = isAporte ? "Novo aporte em CDB existente" : "Nova aplicação CDB";
+  title.textContent = isAporte ? "Novo aporte em produto existente" : "Nova aplicação";
   saveButton.textContent = isAporte ? "Salvar aporte" : "Salvar aplicação";
 
   if (!isAporte) {
     el("invest-produto-existente").value = "";
+    el("invest-tipo-produto").disabled = false;
     el("invest-nome").disabled = false;
     el("invest-cnpj").disabled = false;
+    el("invest-classe-fundo").disabled = false;
+    el("invest-administrador").disabled = false;
   } else {
     preencherProdutoExistente();
   }
 
+  toggleInvestmentTypeFields();
   setMessage("");
+}
+
+function toggleInvestmentTypeFields() {
+  const tipo = el("invest-tipo-produto")?.value || "cdb";
+  const isFundo = tipo === "fundo_investimento";
+  const grupoFundo = el("grupo-fundo");
+  const cnpjLabel = el("invest-cnpj-label");
+  const nome = el("invest-nome");
+
+  if (grupoFundo) grupoFundo.classList.toggle("hidden", !isFundo);
+  if (cnpjLabel) cnpjLabel.textContent = isFundo ? "CNPJ do fundo" : "CNPJ do emissor / produto";
+  if (nome && !nome.value) {
+    nome.placeholder = isFundo ? "Ex: BB Renda Fixa Simples Reserva" : "Ex: CDB Santander Liquidez Diária";
+  }
+
+  ["invest-vencimento", "invest-liquidez", "invest-data-carencia", "invest-dias-carencia", "invest-percentual-cdi", "invest-cdi-anual"].forEach((id) => {
+    const input = el(id);
+    if (!input) return;
+    input.closest("div")?.classList.toggle("fund-disabled-field", isFundo);
+    input.disabled = isFundo;
+  });
+
+  if (isFundo) {
+    el("invest-liquidez").value = "diaria";
+    el("invest-percentual-cdi").value = "0";
+    el("invest-cdi-anual").value = "0";
+    el("invest-vencimento").value = "";
+    el("invest-data-carencia").value = "";
+    el("invest-dias-carencia").value = "";
+    preencherFundoPorCnpj();
+  } else {
+    if (parsePercentBR(el("invest-percentual-cdi").value || 0) === 0) el("invest-percentual-cdi").value = "100";
+    if (parsePercentBR(el("invest-cdi-anual").value || 0) === 0) el("invest-cdi-anual").value = "10,65";
+  }
+
+  toggleCarenciaFields();
 }
 
 function setupCleanMoneyInput(input) {
@@ -541,7 +635,8 @@ function renderContasInvestimento(contasInvestimento = []) {
 }
 
 function toggleCarenciaFields() {
-  const isCarencia = el("invest-liquidez").value === "carencia";
+  const isFundo = el("invest-tipo-produto")?.value === "fundo_investimento";
+  const isCarencia = !isFundo && el("invest-liquidez").value === "carencia";
   el("grupo-carencia").classList.toggle("hidden", !isCarencia);
   if (!isCarencia) {
     el("invest-data-carencia").value = "";
@@ -590,7 +685,7 @@ function renderProdutoOptions() {
     aporteSelect.innerHTML = "";
     aporteSelect.append(new Option("Selecione o produto para aporte", ""));
     produtos.forEach((produto) => {
-      aporteSelect.append(new Option(`${produto.base.nome} — disponível ${money(produto.principalDisponivel)}`, produto.id));
+      aporteSelect.append(new Option(`${investmentTypeLabel(produto.base.tipo)} — ${produto.base.nome} — disponível ${money(produto.principalDisponivel)}`, produto.id));
     });
     aporteSelect.value = produtos.some(p => p.id === current) ? current : "";
   }
@@ -602,7 +697,7 @@ function renderProdutoOptions() {
     produtos
       .filter(p => p.principalDisponivel > 0)
       .forEach((produto) => {
-        resgateSelect.append(new Option(`${produto.base.nome} — disponível ${money(produto.principalDisponivel)}`, produto.id));
+        resgateSelect.append(new Option(`${investmentTypeLabel(produto.base.tipo)} — ${produto.base.nome} — disponível ${money(produto.principalDisponivel)}`, produto.id));
       });
     resgateSelect.value = produtos.some(p => p.id === current) ? current : "";
   }
@@ -612,11 +707,17 @@ function preencherProdutoExistente() {
   const produtoId = el("invest-produto-existente").value;
   if (!produtoId) {
     el("invest-nome").disabled = false;
+    el("invest-tipo-produto").disabled = false;
     el("invest-cnpj").disabled = false;
+    el("invest-classe-fundo").disabled = false;
+    el("invest-administrador").disabled = false;
     if (state.formMode === "aporte") {
       el("invest-nome").value = "";
       el("invest-cnpj").value = "";
+      el("invest-classe-fundo").value = "";
+      el("invest-administrador").value = "";
     }
+    toggleInvestmentTypeFields();
     return;
   }
 
@@ -624,8 +725,11 @@ function preencherProdutoExistente() {
   if (!produto) return;
   const base = produto.base;
 
+  el("invest-tipo-produto").value = base.tipo || "cdb";
   el("invest-nome").value = base.nome || "";
   el("invest-cnpj").value = formatCnpj(base.cnpj_emissor || "");
+  el("invest-classe-fundo").value = base.classe_fundo || "";
+  el("invest-administrador").value = base.administrador || "";
   el("invest-vencimento").value = base.data_vencimento || "";
   el("invest-liquidez").value = base.liquidez || "diaria";
   el("invest-data-carencia").value = base.data_carencia || "";
@@ -633,9 +737,12 @@ function preencherProdutoExistente() {
   el("invest-percentual-cdi").value = String(base.percentual_cdi || 100).replace(".", ",");
   el("invest-cdi-anual").value = String(base.cdi_anual_referencia || 10.65).replace(".", ",");
   el("invest-conta-destino").value = base.conta_investimento_id || "";
+  el("invest-tipo-produto").disabled = true;
   el("invest-nome").disabled = true;
   el("invest-cnpj").disabled = true;
-  toggleCarenciaFields();
+  el("invest-classe-fundo").disabled = true;
+  el("invest-administrador").disabled = true;
+  toggleInvestmentTypeFields();
 }
 
 async function criarContaInvestimento() {
@@ -713,7 +820,7 @@ function renderInvestimentos() {
 
     const aportesHtml = grupo.aportes.map((aporte) => {
       const disponivel = principalDisponivel(aporte);
-      const calc = calculateCdb({ ...aporte, valor_aplicado: disponivel });
+      const calc = calculateInvestimento({ ...aporte, valor_aplicado: disponivel });
       return `
         <tr>
           <td>${formatDateBR(aporte.data_aplicacao)}</td>
@@ -728,15 +835,22 @@ function renderInvestimentos() {
 
     const card = document.createElement("article");
     card.className = "invest-card";
+    const tipoLabel = investmentTypeLabel(item.tipo);
+    const isFundo = isFundoInvestimento(item);
+    const indicadorProduto = isFundo
+      ? escapeHtml(item.classe_fundo || "Rentabilidade manual")
+      : `${Number(item.percentual_cdi || 0).toLocaleString("pt-BR")}% do CDI`;
     card.innerHTML = `
       <div>
-        <span class="pill">${String(item.tipo || "cdb").toUpperCase()} • ${Number(item.percentual_cdi || 0).toLocaleString("pt-BR")}% do CDI</span>
+        <span class="pill">${tipoLabel} • ${indicadorProduto}</span>
         <h3>${escapeHtml(item.nome)}</h3>
         <p><strong>Instituição:</strong> ${escapeHtml(item.instituicao || "-")}</p>
         <p><strong>CNPJ:</strong> ${formatCnpj(item.cnpj_emissor)}</p>
-        <p><strong>Aportes:</strong> ${grupo.aportes.length} • <strong>Vencimento:</strong> ${formatDateBR(item.data_vencimento)}</p>
-        ${item.liquidez === "carencia" ? `<p><strong>Carência:</strong> ${formatDateBR(item.data_carencia)}${item.dias_carencia ? ` • ${Number(item.dias_carencia)} dias` : ""}</p>` : ""}
+        ${isFundo ? `<p><strong>Classe:</strong> ${escapeHtml(item.classe_fundo || "-")} • <strong>Administrador:</strong> ${escapeHtml(item.administrador || item.instituicao || "-")}</p>` : ""}
+        <p><strong>Aportes:</strong> ${grupo.aportes.length}${!isFundo ? ` • <strong>Vencimento:</strong> ${formatDateBR(item.data_vencimento)}` : ""}</p>
+        ${!isFundo && item.liquidez === "carencia" ? `<p><strong>Carência:</strong> ${formatDateBR(item.data_carencia)}${item.dias_carencia ? ` • ${Number(item.dias_carencia)} dias` : ""}</p>` : ""}
         <p><strong>Destino:</strong> ${escapeHtml(accountName(item.conta_investimento_id))}</p>
+        ${isFundo ? `<p class="fund-note">Rentabilidade automática por cota ainda não integrada. Nesta etapa o líquido acompanha o principal informado.</p>` : ""}
         ${item.observacoes ? `<p><strong>Obs.:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
         <div class="aportes-table-wrap">
           <table class="aportes-table">
@@ -806,7 +920,7 @@ async function recalcConta(contaId) {
 async function registrarTransferenciaInvestimento(investimento, origemId, destinoId) {
   const valor = Number(investimento.valor_aplicado || 0);
   const transferenciaId = uid();
-  const descricao = `Aplicação CDB — ${investimento.nome}`;
+  const descricao = `Aplicação ${investmentTypeLabel(investimento.tipo)} — ${investimento.nome}`;
 
   const { error: errTransf } = await supabase.from("transferencias").insert([{
     id: transferenciaId,
@@ -853,7 +967,7 @@ async function registrarTransferenciaInvestimento(investimento, origemId, destin
 
 async function registrarTransferenciaResgate({ produtoNome, valorLiquido, dataResgate, origemId, destinoId }) {
   const transferenciaId = uid();
-  const descricao = `Resgate CDB — ${produtoNome}`;
+  const descricao = `Resgate investimento — ${produtoNome}`;
 
   const { error: errTransf } = await supabase.from("transferencias").insert([{
     id: transferenciaId,
@@ -946,6 +1060,8 @@ async function handleSubmit(event) {
     const produtoExistente = produtoExistenteId
       ? buildProductGroups().find(p => p.id === produtoExistenteId)
       : null;
+    const tipoProduto = produtoExistente?.base?.tipo || el("invest-tipo-produto").value || "cdb";
+    const isFundo = tipoProduto === "fundo_investimento";
     const valor = parseMoneyBR(el("invest-valor").value);
     const dataAplicacao = el("invest-data").value;
     const origemId = el("invest-conta-origem").value || null;
@@ -960,10 +1076,10 @@ async function handleSubmit(event) {
     }
 
     if (state.formMode === "aporte" && !produtoExistente) {
-      throw new Error("Selecione o produto CDB que receberá este aporte.");
+      throw new Error("Selecione o produto que receberá este aporte.");
     }
 
-    if (liquidez === "carencia" && !dataCarencia && !diasCarencia) {
+    if (!isFundo && liquidez === "carencia" && !dataCarencia && !diasCarencia) {
       throw new Error("Informe a data fim da carência ou a quantidade de dias de carência.");
     }
 
@@ -979,19 +1095,23 @@ async function handleSubmit(event) {
       id: uid(),
       user_id: state.user.id,
       produto_grupo_id: produtoExistente ? produtoExistente.id : null,
-      tipo: "cdb",
-      indexador: "cdi",
+      tipo: tipoProduto,
+      indexador: isFundo ? "manual" : "cdi",
       nome,
-      instituicao: "Santander",
+      instituicao: isFundo
+        ? (el("invest-administrador").value.trim() || "Banco do Brasil")
+        : "Santander",
       cnpj_emissor: normalizeCnpj(el("invest-cnpj").value),
       valor_aplicado: Number(valor.toFixed(2)),
       data_aplicacao: dataAplicacao,
-      data_vencimento: el("invest-vencimento").value || null,
-      percentual_cdi: parsePercentBR(el("invest-percentual-cdi").value || 100, 100),
-      cdi_anual_referencia: parsePercentBR(el("invest-cdi-anual").value || 0),
-      liquidez,
-      data_carencia: liquidez === "carencia" ? dataCarencia : null,
-      dias_carencia: liquidez === "carencia" && diasCarencia > 0 ? diasCarencia : null,
+      data_vencimento: isFundo ? null : (el("invest-vencimento").value || null),
+      percentual_cdi: isFundo ? 0 : parsePercentBR(el("invest-percentual-cdi").value || 100, 100),
+      cdi_anual_referencia: isFundo ? 0 : parsePercentBR(el("invest-cdi-anual").value || 0),
+      liquidez: isFundo ? "diaria" : liquidez,
+      data_carencia: !isFundo && liquidez === "carencia" ? dataCarencia : null,
+      dias_carencia: !isFundo && liquidez === "carencia" && diasCarencia > 0 ? diasCarencia : null,
+      classe_fundo: isFundo ? (el("invest-classe-fundo").value.trim() || null) : null,
+      administrador: isFundo ? (el("invest-administrador").value.trim() || null) : null,
       conta_origem_id: origemId,
       conta_investimento_id: destinoId,
       observacoes: el("invest-observacoes").value.trim() || null,
@@ -1016,14 +1136,20 @@ async function handleSubmit(event) {
 
     event.target.reset();
     el("invest-produto-existente").value = "";
+    el("invest-tipo-produto").value = "cdb";
+    el("invest-tipo-produto").disabled = false;
     el("invest-nome").disabled = false;
     el("invest-cnpj").disabled = false;
+    el("invest-classe-fundo").disabled = false;
+    el("invest-administrador").disabled = false;
+    el("invest-classe-fundo").value = "";
+    el("invest-administrador").value = "";
     el("invest-valor").value = "0,00";
     el("invest-data").value = isoToday();
     el("invest-percentual-cdi").value = "100";
     el("invest-cdi-anual").value = "10,65";
     el("invest-gerar-transferencia").checked = true;
-    toggleCarenciaFields();
+    toggleInvestmentTypeFields();
     setInvestmentFormMode(state.formMode);
 
     await loadContas();
@@ -1132,6 +1258,8 @@ async function boot() {
   el("form-investimento").addEventListener("submit", handleSubmit);
   el("form-resgate").addEventListener("submit", handleResgateSubmit);
   el("invest-produto-existente").addEventListener("change", preencherProdutoExistente);
+  el("invest-tipo-produto").addEventListener("change", toggleInvestmentTypeFields);
+  el("invest-cnpj").addEventListener("input", preencherFundoPorCnpj);
   el("invest-liquidez").addEventListener("change", toggleCarenciaFields);
   document.querySelectorAll(".invest-tab").forEach((button) => {
     button.addEventListener("click", () => {
