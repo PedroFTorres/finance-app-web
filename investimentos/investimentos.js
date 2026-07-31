@@ -268,6 +268,13 @@ function isFundoInvestimento(investimento) {
   return tipo === "fundo_investimento" || observacoes.includes("tipo informado: fundo de investimento");
 }
 
+function getObservationField(investimento, label) {
+  const observacoes = String(investimento?.observacoes || "");
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = observacoes.match(new RegExp(`${escapedLabel}:\\s*([^|\\n]+)`, "i"));
+  return match ? match[1].trim() : "";
+}
+
 function calculateInvestimento(investimento, endDate = isoToday()) {
   if (!isFundoInvestimento(investimento)) return calculateCdb(investimento, endDate);
 
@@ -915,8 +922,10 @@ function renderInvestimentos() {
     card.className = "invest-card";
     const isFundo = isFundoInvestimento(item);
     const tipoLabel = investmentTypeLabel(item.tipo, item);
+    const classeFundo = item.classe_fundo || getObservationField(item, "Classe do fundo");
+    const administradorFundo = item.administrador || getObservationField(item, "Administrador/gestor") || item.instituicao;
     const indicadorProduto = isFundo
-      ? escapeHtml(item.classe_fundo || "Rentabilidade manual")
+      ? escapeHtml(classeFundo || "Fundo em cotas")
       : `${Number(item.percentual_cdi || 0).toLocaleString("pt-BR")}% do CDI`;
     card.innerHTML = `
       <div>
@@ -924,11 +933,11 @@ function renderInvestimentos() {
         <h3>${escapeHtml(item.nome)}</h3>
         <p><strong>Instituição:</strong> ${escapeHtml(item.instituicao || "-")}</p>
         <p><strong>CNPJ:</strong> ${formatCnpj(item.cnpj_emissor)}</p>
-        ${isFundo ? `<p><strong>Classe:</strong> ${escapeHtml(item.classe_fundo || "-")} • <strong>Administrador:</strong> ${escapeHtml(item.administrador || item.instituicao || "-")}</p>` : ""}
+        ${isFundo ? `<p><strong>Classe:</strong> ${escapeHtml(classeFundo || "-")} • <strong>Administrador:</strong> ${escapeHtml(administradorFundo || "-")}</p>` : ""}
         <p><strong>Aportes:</strong> ${grupo.aportes.length}${!isFundo ? ` • <strong>Vencimento:</strong> ${formatDateBR(item.data_vencimento)}` : ""}</p>
         ${!isFundo && item.liquidez === "carencia" ? `<p><strong>Carência:</strong> ${formatDateBR(item.data_carencia)}${item.dias_carencia ? ` • ${Number(item.dias_carencia)} dias` : ""}</p>` : ""}
         <p><strong>Destino:</strong> ${escapeHtml(accountName(item.conta_investimento_id))}</p>
-        ${isFundo ? `<p class="fund-note">Rentabilidade automática por cota ainda não integrada. Nesta etapa o líquido acompanha o principal informado.</p>` : ""}
+        ${isFundo ? `<p class="fund-note">Cota automática ainda não integrada. Nesta etapa o líquido acompanha o valor aplicado informado.</p>` : ""}
         ${item.observacoes ? `<p><strong>Obs.:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
         <div class="aportes-table-wrap">
           <table class="aportes-table">
