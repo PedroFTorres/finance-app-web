@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Investimentos - Arolix</title>
   <link rel="icon" type="image/png" href="../favicon.png">
-  <link rel="stylesheet" href="investimentos.css?v=20260731-1">
+  <link rel="stylesheet" href="investimentos.css?v=20260731-2">
 </head>
 <body>
   <header class="invest-header">
@@ -80,8 +80,18 @@
               <input id="invest-administrador" placeholder="Ex: Banco do Brasil">
             </div>
           </div>
+          <div class="row">
+            <div>
+              <label>Cota na aplicação</label>
+              <input id="invest-cota-inicial" inputmode="decimal" placeholder="0,00000000">
+            </div>
+            <div>
+              <label>Cota atual</label>
+              <input id="invest-cota-atual" inputmode="decimal" placeholder="0,00000000">
+            </div>
+          </div>
           <p class="field-help">
-            Nesta etapa o CNPJ identifica o fundo no cadastro. Rentabilidade automática, cota diária e histórico entram na próxima evolução.
+            Para fundos em cotas, informe a cota da data da aplicação e atualize a cota atual na carteira.
           </p>
         </div>
 
@@ -226,6 +236,7 @@
         <h2>Produtos e aportes cadastrados</h2>
         <button id="btn-recarregar" class="btn-secondary">Recarregar</button>
       </div>
+      <p id="carteira-msg" class="msg"></p>
       <div id="lista-investimentos" class="invest-list"></div>
     </section>
   </main>
@@ -233,6 +244,6 @@
   <script src="../vendor/supabase-2.108.2.js"></script>
   <script src="../config.js"></script>
   <script src="../supabase.js"></script>
-  <script src="investimentos.js?v=20260731-3"></script>
+  <script src="investimentos.js?v=20260731-4"></script>
 </body>
 </html>

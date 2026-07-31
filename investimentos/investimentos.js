@@ -69,6 +69,15 @@ function parsePercentBR(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function formatDecimalBR(value, digits = 8) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number) || number <= 0) return "";
+  return number.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: digits
+  });
+}
+
 function isoToday() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -170,6 +179,18 @@ function appendObservation(...parts) {
     .join("\n") || null;
 }
 
+function buildObservationWithFields(baseObservacao, fields) {
+  const existing = String(baseObservacao || "")
+    .split(/\n|\s+\|\s+/)
+    .map(part => part.trim())
+    .filter(Boolean)
+    .filter(part => !fields.some(field => part.toLowerCase().startsWith(`${field.label.toLowerCase()}:`)));
+  const details = fields
+    .filter(field => String(field.value || "").trim())
+    .map(field => `${field.label}: ${String(field.value).trim()}`);
+  return appendObservation(existing.join(" | "), details.join(" | "));
+}
+
 function isSchemaCacheError(error) {
   const message = String(error?.message || "").toLowerCase();
   return error?.code === "PGRST204" || message.includes("schema cache");
@@ -181,19 +202,20 @@ function isConstraintError(error) {
 }
 
 function withFundDetailsInObservations(investimento) {
-  const detalhes = [
-    isFundoInvestimento(investimento) ? "Tipo informado: Fundo de investimento" : "",
-    investimento.classe_fundo ? `Classe do fundo: ${investimento.classe_fundo}` : "",
-    investimento.administrador ? `Administrador/gestor: ${investimento.administrador}` : ""
-  ].filter(Boolean).join(" | ");
-  const { classe_fundo, administrador, ...compatInvestimento } = investimento;
+  const { classe_fundo, administrador, cota_inicial, cota_atual, ...compatInvestimento } = investimento;
   return {
     ...compatInvestimento,
     tipo: "cdb",
     indexador: "cdi",
     percentual_cdi: Number(compatInvestimento.percentual_cdi || 0),
     cdi_anual_referencia: Number(compatInvestimento.cdi_anual_referencia || 0),
-    observacoes: appendObservation(compatInvestimento.observacoes, detalhes)
+    observacoes: buildObservationWithFields(compatInvestimento.observacoes, [
+      { label: "Tipo informado", value: "Fundo de investimento" },
+      { label: "Classe do fundo", value: classe_fundo },
+      { label: "Administrador/gestor", value: administrador },
+      { label: "Cota inicial", value: cota_inicial ? formatDecimalBR(cota_inicial) : "" },
+      { label: "Cota atual", value: cota_atual ? formatDecimalBR(cota_atual) : "" }
+    ])
   };
 }
 
@@ -275,21 +297,54 @@ function getObservationField(investimento, label) {
   return match ? match[1].trim() : "";
 }
 
+function getFundCotaInicial(investimento) {
+  return parseMoneyBR(investimento?.cota_inicial || getObservationField(investimento, "Cota inicial"));
+}
+
+function getFundCotaAtual(investimento) {
+  return parseMoneyBR(investimento?.cota_atual || getObservationField(investimento, "Cota atual"));
+}
+
 function calculateInvestimento(investimento, endDate = isoToday()) {
   if (!isFundoInvestimento(investimento)) return calculateCdb(investimento, endDate);
 
   const principal = Number(investimento.valor_aplicado || 0);
+  const cotaInicial = getFundCotaInicial(investimento);
+  const cotaAtual = getFundCotaAtual(investimento) || cotaInicial;
+  const quantidadeCotas = cotaInicial > 0 ? principal / cotaInicial : 0;
+  const valorLiquido = quantidadeCotas > 0 && cotaAtual > 0
+    ? quantidadeCotas * cotaAtual
+    : principal;
+  const rendimentoBruto = valorLiquido - principal;
+
   return {
     principal,
     diasCorridos: daysBetween(investimento.data_aplicacao, endDate),
     diasUteis: businessDaysBetween(investimento.data_aplicacao, endDate),
-    rendimentoBruto: 0,
+    rendimentoBruto,
     iofRate: 0,
     iof: 0,
     irRate: 0,
     ir: 0,
-    valorLiquido: principal
+    valorLiquido,
+    quantidadeCotas,
+    cotaInicial,
+    cotaAtual
   };
+}
+
+function groupCotaAtual(group) {
+  const cotas = (group?.aportes || [])
+    .map(aporte => getFundCotaAtual(aporte))
+    .filter(value => value > 0);
+  return cotas.length ? cotas[cotas.length - 1] : 0;
+}
+
+function groupCotaInicial(group) {
+  const cotas = (group?.aportes || [])
+    .map(aporte => getFundCotaInicial(aporte))
+    .filter(value => value > 0);
+  return cotas.length ? cotas[0] : 0;
 }
 
 function groupId(item) {
@@ -458,6 +513,13 @@ function setResgateMessage(text, success = false) {
   msg.style.color = success ? "#16a34a" : "#dc2626";
 }
 
+function setCarteiraMessage(text, success = false) {
+  const msg = el("carteira-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.style.color = success ? "#16a34a" : "#dc2626";
+}
+
 function activateInvestmentTab(tabName, mode = null) {
   document.querySelectorAll(".invest-tab").forEach((button) => {
     const isActive = button.dataset.investTab === tabName &&
@@ -493,6 +555,8 @@ function setInvestmentFormMode(mode) {
     el("invest-cnpj").disabled = false;
     el("invest-classe-fundo").disabled = false;
     el("invest-administrador").disabled = false;
+    el("invest-cota-inicial").disabled = false;
+    el("invest-cota-atual").disabled = false;
   } else {
     preencherProdutoExistente();
   }
@@ -796,11 +860,15 @@ function preencherProdutoExistente() {
     el("invest-cnpj").disabled = false;
     el("invest-classe-fundo").disabled = false;
     el("invest-administrador").disabled = false;
+    el("invest-cota-inicial").disabled = false;
+    el("invest-cota-atual").disabled = false;
     if (state.formMode === "aporte") {
       el("invest-nome").value = "";
       el("invest-cnpj").value = "";
       el("invest-classe-fundo").value = "";
       el("invest-administrador").value = "";
+      el("invest-cota-inicial").value = "";
+      el("invest-cota-atual").value = "";
     }
     toggleInvestmentTypeFields();
     return;
@@ -810,11 +878,13 @@ function preencherProdutoExistente() {
   if (!produto) return;
   const base = produto.base;
 
-  el("invest-tipo-produto").value = base.tipo || "cdb";
+  el("invest-tipo-produto").value = isFundoInvestimento(base) ? "fundo_investimento" : (base.tipo || "cdb");
   el("invest-nome").value = base.nome || "";
   el("invest-cnpj").value = formatCnpj(base.cnpj_emissor || "");
-  el("invest-classe-fundo").value = base.classe_fundo || "";
-  el("invest-administrador").value = base.administrador || "";
+  el("invest-classe-fundo").value = base.classe_fundo || getObservationField(base, "Classe do fundo");
+  el("invest-administrador").value = base.administrador || getObservationField(base, "Administrador/gestor");
+  el("invest-cota-inicial").value = "";
+  el("invest-cota-atual").value = formatDecimalBR(getFundCotaAtual(base));
   el("invest-vencimento").value = base.data_vencimento || "";
   el("invest-liquidez").value = base.liquidez || "diaria";
   el("invest-data-carencia").value = base.data_carencia || "";
@@ -827,6 +897,8 @@ function preencherProdutoExistente() {
   el("invest-cnpj").disabled = true;
   el("invest-classe-fundo").disabled = true;
   el("invest-administrador").disabled = true;
+  el("invest-cota-inicial").disabled = false;
+  el("invest-cota-atual").disabled = false;
   toggleInvestmentTypeFields();
 }
 
@@ -897,6 +969,9 @@ function renderInvestimentos() {
 
   grupos.forEach((grupo) => {
     const item = grupo.base;
+    const isFundo = isFundoInvestimento(item);
+    const cotaInicialGrupo = isFundo ? groupCotaInicial(grupo) : 0;
+    const cotaAtualGrupo = isFundo ? groupCotaAtual(grupo) : 0;
     totals.aplicado += grupo.principalDisponivel;
     totals.rendimento += grupo.rendimento;
     totals.iof += grupo.iof;
@@ -913,14 +988,13 @@ function renderInvestimentos() {
           <td>${money(aporte.__resgatado || 0)}</td>
           <td>${money(disponivel)}</td>
           <td>${money(calc.valorLiquido)}</td>
-          <td>${calc.iofRate}% / ${calc.irRate}%</td>
+          <td>${isFundo ? formatDecimalBR(calc.quantidadeCotas, 8) : `${calc.iofRate}% / ${calc.irRate}%`}</td>
         </tr>
       `;
     }).join("");
 
     const card = document.createElement("article");
     card.className = "invest-card";
-    const isFundo = isFundoInvestimento(item);
     const tipoLabel = investmentTypeLabel(item.tipo, item);
     const classeFundo = item.classe_fundo || getObservationField(item, "Classe do fundo");
     const administradorFundo = item.administrador || getObservationField(item, "Administrador/gestor") || item.instituicao;
@@ -937,7 +1011,20 @@ function renderInvestimentos() {
         <p><strong>Aportes:</strong> ${grupo.aportes.length}${!isFundo ? ` • <strong>Vencimento:</strong> ${formatDateBR(item.data_vencimento)}` : ""}</p>
         ${!isFundo && item.liquidez === "carencia" ? `<p><strong>Carência:</strong> ${formatDateBR(item.data_carencia)}${item.dias_carencia ? ` • ${Number(item.dias_carencia)} dias` : ""}</p>` : ""}
         <p><strong>Destino:</strong> ${escapeHtml(accountName(item.conta_investimento_id))}</p>
-        ${isFundo ? `<p class="fund-note">Cota automática ainda não integrada. Nesta etapa o líquido acompanha o valor aplicado informado.</p>` : ""}
+        ${isFundo ? `
+          <div class="fund-cota-update">
+            <div>
+              <label>Cota inicial</label>
+              <input class="fund-cota-inicial-input" data-produto-id="${escapeHtml(grupo.id)}" inputmode="decimal" value="${escapeHtml(formatDecimalBR(cotaInicialGrupo))}" placeholder="0,00000000">
+            </div>
+            <div>
+              <label>Cota atual</label>
+              <input class="fund-cota-atual-input" data-produto-id="${escapeHtml(grupo.id)}" inputmode="decimal" value="${escapeHtml(formatDecimalBR(cotaAtualGrupo))}" placeholder="0,00000000">
+            </div>
+            <button class="btn-secondary btn-atualizar-cota" type="button" data-produto-id="${escapeHtml(grupo.id)}">Atualizar cota</button>
+          </div>
+          <p class="fund-note">O rendimento do fundo é calculado por cotas: valor aplicado dividido pela cota inicial, multiplicado pela cota atual.</p>
+        ` : ""}
         ${item.observacoes ? `<p><strong>Obs.:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
         <div class="aportes-table-wrap">
           <table class="aportes-table">
@@ -948,7 +1035,7 @@ function renderInvestimentos() {
                 <th>Resgatado</th>
                 <th>Disponível</th>
                 <th>Líquido estimado</th>
-                <th>IOF/IR</th>
+                <th>${isFundo ? "Cotas" : "IOF/IR"}</th>
               </tr>
             </thead>
             <tbody>${aportesHtml}</tbody>
@@ -957,7 +1044,7 @@ function renderInvestimentos() {
       </div>
       <div class="invest-meta">
         <div><span>Principal disponível</span><strong>${money(grupo.principalDisponivel)}</strong></div>
-        <div><span>Rendimento bruto</span><strong class="positive">${money(grupo.rendimento)}</strong></div>
+        <div><span>Rendimento bruto</span><strong class="${grupo.rendimento >= 0 ? "positive" : "negative"}">${money(grupo.rendimento)}</strong></div>
         <div><span>IOF estimado</span><strong class="negative">${money(grupo.iof)}</strong></div>
         <div><span>IR estimado</span><strong class="negative">${money(grupo.ir)}</strong></div>
         <div><span>Total aportado</span><strong>${money(grupo.principalAplicado)}</strong></div>
@@ -972,6 +1059,69 @@ function renderInvestimentos() {
   el("total-iof").textContent = money(totals.iof);
   el("total-ir").textContent = money(totals.ir);
   el("total-liquido").textContent = money(totals.liquido);
+}
+
+async function atualizarCotaFundo(produtoId) {
+  if (!requireInvestmentAccess()) return;
+
+  const input = [...document.querySelectorAll(".fund-cota-atual-input")]
+    .find(element => element.dataset.produtoId === produtoId);
+  const inputInicial = [...document.querySelectorAll(".fund-cota-inicial-input")]
+    .find(element => element.dataset.produtoId === produtoId);
+  const button = [...document.querySelectorAll(".btn-atualizar-cota")]
+    .find(element => element.dataset.produtoId === produtoId);
+  const cotaInicialInformada = parseMoneyBR(inputInicial?.value);
+  const cotaAtual = parseMoneyBR(input?.value);
+  const group = buildProductGroups().find(g => g.id === produtoId);
+
+  if (!group) {
+    setCarteiraMessage("Produto não encontrado.");
+    return;
+  }
+
+  if (!cotaAtual || cotaAtual <= 0) {
+    setCarteiraMessage("Informe uma cota atual válida.");
+    input?.focus();
+    return;
+  }
+
+  if (!group.aportes.every(aporte => getFundCotaInicial(aporte) > 0) && (!cotaInicialInformada || cotaInicialInformada <= 0)) {
+    setCarteiraMessage("Informe a cota inicial para completar o cálculo deste fundo.");
+    inputInicial?.focus();
+    return;
+  }
+
+  if (button) button.disabled = true;
+  setCarteiraMessage("");
+
+  try {
+    const updates = await Promise.all(group.aportes.map((aporte) => {
+      const observacoes = buildObservationWithFields(aporte.observacoes, [
+        { label: "Tipo informado", value: "Fundo de investimento" },
+        { label: "Classe do fundo", value: aporte.classe_fundo || getObservationField(aporte, "Classe do fundo") },
+        { label: "Administrador/gestor", value: aporte.administrador || getObservationField(aporte, "Administrador/gestor") || aporte.instituicao },
+        { label: "Cota inicial", value: formatDecimalBR(getFundCotaInicial(aporte) || cotaInicialInformada) },
+        { label: "Cota atual", value: formatDecimalBR(cotaAtual) }
+      ]);
+
+      return supabase
+        .from("investimentos")
+        .update({ observacoes })
+        .eq("id", aporte.id)
+        .eq("user_id", state.user.id);
+    }));
+
+    const updateError = updates.find(result => result.error)?.error;
+    if (updateError) throw updateError;
+
+    await loadInvestimentos();
+    setCarteiraMessage("Cota atualizada com sucesso.", true);
+  } catch (error) {
+    console.error(error);
+    setCarteiraMessage(error.message || "Erro ao atualizar cota.");
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
 
 async function recalcConta(contaId) {
@@ -1147,7 +1297,9 @@ async function handleSubmit(event) {
     const produtoExistente = produtoExistenteId
       ? buildProductGroups().find(p => p.id === produtoExistenteId)
       : null;
-    const tipoProduto = produtoExistente?.base?.tipo || el("invest-tipo-produto").value || "cdb";
+    const tipoProduto = produtoExistente
+      ? (isFundoInvestimento(produtoExistente.base) ? "fundo_investimento" : (produtoExistente.base.tipo || "cdb"))
+      : (el("invest-tipo-produto").value || "cdb");
     const isFundo = tipoProduto === "fundo_investimento";
     const valor = parseMoneyBR(el("invest-valor").value);
     const dataAplicacao = el("invest-data").value;
@@ -1180,6 +1332,18 @@ async function handleSubmit(event) {
 
     const classeFundo = isFundo ? (el("invest-classe-fundo").value.trim() || null) : null;
     const administrador = isFundo ? (el("invest-administrador").value.trim() || null) : null;
+    const cotaInicial = isFundo ? parseMoneyBR(el("invest-cota-inicial").value) : 0;
+    const cotaAtualInformada = isFundo ? parseMoneyBR(el("invest-cota-atual").value) : 0;
+    const cotaAtual = isFundo ? (cotaAtualInformada || cotaInicial || getFundCotaAtual(produtoExistente?.base)) : 0;
+    const observacoes = isFundo
+      ? buildObservationWithFields(el("invest-observacoes").value.trim(), [
+          { label: "Tipo informado", value: "Fundo de investimento" },
+          { label: "Classe do fundo", value: classeFundo },
+          { label: "Administrador/gestor", value: administrador },
+          { label: "Cota inicial", value: cotaInicial ? formatDecimalBR(cotaInicial) : "" },
+          { label: "Cota atual", value: cotaAtual ? formatDecimalBR(cotaAtual) : "" }
+        ])
+      : (el("invest-observacoes").value.trim() || null);
     const investimento = {
       id: uid(),
       user_id: state.user.id,
@@ -1201,9 +1365,11 @@ async function handleSubmit(event) {
       dias_carencia: !isFundo && liquidez === "carencia" && diasCarencia > 0 ? diasCarencia : null,
       classe_fundo: classeFundo,
       administrador,
+      cota_inicial: cotaInicial || null,
+      cota_atual: cotaAtual || null,
       conta_origem_id: origemId,
       conta_investimento_id: destinoId,
-      observacoes: el("invest-observacoes").value.trim() || null,
+      observacoes,
       status: "ativo"
     };
 
@@ -1232,6 +1398,8 @@ async function handleSubmit(event) {
     el("invest-administrador").disabled = false;
     el("invest-classe-fundo").value = "";
     el("invest-administrador").value = "";
+    el("invest-cota-inicial").value = "";
+    el("invest-cota-atual").value = "";
     el("invest-valor").value = "0,00";
     el("invest-data").value = isoToday();
     el("invest-percentual-cdi").value = "100";
@@ -1343,6 +1511,11 @@ async function boot() {
     await loadInvestimentos();
   };
   el("btn-criar-conta-investimento").onclick = criarContaInvestimento;
+  el("lista-investimentos").addEventListener("click", (event) => {
+    const button = event.target.closest(".btn-atualizar-cota");
+    if (!button) return;
+    atualizarCotaFundo(button.dataset.produtoId);
+  });
   el("form-investimento").addEventListener("submit", handleSubmit);
   el("form-resgate").addEventListener("submit", handleResgateSubmit);
   el("invest-produto-existente").addEventListener("change", preencherProdutoExistente);

@@ -514,6 +514,27 @@ button:disabled {
   font-weight: 700;
 }
 
+.fund-cota-update {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid rgba(122, 77, 255, 0.16);
+  border-radius: 14px;
+  background: #fbfaff;
+}
+
+.fund-cota-update label {
+  margin-top: 0;
+}
+
+.fund-cota-update button {
+  min-height: 45px;
+  white-space: nowrap;
+}
+
 .invest-meta {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -565,6 +586,7 @@ button:disabled {
   }
 
   .row,
+  .fund-cota-update,
   .invest-meta,
   .preview-grid {
     grid-template-columns: 1fr;
