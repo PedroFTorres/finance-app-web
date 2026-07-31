@@ -133,6 +133,20 @@ function formatCnpj(value) {
   return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 }
 
+function maskCnpj(value) {
+  const digits = normalizeCnpj(value);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+  if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`;
+}
+
+function handleCnpjInput(event) {
+  event.target.value = maskCnpj(event.target.value);
+  preencherFundoPorCnpj();
+}
+
 function preencherFundoPorCnpj() {
   if (el("invest-tipo-produto")?.value !== "fundo_investimento") return;
 
@@ -147,6 +161,44 @@ function preencherFundoPorCnpj() {
   if (observacoes && !observacoes.value.trim()) {
     observacoes.value = `Instituição: ${fundo.instituicao}. Cadastro inicial identificado pelo CNPJ do fundo.`;
   }
+}
+
+function appendObservation(...parts) {
+  return parts
+    .map(part => String(part || "").trim())
+    .filter(Boolean)
+    .join("\n") || null;
+}
+
+function isSchemaCacheError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return error?.code === "PGRST204" || message.includes("schema cache");
+}
+
+function withFundDetailsInObservations(investimento) {
+  const detalhes = [
+    investimento.classe_fundo ? `Classe do fundo: ${investimento.classe_fundo}` : "",
+    investimento.administrador ? `Administrador/gestor: ${investimento.administrador}` : ""
+  ].filter(Boolean).join(" | ");
+  const { classe_fundo, administrador, ...compatInvestimento } = investimento;
+  return {
+    ...compatInvestimento,
+    observacoes: appendObservation(compatInvestimento.observacoes, detalhes)
+  };
+}
+
+async function insertInvestimento(investimento) {
+  const { error } = await supabase.from("investimentos").insert([investimento]);
+  if (!error) return;
+
+  if (isSchemaCacheError(error) && (investimento.classe_fundo || investimento.administrador)) {
+    const fallback = withFundDetailsInObservations(investimento);
+    const { error: retryError } = await supabase.from("investimentos").insert([fallback]);
+    if (!retryError) return;
+    throw retryError;
+  }
+
+  throw error;
 }
 
 function calculateCdb(investimento, endDate = isoToday()) {
@@ -1091,6 +1143,8 @@ async function handleSubmit(event) {
       throw new Error("Conta origem e destino precisam ser diferentes.");
     }
 
+    const classeFundo = isFundo ? (el("invest-classe-fundo").value.trim() || null) : null;
+    const administrador = isFundo ? (el("invest-administrador").value.trim() || null) : null;
     const investimento = {
       id: uid(),
       user_id: state.user.id,
@@ -1110,8 +1164,8 @@ async function handleSubmit(event) {
       liquidez: isFundo ? "diaria" : liquidez,
       data_carencia: !isFundo && liquidez === "carencia" ? dataCarencia : null,
       dias_carencia: !isFundo && liquidez === "carencia" && diasCarencia > 0 ? diasCarencia : null,
-      classe_fundo: isFundo ? (el("invest-classe-fundo").value.trim() || null) : null,
-      administrador: isFundo ? (el("invest-administrador").value.trim() || null) : null,
+      classe_fundo: classeFundo,
+      administrador,
       conta_origem_id: origemId,
       conta_investimento_id: destinoId,
       observacoes: el("invest-observacoes").value.trim() || null,
@@ -1122,8 +1176,7 @@ async function handleSubmit(event) {
       investimento.produto_grupo_id = investimento.id;
     }
 
-    const { error } = await supabase.from("investimentos").insert([investimento]);
-    if (error) throw error;
+    await insertInvestimento(investimento);
 
     if (gerarTransferencia) {
       const transferenciaId = await registrarTransferenciaInvestimento(investimento, origemId, destinoId);
@@ -1259,7 +1312,7 @@ async function boot() {
   el("form-resgate").addEventListener("submit", handleResgateSubmit);
   el("invest-produto-existente").addEventListener("change", preencherProdutoExistente);
   el("invest-tipo-produto").addEventListener("change", toggleInvestmentTypeFields);
-  el("invest-cnpj").addEventListener("input", preencherFundoPorCnpj);
+  el("invest-cnpj").addEventListener("input", handleCnpjInput);
   el("invest-liquidez").addEventListener("change", toggleCarenciaFields);
   document.querySelectorAll(".invest-tab").forEach((button) => {
     button.addEventListener("click", () => {
