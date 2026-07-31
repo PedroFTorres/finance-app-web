@@ -80,11 +80,24 @@ async function atualizarDashboardPorMes() {
   if (!BAIXA_ATUAL) return;
 
   const valor = Number(BAIXA_ATUAL.lancamento.valor || 0);
-  const valorPago = Number(document.getElementById("valor-pago-baixa")?.value || 0);
+  const valorPagoInput = document.getElementById("valor-pago-baixa");
+  let valorPago = Number(valorPagoInput?.value || 0);
   const juros = Number(document.getElementById("juros-baixa").value || 0);
   const desconto = Number(document.getElementById("desconto-baixa").value || 0);
 
-  const final = valor + juros - desconto;
+  const final = Number((valor + juros - desconto).toFixed(2));
+  const finalAnterior = Number(valorPagoInput?.dataset.valorFinalAnterior || valor);
+  const deveAjustarValorPago = valorPagoInput
+    && final > 0
+    && Math.abs(final - finalAnterior) > 0.009
+    && (Math.abs(valorPago - finalAnterior) < 0.009 || Math.abs(valorPago - valor) < 0.009 || valorPago > final + 0.009);
+
+  if (deveAjustarValorPago) {
+    valorPago = final;
+    valorPagoInput.value = final.toFixed(2);
+  }
+
+  if (valorPagoInput) valorPagoInput.dataset.valorFinalAnterior = String(final);
   const restante = Math.max(final - valorPago, 0);
 
   document.getElementById("valor-final-baixa").textContent =
@@ -2860,7 +2873,10 @@ openModalEditSemEscopo(item, tipo) {
   document.getElementById("juros-baixa").value = "";
   document.getElementById("desconto-baixa").value = "";
   const valorPagoInput = document.getElementById("valor-pago-baixa");
-  if (valorPagoInput) valorPagoInput.value = Number(lancamento.valor || 0).toFixed(2);
+  if (valorPagoInput) {
+    valorPagoInput.value = Number(lancamento.valor || 0).toFixed(2);
+    valorPagoInput.dataset.valorFinalAnterior = Number(lancamento.valor || 0).toFixed(2);
+  }
 
  document.getElementById("valor-original-baixa").textContent =
   Number(lancamento.valor).toLocaleString("pt-BR", {
@@ -4513,7 +4529,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     const { tipo, lancamento } = BAIXA_ATUAL;
 
     const dataBaixa = document.getElementById("data-baixa").value;
-    const valorPago = Number(document.getElementById("valor-pago-baixa")?.value || 0);
+    let valorPago = Number(document.getElementById("valor-pago-baixa")?.value || 0);
     const juros = Number(document.getElementById("juros-baixa").value || 0);
     const desconto = Number(document.getElementById("desconto-baixa").value || 0);
     const contaId = document.getElementById("conta-baixa-select").value;
@@ -4525,6 +4541,9 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
 
     const valorOriginal = Number(lancamento.valor);
     const valorFinal = valorOriginal + juros - desconto;
+    if (valorFinal > 0 && Math.abs(valorPago - valorOriginal) < 0.009 && Math.abs(valorFinal - valorOriginal) > 0.009) {
+      valorPago = Number(valorFinal.toFixed(2));
+    }
     const restante = Number((valorFinal - valorPago).toFixed(2));
     const baixaParcial = restante > 0.009;
 
