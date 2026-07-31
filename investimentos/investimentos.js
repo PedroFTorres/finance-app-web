@@ -197,15 +197,28 @@ function withFundDetailsInObservations(investimento) {
   };
 }
 
+function compatibleFundInsertAttempts(investimento) {
+  const fallback = withFundDetailsInObservations(investimento);
+  const { indexador, ...withoutIndexador } = fallback;
+  return [
+    fallback,
+    { ...fallback, indexador: "CDI" },
+    withoutIndexador
+  ];
+}
+
 async function insertInvestimento(investimento) {
   const { error } = await supabase.from("investimentos").insert([investimento]);
   if (!error) return;
 
   if ((isSchemaCacheError(error) || isConstraintError(error)) && isFundoInvestimento(investimento)) {
-    const fallback = withFundDetailsInObservations(investimento);
-    const { error: retryError } = await supabase.from("investimentos").insert([fallback]);
-    if (!retryError) return;
-    throw retryError;
+    let lastError = error;
+    for (const fallback of compatibleFundInsertAttempts(investimento)) {
+      const { error: retryError } = await supabase.from("investimentos").insert([fallback]);
+      if (!retryError) return;
+      lastError = retryError;
+    }
+    throw lastError;
   }
 
   throw error;
