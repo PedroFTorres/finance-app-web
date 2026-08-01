@@ -514,7 +514,12 @@ function investmentTypeLabel(tipo, investimento = null) {
 function isFundoInvestimento(investimento) {
   const tipo = String(investimento?.tipo || "").toLowerCase();
   const observacoes = String(investimento?.observacoes || "").toLowerCase();
-  return tipo === "fundo_investimento" || observacoes.includes("tipo informado: fundo de investimento");
+  const cnpjCvm = normalizeCnpjCvm(investimento?.cnpj_emissor || "");
+  const nome = String(investimento?.nome || "").toLowerCase();
+  return tipo === "fundo_investimento"
+    || observacoes.includes("tipo informado: fundo de investimento")
+    || Boolean(FUNDOS_CONHECIDOS[cnpjCvm])
+    || nome.includes("reserva cofrinho");
 }
 
 function getObservationField(investimento, label) {
