@@ -1553,11 +1553,33 @@ async function handleSubmit(event) {
 
     const classeFundo = isFundo ? (el("invest-classe-fundo").value.trim() || null) : null;
     const administrador = isFundo ? (el("invest-administrador").value.trim() || null) : null;
-    const cotaInicial = isFundo ? parseDecimalBR(el("invest-cota-inicial").value) : 0;
-    const cotaAtual = isFundo ? parseDecimalBR(el("invest-cota-atual").value) : 0;
+    const cnpjFundo = isFundo ? normalizeCnpjCvm(el("invest-cnpj").value) : normalizeCnpj(el("invest-cnpj").value);
+    let cotaInicial = isFundo ? parseDecimalBR(el("invest-cota-inicial").value) : 0;
+    let cotaAtual = isFundo ? parseDecimalBR(el("invest-cota-atual").value) : 0;
+
+    if (isFundo && cnpjFundo.length !== 14) {
+      throw new Error("Informe um CNPJ de fundo válido.");
+    }
+
+    if (isFundo) {
+      setCvmMessage("Validando CNPJ e cotas oficiais na CVM...");
+      const [cotaAplicacaoCvm, cotaAtualCvm] = await Promise.all([
+        buscarCotaCvm(cnpjFundo, dataAplicacao),
+        buscarCotaCvm(cnpjFundo, isoToday())
+      ]);
+      cotaInicial = Number(cotaAplicacaoCvm.quota);
+      cotaAtual = Number(cotaAtualCvm.quota || cotaAplicacaoCvm.quota);
+      el("invest-cnpj").value = formatCnpj(cnpjFundo);
+      el("invest-cota-inicial").value = formatDecimalBR(cotaInicial, 8);
+      el("invest-cota-atual").value = formatDecimalBR(cotaAtual, 8);
+      setCvmMessage(
+        `CNPJ validado na CVM. Cota da aplicação em ${formatDateBR(cotaAplicacaoCvm.date)} e cota atual de ${formatDateBR(cotaAtualCvm.date)}.`,
+        true
+      );
+    }
 
     if (isFundo && (!cotaInicial || cotaInicial <= 0)) {
-      throw new Error("Busque ou informe a cota da aplicação para calcular a rentabilidade do fundo.");
+      throw new Error("Não encontrei cota oficial para esse CNPJ na CVM. Confira se o CNPJ é de um fundo de investimento.");
     }
 
     const observacoes = isFundo
@@ -1579,7 +1601,7 @@ async function handleSubmit(event) {
       instituicao: isFundo
         ? (el("invest-administrador").value.trim() || "Banco do Brasil")
         : "Santander",
-      cnpj_emissor: normalizeCnpjCvm(el("invest-cnpj").value),
+      cnpj_emissor: cnpjFundo,
       valor_aplicado: Number(valor.toFixed(2)),
       data_aplicacao: dataAplicacao,
       data_vencimento: isFundo ? null : (el("invest-vencimento").value || null),
