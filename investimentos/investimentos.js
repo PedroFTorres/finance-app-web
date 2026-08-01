@@ -25,6 +25,10 @@ const FUNDOS_CONHECIDOS = {
   }
 };
 
+const FUNDOS_CNPJ_CVM_ALIAS = {
+  "54603259001556": "54603259000156"
+};
+
 const CVM_INF_DIARIO_BASE = "https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS";
 const cvmFileCache = new Map();
 
@@ -164,6 +168,11 @@ function normalizeCnpj(value) {
   return String(value || "").replace(/\D/g, "").slice(0, 14);
 }
 
+function normalizeCnpjCvm(value) {
+  const cnpj = normalizeCnpj(value);
+  return FUNDOS_CNPJ_CVM_ALIAS[cnpj] || cnpj;
+}
+
 function formatCnpj(value) {
   const digits = normalizeCnpj(value);
   if (digits.length !== 14) return digits || "-";
@@ -187,7 +196,7 @@ function handleCnpjInput(event) {
 function preencherFundoPorCnpj() {
   if (el("invest-tipo-produto")?.value !== "fundo_investimento") return;
 
-  const cnpj = normalizeCnpj(el("invest-cnpj")?.value || "");
+  const cnpj = normalizeCnpjCvm(el("invest-cnpj")?.value || "");
   const fundo = FUNDOS_CONHECIDOS[cnpj];
   if (!fundo) return;
 
@@ -294,7 +303,7 @@ async function buscarCotaCvmViaSupabase(cnpj, dateISO, maxBackMonths) {
 }
 
 async function buscarCotaCvm(cnpjValue, dateISO, options = {}) {
-  const cnpj = normalizeCnpj(cnpjValue);
+  const cnpj = normalizeCnpjCvm(cnpjValue);
   if (cnpj.length !== 14) throw new Error("Informe um CNPJ de fundo válido.");
 
   const maxBackMonths = Number(options.maxBackMonths ?? 15);
@@ -349,7 +358,7 @@ async function buscarCotasFormulario() {
   if (el("invest-tipo-produto")?.value !== "fundo_investimento") return;
 
   const button = el("btn-buscar-cotas-cvm");
-  const cnpj = normalizeCnpj(el("invest-cnpj")?.value);
+  const cnpj = normalizeCnpjCvm(el("invest-cnpj")?.value);
   const dataAplicacao = el("invest-data")?.value || isoToday();
 
   if (cnpj.length !== 14) {
@@ -367,6 +376,7 @@ async function buscarCotasFormulario() {
       buscarCotaCvm(cnpj, isoToday())
     ]);
 
+    el("invest-cnpj").value = formatCnpj(cnpj);
     el("invest-cota-inicial").value = formatDecimalBR(cotaAplicacao.quota, 8);
     el("invest-cota-atual").value = formatDecimalBR(cotaAtual.quota, 8);
     setCvmMessage(
@@ -1275,7 +1285,7 @@ async function atualizarCotasFundoPelaCvm(produtoId) {
     return;
   }
 
-  const cnpj = normalizeCnpj(group.base.cnpj_emissor);
+  const cnpj = normalizeCnpjCvm(group.base.cnpj_emissor);
   if (cnpj.length !== 14) {
     setCarteiraMessage("Este fundo não possui CNPJ válido para consulta na CVM.");
     return;
@@ -1301,6 +1311,7 @@ async function atualizarCotasFundoPelaCvm(produtoId) {
       ]);
 
       const payload = {
+        cnpj_emissor: cnpj,
         cota_inicial: Number(cotaInicial.quota),
         cota_atual: Number(cotaAtual.quota),
         observacoes
@@ -1568,7 +1579,7 @@ async function handleSubmit(event) {
       instituicao: isFundo
         ? (el("invest-administrador").value.trim() || "Banco do Brasil")
         : "Santander",
-      cnpj_emissor: normalizeCnpj(el("invest-cnpj").value),
+      cnpj_emissor: normalizeCnpjCvm(el("invest-cnpj").value),
       valor_aplicado: Number(valor.toFixed(2)),
       data_aplicacao: dataAplicacao,
       data_vencimento: isFundo ? null : (el("invest-vencimento").value || null),

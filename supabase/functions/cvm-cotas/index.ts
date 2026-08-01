@@ -1,6 +1,9 @@
 import { unzipSync } from "npm:fflate@0.8.2";
 
 const CVM_INF_DIARIO_BASE = "https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS";
+const CVM_CNPJ_ALIASES: Record<string, string> = {
+  "54603259001556": "54603259000156"
+};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +15,11 @@ type CvmRow = Record<string, string>;
 
 function normalizeCnpj(value: unknown) {
   return String(value || "").replace(/\D/g, "").slice(0, 14);
+}
+
+function normalizeCnpjCvm(value: unknown) {
+  const cnpj = normalizeCnpj(value);
+  return CVM_CNPJ_ALIASES[cnpj] || cnpj;
 }
 
 function parseDecimal(value: unknown) {
@@ -121,7 +129,7 @@ Deno.serve(async (request) => {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const cnpj = normalizeCnpj(body.cnpj);
+    const cnpj = normalizeCnpjCvm(body.cnpj);
     const dateISO = String(body.date || new Date().toISOString().slice(0, 10)).slice(0, 10);
     const maxBackMonths = Math.min(36, Math.max(0, Number(body.maxBackMonths ?? 15)));
 
