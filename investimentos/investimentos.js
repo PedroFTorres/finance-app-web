@@ -25,6 +25,9 @@ const FUNDOS_CONHECIDOS = {
   }
 };
 
+const CVM_INF_DIARIO_BASE = "https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS";
+const cvmFileCache = new Map();
+
 const el = (id) => document.getElementById(id);
 
 function uid() {
@@ -78,6 +81,18 @@ function formatDecimalBR(value, digits = 8) {
   });
 }
 
+function parseDecimalBR(value) {
+  if (typeof value === "number") return value;
+  const raw = String(value || "").trim().replace(/\s/g, "");
+  const hasComma = raw.includes(",");
+  const hasDot = raw.includes(".");
+  const normalized = hasComma
+    ? raw.replace(/\./g, "").replace(",", ".")
+    : (hasDot ? raw : raw.replace(",", "."));
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : 0;
+}
+
 function isoToday() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -85,6 +100,19 @@ function isoToday() {
 function parseISODate(value) {
   if (!value) return null;
   return new Date(`${value}T00:00:00`);
+}
+
+function addMonthsISO(iso, amount) {
+  const date = parseISODate(iso);
+  if (!date) return isoToday();
+  date.setMonth(date.getMonth() + Number(amount || 0));
+  return date.toISOString().slice(0, 10);
+}
+
+function yearMonthFromISO(iso) {
+  const date = parseISODate(iso);
+  if (!date) return isoToday().replace(/-/g, "").slice(0, 6);
+  return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function daysBetween(startISO, endISO = isoToday()) {
@@ -172,6 +200,187 @@ function preencherFundoPorCnpj() {
   }
 }
 
+function setCvmMessage(text, success = false) {
+  const msg = el("cvm-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.style.color = success ? "#16a34a" : "#dc2626";
+}
+
+function parseCvmCsv(text) {
+  const lines = String(text || "").trim().split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(";").map(header => header.trim());
+  return lines.slice(1).map((line) => {
+    const values = line.split(";");
+    return headers.reduce((row, header, index) => {
+      row[header] = values[index] ?? "";
+      return row;
+    }, {});
+  });
+}
+
+async function fetchCvmZip(url) {
+  if (!window.JSZip) {
+    throw new Error("Leitor ZIP da CVM não carregado. Recarregue a página e tente novamente.");
+  }
+
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Arquivo CVM indisponível (${response.status}).`);
+  const zip = await window.JSZip.loadAsync(await response.arrayBuffer());
+  const csvFile = Object.values(zip.files).find(file => /\.csv$/i.test(file.name));
+  if (!csvFile) throw new Error("Arquivo da CVM não contém CSV de cotas.");
+  return csvFile.async("string");
+}
+
+async function fetchCvmRowsForMonth(yearMonth) {
+  if (cvmFileCache.has(yearMonth)) return cvmFileCache.get(yearMonth);
+
+  const promise = (async () => {
+    const baseName = `inf_diario_fi_${yearMonth}`;
+    const csvUrl = `${CVM_INF_DIARIO_BASE}/${baseName}.csv`;
+    const zipUrl = `${CVM_INF_DIARIO_BASE}/${baseName}.zip`;
+
+    try {
+      const csvResponse = await fetch(csvUrl);
+      if (csvResponse.ok) return parseCvmCsv(await csvResponse.text());
+    } catch (_error) {
+      // A CVM costuma publicar os meses recentes em ZIP; o CSV direto fica como primeira tentativa leve.
+    }
+
+    return parseCvmCsv(await fetchCvmZip(zipUrl));
+  })();
+
+  cvmFileCache.set(yearMonth, promise);
+  return promise;
+}
+
+function getCvmRowCnpj(row) {
+  return normalizeCnpj(row.CNPJ_FUNDO || row.CNPJ_FUNDO_CLASSE || row.CNPJ_FUNDO_COTA);
+}
+
+function getCvmRowDate(row) {
+  return row.DT_COMPTC || row.DT_COMPT || row.DT_REFER || "";
+}
+
+function getCvmRowQuota(row) {
+  return parseDecimalBR(row.VL_QUOTA || row.VL_COTA || "");
+}
+
+async function buscarCotaCvmViaSupabase(cnpj, dateISO, maxBackMonths) {
+  if (!supabase?.functions?.invoke) {
+    throw new Error("Funções Supabase indisponíveis neste navegador.");
+  }
+
+  const { data, error } = await supabase.functions.invoke("cvm-cotas", {
+    body: {
+      cnpj,
+      date: dateISO,
+      maxBackMonths
+    }
+  });
+
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  if (!data?.quota || !data?.date) throw new Error("A CVM não retornou cota para esse fundo.");
+
+  return {
+    cnpj: normalizeCnpj(data.cnpj || cnpj),
+    date: data.date,
+    quota: Number(data.quota),
+    yearMonth: data.yearMonth,
+    source: "supabase"
+  };
+}
+
+async function buscarCotaCvm(cnpjValue, dateISO, options = {}) {
+  const cnpj = normalizeCnpj(cnpjValue);
+  if (cnpj.length !== 14) throw new Error("Informe um CNPJ de fundo válido.");
+
+  const maxBackMonths = Number(options.maxBackMonths ?? 15);
+
+  try {
+    return await buscarCotaCvmViaSupabase(cnpj, dateISO, maxBackMonths);
+  } catch (error) {
+    console.warn("Consulta CVM via Supabase indisponível; tentando consulta direta.", error);
+  }
+
+  let cursor = dateISO || isoToday();
+
+  for (let attempt = 0; attempt <= maxBackMonths; attempt += 1) {
+    const yearMonth = yearMonthFromISO(cursor);
+    let rows = [];
+    try {
+      rows = await fetchCvmRowsForMonth(yearMonth);
+    } catch (error) {
+      console.warn(`Arquivo CVM ${yearMonth} indisponível; tentando mês anterior.`, error);
+      cursor = addMonthsISO(`${yearMonth.slice(0, 4)}-${yearMonth.slice(4, 6)}-01`, -1);
+      continue;
+    }
+    const matches = rows
+      .filter(row => getCvmRowCnpj(row) === cnpj)
+      .map(row => ({
+        date: getCvmRowDate(row),
+        quota: getCvmRowQuota(row)
+      }))
+      .filter(row => row.date && row.quota > 0)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const selected = matches
+      .filter(row => !dateISO || row.date <= dateISO)
+      .at(-1);
+
+    if (selected) {
+      return {
+        cnpj,
+        date: selected.date,
+        quota: selected.quota,
+        yearMonth
+      };
+    }
+
+    cursor = addMonthsISO(`${yearMonth.slice(0, 4)}-${yearMonth.slice(4, 6)}-01`, -1);
+  }
+
+  throw new Error("Não encontrei cota desse fundo na CVM para a data informada ou datas anteriores próximas.");
+}
+
+async function buscarCotasFormulario() {
+  if (el("invest-tipo-produto")?.value !== "fundo_investimento") return;
+
+  const button = el("btn-buscar-cotas-cvm");
+  const cnpj = normalizeCnpj(el("invest-cnpj")?.value);
+  const dataAplicacao = el("invest-data")?.value || isoToday();
+
+  if (cnpj.length !== 14) {
+    setCvmMessage("Informe o CNPJ do fundo para buscar na CVM.");
+    el("invest-cnpj")?.focus();
+    return;
+  }
+
+  button.disabled = true;
+  setCvmMessage("Consultando cotas oficiais da CVM...");
+
+  try {
+    const [cotaAplicacao, cotaAtual] = await Promise.all([
+      buscarCotaCvm(cnpj, dataAplicacao),
+      buscarCotaCvm(cnpj, isoToday())
+    ]);
+
+    el("invest-cota-inicial").value = formatDecimalBR(cotaAplicacao.quota, 8);
+    el("invest-cota-atual").value = formatDecimalBR(cotaAtual.quota, 8);
+    setCvmMessage(
+      `CVM: aplicação em ${formatDateBR(cotaAplicacao.date)} e cota atual de ${formatDateBR(cotaAtual.date)}.`,
+      true
+    );
+  } catch (error) {
+    console.error(error);
+    setCvmMessage(error.message || "Não foi possível buscar as cotas na CVM.");
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function appendObservation(...parts) {
   return parts
     .map(part => String(part || "").trim())
@@ -206,8 +415,8 @@ function withFundDetailsInObservations(investimento) {
     classe_fundo,
     administrador,
     saldo_atual_informado,
-    cota_inicial: _cotaInicialLegada,
-    cota_atual: _cotaAtualLegada,
+    cota_inicial,
+    cota_atual,
     ...compatInvestimento
   } = investimento;
   return {
@@ -220,6 +429,8 @@ function withFundDetailsInObservations(investimento) {
       { label: "Tipo informado", value: "Fundo de investimento" },
       { label: "Classe do fundo", value: classe_fundo },
       { label: "Administrador/gestor", value: administrador },
+      { label: "Cota da aplicação", value: cota_inicial ? formatDecimalBR(cota_inicial, 8) : "" },
+      { label: "Cota atual", value: cota_atual ? formatDecimalBR(cota_atual, 8) : "" },
       { label: "Saldo atual informado", value: saldo_atual_informado ? money(saldo_atual_informado) : "" }
     ])
   };
@@ -303,11 +514,18 @@ function getObservationField(investimento, label) {
   return match ? match[1].trim() : "";
 }
 
-function getFundSaldoAtual(investimento) {
-  return parseMoneyBR(
-    investimento?.saldo_atual_informado ||
-    getObservationField(investimento, "Saldo atual informado") ||
-    getObservationField(investimento, "Saldo atual")
+function getFundCotaInicial(investimento) {
+  return parseDecimalBR(
+    investimento?.cota_inicial ||
+    getObservationField(investimento, "Cota da aplicação") ||
+    getObservationField(investimento, "Cota inicial")
+  );
+}
+
+function getFundCotaAtual(investimento) {
+  return parseDecimalBR(
+    investimento?.cota_atual ||
+    getObservationField(investimento, "Cota atual")
   );
 }
 
@@ -315,8 +533,10 @@ function calculateInvestimento(investimento, endDate = isoToday()) {
   if (!isFundoInvestimento(investimento)) return calculateCdb(investimento, endDate);
 
   const principal = Number(investimento.valor_aplicado || 0);
-  const saldoAtual = getFundSaldoAtual(investimento);
-  const valorLiquido = saldoAtual > 0 ? saldoAtual : principal;
+  const cotaInicial = getFundCotaInicial(investimento);
+  const cotaAtual = getFundCotaAtual(investimento);
+  const quantidadeCotas = cotaInicial > 0 ? principal / cotaInicial : 0;
+  const valorLiquido = quantidadeCotas > 0 && cotaAtual > 0 ? quantidadeCotas * cotaAtual : principal;
   const rendimentoBruto = valorLiquido - principal;
 
   return {
@@ -329,13 +549,10 @@ function calculateInvestimento(investimento, endDate = isoToday()) {
     irRate: 0,
     ir: 0,
     valorLiquido,
-    saldoAtual
+    cotaInicial,
+    cotaAtual,
+    quantidadeCotas
   };
-}
-
-function groupSaldoAtualInformado(group) {
-  return (group?.aportes || [])
-    .reduce((sum, aporte) => sum + getFundSaldoAtual(aporte), 0);
 }
 
 function groupId(item) {
@@ -546,7 +763,8 @@ function setInvestmentFormMode(mode) {
     el("invest-cnpj").disabled = false;
     el("invest-classe-fundo").disabled = false;
     el("invest-administrador").disabled = false;
-    el("invest-saldo-atual").disabled = false;
+    el("invest-cota-inicial").disabled = false;
+    el("invest-cota-atual").disabled = false;
   } else {
     preencherProdutoExistente();
   }
@@ -850,13 +1068,15 @@ function preencherProdutoExistente() {
     el("invest-cnpj").disabled = false;
     el("invest-classe-fundo").disabled = false;
     el("invest-administrador").disabled = false;
-    el("invest-saldo-atual").disabled = false;
+    el("invest-cota-inicial").disabled = false;
+    el("invest-cota-atual").disabled = false;
     if (state.formMode === "aporte") {
       el("invest-nome").value = "";
       el("invest-cnpj").value = "";
       el("invest-classe-fundo").value = "";
       el("invest-administrador").value = "";
-      el("invest-saldo-atual").value = "";
+      el("invest-cota-inicial").value = "";
+      el("invest-cota-atual").value = "";
     }
     toggleInvestmentTypeFields();
     return;
@@ -871,7 +1091,8 @@ function preencherProdutoExistente() {
   el("invest-cnpj").value = formatCnpj(base.cnpj_emissor || "");
   el("invest-classe-fundo").value = base.classe_fundo || getObservationField(base, "Classe do fundo");
   el("invest-administrador").value = base.administrador || getObservationField(base, "Administrador/gestor");
-  el("invest-saldo-atual").value = "";
+  el("invest-cota-inicial").value = "";
+  el("invest-cota-atual").value = formatDecimalBR(getFundCotaAtual(base), 8);
   el("invest-vencimento").value = base.data_vencimento || "";
   el("invest-liquidez").value = base.liquidez || "diaria";
   el("invest-data-carencia").value = base.data_carencia || "";
@@ -884,7 +1105,8 @@ function preencherProdutoExistente() {
   el("invest-cnpj").disabled = true;
   el("invest-classe-fundo").disabled = true;
   el("invest-administrador").disabled = true;
-  el("invest-saldo-atual").disabled = false;
+  el("invest-cota-inicial").disabled = false;
+  el("invest-cota-atual").disabled = false;
   toggleInvestmentTypeFields();
 }
 
@@ -956,7 +1178,6 @@ function renderInvestimentos() {
   grupos.forEach((grupo) => {
     const item = grupo.base;
     const isFundo = isFundoInvestimento(item);
-    const saldoAtualInformado = isFundo ? groupSaldoAtualInformado(grupo) : 0;
     totals.aplicado += grupo.principalDisponivel;
     totals.rendimento += grupo.rendimento;
     totals.iof += grupo.iof;
@@ -973,7 +1194,7 @@ function renderInvestimentos() {
           <td>${money(aporte.__resgatado || 0)}</td>
           <td>${money(disponivel)}</td>
           <td>${money(calc.valorLiquido)}</td>
-          <td>${isFundo ? money(calc.saldoAtual || disponivel) : `${calc.iofRate}% / ${calc.irRate}%`}</td>
+          <td>${isFundo ? `${formatDecimalBR(calc.cotaAtual, 8) || "-"} / ${formatDecimalBR(calc.quantidadeCotas, 8) || "-"}` : `${calc.iofRate}% / ${calc.irRate}%`}</td>
         </tr>
       `;
     }).join("");
@@ -999,12 +1220,12 @@ function renderInvestimentos() {
         ${isFundo ? `
           <div class="fund-balance-update">
             <div>
-              <label>Saldo atual informado pelo banco</label>
-              <input class="fund-saldo-atual-input" data-produto-id="${escapeHtml(grupo.id)}" inputmode="decimal" value="${escapeHtml(saldoAtualInformado ? money(saldoAtualInformado).replace("R$", "").trim() : "")}" placeholder="0,00">
+              <strong>Cotas pela CVM</strong>
+              <span>Atualiza cota de aplicação e cota atual pelo CNPJ do fundo.</span>
             </div>
-            <button class="btn-secondary btn-atualizar-saldo-fundo" type="button" data-produto-id="${escapeHtml(grupo.id)}">Atualizar saldo</button>
+            <button class="btn-secondary btn-atualizar-cotas-cvm" type="button" data-produto-id="${escapeHtml(grupo.id)}">Atualizar pela CVM</button>
           </div>
-          <p class="fund-note">O rendimento do fundo é calculado pela diferença entre o saldo atual informado e o valor aplicado disponível.</p>
+          <p class="fund-note">O rendimento do fundo é calculado por quantidade de cotas vezes a cota atual oficial da CVM.</p>
         ` : ""}
         ${item.observacoes ? `<p><strong>Obs.:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
         <div class="aportes-table-wrap">
@@ -1016,7 +1237,7 @@ function renderInvestimentos() {
                 <th>Resgatado</th>
                 <th>Disponível</th>
                 <th>Líquido estimado</th>
-                <th>${isFundo ? "Saldo informado" : "IOF/IR"}</th>
+                <th>${isFundo ? "Cota atual / cotas" : "IOF/IR"}</th>
               </tr>
             </thead>
             <tbody>${aportesHtml}</tbody>
@@ -1042,14 +1263,11 @@ function renderInvestimentos() {
   el("total-liquido").textContent = money(totals.liquido);
 }
 
-async function atualizarSaldoFundo(produtoId) {
+async function atualizarCotasFundoPelaCvm(produtoId) {
   if (!requireInvestmentAccess()) return;
 
-  const input = [...document.querySelectorAll(".fund-saldo-atual-input")]
+  const button = [...document.querySelectorAll(".btn-atualizar-cotas-cvm")]
     .find(element => element.dataset.produtoId === produtoId);
-  const button = [...document.querySelectorAll(".btn-atualizar-saldo-fundo")]
-    .find(element => element.dataset.produtoId === produtoId);
-  const saldoAtual = parseMoneyBR(input?.value);
   const group = buildProductGroups().find(g => g.id === produtoId);
 
   if (!group) {
@@ -1057,26 +1275,44 @@ async function atualizarSaldoFundo(produtoId) {
     return;
   }
 
-  if (!saldoAtual || saldoAtual <= 0) {
-    setCarteiraMessage("Informe um saldo atual válido.");
-    input?.focus();
+  const cnpj = normalizeCnpj(group.base.cnpj_emissor);
+  if (cnpj.length !== 14) {
+    setCarteiraMessage("Este fundo não possui CNPJ válido para consulta na CVM.");
     return;
   }
 
   if (button) button.disabled = true;
-  setCarteiraMessage("");
+  setCarteiraMessage("Consultando cotas oficiais da CVM...");
 
   try {
-    const updates = await Promise.all(group.aportes.map((aporte) => {
-      const disponivel = principalDisponivel(aporte);
-      const proporcao = group.principalDisponivel > 0 ? disponivel / group.principalDisponivel : 0;
-      const saldoAtualAporte = saldoAtual * proporcao;
+    const cotaAtual = await buscarCotaCvm(cnpj, isoToday());
+    const updates = await Promise.all(group.aportes.map(async (aporte) => {
+      const cotaInicial = getFundCotaInicial(aporte) > 0
+        ? { quota: getFundCotaInicial(aporte), date: aporte.data_aplicacao }
+        : await buscarCotaCvm(cnpj, aporte.data_aplicacao);
       const observacoes = buildObservationWithFields(aporte.observacoes, [
         { label: "Tipo informado", value: "Fundo de investimento" },
         { label: "Classe do fundo", value: aporte.classe_fundo || getObservationField(aporte, "Classe do fundo") },
         { label: "Administrador/gestor", value: aporte.administrador || getObservationField(aporte, "Administrador/gestor") || aporte.instituicao },
-        { label: "Saldo atual informado", value: money(saldoAtualAporte) }
+        { label: "Cota da aplicação", value: formatDecimalBR(cotaInicial.quota, 8) },
+        { label: "Data cota aplicação", value: formatDateBR(cotaInicial.date) },
+        { label: "Cota atual", value: formatDecimalBR(cotaAtual.quota, 8) },
+        { label: "Data cota atual", value: formatDateBR(cotaAtual.date) }
       ]);
+
+      const payload = {
+        cota_inicial: Number(cotaInicial.quota),
+        cota_atual: Number(cotaAtual.quota),
+        observacoes
+      };
+
+      const result = await supabase
+        .from("investimentos")
+        .update(payload)
+        .eq("id", aporte.id)
+        .eq("user_id", state.user.id);
+
+      if (!result.error || !isSchemaCacheError(result.error)) return result;
 
       return supabase
         .from("investimentos")
@@ -1089,10 +1325,10 @@ async function atualizarSaldoFundo(produtoId) {
     if (updateError) throw updateError;
 
     await loadInvestimentos();
-    setCarteiraMessage("Saldo do fundo atualizado com sucesso.", true);
+    setCarteiraMessage(`Cotas atualizadas pela CVM. Cota atual de ${formatDateBR(cotaAtual.date)}.`, true);
   } catch (error) {
     console.error(error);
-    setCarteiraMessage(error.message || "Erro ao atualizar saldo do fundo.");
+    setCarteiraMessage(error.message || "Erro ao atualizar cotas pela CVM.");
   } finally {
     if (button) button.disabled = false;
   }
@@ -1306,13 +1542,20 @@ async function handleSubmit(event) {
 
     const classeFundo = isFundo ? (el("invest-classe-fundo").value.trim() || null) : null;
     const administrador = isFundo ? (el("invest-administrador").value.trim() || null) : null;
-    const saldoAtualInformado = isFundo ? parseMoneyBR(el("invest-saldo-atual").value) : 0;
+    const cotaInicial = isFundo ? parseDecimalBR(el("invest-cota-inicial").value) : 0;
+    const cotaAtual = isFundo ? parseDecimalBR(el("invest-cota-atual").value) : 0;
+
+    if (isFundo && (!cotaInicial || cotaInicial <= 0)) {
+      throw new Error("Busque ou informe a cota da aplicação para calcular a rentabilidade do fundo.");
+    }
+
     const observacoes = isFundo
       ? buildObservationWithFields(el("invest-observacoes").value.trim(), [
           { label: "Tipo informado", value: "Fundo de investimento" },
           { label: "Classe do fundo", value: classeFundo },
           { label: "Administrador/gestor", value: administrador },
-          { label: "Saldo atual informado", value: saldoAtualInformado ? money(saldoAtualInformado) : "" }
+          { label: "Cota da aplicação", value: formatDecimalBR(cotaInicial, 8) },
+          { label: "Cota atual", value: cotaAtual ? formatDecimalBR(cotaAtual, 8) : formatDecimalBR(cotaInicial, 8) }
         ])
       : (el("invest-observacoes").value.trim() || null);
     const investimento = {
@@ -1336,7 +1579,8 @@ async function handleSubmit(event) {
       dias_carencia: !isFundo && liquidez === "carencia" && diasCarencia > 0 ? diasCarencia : null,
       classe_fundo: classeFundo,
       administrador,
-      saldo_atual_informado: saldoAtualInformado || null,
+      cota_inicial: cotaInicial || null,
+      cota_atual: cotaAtual || cotaInicial || null,
       conta_origem_id: origemId,
       conta_investimento_id: destinoId,
       observacoes,
@@ -1368,7 +1612,9 @@ async function handleSubmit(event) {
     el("invest-administrador").disabled = false;
     el("invest-classe-fundo").value = "";
     el("invest-administrador").value = "";
-    el("invest-saldo-atual").value = "";
+    el("invest-cota-inicial").value = "";
+    el("invest-cota-atual").value = "";
+    setCvmMessage("");
     el("invest-valor").value = "0,00";
     el("invest-data").value = isoToday();
     el("invest-percentual-cdi").value = "100";
@@ -1480,10 +1726,11 @@ async function boot() {
     await loadInvestimentos();
   };
   el("btn-criar-conta-investimento").onclick = criarContaInvestimento;
+  el("btn-buscar-cotas-cvm").onclick = buscarCotasFormulario;
   el("lista-investimentos").addEventListener("click", (event) => {
-    const button = event.target.closest(".btn-atualizar-saldo-fundo");
+    const button = event.target.closest(".btn-atualizar-cotas-cvm");
     if (!button) return;
-    atualizarSaldoFundo(button.dataset.produtoId);
+    atualizarCotasFundoPelaCvm(button.dataset.produtoId);
   });
   el("form-investimento").addEventListener("submit", handleSubmit);
   el("form-resgate").addEventListener("submit", handleResgateSubmit);

@@ -217,6 +217,18 @@ label {
   display: none;
 }
 
+.btn-cvm {
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid rgba(122, 77, 255, 0.22);
+  background: #f3efff;
+  color: var(--purple-dark);
+}
+
+.cvm-msg {
+  margin-top: 8px;
+}
+
 input,
 select,
 textarea {
@@ -528,6 +540,22 @@ button:disabled {
 
 .fund-balance-update label {
   margin-top: 0;
+}
+
+.fund-balance-update strong,
+.fund-balance-update span {
+  display: block;
+}
+
+.fund-balance-update strong {
+  color: var(--purple-dark);
+}
+
+.fund-balance-update span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .fund-balance-update button {

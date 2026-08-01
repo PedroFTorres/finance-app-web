@@ -25,7 +25,7 @@
         <h1>Investimentos</h1>
         <p>
           Controle de aplicações, aportes e resgates por tipo de produto: CDB, fundos de investimento
-          e outros ativos que ainda serão acompanhados por rentabilidade manual.
+          e outros ativos acompanhados por regras próprias de rentabilidade.
         </p>
       </div>
       <div class="hero-values">
@@ -80,11 +80,23 @@
               <input id="invest-administrador" placeholder="Ex: Banco do Brasil">
             </div>
           </div>
-          <label>Saldo atual do fundo</label>
-          <input id="invest-saldo-atual" inputmode="decimal" placeholder="0,00">
+          <div class="row">
+            <div>
+              <label>Cota da aplicação</label>
+              <input id="invest-cota-inicial" inputmode="decimal" placeholder="0,00000000">
+            </div>
+            <div>
+              <label>Cota atual</label>
+              <input id="invest-cota-atual" inputmode="decimal" placeholder="0,00000000">
+            </div>
+          </div>
+          <button id="btn-buscar-cotas-cvm" class="btn-secondary btn-cvm" type="button">
+            Buscar cotas na CVM
+          </button>
           <p class="field-help">
-            Informe o saldo que o banco mostra hoje. Se ainda nao aparecer, deixe em branco e atualize depois na carteira.
+            O app calcula quantidade de cotas, rendimento e valor atual pela cota oficial da CVM. Se a cota do dia ainda nao saiu, usa a ultima data util disponivel.
           </p>
+          <p id="cvm-msg" class="msg cvm-msg"></p>
         </div>
 
         <div class="row">
@@ -234,8 +246,9 @@
   </main>
 
   <script src="../vendor/supabase-2.108.2.js"></script>
+  <script src="../vendor/jszip-3.10.1.min.js"></script>
   <script src="../config.js"></script>
   <script src="../supabase.js"></script>
-  <script src="investimentos.js?v=20260731-5"></script>
+  <script src="investimentos.js?v=20260731-6"></script>
 </body>
 </html>
