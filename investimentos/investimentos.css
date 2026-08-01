@@ -514,7 +514,7 @@ button:disabled {
   font-weight: 700;
 }
 
-.fund-cota-update {
+.fund-balance-update {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
@@ -526,11 +526,11 @@ button:disabled {
   background: #fbfaff;
 }
 
-.fund-cota-update label {
+.fund-balance-update label {
   margin-top: 0;
 }
 
-.fund-cota-update button {
+.fund-balance-update button {
   min-height: 45px;
   white-space: nowrap;
 }
@@ -586,7 +586,7 @@ button:disabled {
   }
 
   .row,
-  .fund-cota-update,
+  .fund-balance-update,
   .invest-meta,
   .preview-grid {
     grid-template-columns: 1fr;

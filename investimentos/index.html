@@ -80,18 +80,10 @@
               <input id="invest-administrador" placeholder="Ex: Banco do Brasil">
             </div>
           </div>
-          <div class="row">
-            <div>
-              <label>Cota na aplicação</label>
-              <input id="invest-cota-inicial" inputmode="decimal" placeholder="0,00000000">
-            </div>
-            <div>
-              <label>Cota atual</label>
-              <input id="invest-cota-atual" inputmode="decimal" placeholder="0,00000000">
-            </div>
-          </div>
+          <label>Saldo atual do fundo</label>
+          <input id="invest-saldo-atual" inputmode="decimal" placeholder="0,00">
           <p class="field-help">
-            Para fundos em cotas, informe a cota da data da aplicação e atualize a cota atual na carteira.
+            Informe o saldo que o banco mostra hoje. Se ainda nao aparecer, deixe em branco e atualize depois na carteira.
           </p>
         </div>
 
@@ -244,6 +236,6 @@
   <script src="../vendor/supabase-2.108.2.js"></script>
   <script src="../config.js"></script>
   <script src="../supabase.js"></script>
-  <script src="investimentos.js?v=20260731-4"></script>
+  <script src="investimentos.js?v=20260731-5"></script>
 </body>
 </html>

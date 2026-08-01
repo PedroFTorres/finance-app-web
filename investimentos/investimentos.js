@@ -202,7 +202,14 @@ function isConstraintError(error) {
 }
 
 function withFundDetailsInObservations(investimento) {
-  const { classe_fundo, administrador, cota_inicial, cota_atual, ...compatInvestimento } = investimento;
+  const {
+    classe_fundo,
+    administrador,
+    saldo_atual_informado,
+    cota_inicial: _cotaInicialLegada,
+    cota_atual: _cotaAtualLegada,
+    ...compatInvestimento
+  } = investimento;
   return {
     ...compatInvestimento,
     tipo: "cdb",
@@ -213,8 +220,7 @@ function withFundDetailsInObservations(investimento) {
       { label: "Tipo informado", value: "Fundo de investimento" },
       { label: "Classe do fundo", value: classe_fundo },
       { label: "Administrador/gestor", value: administrador },
-      { label: "Cota inicial", value: cota_inicial ? formatDecimalBR(cota_inicial) : "" },
-      { label: "Cota atual", value: cota_atual ? formatDecimalBR(cota_atual) : "" }
+      { label: "Saldo atual informado", value: saldo_atual_informado ? money(saldo_atual_informado) : "" }
     ])
   };
 }
@@ -297,24 +303,20 @@ function getObservationField(investimento, label) {
   return match ? match[1].trim() : "";
 }
 
-function getFundCotaInicial(investimento) {
-  return parseMoneyBR(investimento?.cota_inicial || getObservationField(investimento, "Cota inicial"));
-}
-
-function getFundCotaAtual(investimento) {
-  return parseMoneyBR(investimento?.cota_atual || getObservationField(investimento, "Cota atual"));
+function getFundSaldoAtual(investimento) {
+  return parseMoneyBR(
+    investimento?.saldo_atual_informado ||
+    getObservationField(investimento, "Saldo atual informado") ||
+    getObservationField(investimento, "Saldo atual")
+  );
 }
 
 function calculateInvestimento(investimento, endDate = isoToday()) {
   if (!isFundoInvestimento(investimento)) return calculateCdb(investimento, endDate);
 
   const principal = Number(investimento.valor_aplicado || 0);
-  const cotaInicial = getFundCotaInicial(investimento);
-  const cotaAtual = getFundCotaAtual(investimento) || cotaInicial;
-  const quantidadeCotas = cotaInicial > 0 ? principal / cotaInicial : 0;
-  const valorLiquido = quantidadeCotas > 0 && cotaAtual > 0
-    ? quantidadeCotas * cotaAtual
-    : principal;
+  const saldoAtual = getFundSaldoAtual(investimento);
+  const valorLiquido = saldoAtual > 0 ? saldoAtual : principal;
   const rendimentoBruto = valorLiquido - principal;
 
   return {
@@ -327,24 +329,13 @@ function calculateInvestimento(investimento, endDate = isoToday()) {
     irRate: 0,
     ir: 0,
     valorLiquido,
-    quantidadeCotas,
-    cotaInicial,
-    cotaAtual
+    saldoAtual
   };
 }
 
-function groupCotaAtual(group) {
-  const cotas = (group?.aportes || [])
-    .map(aporte => getFundCotaAtual(aporte))
-    .filter(value => value > 0);
-  return cotas.length ? cotas[cotas.length - 1] : 0;
-}
-
-function groupCotaInicial(group) {
-  const cotas = (group?.aportes || [])
-    .map(aporte => getFundCotaInicial(aporte))
-    .filter(value => value > 0);
-  return cotas.length ? cotas[0] : 0;
+function groupSaldoAtualInformado(group) {
+  return (group?.aportes || [])
+    .reduce((sum, aporte) => sum + getFundSaldoAtual(aporte), 0);
 }
 
 function groupId(item) {
@@ -555,8 +546,7 @@ function setInvestmentFormMode(mode) {
     el("invest-cnpj").disabled = false;
     el("invest-classe-fundo").disabled = false;
     el("invest-administrador").disabled = false;
-    el("invest-cota-inicial").disabled = false;
-    el("invest-cota-atual").disabled = false;
+    el("invest-saldo-atual").disabled = false;
   } else {
     preencherProdutoExistente();
   }
@@ -860,15 +850,13 @@ function preencherProdutoExistente() {
     el("invest-cnpj").disabled = false;
     el("invest-classe-fundo").disabled = false;
     el("invest-administrador").disabled = false;
-    el("invest-cota-inicial").disabled = false;
-    el("invest-cota-atual").disabled = false;
+    el("invest-saldo-atual").disabled = false;
     if (state.formMode === "aporte") {
       el("invest-nome").value = "";
       el("invest-cnpj").value = "";
       el("invest-classe-fundo").value = "";
       el("invest-administrador").value = "";
-      el("invest-cota-inicial").value = "";
-      el("invest-cota-atual").value = "";
+      el("invest-saldo-atual").value = "";
     }
     toggleInvestmentTypeFields();
     return;
@@ -883,8 +871,7 @@ function preencherProdutoExistente() {
   el("invest-cnpj").value = formatCnpj(base.cnpj_emissor || "");
   el("invest-classe-fundo").value = base.classe_fundo || getObservationField(base, "Classe do fundo");
   el("invest-administrador").value = base.administrador || getObservationField(base, "Administrador/gestor");
-  el("invest-cota-inicial").value = "";
-  el("invest-cota-atual").value = formatDecimalBR(getFundCotaAtual(base));
+  el("invest-saldo-atual").value = "";
   el("invest-vencimento").value = base.data_vencimento || "";
   el("invest-liquidez").value = base.liquidez || "diaria";
   el("invest-data-carencia").value = base.data_carencia || "";
@@ -897,8 +884,7 @@ function preencherProdutoExistente() {
   el("invest-cnpj").disabled = true;
   el("invest-classe-fundo").disabled = true;
   el("invest-administrador").disabled = true;
-  el("invest-cota-inicial").disabled = false;
-  el("invest-cota-atual").disabled = false;
+  el("invest-saldo-atual").disabled = false;
   toggleInvestmentTypeFields();
 }
 
@@ -970,8 +956,7 @@ function renderInvestimentos() {
   grupos.forEach((grupo) => {
     const item = grupo.base;
     const isFundo = isFundoInvestimento(item);
-    const cotaInicialGrupo = isFundo ? groupCotaInicial(grupo) : 0;
-    const cotaAtualGrupo = isFundo ? groupCotaAtual(grupo) : 0;
+    const saldoAtualInformado = isFundo ? groupSaldoAtualInformado(grupo) : 0;
     totals.aplicado += grupo.principalDisponivel;
     totals.rendimento += grupo.rendimento;
     totals.iof += grupo.iof;
@@ -988,7 +973,7 @@ function renderInvestimentos() {
           <td>${money(aporte.__resgatado || 0)}</td>
           <td>${money(disponivel)}</td>
           <td>${money(calc.valorLiquido)}</td>
-          <td>${isFundo ? formatDecimalBR(calc.quantidadeCotas, 8) : `${calc.iofRate}% / ${calc.irRate}%`}</td>
+          <td>${isFundo ? money(calc.saldoAtual || disponivel) : `${calc.iofRate}% / ${calc.irRate}%`}</td>
         </tr>
       `;
     }).join("");
@@ -999,7 +984,7 @@ function renderInvestimentos() {
     const classeFundo = item.classe_fundo || getObservationField(item, "Classe do fundo");
     const administradorFundo = item.administrador || getObservationField(item, "Administrador/gestor") || item.instituicao;
     const indicadorProduto = isFundo
-      ? escapeHtml(classeFundo || "Fundo em cotas")
+      ? escapeHtml(classeFundo || "Fundo")
       : `${Number(item.percentual_cdi || 0).toLocaleString("pt-BR")}% do CDI`;
     card.innerHTML = `
       <div>
@@ -1012,18 +997,14 @@ function renderInvestimentos() {
         ${!isFundo && item.liquidez === "carencia" ? `<p><strong>Carência:</strong> ${formatDateBR(item.data_carencia)}${item.dias_carencia ? ` • ${Number(item.dias_carencia)} dias` : ""}</p>` : ""}
         <p><strong>Destino:</strong> ${escapeHtml(accountName(item.conta_investimento_id))}</p>
         ${isFundo ? `
-          <div class="fund-cota-update">
+          <div class="fund-balance-update">
             <div>
-              <label>Cota inicial</label>
-              <input class="fund-cota-inicial-input" data-produto-id="${escapeHtml(grupo.id)}" inputmode="decimal" value="${escapeHtml(formatDecimalBR(cotaInicialGrupo))}" placeholder="0,00000000">
+              <label>Saldo atual informado pelo banco</label>
+              <input class="fund-saldo-atual-input" data-produto-id="${escapeHtml(grupo.id)}" inputmode="decimal" value="${escapeHtml(saldoAtualInformado ? money(saldoAtualInformado).replace("R$", "").trim() : "")}" placeholder="0,00">
             </div>
-            <div>
-              <label>Cota atual</label>
-              <input class="fund-cota-atual-input" data-produto-id="${escapeHtml(grupo.id)}" inputmode="decimal" value="${escapeHtml(formatDecimalBR(cotaAtualGrupo))}" placeholder="0,00000000">
-            </div>
-            <button class="btn-secondary btn-atualizar-cota" type="button" data-produto-id="${escapeHtml(grupo.id)}">Atualizar cota</button>
+            <button class="btn-secondary btn-atualizar-saldo-fundo" type="button" data-produto-id="${escapeHtml(grupo.id)}">Atualizar saldo</button>
           </div>
-          <p class="fund-note">O rendimento do fundo é calculado por cotas: valor aplicado dividido pela cota inicial, multiplicado pela cota atual.</p>
+          <p class="fund-note">O rendimento do fundo é calculado pela diferença entre o saldo atual informado e o valor aplicado disponível.</p>
         ` : ""}
         ${item.observacoes ? `<p><strong>Obs.:</strong> ${escapeHtml(item.observacoes)}</p>` : ""}
         <div class="aportes-table-wrap">
@@ -1035,7 +1016,7 @@ function renderInvestimentos() {
                 <th>Resgatado</th>
                 <th>Disponível</th>
                 <th>Líquido estimado</th>
-                <th>${isFundo ? "Cotas" : "IOF/IR"}</th>
+                <th>${isFundo ? "Saldo informado" : "IOF/IR"}</th>
               </tr>
             </thead>
             <tbody>${aportesHtml}</tbody>
@@ -1061,17 +1042,14 @@ function renderInvestimentos() {
   el("total-liquido").textContent = money(totals.liquido);
 }
 
-async function atualizarCotaFundo(produtoId) {
+async function atualizarSaldoFundo(produtoId) {
   if (!requireInvestmentAccess()) return;
 
-  const input = [...document.querySelectorAll(".fund-cota-atual-input")]
+  const input = [...document.querySelectorAll(".fund-saldo-atual-input")]
     .find(element => element.dataset.produtoId === produtoId);
-  const inputInicial = [...document.querySelectorAll(".fund-cota-inicial-input")]
+  const button = [...document.querySelectorAll(".btn-atualizar-saldo-fundo")]
     .find(element => element.dataset.produtoId === produtoId);
-  const button = [...document.querySelectorAll(".btn-atualizar-cota")]
-    .find(element => element.dataset.produtoId === produtoId);
-  const cotaInicialInformada = parseMoneyBR(inputInicial?.value);
-  const cotaAtual = parseMoneyBR(input?.value);
+  const saldoAtual = parseMoneyBR(input?.value);
   const group = buildProductGroups().find(g => g.id === produtoId);
 
   if (!group) {
@@ -1079,15 +1057,9 @@ async function atualizarCotaFundo(produtoId) {
     return;
   }
 
-  if (!cotaAtual || cotaAtual <= 0) {
-    setCarteiraMessage("Informe uma cota atual válida.");
+  if (!saldoAtual || saldoAtual <= 0) {
+    setCarteiraMessage("Informe um saldo atual válido.");
     input?.focus();
-    return;
-  }
-
-  if (!group.aportes.every(aporte => getFundCotaInicial(aporte) > 0) && (!cotaInicialInformada || cotaInicialInformada <= 0)) {
-    setCarteiraMessage("Informe a cota inicial para completar o cálculo deste fundo.");
-    inputInicial?.focus();
     return;
   }
 
@@ -1096,12 +1068,14 @@ async function atualizarCotaFundo(produtoId) {
 
   try {
     const updates = await Promise.all(group.aportes.map((aporte) => {
+      const disponivel = principalDisponivel(aporte);
+      const proporcao = group.principalDisponivel > 0 ? disponivel / group.principalDisponivel : 0;
+      const saldoAtualAporte = saldoAtual * proporcao;
       const observacoes = buildObservationWithFields(aporte.observacoes, [
         { label: "Tipo informado", value: "Fundo de investimento" },
         { label: "Classe do fundo", value: aporte.classe_fundo || getObservationField(aporte, "Classe do fundo") },
         { label: "Administrador/gestor", value: aporte.administrador || getObservationField(aporte, "Administrador/gestor") || aporte.instituicao },
-        { label: "Cota inicial", value: formatDecimalBR(getFundCotaInicial(aporte) || cotaInicialInformada) },
-        { label: "Cota atual", value: formatDecimalBR(cotaAtual) }
+        { label: "Saldo atual informado", value: money(saldoAtualAporte) }
       ]);
 
       return supabase
@@ -1115,10 +1089,10 @@ async function atualizarCotaFundo(produtoId) {
     if (updateError) throw updateError;
 
     await loadInvestimentos();
-    setCarteiraMessage("Cota atualizada com sucesso.", true);
+    setCarteiraMessage("Saldo do fundo atualizado com sucesso.", true);
   } catch (error) {
     console.error(error);
-    setCarteiraMessage(error.message || "Erro ao atualizar cota.");
+    setCarteiraMessage(error.message || "Erro ao atualizar saldo do fundo.");
   } finally {
     if (button) button.disabled = false;
   }
@@ -1332,16 +1306,13 @@ async function handleSubmit(event) {
 
     const classeFundo = isFundo ? (el("invest-classe-fundo").value.trim() || null) : null;
     const administrador = isFundo ? (el("invest-administrador").value.trim() || null) : null;
-    const cotaInicial = isFundo ? parseMoneyBR(el("invest-cota-inicial").value) : 0;
-    const cotaAtualInformada = isFundo ? parseMoneyBR(el("invest-cota-atual").value) : 0;
-    const cotaAtual = isFundo ? (cotaAtualInformada || cotaInicial || getFundCotaAtual(produtoExistente?.base)) : 0;
+    const saldoAtualInformado = isFundo ? parseMoneyBR(el("invest-saldo-atual").value) : 0;
     const observacoes = isFundo
       ? buildObservationWithFields(el("invest-observacoes").value.trim(), [
           { label: "Tipo informado", value: "Fundo de investimento" },
           { label: "Classe do fundo", value: classeFundo },
           { label: "Administrador/gestor", value: administrador },
-          { label: "Cota inicial", value: cotaInicial ? formatDecimalBR(cotaInicial) : "" },
-          { label: "Cota atual", value: cotaAtual ? formatDecimalBR(cotaAtual) : "" }
+          { label: "Saldo atual informado", value: saldoAtualInformado ? money(saldoAtualInformado) : "" }
         ])
       : (el("invest-observacoes").value.trim() || null);
     const investimento = {
@@ -1365,8 +1336,7 @@ async function handleSubmit(event) {
       dias_carencia: !isFundo && liquidez === "carencia" && diasCarencia > 0 ? diasCarencia : null,
       classe_fundo: classeFundo,
       administrador,
-      cota_inicial: cotaInicial || null,
-      cota_atual: cotaAtual || null,
+      saldo_atual_informado: saldoAtualInformado || null,
       conta_origem_id: origemId,
       conta_investimento_id: destinoId,
       observacoes,
@@ -1398,8 +1368,7 @@ async function handleSubmit(event) {
     el("invest-administrador").disabled = false;
     el("invest-classe-fundo").value = "";
     el("invest-administrador").value = "";
-    el("invest-cota-inicial").value = "";
-    el("invest-cota-atual").value = "";
+    el("invest-saldo-atual").value = "";
     el("invest-valor").value = "0,00";
     el("invest-data").value = isoToday();
     el("invest-percentual-cdi").value = "100";
@@ -1512,9 +1481,9 @@ async function boot() {
   };
   el("btn-criar-conta-investimento").onclick = criarContaInvestimento;
   el("lista-investimentos").addEventListener("click", (event) => {
-    const button = event.target.closest(".btn-atualizar-cota");
+    const button = event.target.closest(".btn-atualizar-saldo-fundo");
     if (!button) return;
-    atualizarCotaFundo(button.dataset.produtoId);
+    atualizarSaldoFundo(button.dataset.produtoId);
   });
   el("form-investimento").addEventListener("submit", handleSubmit);
   el("form-resgate").addEventListener("submit", handleResgateSubmit);
