@@ -11,7 +11,10 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
-type CvmRow = Record<string, string>;
+type CvmQuota = {
+  date: string;
+  quota: number;
+};
 
 function normalizeCnpj(value: unknown) {
   return String(value || "").replace(/\D/g, "").slice(0, 14);
@@ -22,6 +25,12 @@ function normalizeCnpjCvm(value: unknown) {
   return CVM_CNPJ_ALIASES[cnpj] || cnpj;
 }
 
+function formatCnpj(value: unknown) {
+  const cnpj = normalizeCnpj(value);
+  if (cnpj.length !== 14) return cnpj;
+  return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+}
+
 function parseDecimal(value: unknown) {
   const raw = String(value || "").trim().replace(/\s/g, "");
   const normalized = raw.includes(",")
@@ -29,20 +38,6 @@ function parseDecimal(value: unknown) {
     : raw;
   const number = Number(normalized);
   return Number.isFinite(number) ? number : 0;
-}
-
-function parseCsv(text: string): CvmRow[] {
-  const lines = text.trim().split(/\r?\n/).filter(Boolean);
-  if (lines.length < 2) return [];
-
-  const headers = lines[0].split(";").map(header => header.trim());
-  return lines.slice(1).map((line) => {
-    const values = line.split(";");
-    return headers.reduce<CvmRow>((row, header, index) => {
-      row[header] = values[index] ?? "";
-      return row;
-    }, {});
-  });
 }
 
 function parseISODate(value: string) {
@@ -60,7 +55,49 @@ function yearMonthFromISO(iso: string) {
   return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-async function fetchCvmRows(yearMonth: string) {
+function indexOfAny(headers: string[], names: string[]) {
+  return names.reduce((found, name) => (
+    found >= 0 ? found : headers.findIndex(header => header === name)
+  ), -1);
+}
+
+function findQuotaInCsv(text: string, cnpj: string, dateISO: string): CvmQuota | null {
+  const firstBreak = text.indexOf("\n");
+  if (firstBreak < 0) return null;
+
+  const headers = text.slice(0, firstBreak).replace(/\r$/, "").split(";").map(header => header.trim());
+  const cnpjIndex = indexOfAny(headers, ["CNPJ_FUNDO", "CNPJ_FUNDO_CLASSE", "CNPJ_FUNDO_COTA"]);
+  const dateIndex = indexOfAny(headers, ["DT_COMPTC", "DT_COMPT", "DT_REFER"]);
+  const quotaIndex = indexOfAny(headers, ["VL_QUOTA", "VL_COTA"]);
+
+  if (cnpjIndex < 0 || dateIndex < 0 || quotaIndex < 0) return null;
+
+  let selected: CvmQuota | null = null;
+  let start = firstBreak + 1;
+  const formattedCnpj = formatCnpj(cnpj);
+
+  while (start < text.length) {
+    let end = text.indexOf("\n", start);
+    if (end < 0) end = text.length;
+
+    const line = text.slice(start, end).replace(/\r$/, "");
+    start = end + 1;
+    if (!line || !line.includes(formattedCnpj)) continue;
+
+    const values = line.split(";");
+    const rowCnpj = normalizeCnpj(values[cnpjIndex]);
+    const date = values[dateIndex] || "";
+    const quota = parseDecimal(values[quotaIndex]);
+
+    if (rowCnpj === cnpj && date && date <= dateISO && quota > 0) {
+      if (!selected || date > selected.date) selected = { date, quota };
+    }
+  }
+
+  return selected;
+}
+
+async function fetchCvmQuota(yearMonth: string, cnpj: string, dateISO: string) {
   const response = await fetch(`${CVM_INF_DIARIO_BASE}/inf_diario_fi_${yearMonth}.zip`);
   if (!response.ok) {
     throw new Error(`Arquivo CVM ${yearMonth} indisponivel (${response.status}).`);
@@ -70,19 +107,7 @@ async function fetchCvmRows(yearMonth: string) {
   const csvName = Object.keys(files).find(name => /\.csv$/i.test(name));
   if (!csvName) throw new Error(`Arquivo CVM ${yearMonth} nao contem CSV.`);
 
-  return parseCsv(new TextDecoder("iso-8859-1").decode(files[csvName]));
-}
-
-function rowCnpj(row: CvmRow) {
-  return normalizeCnpj(row.CNPJ_FUNDO || row.CNPJ_FUNDO_CLASSE || row.CNPJ_FUNDO_COTA);
-}
-
-function rowDate(row: CvmRow) {
-  return row.DT_COMPTC || row.DT_COMPT || row.DT_REFER || "";
-}
-
-function rowQuota(row: CvmRow) {
-  return parseDecimal(row.VL_QUOTA || row.VL_COTA);
+  return findQuotaInCsv(new TextDecoder("iso-8859-1").decode(files[csvName]), cnpj, dateISO);
 }
 
 async function findQuota(cnpj: string, dateISO: string, maxBackMonths: number) {
@@ -90,22 +115,13 @@ async function findQuota(cnpj: string, dateISO: string, maxBackMonths: number) {
 
   for (let attempt = 0; attempt <= maxBackMonths; attempt += 1) {
     const yearMonth = yearMonthFromISO(cursor);
-    let rows: CvmRow[] = [];
+    let selected: CvmQuota | null = null;
     try {
-      rows = await fetchCvmRows(yearMonth);
+      selected = await fetchCvmQuota(yearMonth, cnpj, dateISO);
     } catch (_error) {
       cursor = addMonthsISO(`${yearMonth.slice(0, 4)}-${yearMonth.slice(4, 6)}-01`, -1);
       continue;
     }
-    const selected = rows
-      .filter(row => rowCnpj(row) === cnpj)
-      .map(row => ({
-        date: rowDate(row),
-        quota: rowQuota(row)
-      }))
-      .filter(row => row.date && row.quota > 0 && row.date <= dateISO)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .at(-1);
 
     if (selected) {
       return {
