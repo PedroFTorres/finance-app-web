@@ -307,10 +307,13 @@ async function buscarCotaCvm(cnpjValue, dateISO, options = {}) {
   if (cnpj.length !== 14) throw new Error("Informe um CNPJ de fundo válido.");
 
   const maxBackMonths = Number(options.maxBackMonths ?? 15);
+  let supabaseErrorMessage = "";
+  let directFetchFailed = false;
 
   try {
     return await buscarCotaCvmViaSupabase(cnpj, dateISO, maxBackMonths);
   } catch (error) {
+    supabaseErrorMessage = error?.message || "Consulta CVM via Supabase falhou.";
     console.warn("Consulta CVM via Supabase indisponível; tentando consulta direta.", error);
   }
 
@@ -322,6 +325,7 @@ async function buscarCotaCvm(cnpjValue, dateISO, options = {}) {
     try {
       rows = await fetchCvmRowsForMonth(yearMonth);
     } catch (error) {
+      directFetchFailed = true;
       console.warn(`Arquivo CVM ${yearMonth} indisponível; tentando mês anterior.`, error);
       cursor = addMonthsISO(`${yearMonth.slice(0, 4)}-${yearMonth.slice(4, 6)}-01`, -1);
       continue;
@@ -349,6 +353,10 @@ async function buscarCotaCvm(cnpjValue, dateISO, options = {}) {
     }
 
     cursor = addMonthsISO(`${yearMonth.slice(0, 4)}-${yearMonth.slice(4, 6)}-01`, -1);
+  }
+
+  if (supabaseErrorMessage && directFetchFailed) {
+    throw new Error(`Não consegui consultar a CVM agora. Detalhe técnico: ${supabaseErrorMessage}`);
   }
 
   throw new Error("Não encontrei cota desse fundo na CVM para a data informada ou datas anteriores próximas.");

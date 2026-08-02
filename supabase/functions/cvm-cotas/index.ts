@@ -1,4 +1,4 @@
-import { unzipSync } from "npm:fflate@0.8.2";
+import { Unzip, UnzipInflate } from "npm:fflate@0.8.2";
 
 const CVM_INF_DIARIO_BASE = "https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS";
 const CVM_CNPJ_ALIASES: Record<string, string> = {
@@ -14,6 +14,18 @@ const corsHeaders = {
 type CvmQuota = {
   date: string;
   quota: number;
+};
+
+type CsvQuotaScanner = {
+  cnpj: string;
+  dateISO: string;
+  formattedCnpj: string;
+  remainder: string;
+  cnpjIndex: number;
+  dateIndex: number;
+  quotaIndex: number;
+  selected: CvmQuota | null;
+  headersParsed: boolean;
 };
 
 function normalizeCnpj(value: unknown) {
@@ -61,40 +73,68 @@ function indexOfAny(headers: string[], names: string[]) {
   ), -1);
 }
 
-function findQuotaInCsv(text: string, cnpj: string, dateISO: string): CvmQuota | null {
-  const firstBreak = text.indexOf("\n");
-  if (firstBreak < 0) return null;
+function createCsvQuotaScanner(cnpj: string, dateISO: string): CsvQuotaScanner {
+  return {
+    cnpj,
+    dateISO,
+    formattedCnpj: formatCnpj(cnpj),
+    remainder: "",
+    cnpjIndex: -1,
+    dateIndex: -1,
+    quotaIndex: -1,
+    selected: null,
+    headersParsed: false
+  };
+}
 
-  const headers = text.slice(0, firstBreak).replace(/\r$/, "").split(";").map(header => header.trim());
+function readCsvHeaders(scanner: CsvQuotaScanner, line: string) {
+  const headers = line.replace(/\r$/, "").split(";").map(header => header.trim());
   const cnpjIndex = indexOfAny(headers, ["CNPJ_FUNDO", "CNPJ_FUNDO_CLASSE", "CNPJ_FUNDO_COTA"]);
   const dateIndex = indexOfAny(headers, ["DT_COMPTC", "DT_COMPT", "DT_REFER"]);
   const quotaIndex = indexOfAny(headers, ["VL_QUOTA", "VL_COTA"]);
 
-  if (cnpjIndex < 0 || dateIndex < 0 || quotaIndex < 0) return null;
+  scanner.cnpjIndex = cnpjIndex;
+  scanner.dateIndex = dateIndex;
+  scanner.quotaIndex = quotaIndex;
+  scanner.headersParsed = cnpjIndex >= 0 && dateIndex >= 0 && quotaIndex >= 0;
+}
 
-  let selected: CvmQuota | null = null;
-  let start = firstBreak + 1;
-  const formattedCnpj = formatCnpj(cnpj);
+function scanCsvLine(scanner: CsvQuotaScanner, rawLine: string) {
+  const line = rawLine.replace(/\r$/, "");
+  if (!line) return;
 
-  while (start < text.length) {
-    let end = text.indexOf("\n", start);
-    if (end < 0) end = text.length;
-
-    const line = text.slice(start, end).replace(/\r$/, "");
-    start = end + 1;
-    if (!line || !line.includes(formattedCnpj)) continue;
-
-    const values = line.split(";");
-    const rowCnpj = normalizeCnpj(values[cnpjIndex]);
-    const date = values[dateIndex] || "";
-    const quota = parseDecimal(values[quotaIndex]);
-
-    if (rowCnpj === cnpj && date && date <= dateISO && quota > 0) {
-      if (!selected || date > selected.date) selected = { date, quota };
-    }
+  if (!scanner.headersParsed && scanner.cnpjIndex < 0) {
+    readCsvHeaders(scanner, line);
+    return;
   }
 
-  return selected;
+  if (!scanner.headersParsed || !line.includes(scanner.formattedCnpj)) return;
+
+  const values = line.split(";");
+  const rowCnpj = normalizeCnpj(values[scanner.cnpjIndex]);
+  const date = values[scanner.dateIndex] || "";
+  const quota = parseDecimal(values[scanner.quotaIndex]);
+
+  if (rowCnpj === scanner.cnpj && date && date <= scanner.dateISO && quota > 0) {
+    if (!scanner.selected || date > scanner.selected.date) {
+      scanner.selected = { date, quota };
+    }
+  }
+}
+
+function scanCsvChunk(scanner: CsvQuotaScanner, chunk: string, final = false) {
+  const text = scanner.remainder + chunk;
+  const lines = text.split("\n");
+  scanner.remainder = final ? "" : lines.pop() || "";
+
+  for (const line of lines) {
+    scanCsvLine(scanner, line);
+  }
+
+  if (final && scanner.remainder) {
+    scanCsvLine(scanner, scanner.remainder);
+    scanner.remainder = "";
+  }
 }
 
 async function fetchCvmQuota(yearMonth: string, cnpj: string, dateISO: string) {
@@ -102,12 +142,41 @@ async function fetchCvmQuota(yearMonth: string, cnpj: string, dateISO: string) {
   if (!response.ok) {
     throw new Error(`Arquivo CVM ${yearMonth} indisponivel (${response.status}).`);
   }
+  if (!response.body) {
+    throw new Error(`Arquivo CVM ${yearMonth} nao pode ser lido por streaming.`);
+  }
 
-  const files = unzipSync(new Uint8Array(await response.arrayBuffer()));
-  const csvName = Object.keys(files).find(name => /\.csv$/i.test(name));
-  if (!csvName) throw new Error(`Arquivo CVM ${yearMonth} nao contem CSV.`);
+  const scanner = createCsvQuotaScanner(cnpj, dateISO);
+  const decoder = new TextDecoder("iso-8859-1");
+  const reader = response.body.getReader();
+  let foundCsv = false;
+  let streamError: Error | null = null;
 
-  return findQuotaInCsv(new TextDecoder("iso-8859-1").decode(files[csvName]), cnpj, dateISO);
+  const unzipper = new Unzip(file => {
+    if (!/\.csv$/i.test(file.name)) return;
+
+    foundCsv = true;
+    file.ondata = (error, data, final) => {
+      if (error) {
+        streamError = error instanceof Error ? error : new Error(String(error));
+        return;
+      }
+      scanCsvChunk(scanner, decoder.decode(data, { stream: !final }), final);
+    };
+    file.start();
+  });
+  unzipper.register(UnzipInflate);
+
+  while (true) {
+    const { value, done } = await reader.read();
+    unzipper.push(value || new Uint8Array(), done);
+    if (streamError) throw streamError;
+    if (done) break;
+  }
+
+  if (!foundCsv) throw new Error(`Arquivo CVM ${yearMonth} nao contem CSV.`);
+
+  return scanner.selected;
 }
 
 async function findQuota(cnpj: string, dateISO: string, maxBackMonths: number) {
