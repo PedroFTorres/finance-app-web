@@ -69,28 +69,42 @@
         <div id="dashboard-pendencias-alert" class="dashboard-carry-alert hidden"></div>
 
         <div class="dashboard-kpis">
-          <div class="kpi-card kpi-income">
+          <button type="button" class="kpi-card kpi-income" data-dashboard-detail="receber">
             <span>A receber</span>
             <strong id="dash-receber">R$ 0,00</strong>
             <small>Pendente no período</small>
-          </div>
+          </button>
 
-          <div class="kpi-card kpi-expense">
+          <button type="button" class="kpi-card kpi-expense" data-dashboard-detail="pagar">
             <span>A pagar</span>
             <strong id="dash-pagar">R$ 0,00</strong>
             <small>Despesas + faturas abertas</small>
-          </div>
+          </button>
 
-          <div class="kpi-card kpi-realized">
+          <button type="button" class="kpi-card kpi-realized" data-dashboard-detail="realizado">
             <span>Realizado</span>
             <strong id="dash-saldo-atual">R$ 0,00</strong>
             <small>Recebido menos pago</small>
-          </div>
+          </button>
 
-          <div class="kpi-card kpi-forecast">
+          <button type="button" class="kpi-card kpi-forecast" data-dashboard-detail="previsto">
             <span>Saldo previsto</span>
             <strong id="dash-saldo-previsto">R$ 0,00</strong>
             <small>Disponível esperado após investimentos</small>
+          </button>
+        </div>
+
+        <div id="dashboard-detail-modal" class="dashboard-detail-modal hidden" aria-hidden="true">
+          <div class="dashboard-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="dashboard-detail-title">
+            <div class="dashboard-detail-header">
+              <div>
+                <span id="dashboard-detail-eyebrow">Detalhamento</span>
+                <h3 id="dashboard-detail-title">Detalhamento do valor</h3>
+                <p id="dashboard-detail-subtitle"></p>
+              </div>
+              <button type="button" class="dashboard-detail-close" data-dashboard-detail-close aria-label="Fechar">×</button>
+            </div>
+            <div id="dashboard-detail-content" class="dashboard-detail-content"></div>
           </div>
         </div>
 

@@ -28,6 +28,7 @@
     despesas: [],
     cartaoPrevistos: [],
     movimentacoes: [],
+    dashboardDados: null,
     charts: { recCat: null, desCat: null, resumo: null, investimentos: null },
     subs: [] // para armazenar channels se quiser unsub later
   };
@@ -67,6 +68,7 @@ async function atualizarDashboardPorMes() {
   const fim = new Date(ano, mes + 1, 0).toISOString().slice(0,10);
 
   const dadosDashboard = await carregarDadosDashboard(inicio, fim);
+  STATE.dashboardDados = dadosDashboard;
 
   drawResumo(dadosDashboard);
   drawReceitasPorCategoria(dadosDashboard);
@@ -1982,6 +1984,22 @@ const UI = {
     });
   });
 
+  document.querySelectorAll("[data-dashboard-detail]").forEach(btn => {
+    btn.addEventListener("click", () => openDashboardDetail(btn.dataset.dashboardDetail));
+  });
+
+  document.querySelectorAll("[data-dashboard-detail-close]").forEach(btn => {
+    btn.addEventListener("click", closeDashboardDetail);
+  });
+
+  document.getElementById("dashboard-detail-modal")?.addEventListener("click", event => {
+    if (event.target?.id === "dashboard-detail-modal") closeDashboardDetail();
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") closeDashboardDetail();
+  });
+
   // ================================// LANÇAMENTOS — MENU LATERAL// ================================
   document.querySelectorAll("[data-lanc-tab]").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -3370,6 +3388,10 @@ function abrirModalEditarConta(conta) {
         previsoesCartao: resumo.cartoesAbertos,
         cartoesTransportados: resumo.cartoesTransportados,
         despesasComPrevisao: resumo.despesasComPrevisao,
+        pendentesReceita: resumo.pendentesReceita,
+        pendentesDespesa: resumo.pendentesDespesa,
+        receitasTransportadas: resumo.receitasTransportadas,
+        despesasTransportadas: resumo.despesasTransportadas,
         comprasCartaoCategorias,
         despesasCategoriasGerenciais,
         totalReceitas: resumo.totalReceitas,
@@ -3398,6 +3420,10 @@ function abrirModalEditarConta(conta) {
         despesasComPrevisao: [],
         comprasCartaoCategorias: [],
         despesasCategoriasGerenciais: [],
+        pendentesReceita: [],
+        pendentesDespesa: [],
+        receitasTransportadas: [],
+        despesasTransportadas: [],
         totalReceitas: 0,
         totalDespesas: 0,
         totalRecebido: 0,
@@ -3810,6 +3836,206 @@ function abrirModalEditarConta(conta) {
         toggleAudit();
       }
     });
+  }
+
+  function getDashboardDetailModal() {
+    return {
+      modal: $('dashboard-detail-modal'),
+      title: $('dashboard-detail-title'),
+      subtitle: $('dashboard-detail-subtitle'),
+      eyebrow: $('dashboard-detail-eyebrow'),
+      content: $('dashboard-detail-content')
+    };
+  }
+
+  function dashboardItemDate(item) {
+    return item?.data_baixa || item?.data_resgate || item?.data_aplicacao || item?.data_competencia || item?.data || item?.data_fatura || item?.data_compra || item?.data_original || '';
+  }
+
+  function dashboardItemCategory(item, fallback = 'Sem categoria') {
+    return item?.categoria_nome || categoriaNome(item?.categoria_id) || fallback;
+  }
+
+  function dashboardItemDescription(item) {
+    return item?.descricao_baixa || item?.descricao || item?.nome || 'Sem descrição';
+  }
+
+  function detailGroup(title, items, options = {}) {
+    const valueGetter = options.valueGetter || (item => Number(item?.valor || 0));
+    const total = roundCurrency(options.total ?? (items || []).reduce((sum, item) => sum + valueGetter(item), 0));
+    return {
+      title,
+      items: items || [],
+      total,
+      empty: options.empty || 'Nenhum item neste grupo.',
+      meta: options.meta || (item => dashboardItemCategory(item)),
+      valueGetter
+    };
+  }
+
+  function renderDashboardDetailSummary(items) {
+    const summary = document.createElement('div');
+    summary.className = 'dashboard-detail-summary';
+    (items || []).forEach(item => {
+      const box = document.createElement('div');
+      box.className = 'dashboard-detail-summary-item';
+      box.appendChild(createTextElement('span', item.label));
+      box.appendChild(createTextElement('strong', fmtMoney(item.value)));
+      summary.appendChild(box);
+    });
+    return summary;
+  }
+
+  function renderDashboardDetailGroup(group) {
+    const wrapper = document.createElement('section');
+    wrapper.className = 'dashboard-detail-group';
+
+    const header = document.createElement('div');
+    header.className = 'dashboard-detail-group-header';
+    header.appendChild(createTextElement('strong', group.title));
+    header.appendChild(createTextElement('span', fmtMoney(group.total)));
+    wrapper.appendChild(header);
+
+    const list = document.createElement('div');
+    list.className = 'dashboard-detail-list';
+
+    if (!group.items.length) {
+      list.appendChild(createTextElement('div', group.empty, 'dashboard-detail-empty'));
+      wrapper.appendChild(list);
+      return wrapper;
+    }
+
+    group.items.slice(0, 12).forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'dashboard-detail-row';
+      row.appendChild(createTextElement('span', fmtDateBR(dashboardItemDate(item)), 'dashboard-detail-date'));
+
+      const desc = document.createElement('div');
+      desc.className = 'dashboard-detail-desc';
+      desc.appendChild(createTextElement('strong', dashboardItemDescription(item)));
+      desc.appendChild(createTextElement('small', group.meta(item)));
+      row.appendChild(desc);
+
+      row.appendChild(createTextElement('strong', fmtMoney(group.valueGetter(item)), 'dashboard-detail-value'));
+      list.appendChild(row);
+    });
+
+    if (group.items.length > 12) {
+      list.appendChild(createTextElement('div', `Mais ${group.items.length - 12} item(ns) neste grupo.`, 'dashboard-detail-empty'));
+    }
+
+    wrapper.appendChild(list);
+    return wrapper;
+  }
+
+  function buildDashboardDetail(type, dados) {
+    const investimentos = dados.investimentosPeriodo || {};
+    const receitasPendentesMes = (dados.pendentesReceita || []).filter(item => !item.transportado);
+    const despesasPendentesMes = (dados.pendentesDespesa || []).filter(item => !item.transportado);
+
+    const configs = {
+      receber: {
+        eyebrow: 'A receber',
+        title: fmtMoney(dados.totalAReceber),
+        subtitle: 'Receitas pendentes do mês somadas às receitas transportadas de meses anteriores.',
+        formula: 'A receber = receitas pendentes do período + receitas transportadas',
+        summary: [
+          { label: 'Pendentes do mês', value: receitasPendentesMes.reduce((s, item) => s + Number(item.valor || 0), 0) },
+          { label: 'Transportadas', value: dados.totalTransportadoReceber || 0 },
+          { label: 'Total a receber', value: dados.totalAReceber || 0 }
+        ],
+        groups: [
+          detailGroup('Receitas pendentes do mês', receitasPendentesMes),
+          detailGroup('Receitas transportadas', dados.receitasTransportadas || [])
+        ]
+      },
+      pagar: {
+        eyebrow: 'A pagar',
+        title: fmtMoney(dados.totalAPagar),
+        subtitle: 'Despesas abertas, faturas abertas e pendências transportadas que ainda precisam ser pagas.',
+        formula: 'A pagar = despesas abertas + faturas abertas + faturas/despesas transportadas',
+        summary: [
+          { label: 'Despesas abertas', value: dados.totalDespesasPendentes || 0 },
+          { label: 'Faturas abertas', value: dados.totalCartoesAbertos || 0 },
+          { label: 'Transportadas', value: dados.totalTransportadoPagar || 0 },
+          { label: 'Total a pagar', value: dados.totalAPagar || 0 }
+        ],
+        groups: [
+          detailGroup('Despesas abertas', despesasPendentesMes),
+          detailGroup('Faturas abertas', dados.cartoesAbertos || [], { meta: item => `${item.movimentos || 0} movimento(s) do cartão` }),
+          detailGroup('Despesas transportadas', dados.despesasTransportadas || []),
+          detailGroup('Faturas transportadas', dados.cartoesTransportados || [], { meta: item => item.nome_cartao || 'Cartão de crédito' })
+        ]
+      },
+      realizado: {
+        eyebrow: 'Realizado',
+        title: fmtMoney(dados.saldoRealizado),
+        subtitle: 'Resultado do que de fato entrou e saiu no período, considerando baixas totais e parciais.',
+        formula: 'Realizado = recebido - pago',
+        summary: [
+          { label: 'Recebido', value: dados.totalRecebido || 0 },
+          { label: 'Pago', value: dados.totalPago || 0 },
+          { label: 'Resultado', value: dados.saldoRealizado || 0 }
+        ],
+        groups: [
+          detailGroup('Receitas recebidas', dados.receitasBaixadas || [], { meta: item => item.baixa_parcial ? 'Baixa parcial recebida' : dashboardItemCategory(item) }),
+          detailGroup('Despesas pagas', dados.despesasBaixadas || [], { meta: item => item.baixa_parcial ? 'Baixa parcial paga' : dashboardItemCategory(item) })
+        ]
+      },
+      previsto: {
+        eyebrow: 'Saldo previsto',
+        title: fmtMoney(dados.saldoPrevisto),
+        subtitle: 'Estimativa do dinheiro disponível após pendências e aplicações/resgates do período.',
+        formula: 'Saldo previsto = realizado - investimento líquido + a receber - a pagar',
+        summary: [
+          { label: 'Realizado', value: dados.saldoRealizado || 0 },
+          { label: 'Investimento líquido', value: -(investimentos.netInvestido || 0) },
+          { label: 'A receber', value: dados.totalAReceber || 0 },
+          { label: 'A pagar', value: -(dados.totalAPagar || 0) }
+        ],
+        groups: [
+          detailGroup('Aplicações do período', investimentos.aplicacoes || [], {
+            total: investimentos.totalAplicado || 0,
+            meta: item => item.nome || 'Aplicação',
+            valueGetter: item => Number(item.valor_aplicado || item.valor || 0)
+          }),
+          detailGroup('Resgates do período', investimentos.resgates || [], {
+            total: investimentos.totalResgatado || 0,
+            meta: () => 'Resgate de investimento',
+            valueGetter: item => Number(item.valor_liquido || item.valor || 0)
+          })
+        ]
+      }
+    };
+
+    return configs[type] || null;
+  }
+
+  function openDashboardDetail(type) {
+    const dados = STATE.dashboardDados;
+    const modalParts = getDashboardDetailModal();
+    if (!dados || !modalParts.modal || !modalParts.content) return;
+
+    const detail = buildDashboardDetail(type, dados);
+    if (!detail) return;
+
+    safeText(modalParts.eyebrow, detail.eyebrow);
+    safeText(modalParts.title, detail.title);
+    safeText(modalParts.subtitle, detail.subtitle);
+    modalParts.content.innerHTML = '';
+    modalParts.content.appendChild(renderDashboardDetailSummary(detail.summary));
+    modalParts.content.appendChild(createTextElement('div', detail.formula, 'dashboard-detail-formula'));
+    detail.groups.forEach(group => modalParts.content.appendChild(renderDashboardDetailGroup(group)));
+
+    modalParts.modal.classList.remove('hidden');
+    modalParts.modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeDashboardDetail() {
+    const modal = $('dashboard-detail-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
   }
 
   function drawResumo(dados) {
