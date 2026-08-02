@@ -57,6 +57,47 @@ function formatDateBR(value) {
   return `${day}/${month}/${year}`;
 }
 
+function textFromCell(row, index) {
+  return row?.children?.[index]?.textContent?.trim() || "-";
+}
+
+function buildExtratoMovimentosHTML() {
+  const rows = Array.from(document.querySelectorAll("#table-extrato tbody tr"));
+
+  if (!rows.length) {
+    return '<p class="print-empty">Nenhuma movimentação encontrada.</p>';
+  }
+
+  return `
+    <div class="statement-list">
+      ${rows.map(row => {
+        const tipoTexto = textFromCell(row, 2);
+        const isCredito = /cr[eé]dito/i.test(tipoTexto);
+        const rowClass = isCredito ? "statement-row statement-row-credit" : "statement-row statement-row-debit";
+        const tipoClass = isCredito ? "statement-type statement-credit" : "statement-type statement-debit";
+
+        return `
+          <article class="${rowClass}">
+            <div class="statement-date">${escapeHTML(textFromCell(row, 0))}</div>
+            <div class="statement-main">
+              <strong>${escapeHTML(textFromCell(row, 1))}</strong>
+              <span class="${tipoClass}">${escapeHTML(tipoTexto)}</span>
+            </div>
+            <div class="statement-amount">
+              <span>Valor</span>
+              <strong>${escapeHTML(textFromCell(row, 3))}</strong>
+            </div>
+            <div class="statement-balance">
+              <span>Saldo</span>
+              <strong>${escapeHTML(textFromCell(row, 4))}</strong>
+            </div>
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
 function buildPrintStyles() {
   return `
     <style>
@@ -262,6 +303,105 @@ function buildPrintStyles() {
         font-weight: 800;
       }
 
+      .statement-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .statement-row {
+        display: grid;
+        grid-template-columns: 96px minmax(0, 1fr) 132px 132px;
+        gap: 12px;
+        align-items: center;
+        min-height: 58px;
+        padding: 10px 12px;
+        border: 1px solid #ebe6f8;
+        border-left: 5px solid var(--red);
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .statement-row:nth-child(even) {
+        background: #fbfaff;
+      }
+
+      .statement-row-credit {
+        border-left-color: #22c55e;
+      }
+
+      .statement-row-debit {
+        border-left-color: #ef4444;
+      }
+
+      .statement-date {
+        color: var(--brand-dark);
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .statement-main strong {
+        display: block;
+        color: var(--ink);
+        font-size: 12px;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+
+      .statement-type {
+        display: inline-flex;
+        align-items: center;
+        margin-top: 5px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #f5f1ff;
+        font-size: 10px;
+        font-weight: 900;
+      }
+
+      .statement-credit {
+        color: var(--green);
+      }
+
+      .statement-debit {
+        color: var(--red);
+      }
+
+      .statement-amount,
+      .statement-balance {
+        text-align: right;
+      }
+
+      .statement-amount span,
+      .statement-balance span {
+        display: block;
+        margin-bottom: 3px;
+        color: #918aa1;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+      }
+
+      .statement-amount strong,
+      .statement-balance strong {
+        display: block;
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .print-empty {
+        margin: 0;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--soft);
+        color: var(--muted);
+        font-weight: 700;
+      }
+
       .report-footer {
         display: flex;
         justify-content: space-between;
@@ -294,7 +434,8 @@ function buildPrintStyles() {
         .print-header,
         .print-account-card,
         .print-summary-grid,
-        tr {
+        tr,
+        .statement-row {
           break-inside: avoid;
         }
       }
@@ -399,7 +540,6 @@ function gerarPDF(tipo) {
 
     if (tipo === "extrato") {
         titulo = "Extrato da Conta";
-        const tabelaLimpa = cloneAndStripActions("#table-extrato");
         const movimentoCount = document.querySelectorAll("#table-extrato tbody tr").length;
         conteudoHTML = `
           ${buildExtratoInfoHTML()}
@@ -409,7 +549,7 @@ function gerarPDF(tipo) {
               <h2>Movimentações</h2>
               <span class="movement-count">${movimentoCount} movimento(s)</span>
             </div>
-            ${tabelaLimpa || "<p>Nenhuma movimentação encontrada.</p>"}
+            ${buildExtratoMovimentosHTML()}
           </section>
         `;
     }

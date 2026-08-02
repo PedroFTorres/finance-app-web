@@ -1,38 +1,79 @@
 #onboarding-guide{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,0.55);
+  background:rgba(24,18,48,0.52);
+  backdrop-filter: blur(3px);
   display:flex;
   align-items:center;
   justify-content:center;
   z-index:99999;
 
-  pointer-events: none; /* 🔥 ESSENCIAL */
+  pointer-events: none;
 }
 
 .onboarding-box{
-  pointer-events: auto; /* 🔥 permite clicar no painel */
+  pointer-events: auto;
 }
 .onboarding-box{
   background:white;
-  padding:30px;
-  border-radius:12px;
-  width:420px;
-  text-align:center;
-  box-shadow:0 10px 40px rgba(0,0,0,0.25);
+  padding:26px;
+  border:1px solid #e5dcff;
+  border-radius:8px;
+  width:min(440px, calc(100vw - 32px));
+  text-align:left;
+  box-shadow:0 20px 70px rgba(47,36,99,0.25);
 }
 
 .onboarding-box h2{
-  color:#6b4dfc;
+  margin:8px 0 8px;
+  color:#2f2463;
+  font-size:24px;
+  line-height:1.1;
+}
+
+.onboarding-box p{
+  margin:0;
+  color:#6f7280;
+  font-size:16px;
+  line-height:1.45;
+}
+
+.onboarding-step{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#f1ecff;
+  color:#754cff;
+  font-size:13px;
+  font-weight:800;
 }
 
 .onboarding-box button{
+  margin-top:0;
+}
+
+.onboarding-actions{
+  display:flex;
+  justify-content:flex-end;
   margin-top:20px;
+}
+
+.onboarding-skip{
+  min-height:42px;
+  padding:0 16px;
+  border:1px solid #d9cdfc;
+  border-radius:8px;
+  background:#fff;
+  color:#754cff;
+  font-size:15px;
+  font-weight:800;
+  cursor:pointer;
 }
 
 .onboarding-highlight{
   position:relative;
   z-index:100000;
-  box-shadow:0 0 0 6px rgba(122,77,255,0.4);
+  box-shadow:0 0 0 6px rgba(122,77,255,0.28), 0 12px 30px rgba(47,36,99,0.2);
   border-radius:8px;
 }

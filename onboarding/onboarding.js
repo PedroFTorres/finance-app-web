@@ -38,7 +38,18 @@ function iniciarOnboarding(){
   passoConta();
 }
 
-function mostrarPainel(titulo, texto){
+async function concluirOnboarding(){
+  document.getElementById("onboarding-guide")?.remove();
+
+  await supabase
+  .from("user_profiles")
+  .update({
+    onboarding_completed: true
+  })
+  .eq("id", STATE.user.id);
+}
+
+function mostrarPainel(titulo, texto, etapa){
 
   document.getElementById("onboarding-guide")?.remove();
 
@@ -51,7 +62,18 @@ function mostrarPainel(titulo, texto){
   heading.textContent = String(titulo ?? "");
   const description = document.createElement("p");
   description.textContent = String(texto ?? "");
-  box.append(heading, description);
+  const badge = document.createElement("span");
+  badge.className = "onboarding-step";
+  badge.textContent = etapa ? `Etapa ${etapa} de 3` : "Configuração inicial";
+  const actions = document.createElement("div");
+  actions.className = "onboarding-actions";
+  const skip = document.createElement("button");
+  skip.type = "button";
+  skip.className = "onboarding-skip";
+  skip.textContent = "Pular guia";
+  skip.addEventListener("click", concluirOnboarding);
+  box.append(badge, heading, description, actions);
+  actions.appendChild(skip);
   guide.appendChild(box);
 
   document.body.appendChild(guide);
@@ -91,7 +113,8 @@ async function passoConta(){
 
   mostrarPainel(
     "Passo 1 — Crie sua conta",
-    "Clique no botão destacado para cadastrar sua primeira conta."
+    "Cadastre a conta bancária que será usada para pagamentos, recebimentos e extrato.",
+    1
   );
 
   verificarConta();
@@ -134,7 +157,8 @@ async function passoCategoria(){
 
   mostrarPainel(
     "Passo 2 — Crie categorias",
-    "Clique no botão destacado para criar uma categoria."
+    "Crie categorias para separar receitas, despesas e compras do cartão nos relatórios.",
+    2
   );
 
   verificarCategoria();
@@ -165,7 +189,8 @@ async function passoLancamento(){
 
   mostrarPainel(
     "Passo 3 — Registre um lançamento",
-    "Adicione sua primeira receita ou despesa."
+    "Inclua uma receita ou despesa para começar a acompanhar dashboard, extrato e previsões.",
+    3
   );
 
   verificarLancamento();
@@ -192,16 +217,7 @@ async function verificarLancamento(){
 }
 
 async function finalizarOnboarding(){
-
-  document.getElementById("onboarding-guide")?.remove();
-
-  await supabase
-  .from("user_profiles")
-  .update({
-    onboarding_completed: true
-  })
-  .eq("id", STATE.user.id);
-
+  await concluirOnboarding();
 }
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
