@@ -3,6 +3,7 @@ const test = require("node:test");
 
 const {
   auditarTransportadas,
+  aplicarPagamentoParcialEmFaturaFechada,
   calcularResumoFinanceiroRegra,
   calcularSaldoConta,
   detectarPagamentoParcialDuplicado,
@@ -121,6 +122,34 @@ test("pagamento parcial de cartao exige categoria e bloqueia duplicidade", () =>
   });
 
   assert.equal(duplicadoNosLancamentos, true);
+});
+
+test("pagamento parcial em fatura fechada reduz o saldo vinculado", () => {
+  const parcial = aplicarPagamentoParcialEmFaturaFechada({
+    valorFatura: 3500,
+    valorPago: 3000
+  });
+
+  assert.equal(parcial.ok, true);
+  assert.equal(parcial.saldoRestante, 500);
+  assert.equal(parcial.quitouFatura, false);
+
+  const quitacao = aplicarPagamentoParcialEmFaturaFechada({
+    valorFatura: 500,
+    valorPago: 500
+  });
+
+  assert.equal(quitacao.ok, true);
+  assert.equal(quitacao.saldoRestante, 0);
+  assert.equal(quitacao.quitouFatura, true);
+
+  const invalido = aplicarPagamentoParcialEmFaturaFechada({
+    valorFatura: 500,
+    valorPago: 600
+  });
+
+  assert.equal(invalido.ok, false);
+  assert.match(invalido.erros.join(" "), /maior que o saldo da fatura/);
 });
 
 test("saldo da conta parte do saldo inicial e nao zera quando periodo fecha em zero", () => {

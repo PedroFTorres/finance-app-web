@@ -458,6 +458,88 @@ if (contaFaturaConfirmar) {
   return created.id;
 }
 
+function roundMoney(value) {
+  return Number(Number(value || 0).toFixed(2));
+}
+
+async function ajustarFaturaFechadaAposPagamentoParcial({ dataFatura, valorPago, categoriaId, dataBaixa, somenteCalcular = false }) {
+  const dataRef = new Date(`${dataFatura}T00:00:00`);
+  const ano = dataRef.getFullYear();
+  const mes = dataRef.getMonth() + 1;
+
+  const { data: fatura, error: erroFatura } = await supabase
+    .from("cartao_faturas")
+    .select("id, valor_total, status, pago")
+    .eq("user_id", state.user.id)
+    .eq("cartao_id", activeCardId)
+    .eq("ano", ano)
+    .eq("mes", mes)
+    .maybeSingle();
+
+  if (erroFatura) throw erroFatura;
+  if (!fatura || fatura.status === "aberta") return null;
+
+  if (fatura.pago === true) {
+    throw new Error("Esta fatura já está paga.");
+  }
+
+  const saldoAtual = roundMoney(fatura.valor_total || 0);
+  const valorPagoNormalizado = roundMoney(valorPago);
+
+  if (saldoAtual <= 0) {
+    throw new Error("Fatura sem saldo pendente.");
+  }
+
+  if (valorPagoNormalizado > saldoAtual + 0.009) {
+    throw new Error("O pagamento parcial não pode ser maior que o saldo da fatura.");
+  }
+
+  const saldoRestante = Math.max(0, roundMoney(saldoAtual - valorPagoNormalizado));
+  const quitouFatura = saldoRestante <= 0.009;
+
+  if (somenteCalcular) {
+    return { faturaId: fatura.id, saldoAtual, saldoRestante, quitouFatura };
+  }
+
+  const { data: despesaFatura, error: erroDespesaFatura } = await supabase
+    .from("despesas")
+    .select("id, baixado")
+    .eq("user_id", state.user.id)
+    .eq("cartao_fatura_id", fatura.id)
+    .maybeSingle();
+
+  if (erroDespesaFatura) throw erroDespesaFatura;
+
+  if (despesaFatura) {
+    const { error: erroUpdateDespesa } = await supabase
+      .from("despesas")
+      .update({
+        valor: saldoRestante,
+        categoria_id: categoriaId,
+        baixado: quitouFatura,
+        data_baixa: quitouFatura ? dataBaixa : null
+      })
+      .eq("id", despesaFatura.id)
+      .eq("user_id", state.user.id);
+
+    if (erroUpdateDespesa) throw erroUpdateDespesa;
+  }
+
+  const { error: erroUpdateFatura } = await supabase
+    .from("cartao_faturas")
+    .update({
+      valor_total: saldoRestante,
+      pago: quitouFatura,
+      status: quitouFatura ? "paga" : "fechada"
+    })
+    .eq("id", fatura.id)
+    .eq("user_id", state.user.id);
+
+  if (erroUpdateFatura) throw erroUpdateFatura;
+
+  return { faturaId: fatura.id, saldoAtual, saldoRestante, quitouFatura };
+}
+
 function computeContaBalance(conta, movs = []) {
   const saldoInicial = Number(conta?.saldo_inicial || 0);
   const dataSaldo = conta?.data_saldo || null;
@@ -1456,6 +1538,14 @@ if (btnConfirmarPagParcial) {
         return;
       }
 
+      const ajusteFaturaPrevisto = await ajustarFaturaFechadaAposPagamentoParcial({
+        dataFatura,
+        valorPago: valor,
+        categoriaId,
+        dataBaixa: data,
+        somenteCalcular: true
+      });
+
     // 🔥 1️⃣ Criar DESPESA real
     const { data: despesa, error: erroDesp } = await supabase
       .from("despesas")
@@ -1513,14 +1603,25 @@ if (btnConfirmarPagParcial) {
 
     if (erroCartaoLanc) throw erroCartaoLanc;
 
+    const ajusteFatura = ajusteFaturaPrevisto
+      ? await ajustarFaturaFechadaAposPagamentoParcial({
+          dataFatura,
+          valorPago: valor,
+          categoriaId,
+          dataBaixa: data
+        })
+      : null;
+
     modalPagParcial.classList.add("hidden");
 
     await loadFaturaForSelected();
 
-    showToast("Pagamento parcial realizado com sucesso.");
+    showToast(ajusteFatura?.quitouFatura
+      ? "Pagamento registrado e fatura quitada com sucesso."
+      : "Pagamento parcial realizado com sucesso.");
     } catch (err) {
       console.error("Erro no pagamento parcial:", err);
-      showToast("Erro ao registrar pagamento parcial.", "error");
+      showToast(err?.message || "Erro ao registrar pagamento parcial.", "error");
     } finally {
       pagamentoParcialEmProcessamento = false;
       btnConfirmarPagParcial.disabled = false;

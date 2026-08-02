@@ -151,6 +151,34 @@ function detectarPagamentoParcialDuplicado({
   return duplicadoNoCartao || duplicadoNosLancamentos;
 }
 
+function aplicarPagamentoParcialEmFaturaFechada({ valorFatura, valorPago } = {}) {
+  const valorAtual = roundCurrency(valorFatura);
+  const pagamento = roundCurrency(valorPago);
+  const erros = [];
+
+  if (valorAtual <= 0) {
+    erros.push("Fatura sem saldo pendente.");
+  }
+
+  if (pagamento <= 0) {
+    erros.push("Informe o valor pago.");
+  }
+
+  if (pagamento > valorAtual + 0.009) {
+    erros.push("O pagamento parcial nao pode ser maior que o saldo da fatura.");
+  }
+
+  const saldoRestante = roundCurrency(valorAtual - pagamento);
+
+  return {
+    ok: erros.length === 0,
+    erros,
+    valorPago: pagamento,
+    saldoRestante: Math.max(0, saldoRestante),
+    quitouFatura: saldoRestante <= 0.009
+  };
+}
+
 function calcularSaldoConta({ saldoInicial = 0, movimentacoes = [] } = {}) {
   return roundCurrency(movimentacoes.reduce((saldo, movimento) => {
     const valor = Number(movimento.valor || 0);
@@ -196,6 +224,7 @@ module.exports = {
   validarBaixaLancamento,
   validarPagamentoParcialCartao,
   detectarPagamentoParcialDuplicado,
+  aplicarPagamentoParcialEmFaturaFechada,
   calcularSaldoConta,
   auditarTransportadas
 };
