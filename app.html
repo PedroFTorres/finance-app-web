@@ -19,7 +19,7 @@
       <button class="menu-btn" data-target="dashboard">Dashboard</button>
       <button class="menu-btn" data-target="contas">Contas</button>
       <button class="menu-btn" data-target="lanc">Lançamentos</button>
-      <button id="btn-transferir" class="btn-secondary">🔁 Transferir</button>
+      <button id="btn-transferir" class="btn-secondary" aria-label="Transferir entre contas">Transferir</button>
       <button class="menu-btn" id="btn-cartao">Cartão</button>
       <button class="menu-btn" id="btn-investimentos" onclick="window.location.href='investimentos/index.html'">Investimentos</button>
       <button class="menu-btn" data-target="auditoria">Auditoria</button>
@@ -30,8 +30,8 @@
  <img id="header-avatar"
      style="width:35px;height:35px;border-radius:50%;object-fit:cover;display:none;">
   <span id="user-email" class="user-email"></span>
-    <button onclick="window.location.href='upgrade.html'" class="btn-primary">
-  🚀 Upgrade
+    <button onclick="window.location.href='upgrade.html'" class="btn-primary" aria-label="Abrir upgrade do plano">
+  Upgrade
 </button>
  <button onclick="window.location.href='perfil.html'"
           class="btn-secondary">
@@ -60,9 +60,9 @@
             <p class="dashboard-subtitle">Visão consolidada de receitas, despesas e faturas abertas.</p>
           </div>
           <div class="dashboard-period-nav">
-            <button id="dash-prev" class="btn-secondary">◀</button>
+            <button id="dash-prev" class="btn-secondary" aria-label="Mês anterior no dashboard">◀</button>
             <strong id="dash-mes-label"></strong>
-            <button id="dash-next" class="btn-secondary">▶</button>
+            <button id="dash-next" class="btn-secondary" aria-label="Próximo mês no dashboard">▶</button>
           </div>
         </div>
 
@@ -177,9 +177,9 @@
             <p class="dashboard-subtitle">Conferência automática dos cálculos, saldos, cartões, categorias e transportadas.</p>
           </div>
           <div class="dashboard-period-nav">
-            <button id="audit-prev" class="btn-secondary">◀</button>
+            <button id="audit-prev" class="btn-secondary" aria-label="Mês anterior na auditoria">◀</button>
             <strong id="audit-mes-label"></strong>
-            <button id="audit-next" class="btn-secondary">▶</button>
+            <button id="audit-next" class="btn-secondary" aria-label="Próximo mês na auditoria">▶</button>
           </div>
         </div>
 
@@ -216,7 +216,7 @@
   id="btn-open-modal-conta"
   class="btn-add-conta"
 >
-  ➕ Adicionar conta
+  Adicionar conta
 </button>
 
 <hr style="margin:25px 0"/>
@@ -241,9 +241,9 @@
 
   <!-- Navegação por mês -->
   <div class="mes-nav" style="display:flex;align-items:center;gap:8px;">
-    <button id="extrato-prev" class="btn-secondary">◀</button>
+    <button id="extrato-prev" class="btn-secondary" aria-label="Mês anterior no extrato">◀</button>
     <strong id="extrato-mes-label"></strong>
-    <button id="extrato-next" class="btn-secondary">▶</button>
+    <button id="extrato-next" class="btn-secondary" aria-label="Próximo mês no extrato">▶</button>
   </div>
 
   <!-- Abrir período personalizado -->
@@ -345,9 +345,9 @@
 
     <div class="lanc-toolbar">
       <div class="lanc-period-card">
-        <button id="lanc-prev" class="btn-secondary">◀</button>
+        <button id="lanc-prev" class="btn-secondary" aria-label="Mês anterior em lançamentos">◀</button>
         <strong id="lanc-mes-label"></strong>
-        <button id="lanc-next" class="btn-secondary">▶</button>
+        <button id="lanc-next" class="btn-secondary" aria-label="Próximo mês em lançamentos">▶</button>
       </div>
 
       <button id="btn-periodo-custom" class="btn-secondary">
@@ -504,10 +504,8 @@
       </div>
 
       <div>
-        
         <label>Conta</label>
-      <label>Conta</label>
-<select id="modal-conta-select"></select>
+        <select id="modal-conta-select"></select>
 
       </div>
 

@@ -3,66 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
- 
+  <title>Arolix</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-
- 
-
-  <!-- 🟩 Tela do Aplicativo -->
-  <section id="app" class="hidden">
-
-    <div class="top-bar">
-      <span id="user-area" class="user-email"></span>
-      <button id="btn-logout" class="danger">Sair</button>
-    </div>
-
-    <section class="contas-box">
-      <h2>Contas</h2>
-
-      <select id="select-contas"></select>
-      <input id="conta-nome" placeholder="Nova conta">
-      <input id="conta-saldo" type="number" placeholder="Saldo inicial">
-      <button id="btn-add-conta">Adicionar Conta</button>
+<body class="entry-page">
+  <main class="entry-shell" aria-live="polite">
+    <img src="logo-arolix.png" class="entry-logo" alt="Arolix">
+    <section class="entry-card">
+      <span class="entry-badge">Arolix</span>
+      <h1>Preparando seu painel financeiro</h1>
+      <p>Estamos abrindo o ambiente correto para você acessar suas contas, lançamentos, cartões e investimentos.</p>
+      <a class="btn-primary entry-action" href="login.html">Continuar</a>
     </section>
-
-    <section class="lancamento-box">
-      <h2>Lançamento</h2>
-
-      <select id="tipo-lancamento">
-        <option value="receita">Receita</option>
-        <option value="despesa">Despesa</option>
-      </select>
-
-      <input id="valor-lanc" type="number" placeholder="Valor">
-      <input id="desc-lanc" placeholder="Descrição">
-      <input id="data-lanc" type="date">
-      <button id="btn-add-lanc">Adicionar</button>
-
-      <div class="totais">
-        <span id="saldo-atual"></span>
-        <span id="total-receitas"></span>
-        <span id="total-despesas"></span>
-      </div>
-    </section>
-
-    <section class="listas">
-      <div class="box">
-        <h3>Receitas</h3>
-        <ul id="list-receitas"></ul>
-      </div>
-
-      <div class="box">
-        <h3>Despesas</h3>
-        <ul id="list-despesas"></ul>
-      </div>
-    </section>
-  </section>
+  </main>
 
   <script src="vendor/supabase-2.108.2.js"></script>
   <script src="config.js"></script>
   <script src="supabase.js"></script>
-  <script src="app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        window.location.replace(data?.session ? "app.html" : "login.html");
+      } catch (error) {
+        window.location.replace("login.html");
+      }
+    });
+  </script>
 </body>
 </html>
