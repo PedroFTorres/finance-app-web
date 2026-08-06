@@ -4189,14 +4189,6 @@ function abrirModalEditarConta(conta) {
         tone
       }
     ]));
-    modalParts.content.appendChild(renderDashboardDetailExplainer({
-      explanation: tipo === 'receita'
-        ? 'Mostra as receitas que formam esta barra no gráfico de receitas por categoria.'
-        : 'Mostra despesas lançadas e compras do cartão que formam esta barra no gráfico de despesas por categoria.',
-      notes: tipo === 'despesa'
-        ? ['Compras do cartão entram pela categoria da compra.', 'A fatura técnica do cartão não duplica a categoria aqui.']
-        : ['Receitas sem categoria aparecem agrupadas como Sem categoria.']
-    }));
     modalParts.content.appendChild(renderDashboardDetailGroup(detailGroup(tituloGrupo, items, {
       total,
       tone,
@@ -4205,6 +4197,7 @@ function abrirModalEditarConta(conta) {
       limit: Infinity
     })));
 
+    modalParts.modal.classList.add('dashboard-detail-category');
     modalParts.modal.classList.remove('hidden');
     modalParts.modal.setAttribute('aria-hidden', 'false');
   }
@@ -4217,6 +4210,7 @@ function abrirModalEditarConta(conta) {
     const detail = buildDashboardDetail(type, dados);
     if (!detail) return;
 
+    modalParts.modal.classList.remove('dashboard-detail-category');
     safeText(modalParts.eyebrow, detail.eyebrow);
     safeText(modalParts.title, detail.title);
     safeText(modalParts.subtitle, detail.subtitle);
