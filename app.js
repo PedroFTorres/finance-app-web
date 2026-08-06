@@ -3869,7 +3869,8 @@ function abrirModalEditarConta(conta) {
       total,
       empty: options.empty || 'Nenhum item neste grupo.',
       meta: options.meta || (item => dashboardItemCategory(item)),
-      valueGetter
+      valueGetter,
+      tone: options.tone || ''
     };
   }
 
@@ -3878,21 +3879,66 @@ function abrirModalEditarConta(conta) {
     summary.className = 'dashboard-detail-summary';
     (items || []).forEach(item => {
       const box = document.createElement('div');
-      box.className = 'dashboard-detail-summary-item';
+      const value = Number(item.value || 0);
+      const tone = item.tone || (value < -0.009 ? 'negative' : value > 0.009 ? 'positive' : 'neutral');
+      box.className = `dashboard-detail-summary-item ${tone}`;
       box.appendChild(createTextElement('span', item.label));
-      box.appendChild(createTextElement('strong', fmtMoney(item.value)));
+      box.appendChild(createTextElement('strong', item.valueText || fmtMoney(item.value)));
+      if (item.help) {
+        box.appendChild(createTextElement('small', item.help));
+      }
       summary.appendChild(box);
     });
     return summary;
   }
 
+  function renderDashboardDetailExplainer(detail) {
+    const wrapper = document.createElement('section');
+    wrapper.className = 'dashboard-detail-explainer';
+
+    wrapper.appendChild(createTextElement('strong', 'Como ler este número'));
+    wrapper.appendChild(createTextElement('p', detail.explanation || detail.subtitle || 'Este valor é formado pelos itens listados abaixo.'));
+
+    if (detail.notes?.length) {
+      const notes = document.createElement('div');
+      notes.className = 'dashboard-detail-notes';
+      detail.notes.forEach(note => notes.appendChild(createTextElement('span', note)));
+      wrapper.appendChild(notes);
+    }
+
+    return wrapper;
+  }
+
+  function renderDashboardDetailFormula(detail) {
+    const wrapper = document.createElement('section');
+    wrapper.className = 'dashboard-detail-formula';
+    wrapper.appendChild(createTextElement('strong', 'Fórmula'));
+    wrapper.appendChild(createTextElement('span', detail.formula));
+
+    if (detail.formulaParts?.length) {
+      const parts = document.createElement('div');
+      parts.className = 'dashboard-detail-formula-parts';
+      detail.formulaParts.forEach(part => {
+        const pill = document.createElement('span');
+        pill.textContent = part;
+        parts.appendChild(pill);
+      });
+      wrapper.appendChild(parts);
+    }
+
+    return wrapper;
+  }
+
   function renderDashboardDetailGroup(group) {
     const wrapper = document.createElement('section');
-    wrapper.className = 'dashboard-detail-group';
+    wrapper.className = `dashboard-detail-group ${group.tone || ''}`;
 
     const header = document.createElement('div');
     header.className = 'dashboard-detail-group-header';
-    header.appendChild(createTextElement('strong', group.title));
+    const title = document.createElement('div');
+    title.appendChild(createTextElement('strong', group.title));
+    title.appendChild(createTextElement('small', `${group.items.length} item(ns)`));
+    header.appendChild(title);
     header.appendChild(createTextElement('span', fmtMoney(group.total)));
     wrapper.appendChild(header);
 
@@ -3938,71 +3984,104 @@ function abrirModalEditarConta(conta) {
         eyebrow: 'A receber',
         title: fmtMoney(dados.totalAReceber),
         subtitle: 'Receitas pendentes do mês somadas às receitas transportadas de meses anteriores.',
+        explanation: 'Mostra dinheiro que ainda deve entrar. Só entram receitas que ainda não foram baixadas; o que já foi recebido aparece em Realizado.',
         formula: 'A receber = receitas pendentes do período + receitas transportadas',
+        formulaParts: ['Pendentes do mês', '+ Transportadas', '= Total a receber'],
+        notes: [
+          'Receitas já recebidas não ficam aqui.',
+          'Valores de meses anteriores aparecem como transportadas.'
+        ],
         summary: [
-          { label: 'Pendentes do mês', value: receitasPendentesMes.reduce((s, item) => s + Number(item.valor || 0), 0) },
-          { label: 'Transportadas', value: dados.totalTransportadoReceber || 0 },
-          { label: 'Total a receber', value: dados.totalAReceber || 0 }
+          { label: 'Pendentes do mês', value: receitasPendentesMes.reduce((s, item) => s + Number(item.valor || 0), 0), help: 'Receitas abertas no período.', tone: 'positive' },
+          { label: 'Transportadas', value: dados.totalTransportadoReceber || 0, help: 'Receitas abertas de meses anteriores.', tone: 'positive' },
+          { label: 'Total a receber', value: dados.totalAReceber || 0, help: 'Previsão de entrada ainda pendente.', tone: 'highlight' }
         ],
         groups: [
-          detailGroup('Receitas pendentes do mês', receitasPendentesMes),
-          detailGroup('Receitas transportadas', dados.receitasTransportadas || [])
+          detailGroup('Receitas pendentes do mês', receitasPendentesMes, { tone: 'positive' }),
+          detailGroup('Receitas transportadas', dados.receitasTransportadas || [], { tone: 'positive' })
         ]
       },
       pagar: {
         eyebrow: 'A pagar',
         title: fmtMoney(dados.totalAPagar),
         subtitle: 'Despesas abertas, faturas abertas e pendências transportadas que ainda precisam ser pagas.',
+        explanation: 'Mostra tudo que ainda pode sair do caixa. Inclui despesas abertas, faturas de cartão abertas e pendências antigas que foram transportadas.',
         formula: 'A pagar = despesas abertas + faturas abertas + faturas/despesas transportadas',
+        formulaParts: ['Despesas abertas', '+ Faturas abertas', '+ Transportadas', '= Total a pagar'],
+        notes: [
+          'Despesas já pagas aparecem em Realizado.',
+          'Faturas parcialmente pagas mostram somente o saldo restante.'
+        ],
         summary: [
-          { label: 'Despesas abertas', value: dados.totalDespesasPendentes || 0 },
-          { label: 'Faturas abertas', value: dados.totalCartoesAbertos || 0 },
-          { label: 'Transportadas', value: dados.totalTransportadoPagar || 0 },
-          { label: 'Total a pagar', value: dados.totalAPagar || 0 }
+          { label: 'Despesas abertas', value: dados.totalDespesasPendentes || 0, help: 'Contas do período ainda não baixadas.', tone: 'negative' },
+          { label: 'Faturas abertas', value: dados.totalCartoesAbertos || 0, help: 'Cartões ainda em aberto.', tone: 'negative' },
+          { label: 'Transportadas', value: dados.totalTransportadoPagar || 0, help: 'Pendências antigas ainda abertas.', tone: 'negative' },
+          { label: 'Total a pagar', value: dados.totalAPagar || 0, help: 'Saída prevista ainda pendente.', tone: 'highlight' }
         ],
         groups: [
-          detailGroup('Despesas abertas', despesasPendentesMes),
-          detailGroup('Faturas abertas', dados.cartoesAbertos || [], { meta: item => `${item.movimentos || 0} movimento(s) do cartão` }),
-          detailGroup('Despesas transportadas', dados.despesasTransportadas || []),
-          detailGroup('Faturas transportadas', dados.cartoesTransportados || [], { meta: item => item.nome_cartao || 'Cartão de crédito' })
+          detailGroup('Despesas abertas', despesasPendentesMes, { tone: 'negative' }),
+          detailGroup('Faturas abertas', dados.cartoesAbertos || [], { meta: item => `${item.movimentos || 0} movimento(s) do cartão`, tone: 'negative' }),
+          detailGroup('Despesas transportadas', dados.despesasTransportadas || [], { tone: 'negative' }),
+          detailGroup('Faturas transportadas', dados.cartoesTransportados || [], { meta: item => item.nome_cartao || 'Cartão de crédito', tone: 'negative' })
         ]
       },
       realizado: {
         eyebrow: 'Realizado',
         title: fmtMoney(dados.saldoRealizado),
         subtitle: 'Resultado do que de fato entrou e saiu no período, considerando baixas totais e parciais.',
+        explanation: 'Mostra o que realmente aconteceu no caixa dentro do período: receitas recebidas menos despesas pagas.',
         formula: 'Realizado = recebido - pago',
+        formulaParts: ['Recebido', '- Pago', '= Realizado'],
+        notes: [
+          'Não inclui contas que ainda estão em aberto.',
+          'Baixas parciais entram somente pelo valor pago ou recebido.'
+        ],
         summary: [
-          { label: 'Recebido', value: dados.totalRecebido || 0 },
-          { label: 'Pago', value: dados.totalPago || 0 },
-          { label: 'Resultado', value: dados.saldoRealizado || 0 }
+          { label: 'Recebido', value: dados.totalRecebido || 0, help: 'Dinheiro que entrou no período.', tone: 'positive' },
+          { label: 'Pago', value: dados.totalPago || 0, help: 'Dinheiro que saiu no período.', tone: 'negative' },
+          { label: 'Resultado', value: dados.saldoRealizado || 0, help: 'Recebido menos pago.', tone: 'highlight' }
         ],
         groups: [
-          detailGroup('Receitas recebidas', dados.receitasBaixadas || [], { meta: item => item.baixa_parcial ? 'Baixa parcial recebida' : dashboardItemCategory(item) }),
-          detailGroup('Despesas pagas', dados.despesasBaixadas || [], { meta: item => item.baixa_parcial ? 'Baixa parcial paga' : dashboardItemCategory(item) })
+          detailGroup('Receitas recebidas', dados.receitasBaixadas || [], { meta: item => item.baixa_parcial ? 'Baixa parcial recebida' : dashboardItemCategory(item), tone: 'positive' }),
+          detailGroup('Despesas pagas', dados.despesasBaixadas || [], { meta: item => item.baixa_parcial ? 'Baixa parcial paga' : dashboardItemCategory(item), tone: 'negative' })
         ]
       },
       previsto: {
         eyebrow: 'Saldo previsto',
         title: fmtMoney(dados.saldoPrevisto),
         subtitle: 'Estimativa do dinheiro disponível após pendências e aplicações/resgates do período.',
+        explanation: 'Projeta quanto deve sobrar disponível depois de considerar o que já aconteceu, o que ainda falta receber ou pagar e o dinheiro aplicado em investimentos.',
         formula: 'Saldo previsto = realizado - investimento líquido + a receber - a pagar',
+        formulaParts: ['Realizado', '- Investimento líquido', '+ A receber', '- A pagar', '= Saldo previsto'],
+        notes: [
+          'Aplicação em investimento reduz o disponível para pagar contas.',
+          'Resgate aumenta o disponível porque volta para o caixa.'
+        ],
         summary: [
-          { label: 'Realizado', value: dados.saldoRealizado || 0 },
-          { label: 'Investimento líquido', value: -(investimentos.netInvestido || 0) },
-          { label: 'A receber', value: dados.totalAReceber || 0 },
-          { label: 'A pagar', value: -(dados.totalAPagar || 0) }
+          { label: 'Realizado', value: dados.saldoRealizado || 0, help: 'Recebido menos pago.', tone: 'highlight' },
+          {
+            label: 'Investimento líquido',
+            value: -(investimentos.netInvestido || 0),
+            help: 'Aplicações menos resgates.',
+            tone: Number(investimentos.netInvestido || 0) > 0.009
+              ? 'negative'
+              : (Number(investimentos.netInvestido || 0) < -0.009 ? 'positive' : 'neutral')
+          },
+          { label: 'A receber', value: dados.totalAReceber || 0, help: 'Entradas pendentes.', tone: 'positive' },
+          { label: 'A pagar', value: -(dados.totalAPagar || 0), help: 'Saídas pendentes.', tone: 'negative' }
         ],
         groups: [
           detailGroup('Aplicações do período', investimentos.aplicacoes || [], {
             total: investimentos.totalAplicado || 0,
             meta: item => item.nome || 'Aplicação',
-            valueGetter: item => Number(item.valor_aplicado || item.valor || 0)
+            valueGetter: item => Number(item.valor_aplicado || item.valor || 0),
+            tone: 'negative'
           }),
           detailGroup('Resgates do período', investimentos.resgates || [], {
             total: investimentos.totalResgatado || 0,
             meta: () => 'Resgate de investimento',
-            valueGetter: item => Number(item.valor_liquido || item.valor || 0)
+            valueGetter: item => Number(item.valor_liquido || item.valor || 0),
+            tone: 'positive'
           })
         ]
       }
@@ -4024,7 +4103,8 @@ function abrirModalEditarConta(conta) {
     safeText(modalParts.subtitle, detail.subtitle);
     modalParts.content.innerHTML = '';
     modalParts.content.appendChild(renderDashboardDetailSummary(detail.summary));
-    modalParts.content.appendChild(createTextElement('div', detail.formula, 'dashboard-detail-formula'));
+    modalParts.content.appendChild(renderDashboardDetailExplainer(detail));
+    modalParts.content.appendChild(renderDashboardDetailFormula(detail));
     detail.groups.forEach(group => modalParts.content.appendChild(renderDashboardDetailGroup(group)));
 
     modalParts.modal.classList.remove('hidden');
