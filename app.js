@@ -3225,10 +3225,19 @@ function abrirModalEditarConta(conta) {
   }
 
   function agruparPorCategoria(lista, fallback = 'Sem categoria') {
+    const gruposDetalhados = agruparItensPorCategoria(lista, fallback);
+    return Object.fromEntries(Object.entries(gruposDetalhados).map(([nome, grupo]) => [nome, grupo.total]));
+  }
+
+  function agruparItensPorCategoria(lista, fallback = 'Sem categoria') {
     const grupos = {};
     (lista || []).forEach(item => {
       const nome = item.categoria_nome || categoriaNome(item.categoria_id) || fallback;
-      grupos[nome] = (grupos[nome] || 0) + Number(item.valor || 0);
+      if (!grupos[nome]) {
+        grupos[nome] = { total: 0, items: [] };
+      }
+      grupos[nome].total = roundCurrency(grupos[nome].total + Number(item.valor || 0));
+      grupos[nome].items.push(item);
     });
     return grupos;
   }
@@ -3280,23 +3289,41 @@ function abrirModalEditarConta(conta) {
   }
 
   function prepararSerieGrafico(grupos) {
+    const normalizar = ([label, grupo]) => {
+      if (grupo && typeof grupo === 'object') {
+        return {
+          label,
+          value: Number(grupo.total || grupo.valor || 0),
+          items: grupo.items || []
+        };
+      }
+      return {
+        label,
+        value: Number(grupo || 0),
+        items: []
+      };
+    };
+
     const itens = Object.entries(grupos || {})
-      .filter(([, valor]) => Math.abs(Number(valor || 0)) > 0.009)
-      .sort((a, b) => Number(b[1]) - Number(a[1]));
+      .map(normalizar)
+      .filter(item => Math.abs(Number(item.value || 0)) > 0.009)
+      .sort((a, b) => Number(b.value) - Number(a.value));
 
     if (itens.length === 0) {
       return {
         labels: ['Sem dados'],
         values: [1],
         colors: ['#e5e7eb'],
+        itemsByLabel: {},
         vazio: true
       };
     }
 
     return {
-      labels: itens.map(([label]) => label),
-      values: itens.map(([, valor]) => Number(Number(valor || 0).toFixed(2))),
+      labels: itens.map(item => item.label),
+      values: itens.map(item => Number(Number(item.value || 0).toFixed(2))),
       colors: itens.map((_, i) => DASH_COLORS[i % DASH_COLORS.length]),
+      itemsByLabel: Object.fromEntries(itens.map(item => [item.label, item.items])),
       vazio: false
     };
   }
@@ -3307,7 +3334,7 @@ function abrirModalEditarConta(conta) {
     return `Valor: ${fmtMoney(value)}`;
   }
 
-  function renderCategoryBars(containerId, serie) {
+  function renderCategoryBars(containerId, serie, options = {}) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -3330,6 +3357,28 @@ function abrirModalEditarConta(conta) {
       const row = document.createElement('div');
       row.className = 'category-bar-row';
       row.title = `${label}: ${fmtMoney(value)}`;
+      const items = serie.itemsByLabel?.[label] || [];
+
+      if (typeof options.onClick === 'function' && items.length) {
+        row.classList.add('category-bar-row-clickable');
+        row.setAttribute('role', 'button');
+        row.setAttribute('tabindex', '0');
+        row.setAttribute('aria-label', `Ver lançamentos da categoria ${label}`);
+        const openDetail = () => options.onClick({
+          tipo: options.tipo || 'categoria',
+          categoria: label,
+          total: value,
+          items,
+          color
+        });
+        row.addEventListener('click', openDetail);
+        row.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openDetail();
+          }
+        });
+      }
 
       const top = document.createElement('div');
       top.className = 'category-bar-top';
@@ -3342,7 +3391,14 @@ function abrirModalEditarConta(conta) {
       amount.className = 'category-bar-value';
       amount.textContent = fmtMoney(value);
 
-      top.append(name, amount);
+      const valueGroup = document.createElement('span');
+      valueGroup.className = 'category-bar-value-group';
+      valueGroup.appendChild(amount);
+      if (typeof options.onClick === 'function' && items.length) {
+        valueGroup.appendChild(createTextElement('span', 'Ver detalhes', 'category-bar-action'));
+      }
+
+      top.append(name, valueGroup);
 
       const track = document.createElement('div');
       track.className = 'category-bar-track';
@@ -3459,20 +3515,20 @@ function abrirModalEditarConta(conta) {
 
   function drawReceitasPorCategoria(dados) {
     try {
-      const serie = prepararSerieGrafico(agruparPorCategoria(dados.receitas));
+      const serie = prepararSerieGrafico(agruparItensPorCategoria(dados.receitas));
       try { if (STATE.charts.recCat) STATE.charts.recCat.destroy(); } catch (e) {}
       STATE.charts.recCat = null;
-      renderCategoryBars(IDS.chartRecCat, serie);
+      renderCategoryBars(IDS.chartRecCat, serie, { tipo: 'receita', onClick: openDashboardCategoryDetail });
     } catch (e) { console.error('drawReceitasPorCategoria', e); }
   }
 
   function drawDespesasPorCategoria(dados) {
     try {
       const baseCategorias = dados.despesasCategoriasGerenciais || dados.despesasComPrevisao;
-      const serie = prepararSerieGrafico(agruparPorCategoria(baseCategorias));
+      const serie = prepararSerieGrafico(agruparItensPorCategoria(baseCategorias));
       try { if (STATE.charts.desCat) STATE.charts.desCat.destroy(); } catch (e) {}
       STATE.charts.desCat = null;
-      renderCategoryBars(IDS.chartDesCat, serie);
+      renderCategoryBars(IDS.chartDesCat, serie, { tipo: 'despesa', onClick: openDashboardCategoryDetail });
     } catch (e) { console.error('drawDespesasPorCategoria', e); }
   }
 
@@ -3870,7 +3926,8 @@ function abrirModalEditarConta(conta) {
       empty: options.empty || 'Nenhum item neste grupo.',
       meta: options.meta || (item => dashboardItemCategory(item)),
       valueGetter,
-      tone: options.tone || ''
+      tone: options.tone || '',
+      limit: options.limit || 12
     };
   }
 
@@ -3951,7 +4008,8 @@ function abrirModalEditarConta(conta) {
       return wrapper;
     }
 
-    group.items.slice(0, 12).forEach(item => {
+    const limit = Number(group.limit || 12);
+    group.items.slice(0, limit).forEach(item => {
       const row = document.createElement('div');
       row.className = 'dashboard-detail-row';
       row.appendChild(createTextElement('span', fmtDateBR(dashboardItemDate(item)), 'dashboard-detail-date'));
@@ -3966,8 +4024,8 @@ function abrirModalEditarConta(conta) {
       list.appendChild(row);
     });
 
-    if (group.items.length > 12) {
-      list.appendChild(createTextElement('div', `Mais ${group.items.length - 12} item(ns) neste grupo.`, 'dashboard-detail-empty'));
+    if (group.items.length > limit) {
+      list.appendChild(createTextElement('div', `Mais ${group.items.length - limit} item(ns) neste grupo.`, 'dashboard-detail-empty'));
     }
 
     wrapper.appendChild(list);
@@ -4088,6 +4146,67 @@ function abrirModalEditarConta(conta) {
     };
 
     return configs[type] || null;
+  }
+
+  function categoriaItemMeta(tipo, item) {
+    if (item?.origem_categoria === 'cartao_lancamento') return 'Compra no cartão';
+    if (tipo === 'receita') return item?.baixado ? 'Receita recebida' : 'Receita aberta';
+    if (item?.cartao_pagamento_parcial) return 'Pagamento parcial da fatura';
+    if (item?.baixado) return 'Despesa paga';
+    return 'Despesa aberta';
+  }
+
+  function openDashboardCategoryDetail(detail) {
+    const modalParts = getDashboardDetailModal();
+    if (!modalParts.modal || !modalParts.content) return;
+
+    const tipo = detail?.tipo === 'receita' ? 'receita' : 'despesa';
+    const items = [...(detail?.items || [])].sort((a, b) => {
+      const dataA = dashboardItemDate(a) || '';
+      const dataB = dashboardItemDate(b) || '';
+      return dataA.localeCompare(dataB);
+    });
+    const total = roundCurrency(detail?.total ?? items.reduce((sum, item) => sum + Number(item.valor || 0), 0));
+    const maiorItem = items.reduce((maior, item) => {
+      const valor = Number(item.valor || 0);
+      return valor > Number(maior?.valor || 0) ? item : maior;
+    }, null);
+    const tone = tipo === 'receita' ? 'positive' : 'negative';
+    const tituloGrupo = tipo === 'receita' ? 'Receitas da categoria' : 'Lançamentos da categoria';
+
+    safeText(modalParts.eyebrow, tipo === 'receita' ? 'Categoria de receita' : 'Categoria de despesa');
+    safeText(modalParts.title, detail?.categoria || 'Categoria');
+    safeText(modalParts.subtitle, `${fmtMoney(total)} em ${items.length} item(ns) no período.`);
+
+    modalParts.content.innerHTML = '';
+    modalParts.content.appendChild(renderDashboardDetailSummary([
+      { label: 'Total da categoria', value: total, tone: 'highlight' },
+      { label: 'Itens encontrados', value: items.length, valueText: String(items.length), help: 'Quantidade de lançamentos no período.', tone: 'neutral' },
+      {
+        label: 'Maior lançamento',
+        value: Number(maiorItem?.valor || 0),
+        help: maiorItem ? dashboardItemDescription(maiorItem) : 'Nenhum item encontrado.',
+        tone
+      }
+    ]));
+    modalParts.content.appendChild(renderDashboardDetailExplainer({
+      explanation: tipo === 'receita'
+        ? 'Mostra as receitas que formam esta barra no gráfico de receitas por categoria.'
+        : 'Mostra despesas lançadas e compras do cartão que formam esta barra no gráfico de despesas por categoria.',
+      notes: tipo === 'despesa'
+        ? ['Compras do cartão entram pela categoria da compra.', 'A fatura técnica do cartão não duplica a categoria aqui.']
+        : ['Receitas sem categoria aparecem agrupadas como Sem categoria.']
+    }));
+    modalParts.content.appendChild(renderDashboardDetailGroup(detailGroup(tituloGrupo, items, {
+      total,
+      tone,
+      empty: 'Nenhum lançamento encontrado para esta categoria.',
+      meta: item => categoriaItemMeta(tipo, item),
+      limit: 30
+    })));
+
+    modalParts.modal.classList.remove('hidden');
+    modalParts.modal.setAttribute('aria-hidden', 'false');
   }
 
   function openDashboardDetail(type) {
