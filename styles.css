@@ -644,6 +644,8 @@ h1, h2, h3 {
   border: 1px solid #ede9fe;
   border-radius: 18px;
   box-shadow: 0 28px 70px rgba(27, 19, 58, .24);
+  display: flex;
+  flex-direction: column;
   max-height: min(760px, calc(100vh - 44px));
   max-width: 920px;
   overflow: hidden;
@@ -654,6 +656,7 @@ h1, h2, h3 {
   align-items: flex-start;
   border-bottom: 1px solid #f0edf8;
   display: flex;
+  flex: 0 0 auto;
   gap: 18px;
   justify-content: space-between;
   padding: 22px 24px 18px;
@@ -700,9 +703,12 @@ h1, h2, h3 {
 .dashboard-detail-content {
   display: grid;
   gap: 18px;
-  max-height: calc(min(760px, 100vh - 44px) - 96px);
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 22px 24px 24px;
+  scrollbar-gutter: stable;
 }
 
 .dashboard-detail-summary {
@@ -846,6 +852,7 @@ h1, h2, h3 {
 .dashboard-detail-group {
   border: 1px solid #f0edf8;
   border-radius: 16px;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -889,6 +896,7 @@ h1, h2, h3 {
 
 .dashboard-detail-list {
   display: grid;
+  min-width: 0;
 }
 
 .dashboard-detail-row {
@@ -896,6 +904,7 @@ h1, h2, h3 {
   display: grid;
   gap: 14px;
   grid-template-columns: 96px minmax(0, 1fr) 150px;
+  min-width: 0;
   padding: 13px 16px;
 }
 

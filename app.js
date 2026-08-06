@@ -3927,7 +3927,7 @@ function abrirModalEditarConta(conta) {
       meta: options.meta || (item => dashboardItemCategory(item)),
       valueGetter,
       tone: options.tone || '',
-      limit: options.limit || 12
+      limit: options.limit ?? 12
     };
   }
 
@@ -4202,7 +4202,7 @@ function abrirModalEditarConta(conta) {
       tone,
       empty: 'Nenhum lançamento encontrado para esta categoria.',
       meta: item => categoriaItemMeta(tipo, item),
-      limit: 30
+      limit: Infinity
     })));
 
     modalParts.modal.classList.remove('hidden');
