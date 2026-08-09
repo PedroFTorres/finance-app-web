@@ -264,6 +264,109 @@ function calcularSaldoConta({ saldoInicial = 0, movimentacoes = [] } = {}) {
   }, Number(saldoInicial || 0)));
 }
 
+function filtrarPorContaRegra(lista = [], contaId = "all") {
+  if (!contaId || contaId === "all") return [...(lista || [])];
+  return (lista || []).filter(item => item.conta_id === contaId);
+}
+
+function filtrarLancamentosPorAbaRegra({
+  receitas = [],
+  despesas = [],
+  cartoesPrevistos = [],
+  filtro = "pendencias"
+} = {}) {
+  const despesasPeriodo = [
+    ...(despesas || []),
+    ...(["pagos", "recebidos"].includes(filtro) ? [] : (cartoesPrevistos || []))
+  ];
+
+  const filtrar = (lista, tipo) => (lista || []).filter(item => {
+    switch (filtro) {
+      case "receitas":
+        return tipo === "receita" && item.baixado !== true;
+      case "despesas":
+        return tipo === "despesa" && item.baixado !== true;
+      case "transportadas":
+        return item.transportado === true;
+      case "recebidos":
+        return tipo === "receita" && item.baixado === true;
+      case "pagos":
+        return tipo === "despesa" && item.baixado === true;
+      case "pendencias":
+      default:
+        return item.baixado !== true;
+    }
+  });
+
+  return {
+    receitas: filtrar(receitas, "receita"),
+    despesas: filtrar(despesasPeriodo, "despesa"),
+    despesasPeriodo
+  };
+}
+
+function calcularTransferenciaMovimentacoesRegra({
+  transferenciaId = "transferencia",
+  userId = "",
+  contaOrigem,
+  contaDestino,
+  valor,
+  data,
+  descricao = "Transferência entre contas"
+} = {}) {
+  const erros = [];
+  const valorNormalizado = roundCurrency(valor);
+
+  if (!contaOrigem || !contaDestino) {
+    erros.push("Selecione as duas contas.");
+  }
+
+  if (contaOrigem && contaDestino && contaOrigem === contaDestino) {
+    erros.push("A conta de origem e destino devem ser diferentes.");
+  }
+
+  if (valorNormalizado <= 0) {
+    erros.push("Informe um valor válido.");
+  }
+
+  if (erros.length) {
+    return { ok: false, erros, movimentacoes: [] };
+  }
+
+  return {
+    ok: true,
+    erros,
+    movimentacoes: [
+      {
+        user_id: userId,
+        conta_id: contaOrigem,
+        tipo: "debito",
+        valor: valorNormalizado,
+        data,
+        descricao: `Transferência enviada — ${descricao}`,
+        transferencia_id: transferenciaId
+      },
+      {
+        user_id: userId,
+        conta_id: contaDestino,
+        tipo: "credito",
+        valor: valorNormalizado,
+        data,
+        descricao: `Transferência recebida — ${descricao}`,
+        transferencia_id: transferenciaId
+      }
+    ]
+  };
+}
+
+function limparCategoriaDeItensRegra(items = [], categoriaId) {
+  return (items || []).map(item => (
+    item.categoria_id === categoriaId
+      ? { ...item, categoria_id: null }
+      : { ...item }
+  ));
+}
+
 function auditarTransportadas({ itens = [], inicioPeriodo } = {}) {
   const inicio = inicioPeriodo ? new Date(`${inicioPeriodo}T00:00:00`) : null;
   const ids = new Set();
@@ -403,6 +506,10 @@ module.exports = {
   aplicarPagamentoParcialEmFaturaFechada,
   auditarCartoesFaturas,
   calcularSaldoConta,
+  filtrarPorContaRegra,
+  filtrarLancamentosPorAbaRegra,
+  calcularTransferenciaMovimentacoesRegra,
+  limparCategoriaDeItensRegra,
   auditarTransportadas,
   isDespesaTecnicaCartao,
   isCompraCartaoGerencial,

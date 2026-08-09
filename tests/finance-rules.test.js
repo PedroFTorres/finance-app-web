@@ -8,11 +8,15 @@ const {
   auditarTransportadas,
   aplicarPagamentoParcialEmFaturaFechada,
   auditarCartoesFaturas,
+  calcularTransferenciaMovimentacoesRegra,
   calcularResumoFinanceiroRegra,
   calcularSaldoConta,
   detectarPagamentoParcialDuplicado,
+  filtrarLancamentosPorAbaRegra,
+  filtrarPorContaRegra,
   isCompraCartaoGerencial,
   isDespesaTecnicaCartao,
+  limparCategoriaDeItensRegra,
   montarBaseDespesasPorCategoria,
   hasPremiumAccessRegra,
   validarLimitePlano,
@@ -338,6 +342,118 @@ test("saldo da conta parte do saldo inicial e nao zera quando periodo fecha em z
   });
 
   assert.equal(saldo, 4.18);
+});
+
+test("transferencia debita origem, credita destino e preserva saldo consolidado", () => {
+  const transferencia = calcularTransferenciaMovimentacoesRegra({
+    transferenciaId: "transf-1",
+    userId: "user-1",
+    contaOrigem: "bb",
+    contaDestino: "caixa",
+    valor: 302.15,
+    data: "2026-07-15",
+    descricao: "Pagamento de seguro"
+  });
+
+  assert.equal(transferencia.ok, true);
+  assert.equal(transferencia.movimentacoes.length, 2);
+  assert.deepEqual(transferencia.movimentacoes.map(item => item.tipo), ["debito", "credito"]);
+  assert.equal(transferencia.movimentacoes[0].conta_id, "bb");
+  assert.equal(transferencia.movimentacoes[1].conta_id, "caixa");
+  assert.equal(transferencia.movimentacoes[0].valor, 302.15);
+  assert.equal(transferencia.movimentacoes[1].valor, 302.15);
+  assert.equal(
+    transferencia.movimentacoes.reduce((sum, item) => sum + (item.tipo === "credito" ? item.valor : -item.valor), 0),
+    0
+  );
+
+  assert.equal(calcularSaldoConta({
+    saldoInicial: 1000,
+    movimentacoes: [transferencia.movimentacoes[0]]
+  }), 697.85);
+
+  assert.equal(calcularSaldoConta({
+    saldoInicial: 10,
+    movimentacoes: [transferencia.movimentacoes[1]]
+  }), 312.15);
+});
+
+test("transferencia bloqueia origem igual destino e valor invalido", () => {
+  const mesmaConta = calcularTransferenciaMovimentacoesRegra({
+    contaOrigem: "bb",
+    contaDestino: "bb",
+    valor: 100
+  });
+
+  assert.equal(mesmaConta.ok, false);
+  assert.match(mesmaConta.erros.join(" "), /diferentes/);
+
+  const valorInvalido = calcularTransferenciaMovimentacoesRegra({
+    contaOrigem: "bb",
+    contaDestino: "caixa",
+    valor: 0
+  });
+
+  assert.equal(valorInvalido.ok, false);
+  assert.match(valorInvalido.erros.join(" "), /valor válido/);
+});
+
+test("filtro por conta nao mistura lancamentos de outras contas", () => {
+  const lista = [
+    { id: "1", conta_id: "bb", valor: 100 },
+    { id: "2", conta_id: "caixa", valor: 200 },
+    { id: "3", conta_id: "bb", valor: 300 }
+  ];
+
+  assert.deepEqual(filtrarPorContaRegra(lista, "bb").map(item => item.id), ["1", "3"]);
+  assert.deepEqual(filtrarPorContaRegra(lista, "all").map(item => item.id), ["1", "2", "3"]);
+});
+
+test("abas de lancamentos separam pendencias, pagos, recebidos e transportadas", () => {
+  const receitas = [
+    { id: "rec-aberta", baixado: false },
+    { id: "rec-paga", baixado: true },
+    { id: "rec-antiga", baixado: false, transportado: true }
+  ];
+  const despesas = [
+    { id: "desp-aberta", baixado: false },
+    { id: "desp-paga", baixado: true },
+    { id: "desp-antiga", baixado: false, transportado: true }
+  ];
+  const cartoesPrevistos = [
+    { id: "fat-aberta", baixado: false, provisorio_cartao: true }
+  ];
+
+  const pendencias = filtrarLancamentosPorAbaRegra({ receitas, despesas, cartoesPrevistos, filtro: "pendencias" });
+  assert.deepEqual(pendencias.receitas.map(item => item.id), ["rec-aberta", "rec-antiga"]);
+  assert.deepEqual(pendencias.despesas.map(item => item.id), ["desp-aberta", "desp-antiga", "fat-aberta"]);
+
+  const pagos = filtrarLancamentosPorAbaRegra({ receitas, despesas, cartoesPrevistos, filtro: "pagos" });
+  assert.deepEqual(pagos.receitas.map(item => item.id), []);
+  assert.deepEqual(pagos.despesas.map(item => item.id), ["desp-paga"]);
+  assert.deepEqual(pagos.despesasPeriodo.map(item => item.id), ["desp-aberta", "desp-paga", "desp-antiga"]);
+
+  const recebidos = filtrarLancamentosPorAbaRegra({ receitas, despesas, cartoesPrevistos, filtro: "recebidos" });
+  assert.deepEqual(recebidos.receitas.map(item => item.id), ["rec-paga"]);
+  assert.deepEqual(recebidos.despesas.map(item => item.id), []);
+
+  const transportadas = filtrarLancamentosPorAbaRegra({ receitas, despesas, cartoesPrevistos, filtro: "transportadas" });
+  assert.deepEqual(transportadas.receitas.map(item => item.id), ["rec-antiga"]);
+  assert.deepEqual(transportadas.despesas.map(item => item.id), ["desp-antiga"]);
+});
+
+test("excluir categoria limpa referencia sem apagar lancamentos", () => {
+  const itens = [
+    { id: "1", descricao: "Energia", categoria_id: "cat-conta", valor: 200 },
+    { id: "2", descricao: "Salario", categoria_id: "cat-renda", valor: 1000 }
+  ];
+
+  const atualizados = limparCategoriaDeItensRegra(itens, "cat-conta");
+
+  assert.equal(atualizados.length, 2);
+  assert.equal(atualizados[0].categoria_id, null);
+  assert.equal(atualizados[1].categoria_id, "cat-renda");
+  assert.deepEqual(itens.map(item => item.categoria_id), ["cat-conta", "cat-renda"]);
 });
 
 test("auditoria de transportadas alerta baixadas, atuais e duplicadas", () => {
