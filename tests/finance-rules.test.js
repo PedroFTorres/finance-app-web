@@ -1,13 +1,21 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const test = require("node:test");
 
 const {
+  agruparItensPorCategoriaRegra,
   auditarTransportadas,
   aplicarPagamentoParcialEmFaturaFechada,
   auditarCartoesFaturas,
   calcularResumoFinanceiroRegra,
   calcularSaldoConta,
   detectarPagamentoParcialDuplicado,
+  isCompraCartaoGerencial,
+  isDespesaTecnicaCartao,
+  montarBaseDespesasPorCategoria,
+  hasPremiumAccessRegra,
+  validarLimitePlano,
   validarBaixaLancamento,
   validarPagamentoParcialCartao
 } = require("../finance-rules");
@@ -353,4 +361,124 @@ test("auditoria de transportadas alerta baixadas, atuais e duplicadas", () => {
 
   assert.equal(auditoriaComErro.ok, false);
   assert.equal(auditoriaComErro.divergencias.length, 3);
+});
+
+test("grafico de despesas por categoria usa compras do cartao e ignora fatura tecnica", () => {
+  const base = montarBaseDespesasPorCategoria({
+    despesasComPrevisao: [
+      { descricao: "Condominio", valor: 1200, categoria_nome: "Condominio" },
+      { descricao: "Fatura Santander", valor: 500, categoria_nome: "Cartão de Crédito", cartao_fatura_id: "fat-1" },
+      { descricao: "Fatura aberta", valor: 300, categoria_nome: "Cartão de Crédito", provisorio_cartao: true },
+      { descricao: "Pagamento parcial cartão", valor: 250, categoria_nome: "Cartão de Crédito", cartao_pagamento_parcial: true }
+    ],
+    comprasCartao: [
+      { descricao: "Calvin Klein (1/4)", valor: 180, categoria_nome: "Roupas e Acessórios" },
+      { descricao: "Compra celular", valor: 900, categoria_nome: "Informática e Celular" },
+      { descricao: "Pagamento parcial da fatura", tipo: "pagamento", valor: -250, categoria_nome: "Cartão de Crédito" },
+      { descricao: "Antecipação Santander", valor: 100, categoria_nome: "Cartão de Crédito" }
+    ]
+  });
+
+  const grupos = agruparItensPorCategoriaRegra(base);
+
+  assert.equal(base.length, 3);
+  assert.equal(grupos["Condominio"].total, 1200);
+  assert.equal(grupos["Roupas e Acessórios"].total, 180);
+  assert.equal(grupos["Informática e Celular"].total, 900);
+  assert.equal(grupos["Cartão de Crédito"], undefined);
+});
+
+test("detalhamento por categoria preserva os itens que formam a barra", () => {
+  const grupos = agruparItensPorCategoriaRegra([
+    { id: "1", descricao: "Posto Full", valor: 150, categoria_nome: "Combustível" },
+    { id: "2", descricao: "Posto São Raimundo", valor: 100, categoria_nome: "Combustível" },
+    { id: "3", descricao: "Academia", valor: 80, categoria_nome: "Academia" }
+  ]);
+
+  assert.equal(grupos["Combustível"].total, 250);
+  assert.deepEqual(grupos["Combustível"].items.map(item => item.descricao), [
+    "Posto Full",
+    "Posto São Raimundo"
+  ]);
+  assert.equal(grupos["Academia"].total, 80);
+});
+
+test("classificadores protegem categorias contra movimentos tecnicos do cartao", () => {
+  assert.equal(isDespesaTecnicaCartao({ cartao_fatura_id: "fat-1" }), true);
+  assert.equal(isDespesaTecnicaCartao({ provisorio_cartao: true }), true);
+  assert.equal(isDespesaTecnicaCartao({ cartao_pagamento_parcial: true }), true);
+  assert.equal(isDespesaTecnicaCartao({ descricao: "Seguro", valor: 100 }), false);
+
+  assert.equal(isCompraCartaoGerencial({ descricao: "Compra mercado", valor: 100 }), true);
+  assert.equal(isCompraCartaoGerencial({ descricao: "Pagamento parcial da fatura", tipo: "pagamento", valor: -100 }), false);
+  assert.equal(isCompraCartaoGerencial({ descricao: "Antecipação Santander", valor: 100 }), false);
+  assert.equal(isCompraCartaoGerencial({ descricao: "Estorno", valor: -10 }), false);
+});
+
+test("limites do plano free bloqueiam conta extra, cartao e lancamento acima do limite", () => {
+  assert.equal(validarLimitePlano({ recurso: "conta", totalContas: 1 }).ok, true);
+
+  const contaExtra = validarLimitePlano({ recurso: "conta", totalContas: 2 });
+  assert.equal(contaExtra.ok, false);
+  assert.match(contaExtra.erros.join(" "), /2 contas/);
+
+  const cartaoFree = validarLimitePlano({ recurso: "cartao" });
+  assert.equal(cartaoFree.ok, false);
+  assert.match(cartaoFree.erros.join(" "), /PRO/);
+
+  const lancamentoExtra = validarLimitePlano({ recurso: "lancamento", totalLancamentos: 50 });
+  assert.equal(lancamentoExtra.ok, false);
+  assert.match(lancamentoExtra.erros.join(" "), /50 lancamentos/);
+});
+
+test("plano pro ou vip ativo libera limites ate a data de expiracao", () => {
+  const now = new Date("2026-08-09T12:00:00Z");
+
+  assert.equal(hasPremiumAccessRegra({
+    plano: "pro",
+    subscriptionStatus: "active",
+    subscriptionEndsAt: "2026-08-10T00:00:00Z",
+    now
+  }), true);
+
+  assert.equal(validarLimitePlano({
+    recurso: "cartao",
+    plano: "vip",
+    subscriptionStatus: "active",
+    planoExpiraEm: "2026-08-10T00:00:00Z",
+    totalContas: 99,
+    totalLancamentos: 999,
+    now
+  }).ok, true);
+
+  assert.equal(hasPremiumAccessRegra({
+    plano: "pro",
+    subscriptionStatus: "active",
+    subscriptionEndsAt: "2026-08-01T00:00:00Z",
+    now
+  }), false);
+
+  assert.equal(hasPremiumAccessRegra({
+    plano: "pro",
+    subscriptionStatus: "inactive",
+    subscriptionEndsAt: "2026-08-10T00:00:00Z",
+    now
+  }), false);
+});
+
+test("migracao do banco protege limites de plano nos inserts criticos", () => {
+  const sql = fs.readFileSync(
+    path.join(__dirname, "../supabase/migrations/202608090003_enforce_plan_limits.sql"),
+    "utf8"
+  );
+
+  assert.match(sql, /create or replace function public\.arolix_enforce_plan_limits\(\)/);
+  assert.match(sql, /before insert on public\.contas_bancarias/);
+  assert.match(sql, /before insert on public\.receitas/);
+  assert.match(sql, /before insert on public\.despesas/);
+  assert.match(sql, /before insert on public\.cartoes_credito/);
+  assert.match(sql, /Plano Free permite ate 2 contas/);
+  assert.match(sql, /Plano Free permite ate 50 lancamentos/);
+  assert.match(sql, /Cartao disponivel apenas no plano PRO/);
+  assert.doesNotMatch(sql, /security\s+definer/i);
 });

@@ -294,6 +294,104 @@ function auditarTransportadas({ itens = [], inicioPeriodo } = {}) {
   };
 }
 
+function isDespesaTecnicaCartao(item) {
+  return Boolean(item?.cartao_fatura_id || item?.provisorio_cartao || item?.cartao_pagamento_parcial);
+}
+
+function isCompraCartaoGerencial(item) {
+  const valor = Number(item?.valor || 0);
+  const tipo = String(item?.tipo || "").toLowerCase();
+  const descricao = String(item?.descricao || "").toLowerCase();
+
+  if (valor <= 0) return false;
+  if (tipo === "pagamento") return false;
+  if (descricao.includes("pagamento parcial da fatura")) return false;
+  if (descricao.startsWith("antecipação") || descricao.startsWith("antecipacao")) return false;
+
+  return true;
+}
+
+function agruparItensPorCategoriaRegra(lista = [], {
+  fallback = "Sem categoria",
+  categoriasPorId = {}
+} = {}) {
+  const grupos = {};
+
+  (lista || []).forEach(item => {
+    const nome = item.categoria_nome || categoriasPorId[item.categoria_id] || fallback;
+    if (!grupos[nome]) {
+      grupos[nome] = { total: 0, items: [] };
+    }
+    grupos[nome].total = roundCurrency(grupos[nome].total + Number(item.valor || 0));
+    grupos[nome].items.push(item);
+  });
+
+  return grupos;
+}
+
+function montarBaseDespesasPorCategoria({
+  despesasComPrevisao = [],
+  comprasCartao = []
+} = {}) {
+  const despesasGerenciais = (despesasComPrevisao || []).filter(item => !isDespesaTecnicaCartao(item));
+  const comprasGerenciais = (comprasCartao || [])
+    .filter(isCompraCartaoGerencial)
+    .map(item => ({
+      ...item,
+      origem_categoria: item.origem_categoria || "cartao_lancamento"
+    }));
+
+  return [...despesasGerenciais, ...comprasGerenciais];
+}
+
+function hasPremiumAccessRegra({
+  plano = "free",
+  subscriptionStatus = "inactive",
+  subscriptionEndsAt = null,
+  planoExpiraEm = null,
+  now = new Date()
+} = {}) {
+  const planoPremium = ["pro", "vip"].includes(String(plano || "free").toLowerCase());
+  const assinaturaAtiva = String(subscriptionStatus || "inactive").toLowerCase() === "active";
+  const agora = now instanceof Date ? now : new Date(now);
+  const assinaturaNaoExpirou = !subscriptionEndsAt || new Date(subscriptionEndsAt) > agora;
+  const planoNaoExpirou = !planoExpiraEm || new Date(planoExpiraEm) > agora;
+
+  return planoPremium && assinaturaAtiva && assinaturaNaoExpirou && planoNaoExpirou;
+}
+
+function validarLimitePlano({
+  recurso,
+  plano = "free",
+  subscriptionStatus = "inactive",
+  subscriptionEndsAt = null,
+  planoExpiraEm = null,
+  totalContas = 0,
+  totalLancamentos = 0,
+  now
+} = {}) {
+  const premium = hasPremiumAccessRegra({ plano, subscriptionStatus, subscriptionEndsAt, planoExpiraEm, now });
+  const erros = [];
+
+  if (premium) {
+    return { ok: true, erros, premium };
+  }
+
+  if (recurso === "conta" && Number(totalContas || 0) >= 2) {
+    erros.push("Plano Free permite ate 2 contas.");
+  }
+
+  if (recurso === "cartao") {
+    erros.push("Cartao disponivel apenas no plano PRO.");
+  }
+
+  if (recurso === "lancamento" && Number(totalLancamentos || 0) >= 50) {
+    erros.push("Plano Free permite ate 50 lancamentos.");
+  }
+
+  return { ok: erros.length === 0, erros, premium };
+}
+
 module.exports = {
   roundCurrency,
   sumValues,
@@ -305,5 +403,11 @@ module.exports = {
   aplicarPagamentoParcialEmFaturaFechada,
   auditarCartoesFaturas,
   calcularSaldoConta,
-  auditarTransportadas
+  auditarTransportadas,
+  isDespesaTecnicaCartao,
+  isCompraCartaoGerencial,
+  agruparItensPorCategoriaRegra,
+  montarBaseDespesasPorCategoria,
+  hasPremiumAccessRegra,
+  validarLimitePlano
 };
