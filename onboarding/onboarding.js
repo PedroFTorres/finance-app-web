@@ -176,13 +176,7 @@ async function verificarConta(){
 async function passoCategoria(){
 
   clearHighlights();
-  irParaTela("contas");
-
-  const btnCategoria = await esperarElemento('[data-tab="categorias"]');
-
-  if (btnCategoria) {
-    btnCategoria.click();
-  }
+  irParaTela("categorias");
 
   const btnAdd = await esperarElemento("#btn-add-categoria");
 

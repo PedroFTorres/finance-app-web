@@ -161,7 +161,6 @@ let FILTRO_LANCAMENTOS = "pendencias";
     tabBtns: '.tab-btn',
     tabCadastro: 'tab-cadastro',
     tabExtrato: 'tab-extrato',
-    tabCategorias: 'tab-categorias',
 
     // extrato
     selectExtrato: 'select-contas-extrato',
@@ -2159,11 +2158,10 @@ if (!editId && !hasPremiumAccess() && STATE.contas.length >= 2) {
           $all(IDS.tabBtns).forEach(x => x.classList.remove('active'));
           b.classList.add('active');
           const tab = b.dataset.tab;
-          ['tab-cadastro','tab-extrato','tab-categorias'].forEach(id=>{ const el = document.getElementById(id); if(el) el.classList.add('hidden'); });
+          ['tab-cadastro','tab-extrato'].forEach(id=>{ const el = document.getElementById(id); if(el) el.classList.add('hidden'); });
           const show = document.getElementById('tab-' + tab);
           if (show) show.classList.remove('hidden');
           if (tab === 'extrato') App.renderExtrato();
-          if (tab === 'categorias') UI.renderCategorias();
         });
       });
 
@@ -4643,6 +4641,10 @@ if (name === 'contas') {
   }
 
   App.renderExtrato();
+}
+
+if (name === 'categorias') {
+  UI.renderCategorias();
 }
 
 },
