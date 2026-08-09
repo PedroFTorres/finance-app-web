@@ -503,7 +503,7 @@ async function ajustarFaturaFechadaAposPagamentoParcial({ dataFatura, valorPago,
 
   const { data: despesaFatura, error: erroDespesaFatura } = await supabase
     .from("despesas")
-    .select("id, baixado")
+    .select("id, valor, categoria_id, baixado, data_baixa")
     .eq("user_id", state.user.id)
     .eq("cartao_fatura_id", fatura.id)
     .maybeSingle();
@@ -535,7 +535,21 @@ async function ajustarFaturaFechadaAposPagamentoParcial({ dataFatura, valorPago,
     .eq("id", fatura.id)
     .eq("user_id", state.user.id);
 
-  if (erroUpdateFatura) throw erroUpdateFatura;
+  if (erroUpdateFatura) {
+    if (despesaFatura) {
+      await supabase
+        .from("despesas")
+        .update({
+          valor: despesaFatura.valor,
+          categoria_id: despesaFatura.categoria_id,
+          baixado: despesaFatura.baixado,
+          data_baixa: despesaFatura.data_baixa
+        })
+        .eq("id", despesaFatura.id)
+        .eq("user_id", state.user.id);
+    }
+    throw erroUpdateFatura;
+  }
 
   return { faturaId: fatura.id, saldoAtual, saldoRestante, quitouFatura };
 }
@@ -1227,6 +1241,11 @@ if (btnFecharFatura) {
   // ===========================// PAGAR FATURA → baixa a despesa vinculada, cria movimentação e atualiza saldo// ===========================
 if (btnPagarFatura) {
   btnPagarFatura.onclick = async () => {
+    let despesaOriginal = null;
+    let movimentacaoCriadaId = null;
+    let contaPagamentoId = null;
+    let pagamentoPersistido = false;
+
     try {
       if (!state.faturaAtual) {
         showToast("Nenhuma fatura selecionada.", "error");
@@ -1240,6 +1259,7 @@ if (btnPagarFatura) {
 
       const contaId = selectContaPagamento.value;
       const venc = dataVencimentoFatura.value;
+      contaPagamentoId = contaId;
 
       if (!contaId || !venc) {
         showToast("Informe conta e data.", "error");
@@ -1264,6 +1284,7 @@ if (btnPagarFatura) {
         showToast("Despesa da fatura não encontrada.", "error");
         return;
       }
+      despesaOriginal = { ...desp };
 
       const categoriaId = desp.categoria_id || await getOrCreateCategoria("Cartão de Crédito");
 
@@ -1282,8 +1303,9 @@ if (btnPagarFatura) {
       if (erroBaixaDespesa) throw erroBaixaDespesa;
 
       // 🔹 movimentação
+      const movimentacaoId = crypto.randomUUID();
       const { error: erroMovimentacao } = await supabase.from("movimentacoes").insert([{
-        id: crypto.randomUUID(),
+        id: movimentacaoId,
         user_id: state.user.id,
         conta_id: contaId,
         tipo: "debito",
@@ -1294,6 +1316,7 @@ if (btnPagarFatura) {
       }]);
 
       if (erroMovimentacao) throw erroMovimentacao;
+      movimentacaoCriadaId = movimentacaoId;
 
       await recalcularSaldoConta(contaId);
 
@@ -1308,6 +1331,7 @@ if (btnPagarFatura) {
         .eq("user_id", state.user.id);
 
       if (erroPagarFatura) throw erroPagarFatura;
+      pagamentoPersistido = true;
 
       showToast("Fatura paga com sucesso!", "success");
 
@@ -1346,6 +1370,33 @@ if (btnPagarFatura) {
 
     } catch (err) {
       console.error(err);
+      if (pagamentoPersistido) {
+        showToast("Fatura paga, mas não consegui atualizar a tela. Recarregue a página.", "warning");
+        return;
+      }
+      if (movimentacaoCriadaId) {
+        await supabase
+          .from("movimentacoes")
+          .delete()
+          .eq("id", movimentacaoCriadaId)
+          .eq("user_id", state.user.id);
+      }
+      if (despesaOriginal?.id) {
+        await supabase
+          .from("despesas")
+          .update({
+            valor: despesaOriginal.valor,
+            conta_id: despesaOriginal.conta_id,
+            categoria_id: despesaOriginal.categoria_id,
+            baixado: despesaOriginal.baixado,
+            data_baixa: despesaOriginal.data_baixa
+          })
+          .eq("id", despesaOriginal.id)
+          .eq("user_id", state.user.id);
+      }
+      if (contaPagamentoId) {
+        await recalcularSaldoConta(contaPagamentoId);
+      }
       showToast("Erro ao pagar fatura.", "error");
     }
   };
@@ -1539,6 +1590,7 @@ if (btnConfirmarPagParcial) {
     let despesaCriadaId = null;
     let movimentacaoCriadaId = null;
     let pagamentoCartaoCriadoId = null;
+    let pagamentoParcialPersistido = false;
 
     if (!valor || valor <= 0) {
       showToast("Informe um valor válido.", "error");
@@ -1683,6 +1735,7 @@ if (btnConfirmarPagParcial) {
           dataBaixa: data
         })
       : null;
+    pagamentoParcialPersistido = true;
 
     modalPagParcial.classList.add("hidden");
 
@@ -1693,6 +1746,10 @@ if (btnConfirmarPagParcial) {
       : "Pagamento parcial realizado com sucesso.");
     } catch (err) {
       console.error("Erro no pagamento parcial:", err);
+      if (pagamentoParcialPersistido) {
+        showToast("Pagamento parcial salvo, mas não consegui atualizar a tela. Recarregue a página.", "warning");
+        return;
+      }
       if (pagamentoCartaoCriadoId) {
         await supabase
           .from("cartao_lancamentos")

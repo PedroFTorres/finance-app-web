@@ -482,3 +482,28 @@ test("migracao do banco protege limites de plano nos inserts criticos", () => {
   assert.match(sql, /Cartao disponivel apenas no plano PRO/);
   assert.doesNotMatch(sql, /security\s+definer/i);
 });
+
+test("fluxo de pagamento de fatura tem compensacao contra falha parcial", () => {
+  const js = fs.readFileSync(path.join(__dirname, "../cartao.js"), "utf8");
+
+  assert.match(js, /let despesaOriginal = null/);
+  assert.match(js, /let movimentacaoCriadaId = null/);
+  assert.match(js, /let pagamentoPersistido = false/);
+  assert.match(js, /pagamentoPersistido = true/);
+  assert.match(js, /if \(pagamentoPersistido\)/);
+  assert.match(js, /\.from\("movimentacoes"\)\s*[\s\S]*?\.delete\(\)/);
+  assert.match(js, /\.from\("despesas"\)\s*[\s\S]*?valor: despesaOriginal\.valor/);
+  assert.match(js, /await recalcularSaldoConta\(contaPagamentoId\)/);
+});
+
+test("fluxo de pagamento parcial de fatura evita rollback depois de salvo", () => {
+  const js = fs.readFileSync(path.join(__dirname, "../cartao.js"), "utf8");
+
+  assert.match(js, /let pagamentoParcialPersistido = false/);
+  assert.match(js, /pagamentoParcialPersistido = true/);
+  assert.match(js, /if \(pagamentoParcialPersistido\)/);
+  assert.match(js, /Pagamento parcial salvo, mas não consegui atualizar a tela/);
+  assert.match(js, /\.from\("cartao_lancamentos"\)\s*[\s\S]*?\.delete\(\)/);
+  assert.match(js, /\.from\("movimentacoes"\)\s*[\s\S]*?\.delete\(\)/);
+  assert.match(js, /\.from\("despesas"\)\s*[\s\S]*?\.delete\(\)/);
+});
