@@ -1093,32 +1093,71 @@ async function fecharFaturaComConta(conta_id) {
       0
     );
 
-    // 🔹 cria registro da fatura
-    const { data: fData, error: errFatura } = await supabase
-      .from("cartao_faturas")
-      .insert([{
-        id: crypto.randomUUID(),
-        user_id: state.user.id,
-        cartao_id: activeCardId,
-        mes,
-        ano,
-        data_vencimento: venc,
-        valor_total: total,
-        status: "fechada"
-      }])
-      .select()
-      .single();
-
-    if (errFatura) throw errFatura;
-
     // 🔹 categoria padrão
     const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
 
     const card =
       state.cards.find(c => c.id === activeCardId) || { nome: "Cartão" };
 
+    const { data: faturaExistente, error: errBuscaFatura } = await supabase
+      .from("cartao_faturas")
+      .select("id,status,pago")
+      .eq("user_id", state.user.id)
+      .eq("cartao_id", activeCardId)
+      .eq("ano", ano)
+      .eq("mes", mes)
+      .maybeSingle();
+
+    if (errBuscaFatura) throw errBuscaFatura;
+
+    if (faturaExistente && faturaExistente.status !== "aberta") {
+      showToast("Esta fatura já foi fechada ou paga.", "warning");
+      return;
+    }
+
+    let fData = null;
+    let faturaCriada = false;
+
+    if (faturaExistente?.id) {
+      const { data: updatedFatura, error: errFatura } = await supabase
+        .from("cartao_faturas")
+        .update({
+          data_vencimento: venc,
+          valor_total: total,
+          status: "fechada",
+          pago: false
+        })
+        .eq("id", faturaExistente.id)
+        .eq("user_id", state.user.id)
+        .select()
+        .single();
+
+      if (errFatura) throw errFatura;
+      fData = updatedFatura;
+    } else {
+      const { data: createdFatura, error: errFatura } = await supabase
+        .from("cartao_faturas")
+        .insert([{
+          id: crypto.randomUUID(),
+          user_id: state.user.id,
+          cartao_id: activeCardId,
+          mes,
+          ano,
+          data_vencimento: venc,
+          valor_total: total,
+          status: "fechada",
+          pago: false
+        }])
+        .select()
+        .single();
+
+      if (errFatura) throw errFatura;
+      fData = createdFatura;
+      faturaCriada = true;
+    }
+
     // 🔹 cria despesa
-    await supabase.from("despesas").insert([{
+    const { error: errDespesaFatura } = await supabase.from("despesas").insert([{
       id: crypto.randomUUID(),
       user_id: state.user.id,
       conta_id: conta_id,
@@ -1130,7 +1169,24 @@ async function fecharFaturaComConta(conta_id) {
       cartao_fatura_id: fData.id
     }]);
 
-        showToast("Fatura fechada com sucesso!", "success");
+    if (errDespesaFatura) {
+      if (faturaCriada) {
+        await supabase
+          .from("cartao_faturas")
+          .delete()
+          .eq("id", fData.id)
+          .eq("user_id", state.user.id);
+      } else {
+        await supabase
+          .from("cartao_faturas")
+          .update({ status: "aberta", pago: false })
+          .eq("id", fData.id)
+          .eq("user_id", state.user.id);
+      }
+      throw errDespesaFatura;
+    }
+
+    showToast("Fatura fechada com sucesso!", "success");
 
     // 🔥 Avança para o próximo mês
     mesFatura.setMonth(mesFatura.getMonth() + 1);
@@ -1212,7 +1268,7 @@ if (btnPagarFatura) {
       const categoriaId = desp.categoria_id || await getOrCreateCategoria("Cartão de Crédito");
 
       // 🔹 baixa despesa
-      await supabase
+      const { error: erroBaixaDespesa } = await supabase
         .from("despesas")
         .update({
           baixado: true,
@@ -1223,8 +1279,10 @@ if (btnPagarFatura) {
         .eq("id", desp.id)
         .eq("user_id", state.user.id);
 
+      if (erroBaixaDespesa) throw erroBaixaDespesa;
+
       // 🔹 movimentação
-      await supabase.from("movimentacoes").insert([{
+      const { error: erroMovimentacao } = await supabase.from("movimentacoes").insert([{
         id: crypto.randomUUID(),
         user_id: state.user.id,
         conta_id: contaId,
@@ -1235,10 +1293,12 @@ if (btnPagarFatura) {
         lancamento_id: desp.id
       }]);
 
+      if (erroMovimentacao) throw erroMovimentacao;
+
       await recalcularSaldoConta(contaId);
 
       // 🔹 marcar fatura como PAGA
-      await supabase
+      const { error: erroPagarFatura } = await supabase
         .from("cartao_faturas")
         .update({
           pago: true,
@@ -1246,6 +1306,8 @@ if (btnPagarFatura) {
         })
         .eq("id", state.faturaAtual.id)
         .eq("user_id", state.user.id);
+
+      if (erroPagarFatura) throw erroPagarFatura;
 
       showToast("Fatura paga com sucesso!", "success");
 
@@ -1474,6 +1536,9 @@ if (btnConfirmarPagParcial) {
     const valor = Number(document.getElementById("pag-parcial-valor").value);
     const data = document.getElementById("pag-parcial-data").value;
     const contaId = document.getElementById("pag-parcial-conta").value;
+    let despesaCriadaId = null;
+    let movimentacaoCriadaId = null;
+    let pagamentoCartaoCriadoId = null;
 
     if (!valor || valor <= 0) {
       showToast("Informe um valor válido.", "error");
@@ -1547,10 +1612,11 @@ if (btnConfirmarPagParcial) {
       });
 
     // 🔥 1️⃣ Criar DESPESA real
+    const despesaId = crypto.randomUUID();
     const { data: despesa, error: erroDesp } = await supabase
       .from("despesas")
       .insert([{
-        id: crypto.randomUUID(),
+        id: despesaId,
         user_id: state.user.id,
         conta_id: contaId,
         descricao: "Pagamento parcial cartão",
@@ -1569,9 +1635,12 @@ if (btnConfirmarPagParcial) {
       return showToast("Erro ao criar despesa.", "error");
     }
 
+    despesaCriadaId = despesa.id;
+
     // 🔥 2️⃣ Criar movimentação vinculada
+    const movimentacaoId = crypto.randomUUID();
     const { error: erroMov } = await supabase.from("movimentacoes").insert([{
-      id: crypto.randomUUID(),
+      id: movimentacaoId,
       user_id: state.user.id,
       conta_id: contaId,
       tipo: "debito",
@@ -1582,26 +1651,29 @@ if (btnConfirmarPagParcial) {
     }]);
 
     if (erroMov) throw erroMov;
+    movimentacaoCriadaId = movimentacaoId;
 
     await recalcularSaldoConta(contaId);
 
     // 🔥 4️⃣ Inserir abatimento na fatura
+    const pagamentoCartaoId = crypto.randomUUID();
     const { error: erroCartaoLanc } = await supabase.from("cartao_lancamentos").insert([{
-  id: crypto.randomUUID(),
-  user_id: state.user.id,
-  cartao_id: activeCardId,
-  descricao: "Pagamento parcial da fatura",
-  valor: -Math.abs(valor),
-  data_compra: data,
-  data_fatura: dataFatura,
-  parcelas: 1,
-  parcela_atual: 0,
-  tipo: "pagamento",
-  billed: false,
-  despesa_id: despesa.id
-}]);
+      id: pagamentoCartaoId,
+      user_id: state.user.id,
+      cartao_id: activeCardId,
+      descricao: "Pagamento parcial da fatura",
+      valor: -Math.abs(valor),
+      data_compra: data,
+      data_fatura: dataFatura,
+      parcelas: 1,
+      parcela_atual: 0,
+      tipo: "pagamento",
+      billed: false,
+      despesa_id: despesa.id
+    }]);
 
     if (erroCartaoLanc) throw erroCartaoLanc;
+    pagamentoCartaoCriadoId = pagamentoCartaoId;
 
     const ajusteFatura = ajusteFaturaPrevisto
       ? await ajustarFaturaFechadaAposPagamentoParcial({
@@ -1621,6 +1693,30 @@ if (btnConfirmarPagParcial) {
       : "Pagamento parcial realizado com sucesso.");
     } catch (err) {
       console.error("Erro no pagamento parcial:", err);
+      if (pagamentoCartaoCriadoId) {
+        await supabase
+          .from("cartao_lancamentos")
+          .delete()
+          .eq("id", pagamentoCartaoCriadoId)
+          .eq("user_id", state.user.id);
+      }
+      if (movimentacaoCriadaId) {
+        await supabase
+          .from("movimentacoes")
+          .delete()
+          .eq("id", movimentacaoCriadaId)
+          .eq("user_id", state.user.id);
+      }
+      if (despesaCriadaId) {
+        await supabase
+          .from("despesas")
+          .delete()
+          .eq("id", despesaCriadaId)
+          .eq("user_id", state.user.id);
+      }
+      if (contaId && movimentacaoCriadaId) {
+        await recalcularSaldoConta(contaId);
+      }
       showToast(err?.message || "Erro ao registrar pagamento parcial.", "error");
     } finally {
       pagamentoParcialEmProcessamento = false;

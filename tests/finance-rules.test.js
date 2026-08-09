@@ -4,6 +4,7 @@ const test = require("node:test");
 const {
   auditarTransportadas,
   aplicarPagamentoParcialEmFaturaFechada,
+  auditarCartoesFaturas,
   calcularResumoFinanceiroRegra,
   calcularSaldoConta,
   detectarPagamentoParcialDuplicado,
@@ -150,6 +151,73 @@ test("pagamento parcial em fatura fechada reduz o saldo vinculado", () => {
 
   assert.equal(invalido.ok, false);
   assert.match(invalido.erros.join(" "), /maior que o saldo da fatura/);
+});
+
+test("auditoria de cartao detecta fatura duplicada e despesa vinculada inconsistente", () => {
+  const auditoriaOk = auditarCartoesFaturas({
+    faturas: [{
+      id: "fat-1",
+      user_id: "user-1",
+      cartao_id: "card-1",
+      mes: 7,
+      ano: 2026,
+      valor_total: 500,
+      status: "fechada",
+      pago: false
+    }],
+    lancamentos: [
+      { cartao_id: "card-1", data_fatura: "2026-07-01", valor: 800 },
+      { cartao_id: "card-1", data_fatura: "2026-07-01", valor: -300 }
+    ],
+    despesas: [{ id: "desp-1", cartao_fatura_id: "fat-1", baixado: false }]
+  });
+
+  assert.equal(auditoriaOk.ok, true);
+
+  const auditoriaComErro = auditarCartoesFaturas({
+    faturas: [
+      {
+        id: "fat-1",
+        user_id: "user-1",
+        cartao_id: "card-1",
+        mes: 7,
+        ano: 2026,
+        valor_total: 500,
+        status: "paga",
+        pago: true
+      },
+      {
+        id: "fat-2",
+        user_id: "user-1",
+        cartao_id: "card-1",
+        mes: 7,
+        ano: 2026,
+        valor_total: 500,
+        status: "fechada",
+        pago: false
+      },
+      {
+        id: "fat-3",
+        user_id: "user-1",
+        cartao_id: "card-1",
+        mes: 8,
+        ano: 2026,
+        valor_total: 100,
+        status: "fechada",
+        pago: false
+      }
+    ],
+    lancamentos: [
+      { cartao_id: "card-1", data_fatura: "2026-07-01", valor: 500 },
+      { cartao_id: "card-1", data_fatura: "2026-08-01", valor: 100 }
+    ],
+    despesas: [{ id: "desp-1", cartao_fatura_id: "fat-1", baixado: false }]
+  });
+
+  assert.equal(auditoriaComErro.ok, false);
+  assert.equal(auditoriaComErro.divergencias.length, 4);
+  assert.match(auditoriaComErro.divergencias.join(" "), /duplicada/);
+  assert.match(auditoriaComErro.divergencias.join(" "), /não está baixada/);
 });
 
 test("saldo da conta parte do saldo inicial e nao zera quando periodo fecha em zero", () => {

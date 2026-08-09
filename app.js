@@ -1550,6 +1550,19 @@ const CategoriasService = {
         return acc;
       }, {});
 
+      const faturasDuplicadas = Object.values(faturasLista.reduce((acc, fatura) => {
+        const chave = `${fatura.cartao_id}:${fatura.ano}-${String(fatura.mes).padStart(2, '0')}`;
+        if (!acc[chave]) acc[chave] = [];
+        acc[chave].push(fatura);
+        return acc;
+      }, {})).filter(lista => lista.length > 1);
+
+      faturasDuplicadas.forEach(lista => {
+        const fatura = lista[0] || {};
+        const nomeCartao = fatura.cartoes_credito?.nome || 'Cartão';
+        divergencias.push(`${nomeCartao} ${String(fatura.mes).padStart(2, '0')}/${fatura.ano}: ${lista.length} faturas cadastradas para o mesmo mês.`);
+      });
+
       const partialKey = item => [
         item.cartao_id || item.conta_id || '',
         item.data_fatura || item.data_baixa || item.data || '',

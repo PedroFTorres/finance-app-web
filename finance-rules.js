@@ -179,6 +179,84 @@ function aplicarPagamentoParcialEmFaturaFechada({ valorFatura, valorPago } = {})
   };
 }
 
+function auditarCartoesFaturas({
+  faturas = [],
+  lancamentos = [],
+  despesas = []
+} = {}) {
+  const divergencias = [];
+  const alertas = [];
+  const faturasPorPeriodo = {};
+
+  for (const fatura of faturas || []) {
+    const chave = [
+      fatura.user_id || "",
+      fatura.cartao_id || "",
+      fatura.ano || "",
+      fatura.mes || ""
+    ].join("|");
+    if (!faturasPorPeriodo[chave]) faturasPorPeriodo[chave] = [];
+    faturasPorPeriodo[chave].push(fatura);
+  }
+
+  Object.values(faturasPorPeriodo)
+    .filter(lista => lista.length > 1)
+    .forEach(lista => {
+      const primeira = lista[0] || {};
+      divergencias.push(`Fatura duplicada para o mesmo cartão e mês: ${String(primeira.mes).padStart(2, "0")}/${primeira.ano}.`);
+    });
+
+  const lancamentosPorFatura = (lancamentos || []).reduce((acc, item) => {
+    if (!item.cartao_id || !item.data_fatura) return acc;
+    const dataFatura = new Date(`${item.data_fatura}T00:00:00`);
+    const chave = `${item.cartao_id}:${dataFatura.getFullYear()}-${String(dataFatura.getMonth() + 1).padStart(2, "0")}`;
+    if (!acc[chave]) acc[chave] = [];
+    acc[chave].push(item);
+    return acc;
+  }, {});
+
+  const despesasPorFatura = (despesas || []).reduce((acc, item) => {
+    if (!item.cartao_fatura_id) return acc;
+    if (!acc[item.cartao_fatura_id]) acc[item.cartao_fatura_id] = [];
+    acc[item.cartao_fatura_id].push(item);
+    return acc;
+  }, {});
+
+  for (const fatura of faturas || []) {
+    const chave = `${fatura.cartao_id}:${fatura.ano}-${String(fatura.mes).padStart(2, "0")}`;
+    const totalLiquido = roundCurrency((lancamentosPorFatura[chave] || []).reduce((s, item) => s + Number(item.valor || 0), 0));
+    const valorFatura = roundCurrency(fatura.valor_total || 0);
+    const despesasFatura = despesasPorFatura[fatura.id] || [];
+    const faturaLabel = `${String(fatura.mes).padStart(2, "0")}/${fatura.ano}`;
+
+    if (Math.abs(valorFatura - totalLiquido) > 0.01) {
+      divergencias.push(`${faturaLabel}: valor da fatura ${valorFatura} diferente do líquido das compras ${totalLiquido}.`);
+    }
+
+    if ((fatura.status === "fechada" || fatura.pago === true) && despesasFatura.length === 0) {
+      divergencias.push(`${faturaLabel}: fatura fechada/paga sem despesa vinculada.`);
+    }
+
+    if (despesasFatura.length > 1) {
+      divergencias.push(`${faturaLabel}: ${despesasFatura.length} despesas vinculadas para a mesma fatura.`);
+    }
+
+    if (fatura.pago === true && despesasFatura.some(item => item.baixado !== true)) {
+      divergencias.push(`${faturaLabel}: fatura marcada como paga, mas a despesa vinculada não está baixada.`);
+    }
+
+    if (fatura.status === "paga" && fatura.pago !== true) {
+      alertas.push(`${faturaLabel}: status paga sem flag pago=true.`);
+    }
+  }
+
+  return {
+    ok: divergencias.length === 0 && alertas.length === 0,
+    divergencias,
+    alertas
+  };
+}
+
 function calcularSaldoConta({ saldoInicial = 0, movimentacoes = [] } = {}) {
   return roundCurrency(movimentacoes.reduce((saldo, movimento) => {
     const valor = Number(movimento.valor || 0);
@@ -225,6 +303,7 @@ module.exports = {
   validarPagamentoParcialCartao,
   detectarPagamentoParcialDuplicado,
   aplicarPagamentoParcialEmFaturaFechada,
+  auditarCartoesFaturas,
   calcularSaldoConta,
   auditarTransportadas
 };
