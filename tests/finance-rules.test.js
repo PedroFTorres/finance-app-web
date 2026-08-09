@@ -42,6 +42,37 @@ test("dashboard soma realizados, pendencias, investimentos e saldo previsto", ()
   assert.equal(resumo.saldoPrevisto, 620);
 });
 
+test("dashboard nao trata investimento como despesa e desconta apenas do disponivel", () => {
+  const resumo = calcularResumoFinanceiroRegra({
+    receitasRecebidas: [{ valor: 1000 }],
+    despesasPagas: [{ valor: 200 }],
+    investimentosPeriodo: { netInvestido: 300 }
+  });
+
+  assert.equal(resumo.totalRecebido, 1000);
+  assert.equal(resumo.totalPago, 200);
+  assert.equal(resumo.saldoRealizado, 800);
+  assert.equal(resumo.saldoDisponivelRealizado, 500);
+  assert.equal(resumo.saldoPrevisto, 500);
+});
+
+test("dashboard inclui faturas transportadas no a pagar sem duplicar realizado", () => {
+  const resumo = calcularResumoFinanceiroRegra({
+    receitasRecebidas: [{ valor: 900 }],
+    despesasPagas: [{ valor: 100 }],
+    despesasPeriodo: [{ valor: 250, baixado: false }],
+    cartoesAbertos: [{ valor: 300 }],
+    cartoesTransportados: [{ valor: 450 }]
+  });
+
+  assert.equal(resumo.totalPago, 100);
+  assert.equal(resumo.totalAPagar, 1000);
+  assert.equal(resumo.totalTransportadoPagar, 450);
+  assert.equal(resumo.saldoRealizado, 800);
+  assert.equal(resumo.saldoPendencias, -1000);
+  assert.equal(resumo.saldoPrevisto, -200);
+});
+
 test("baixa com desconto aceita valor final e rejeita pagar acima do final", () => {
   const baixaComDesconto = validarBaixaLancamento({
     valorOriginal: 291.5,
@@ -62,6 +93,21 @@ test("baixa com desconto aceita valor final e rejeita pagar acima do final", () 
 
   assert.equal(baixaInvalida.ok, false);
   assert.match(baixaInvalida.erros.join(" "), /maior que o valor final/);
+});
+
+test("baixa com juros e desconto calcula saldo parcial sobre o valor final", () => {
+  const baixa = validarBaixaLancamento({
+    valorOriginal: 1000,
+    juros: 50,
+    desconto: 150,
+    valorPago: 700
+  });
+
+  assert.equal(baixa.ok, true);
+  assert.equal(baixa.valorFinal, 900);
+  assert.equal(baixa.valorPago, 700);
+  assert.equal(baixa.restante, 200);
+  assert.equal(baixa.baixaParcial, true);
 });
 
 test("baixa parcial mantem somente o saldo restante pendente", () => {
@@ -123,6 +169,31 @@ test("pagamento parcial de cartao exige categoria e bloqueia duplicidade", () =>
   });
 
   assert.equal(duplicadoNosLancamentos, true);
+
+  const parecidoMasValido = detectarPagamentoParcialDuplicado({
+    pagamentosCartao: [{
+      tipo: "pagamento",
+      descricao: "Pagamento parcial da fatura",
+      data_compra: "2026-07-31",
+      data_fatura: "2026-07-01",
+      valor: -300
+    }],
+    despesas: [{
+      conta_id: "conta-1",
+      descricao: "Pagamento parcial cartão",
+      data_baixa: "2026-07-31",
+      cartao_pagamento_parcial: true,
+      valor: 300
+    }],
+    novoPagamento: {
+      valor: 300,
+      data: "2026-08-01",
+      dataFatura: "2026-08-01",
+      contaId: "conta-1"
+    }
+  });
+
+  assert.equal(parecidoMasValido, false);
 });
 
 test("pagamento parcial em fatura fechada reduz o saldo vinculado", () => {
@@ -218,6 +289,35 @@ test("auditoria de cartao detecta fatura duplicada e despesa vinculada inconsist
   assert.equal(auditoriaComErro.divergencias.length, 4);
   assert.match(auditoriaComErro.divergencias.join(" "), /duplicada/);
   assert.match(auditoriaComErro.divergencias.join(" "), /não está baixada/);
+});
+
+test("auditoria de cartao detecta total divergente, despesa duplicada e status incompleto", () => {
+  const auditoria = auditarCartoesFaturas({
+    faturas: [{
+      id: "fat-1",
+      user_id: "user-1",
+      cartao_id: "card-1",
+      mes: 9,
+      ano: 2026,
+      valor_total: 500,
+      status: "paga",
+      pago: false
+    }],
+    lancamentos: [
+      { cartao_id: "card-1", data_fatura: "2026-09-01", valor: 350 }
+    ],
+    despesas: [
+      { id: "desp-1", cartao_fatura_id: "fat-1", baixado: true },
+      { id: "desp-2", cartao_fatura_id: "fat-1", baixado: true }
+    ]
+  });
+
+  assert.equal(auditoria.ok, false);
+  assert.equal(auditoria.divergencias.length, 2);
+  assert.equal(auditoria.alertas.length, 1);
+  assert.match(auditoria.divergencias.join(" "), /diferente do líquido/);
+  assert.match(auditoria.divergencias.join(" "), /despesas vinculadas/);
+  assert.match(auditoria.alertas.join(" "), /status paga sem flag pago=true/);
 });
 
 test("saldo da conta parte do saldo inicial e nao zera quando periodo fecha em zero", () => {
