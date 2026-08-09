@@ -644,3 +644,23 @@ test("pagamento de fatura bloqueia conta de investimento mesmo se o select vier 
   assert.match(js, /const contaPagamento = await validarContaPagamentoCartao\(contaId\)/);
   assert.match(js, /if \(!contaPagamento\.ok\)/);
 });
+
+test("onboarding finaliza com primeiro lancamento mesmo antes da baixa", () => {
+  const js = fs.readFileSync(path.join(__dirname, "../onboarding/onboarding.js"), "utf8");
+
+  assert.match(js, /Primeiro lançamento/);
+  assert.match(js, /Pular guia/);
+  assert.match(js, /Promise\.all\(/);
+  assert.match(js, /\.from\("receitas"\)/);
+  assert.match(js, /\.from\("despesas"\)/);
+  assert.match(js, /\.from\("movimentacoes"\)/);
+});
+
+test("relatorio de extrato identifica saldo atual e trata popup bloqueado", () => {
+  const js = fs.readFileSync(path.join(__dirname, "../print.js"), "utf8");
+
+  assert.match(js, /<span>Saldo atual<\/span>/);
+  assert.match(js, /if \(!win\)/);
+  assert.match(js, /Libere pop-ups para gerar o PDF/);
+  assert.match(js, /Relatório financeiro gerado pelo app/);
+});

@@ -780,6 +780,10 @@ function buildExtratoInfoHTML() {
         <strong>${escapeHTML(conta.saldoInicial)}</strong>
       </div>
       <div>
+        <span>Saldo atual</span>
+        <strong>${escapeHTML(conta.saldoAtual)}</strong>
+      </div>
+      <div>
         <span>Data do saldo</span>
         <strong>${escapeHTML(formatDateBR(conta.dataSaldo))}</strong>
       </div>
@@ -842,6 +846,11 @@ function gerarPDF(tipo) {
     }
 
     const win = window.open("", "_blank");
+    if (!win) {
+        alert("Não consegui abrir a janela de impressão. Libere pop-ups para gerar o PDF.");
+        return;
+    }
+
     const geradoEm = new Date().toLocaleString("pt-BR");
     win.document.write(`
         <html>
@@ -866,8 +875,8 @@ function gerarPDF(tipo) {
                     ${conteudoHTML}
                 </div>
                 <footer class="report-footer">
-                    <span>Arolix Finance</span>
-                    <span>Documento para conferência interna</span>
+                    <span>Arolix</span>
+                    <span>Relatório financeiro gerado pelo app</span>
                 </footer>
             </main>
         </body>

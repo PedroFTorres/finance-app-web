@@ -50,9 +50,9 @@ async function concluirOnboarding(){
 }
 
 const onboardingSteps = [
-  "Conta",
+  "Conta bancária",
   "Categorias",
-  "Movimento"
+  "Primeiro lançamento"
 ];
 
 function clearHighlights() {
@@ -77,7 +77,7 @@ function mostrarPainel({ titulo, texto, etapa, acaoTexto, onAcao }){
   description.textContent = String(texto ?? "");
   const badge = document.createElement("span");
   badge.className = "onboarding-step";
-  badge.textContent = etapa ? `Etapa ${etapa} de ${onboardingSteps.length}` : "Configuração inicial";
+  badge.textContent = etapa ? `Etapa ${etapa} de ${onboardingSteps.length}` : "Primeiros passos";
   const checklist = document.createElement("ol");
   checklist.className = "onboarding-checklist";
   onboardingSteps.forEach((label, index) => {
@@ -100,7 +100,7 @@ function mostrarPainel({ titulo, texto, etapa, acaoTexto, onAcao }){
   const skip = document.createElement("button");
   skip.type = "button";
   skip.className = "onboarding-skip";
-  skip.textContent = "Concluir depois";
+  skip.textContent = "Pular guia";
   skip.addEventListener("click", concluirOnboarding);
   actions.appendChild(skip);
   intro.append(badge, heading, description);
@@ -145,7 +145,7 @@ async function passoConta(){
 
   mostrarPainel({
     titulo: "Comece pela conta bancária",
-    texto: "Cadastre a conta principal para o Arolix montar saldo, extrato, pagamentos e previsões com uma base confiável.",
+    texto: "Cadastre a conta que você usa no dia a dia. A partir dela o Arolix monta saldo, extrato e pagamentos.",
     etapa: 1,
     acaoTexto: "Adicionar conta",
     onAcao: () => btn?.click()
@@ -186,7 +186,7 @@ async function passoCategoria(){
 
   mostrarPainel({
     titulo: "Organize por categorias",
-    texto: "Crie as categorias que você usa no dia a dia. Elas alimentam gráficos, relatórios e a leitura real das faturas.",
+    texto: "Crie categorias que façam sentido para sua rotina. Elas deixam dashboard, faturas e relatórios mais claros.",
     etapa: 2,
     acaoTexto: "Adicionar categoria",
     onAcao: () => btnAdd?.click()
@@ -221,7 +221,7 @@ async function passoLancamento(){
 
   mostrarPainel({
     titulo: "Registre o primeiro lançamento",
-    texto: "Inclua uma receita ou despesa para validar o fluxo completo: dashboard, lançamentos, extrato e relatórios.",
+    texto: "Inclua uma receita ou despesa para ver dashboard, lançamentos e relatórios funcionando com seus dados.",
     etapa: 3,
     acaoTexto: "Adicionar lançamento",
     onAcao: () => document.getElementById("btn-open-add-lanc")?.click()
@@ -233,13 +233,29 @@ async function passoLancamento(){
 
 async function verificarLancamento(){
 
-  const { data } = await supabase
-  .from("movimentacoes")
-  .select("id")
-  .eq("user_id", STATE.user.id)
-  .limit(1);
+  const [receitas, despesas, movimentacoes] = await Promise.all([
+    supabase
+      .from("receitas")
+      .select("id")
+      .eq("user_id", STATE.user.id)
+      .limit(1),
+    supabase
+      .from("despesas")
+      .select("id")
+      .eq("user_id", STATE.user.id)
+      .limit(1),
+    supabase
+      .from("movimentacoes")
+      .select("id")
+      .eq("user_id", STATE.user.id)
+      .limit(1)
+  ]);
 
-  if(data && data.length > 0){
+  if(
+    (receitas.data && receitas.data.length > 0) ||
+    (despesas.data && despesas.data.length > 0) ||
+    (movimentacoes.data && movimentacoes.data.length > 0)
+  ){
 
     finalizarOnboarding();
     return;
