@@ -1061,9 +1061,15 @@ h1, h2, h3 {
   height: 340px !important;
 }
 
+.category-chart-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 300px;
+}
+
 .category-chart {
   width: 100% !important;
-  min-height: 300px;
+  height: 100% !important;
 }
 
 .category-bars {

@@ -3438,7 +3438,9 @@ function abrirModalEditarConta(conta) {
     const colors = serie.vazio ? ['#e5e7eb'] : serie.colors;
     const maxValue = Math.max(...values.map(value => Math.abs(Number(value || 0))), 1);
     const chartHeight = Math.max(300, Math.min(620, labels.length * 46 + 76));
-    canvas.style.setProperty('height', `${chartHeight}px`, 'important');
+    const wrap = canvas.closest('.category-chart-wrap');
+    if (wrap) wrap.style.height = `${chartHeight}px`;
+    canvas.style.removeProperty('height');
     canvas.dataset.empty = serie.vazio ? 'true' : 'false';
 
     STATE.charts[chartKey] = new Chart(canvas, {
