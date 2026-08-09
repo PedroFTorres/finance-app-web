@@ -1,7 +1,7 @@
 #onboarding-guide{
   position:fixed;
   inset:0;
-  background:rgba(24,18,48,0.52);
+  background:rgba(24,18,48,0.46);
   backdrop-filter: blur(3px);
   display:flex;
   align-items:center;
@@ -19,22 +19,27 @@
   padding:26px;
   border:1px solid #e5dcff;
   border-radius:8px;
-  width:min(440px, calc(100vw - 32px));
+  width:min(520px, calc(100vw - 32px));
   text-align:left;
   box-shadow:0 20px 70px rgba(47,36,99,0.25);
 }
 
+.onboarding-intro{
+  display:grid;
+  gap:8px;
+}
+
 .onboarding-box h2{
-  margin:8px 0 8px;
+  margin:0;
   color:#2f2463;
-  font-size:24px;
+  font-size:26px;
   line-height:1.1;
 }
 
 .onboarding-box p{
   margin:0;
   color:#6f7280;
-  font-size:16px;
+  font-size:15px;
   line-height:1.45;
 }
 
@@ -49,14 +54,83 @@
   font-weight:800;
 }
 
+.onboarding-checklist{
+  display:grid;
+  gap:8px;
+  margin:22px 0 0;
+  padding:0;
+  list-style:none;
+}
+
+.onboarding-checklist li{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:40px;
+  padding:9px 11px;
+  border:1px solid #ece7fb;
+  border-radius:8px;
+  background:#fbfaff;
+  color:#6f7280;
+  font-size:14px;
+  font-weight:800;
+}
+
+.onboarding-checklist li::before{
+  content:"";
+  flex:0 0 18px;
+  width:18px;
+  height:18px;
+  border:2px solid #d7ccfb;
+  border-radius:50%;
+  background:#fff;
+}
+
+.onboarding-checklist li.active{
+  border-color:#bca7ff;
+  background:#f4efff;
+  color:#2f2463;
+}
+
+.onboarding-checklist li.active::before{
+  border-color:#754cff;
+  box-shadow:inset 0 0 0 4px #fff;
+  background:#754cff;
+}
+
+.onboarding-checklist li.done{
+  color:#15803d;
+}
+
+.onboarding-checklist li.done::before{
+  border-color:#22c55e;
+  background:#22c55e;
+  box-shadow:inset 0 0 0 4px #fff;
+}
+
 .onboarding-box button{
   margin-top:0;
 }
 
 .onboarding-actions{
   display:flex;
+  flex-wrap:wrap;
+  gap:10px;
   justify-content:flex-end;
   margin-top:20px;
+}
+
+.onboarding-primary{
+  min-height:42px;
+  padding:0 18px;
+  border:0;
+  border-radius:8px;
+  background:linear-gradient(135deg, #7c4dff, #5b2be8);
+  color:#fff;
+  font-size:15px;
+  font-weight:900;
+  cursor:pointer;
+  box-shadow:0 10px 24px rgba(122,77,255,0.24);
 }
 
 .onboarding-skip{
@@ -76,4 +150,23 @@
   z-index:100000;
   box-shadow:0 0 0 6px rgba(122,77,255,0.28), 0 12px 30px rgba(47,36,99,0.2);
   border-radius:8px;
+}
+
+@media (max-width: 560px){
+  #onboarding-guide{
+    align-items:flex-end;
+  }
+
+  .onboarding-box{
+    width:100%;
+    border-radius:8px 8px 0 0;
+  }
+
+  .onboarding-actions{
+    justify-content:stretch;
+  }
+
+  .onboarding-actions button{
+    flex:1 1 180px;
+  }
 }

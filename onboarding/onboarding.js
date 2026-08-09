@@ -39,6 +39,7 @@ function iniciarOnboarding(){
 }
 
 async function concluirOnboarding(){
+  clearHighlights();
   document.getElementById("onboarding-guide")?.remove();
 
   await supabase
@@ -49,7 +50,18 @@ async function concluirOnboarding(){
   .eq("id", STATE.user.id);
 }
 
-function mostrarPainel(titulo, texto, etapa){
+const onboardingSteps = [
+  "Conta bancária",
+  "Categorias",
+  "Primeiro lançamento"
+];
+
+function clearHighlights() {
+  document.querySelectorAll(".onboarding-highlight")
+    .forEach(el => el.classList.remove("onboarding-highlight"));
+}
+
+function mostrarPainel({ titulo, texto, etapa, acaoTexto, onAcao }){
 
   document.getElementById("onboarding-guide")?.remove();
 
@@ -58,22 +70,42 @@ function mostrarPainel(titulo, texto, etapa){
 
   const box = document.createElement("div");
   box.className = "onboarding-box";
+  const intro = document.createElement("div");
+  intro.className = "onboarding-intro";
   const heading = document.createElement("h2");
   heading.textContent = String(titulo ?? "");
   const description = document.createElement("p");
   description.textContent = String(texto ?? "");
   const badge = document.createElement("span");
   badge.className = "onboarding-step";
-  badge.textContent = etapa ? `Etapa ${etapa} de 3` : "Configuração inicial";
+  badge.textContent = etapa ? `Etapa ${etapa} de ${onboardingSteps.length}` : "Configuração inicial";
+  const checklist = document.createElement("ol");
+  checklist.className = "onboarding-checklist";
+  onboardingSteps.forEach((label, index) => {
+    const item = document.createElement("li");
+    const numero = index + 1;
+    item.className = numero < etapa ? "done" : (numero === etapa ? "active" : "");
+    item.textContent = label;
+    checklist.appendChild(item);
+  });
   const actions = document.createElement("div");
   actions.className = "onboarding-actions";
+  if (acaoTexto && typeof onAcao === "function") {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "onboarding-primary";
+    action.textContent = acaoTexto;
+    action.addEventListener("click", onAcao);
+    actions.appendChild(action);
+  }
   const skip = document.createElement("button");
   skip.type = "button";
   skip.className = "onboarding-skip";
-  skip.textContent = "Pular guia";
+  skip.textContent = "Concluir depois";
   skip.addEventListener("click", concluirOnboarding);
-  box.append(badge, heading, description, actions);
   actions.appendChild(skip);
+  intro.append(badge, heading, description);
+  box.append(intro, checklist, actions);
   guide.appendChild(box);
 
   document.body.appendChild(guide);
@@ -103,6 +135,7 @@ function destacar(selector){
 
 async function passoConta(){
 
+  clearHighlights();
   irParaTela("contas");
 
   const btn = await esperarElemento("#btn-open-modal-conta");
@@ -111,11 +144,13 @@ async function passoConta(){
     btn.classList.add("onboarding-highlight");
   }
 
-  mostrarPainel(
-    "Passo 1 — Crie sua conta",
-    "Cadastre a conta bancária que será usada para pagamentos, recebimentos e extrato.",
-    1
-  );
+  mostrarPainel({
+    titulo: "Comece pela conta bancária",
+    texto: "Cadastre a conta que vai receber seus movimentos. Ela será a base do extrato, dos pagamentos e do saldo atual.",
+    etapa: 1,
+    acaoTexto: "Adicionar conta",
+    onAcao: () => btn?.click()
+  });
 
   verificarConta();
 }
@@ -141,6 +176,7 @@ async function verificarConta(){
 
 async function passoCategoria(){
 
+  clearHighlights();
   irParaTela("contas");
 
   const btnCategoria = await esperarElemento('[data-tab="categorias"]');
@@ -155,11 +191,13 @@ async function passoCategoria(){
     btnAdd.classList.add("onboarding-highlight");
   }
 
-  mostrarPainel(
-    "Passo 2 — Crie categorias",
-    "Crie categorias para separar receitas, despesas e compras do cartão nos relatórios.",
-    2
-  );
+  mostrarPainel({
+    titulo: "Organize por categorias",
+    texto: "Crie categorias para enxergar despesas, receitas e compras do cartão nos gráficos e relatórios.",
+    etapa: 2,
+    acaoTexto: "Adicionar categoria",
+    onAcao: () => btnAdd?.click()
+  });
 
   verificarCategoria();
 }
@@ -185,13 +223,16 @@ async function verificarCategoria(){
 
 async function passoLancamento(){
 
+  clearHighlights();
   irParaTela("lanc");
 
-  mostrarPainel(
-    "Passo 3 — Registre um lançamento",
-    "Inclua uma receita ou despesa para começar a acompanhar dashboard, extrato e previsões.",
-    3
-  );
+  mostrarPainel({
+    titulo: "Registre o primeiro lançamento",
+    texto: "Inclua uma receita ou despesa para a dashboard, o extrato e a previsão começarem a trabalhar com dados reais.",
+    etapa: 3,
+    acaoTexto: "Adicionar lançamento",
+    onAcao: () => document.getElementById("btn-open-add-lanc")?.click()
+  });
 
   verificarLancamento();
 
@@ -217,10 +258,12 @@ async function verificarLancamento(){
 }
 
 async function finalizarOnboarding(){
+  clearHighlights();
   await concluirOnboarding();
 }
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
+    clearHighlights();
     document.getElementById("onboarding-guide")?.remove();
   }
 });

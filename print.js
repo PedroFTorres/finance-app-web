@@ -61,6 +61,99 @@ function textFromCell(row, index) {
   return row?.children?.[index]?.textContent?.trim() || "-";
 }
 
+function listText(item, selector, fallback = "-") {
+  return item?.querySelector(selector)?.textContent?.trim() || fallback;
+}
+
+function normalizeListItems(selector) {
+  return Array.from(document.querySelectorAll(`${selector} > li`))
+    .filter(item => !item.classList.contains("lanc-empty") && !item.classList.contains("fatura-empty"));
+}
+
+function buildLancamentosReportHTML(selector, emptyText) {
+  const items = normalizeListItems(selector);
+
+  if (!items.length) {
+    return `<p class="print-empty">${escapeHTML(emptyText)}</p>`;
+  }
+
+  return `
+    <div class="report-list">
+      ${items.map((item, index) => {
+        const isReceita = item.classList.contains("lanc-receita");
+        const isDespesa = item.classList.contains("lanc-despesa");
+        const tone = isReceita ? "credit" : "debit";
+        const date = listText(item, ".lanc-date");
+        const title = listText(item, ".lanc-title", item.textContent?.trim() || "-");
+        const value = listText(item, ".lanc-value");
+        const chips = Array.from(item.querySelectorAll(".lanc-chip"))
+          .map(chip => chip.textContent.trim())
+          .filter(Boolean);
+
+        return `
+          <article class="report-row report-row-${tone} ${index % 2 ? "report-row-alt" : ""}">
+            <div class="report-date">${escapeHTML(date)}</div>
+            <div class="report-main">
+              <strong>${escapeHTML(title)}</strong>
+              ${chips.length ? `<div class="report-tags">${chips.map(chip => `<span>${escapeHTML(chip)}</span>`).join("")}</div>` : ""}
+            </div>
+            <div class="report-value ${isDespesa ? "report-value-debit" : "report-value-credit"}">${escapeHTML(value)}</div>
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function buildFaturaReportHTML() {
+  const summary = document.querySelector("#fatura-summary");
+  const compras = normalizeListItems("#lista-compras-fatura");
+  const titulo = document.querySelector("#fatura-titulo")?.textContent?.trim() || "Cartão";
+  const periodo = document.querySelector("#fatura-periodo")?.textContent?.trim() || "-";
+  const total = document.querySelector("#fatura-total")?.textContent?.trim() || "-";
+
+  return `
+    <section class="print-summary-grid print-summary-grid-compact">
+      <div><span>Cartão</span><strong>${escapeHTML(titulo)}</strong></div>
+      <div><span>Competência</span><strong>${escapeHTML(periodo)}</strong></div>
+      <div><span>Total da fatura</span><strong>${escapeHTML(total)}</strong></div>
+      ${summary ? `<div><span>Status</span><strong>${escapeHTML(summary.textContent.trim() || "-")}</strong></div>` : ""}
+    </section>
+    <section class="print-section">
+      <div class="section-title-row">
+        <h2>Compras e abatimentos</h2>
+        <span class="movement-count">${compras.length} item(ns)</span>
+      </div>
+      ${compras.length ? `
+        <div class="report-list">
+          ${compras.map((item, index) => {
+            const isPagamento = item.classList.contains("fatura-row-pagamento");
+            const date = listText(item, ".fatura-data");
+            const title = listText(item, ".fatura-desc", item.textContent?.trim() || "-");
+            const meta = listText(item, ".fatura-meta", isPagamento ? "Pagamento / abatimento" : "Compra no cartão");
+            const parcela = listText(item, ".fatura-parcela", "");
+            const value = listText(item, ".fatura-valor, .valor-pagamento");
+            const tone = isPagamento ? "credit" : "debit";
+            return `
+              <article class="report-row report-row-${tone} ${index % 2 ? "report-row-alt" : ""}">
+                <div class="report-date">${escapeHTML(date)}</div>
+                <div class="report-main">
+                  <strong>${escapeHTML(title)}</strong>
+                  <div class="report-tags">
+                    <span>${escapeHTML(meta)}</span>
+                    ${parcela ? `<span>${escapeHTML(parcela)}</span>` : ""}
+                  </div>
+                </div>
+                <div class="report-value ${isPagamento ? "report-value-credit" : "report-value-debit"}">${escapeHTML(value)}</div>
+              </article>
+            `;
+          }).join("")}
+        </div>
+      ` : '<p class="print-empty">Nenhuma compra lançada nesta fatura.</p>'}
+    </section>
+  `;
+}
+
 function buildExtratoMovimentosHTML() {
   const rows = Array.from(document.querySelectorAll("#table-extrato tbody tr"));
 
@@ -119,17 +212,17 @@ function buildPrintStyles() {
 
       body {
         margin: 0;
-        padding: 24px;
+        padding: 22px;
         background: #f7f7fb;
         color: var(--ink);
         font-family: Inter, Arial, Helvetica, sans-serif;
-        font-size: 12px;
+        font-size: 13px;
       }
 
       .report-page {
-        max-width: 1120px;
+        max-width: 1060px;
         margin: 0 auto;
-        padding: 24px;
+        padding: 26px;
         background: #fff;
         border: 1px solid var(--line);
         border-radius: 8px;
@@ -308,7 +401,8 @@ function buildPrintStyles() {
         gap: 8px;
       }
 
-      .statement-row {
+      .statement-row,
+      .report-row {
         display: grid;
         grid-template-columns: 96px minmax(0, 1fr) 132px 132px;
         gap: 12px;
@@ -321,31 +415,80 @@ function buildPrintStyles() {
         background: #fff;
       }
 
-      .statement-row:nth-child(even) {
+      .report-row {
+        grid-template-columns: 96px minmax(0, 1fr) 150px;
+      }
+
+      .statement-row:nth-child(even),
+      .report-row-alt {
         background: #fbfaff;
       }
 
-      .statement-row-credit {
+      .statement-row-credit,
+      .report-row-credit {
         border-left-color: #22c55e;
       }
 
-      .statement-row-debit {
+      .statement-row-debit,
+      .report-row-debit {
         border-left-color: #ef4444;
       }
 
-      .statement-date {
+      .statement-date,
+      .report-date {
         color: var(--brand-dark);
         font-size: 12px;
         font-weight: 900;
         white-space: nowrap;
       }
 
-      .statement-main strong {
+      .statement-main strong,
+      .report-main strong {
         display: block;
         color: var(--ink);
         font-size: 12px;
         line-height: 1.25;
         overflow-wrap: anywhere;
+      }
+
+      .report-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .report-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 6px;
+      }
+
+      .report-tags span {
+        display: inline-flex;
+        align-items: center;
+        min-height: 20px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: #f5f1ff;
+        color: #655f75;
+        font-size: 9px;
+        font-weight: 800;
+      }
+
+      .report-value {
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 900;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .report-value-credit {
+        color: var(--green);
+      }
+
+      .report-value-debit {
+        color: var(--red);
       }
 
       .statement-type {
@@ -435,7 +578,8 @@ function buildPrintStyles() {
         .print-account-card,
         .print-summary-grid,
         tr,
-        .statement-row {
+        .statement-row,
+        .report-row {
           break-inside: avoid;
         }
       }
@@ -556,34 +700,17 @@ function gerarPDF(tipo) {
 
     if (tipo === "receitas") {
         titulo = "Contas a Receber";
-        // para listas simples, clona e remove botões
-        const lista = document.querySelector("#list-receitas");
-        if (lista) {
-            const clone = lista.cloneNode(true);
-            clone.querySelectorAll("button").forEach(b => b.remove());
-            conteudoHTML = clone.outerHTML;
-        } else conteudoHTML = "<p>Nenhuma conta a receber encontrada.</p>";
+        conteudoHTML = buildLancamentosReportHTML("#list-receitas", "Nenhuma conta a receber encontrada.");
     }
 
     if (tipo === "despesas") {
         titulo = "Contas a Pagar";
-        const lista = document.querySelector("#list-despesas");
-        if (lista) {
-            const clone = lista.cloneNode(true);
-            clone.querySelectorAll("button").forEach(b => b.remove());
-            conteudoHTML = clone.outerHTML;
-        } else conteudoHTML = "<p>Nenhuma conta a pagar encontrada.</p>";
+        conteudoHTML = buildLancamentosReportHTML("#list-despesas", "Nenhuma conta a pagar encontrada.");
     }
 
     if (tipo === "fatura") {
         titulo = "Fatura do Cartão";
-        const sum = document.querySelector("#fatura-summary")?.outerHTML || "";
-        const lista = document.querySelector("#lista-compras-fatura");
-        if (lista) {
-            const clone = lista.cloneNode(true);
-            clone.querySelectorAll("button").forEach(b => b.remove());
-            conteudoHTML = sum + clone.outerHTML;
-        } else conteudoHTML = sum;
+        conteudoHTML = buildFaturaReportHTML();
     }
 
     const win = window.open("", "_blank");
