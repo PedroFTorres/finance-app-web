@@ -2340,15 +2340,50 @@ if (btnCartao) {
   renderExtratoContaPicker();
 },
     renderCategorias() {
-      const ul = $(IDS.listaCategorias);
-      if (!ul) return;
-      ul.innerHTML = '';
-      (STATE.categorias || []).forEach(cat => {
-        const li = document.createElement('li');
-        li.style.display = 'flex';
-        li.style.justifyContent = 'space-between';
-        const span = document.createElement('span'); span.textContent = cat.nome;
-        const btn = document.createElement('button'); btn.textContent = 'Excluir';
+      const container = $(IDS.listaCategorias);
+      if (!container) return;
+      container.innerHTML = '';
+
+      const categorias = [...(STATE.categorias || [])].sort((a, b) =>
+        String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR', { sensitivity: 'base' })
+      );
+
+      const totalEl = document.getElementById('categorias-total');
+      if (totalEl) {
+        totalEl.textContent = `${categorias.length} cadastrada${categorias.length === 1 ? '' : 's'}`;
+      }
+
+      if (!categorias.length) {
+        const empty = document.createElement('div');
+        empty.className = 'category-empty';
+        empty.innerHTML = `
+          <strong>Nenhuma categoria cadastrada</strong>
+          <span>Crie a primeira categoria para classificar seus lançamentos.</span>
+        `;
+        container.appendChild(empty);
+        return;
+      }
+
+      categorias.forEach(cat => {
+        const card = document.createElement('article');
+        card.className = 'category-card';
+
+        const avatar = document.createElement('span');
+        avatar.className = 'category-avatar';
+        avatar.textContent = String(cat.nome || '?').trim().slice(0, 1).toUpperCase() || '?';
+
+        const info = document.createElement('div');
+        info.className = 'category-info';
+        const title = document.createElement('strong');
+        title.textContent = cat.nome;
+        const meta = document.createElement('small');
+        meta.textContent = 'Categoria personalizada';
+        info.append(title, meta);
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'category-delete-btn';
+        btn.textContent = 'Excluir';
         btn.addEventListener('click', async () => {
           if (!confirm('Deseja excluir esta categoria?')) return;
           await supabase
@@ -2369,7 +2404,8 @@ if (btnCartao) {
             .eq('user_id', STATE.user.id);
           await App.reloadAll();
         });
-        li.appendChild(span); li.appendChild(btn); ul.appendChild(li);
+        card.append(avatar, info, btn);
+        container.appendChild(card);
       });
     },
    

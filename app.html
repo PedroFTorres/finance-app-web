@@ -6,7 +6,7 @@
   <title> Arolix </title>
    <link rel="icon" type="image/png" href="favicon.png">
 
-  <link rel="stylesheet" href="styles.css?v=20260730-3" />
+  <link rel="stylesheet" href="styles.css?v=20260809-2" />
 </head>
 
 <body>
@@ -311,19 +311,32 @@
         <!-- TAB CATEGORIAS -->
         <div id="tab-categorias" class="hidden">
 
-          <h3>Categorias</h3>
+          <div class="category-manager">
+            <div class="category-manager-header">
+              <div>
+                <h3>Categorias</h3>
+                <p>Organize receitas, despesas e compras do cartão para deixar gráficos e relatórios mais precisos.</p>
+              </div>
+              <span id="categorias-total" class="category-count">0 cadastradas</span>
+            </div>
 
-          <label>Nova categoria</label>
-          <input id="categoria-nome" placeholder="Ex: Mercado, Transporte..."/>
+            <div class="category-create-card">
+              <label for="categoria-nome">Nova categoria</label>
+              <div class="category-create-row">
+                <input id="categoria-nome" placeholder="Ex: Mercado, Transporte..."/>
+                <button id="btn-add-categoria" class="btn-primary">
+                  Adicionar
+                </button>
+              </div>
+            </div>
 
-          <button id="btn-add-categoria" class="btn-primary" style="margin-top:10px;">
-            Adicionar Categoria
-          </button>
+            <div class="category-list-header">
+              <h4>Categorias cadastradas</h4>
+              <small>Use nomes objetivos para facilitar a leitura da dashboard.</small>
+            </div>
 
-          <hr style="margin:20px 0"/>
-
-          <h4>Cadastradas</h4>
-          <ul id="lista-categorias"></ul>
+            <div id="lista-categorias" class="category-grid"></div>
+          </div>
 
         </div>
 
