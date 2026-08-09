@@ -462,6 +462,40 @@ function roundMoney(value) {
   return Number(Number(value || 0).toFixed(2));
 }
 
+function parseMoneyValue(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const text = String(value || "").trim();
+  if (!text) return 0;
+  const normalized = text
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\.(?=\d{3}(?:\D|$))/g, "")
+    .replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+async function validarContaPagamentoCartao(contaId) {
+  if (!contaId) return { ok: false, message: "Selecione a conta." };
+
+  const { data: conta, error } = await supabase
+    .from("contas_bancarias")
+    .select("id,tipo_conta")
+    .eq("id", contaId)
+    .eq("user_id", state.user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("validarContaPagamentoCartao", error);
+    return { ok: false, message: "Não consegui validar a conta de pagamento." };
+  }
+  if (!conta) return { ok: false, message: "Conta de pagamento não encontrada." };
+  if (isContaInvestimento(conta)) {
+    return { ok: false, message: "Conta de investimento não pode pagar fatura." };
+  }
+
+  return { ok: true };
+}
+
 async function ajustarFaturaFechadaAposPagamentoParcial({ dataFatura, valorPago, categoriaId, dataBaixa, somenteCalcular = false }) {
   const dataRef = new Date(`${dataFatura}T00:00:00`);
   const ano = dataRef.getFullYear();
@@ -1266,6 +1300,12 @@ if (btnPagarFatura) {
         return;
       }
 
+      const contaPagamento = await validarContaPagamentoCartao(contaId);
+      if (!contaPagamento.ok) {
+        showToast(contaPagamento.message, "error");
+        return;
+      }
+
       const total = Number(state.faturaAtual.valor_total || 0);
       if (total <= 0) {
         showToast("Fatura sem valor.", "error");
@@ -1584,7 +1624,7 @@ if (btnConfirmarPagParcial) {
   btnConfirmarPagParcial.onclick = async () => {
     if (pagamentoParcialEmProcessamento) return;
 
-    const valor = Number(document.getElementById("pag-parcial-valor").value);
+    const valor = parseMoneyValue(document.getElementById("pag-parcial-valor").value);
     const data = document.getElementById("pag-parcial-data").value;
     const contaId = document.getElementById("pag-parcial-conta").value;
     let despesaCriadaId = null;
@@ -1599,6 +1639,12 @@ if (btnConfirmarPagParcial) {
 
     if (!contaId) {
       showToast("Selecione a conta.", "error");
+      return;
+    }
+
+    const contaPagamento = await validarContaPagamentoCartao(contaId);
+    if (!contaPagamento.ok) {
+      showToast(contaPagamento.message, "error");
       return;
     }
 

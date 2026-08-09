@@ -81,11 +81,11 @@ async function atualizarDashboardPorMes() {
    function atualizarValorFinalBaixa() {
   if (!BAIXA_ATUAL) return;
 
-  const valor = Number(BAIXA_ATUAL.lancamento.valor || 0);
+  const valor = parseMoneyValue(BAIXA_ATUAL.lancamento.valor);
   const valorPagoInput = document.getElementById("valor-pago-baixa");
-  let valorPago = Number(valorPagoInput?.value || 0);
-  const juros = Number(document.getElementById("juros-baixa").value || 0);
-  const desconto = Number(document.getElementById("desconto-baixa").value || 0);
+  let valorPago = parseMoneyValue(valorPagoInput?.value);
+  const juros = parseMoneyValue(document.getElementById("juros-baixa").value);
+  const desconto = parseMoneyValue(document.getElementById("desconto-baixa").value);
 
   const final = Number((valor + juros - desconto).toFixed(2));
   const finalAnterior = Number(valorPagoInput?.dataset.valorFinalAnterior || valor);
@@ -127,7 +127,19 @@ let modoPeriodoExtrato = "mes"; // "mes" | "custom"
 let mesExtratoAtual = new Date();
 
 // ================================ // FILTRO DE LANÇAMENTOS // ================================
-let FILTRO_LANCAMENTOS = "pendencias";
+  let FILTRO_LANCAMENTOS = "pendencias";
+
+  function parseMoneyValue(value) {
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    const text = String(value || "").trim();
+    if (!text) return 0;
+    const normalized = text
+      .replace(/[^\d,.-]/g, "")
+      .replace(/\.(?=\d{3}(?:\D|$))/g, "")
+      .replace(",", ".");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
 
   const IDS = {
     // header / auth
@@ -5078,6 +5090,9 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
   // 🔒 trava clique duplo
   if (IS_BAIXANDO) return;
   IS_BAIXANDO = true;
+  let movimentacaoCriadaId = null;
+  let lancamentoOriginal = null;
+  let contaBaixaId = null;
 
   try {
     if (!BAIXA_ATUAL) {
@@ -5088,17 +5103,23 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     const { tipo, lancamento } = BAIXA_ATUAL;
 
     const dataBaixa = document.getElementById("data-baixa").value;
-    let valorPago = Number(document.getElementById("valor-pago-baixa")?.value || 0);
-    const juros = Number(document.getElementById("juros-baixa").value || 0);
-    const desconto = Number(document.getElementById("desconto-baixa").value || 0);
+    let valorPago = parseMoneyValue(document.getElementById("valor-pago-baixa")?.value);
+    const juros = parseMoneyValue(document.getElementById("juros-baixa").value);
+    const desconto = parseMoneyValue(document.getElementById("desconto-baixa").value);
     const contaId = document.getElementById("conta-baixa-select").value;
+    contaBaixaId = contaId;
 
     if (!dataBaixa || !contaId) {
       alert("Informe a data e a conta.");
       return;
     }
 
-    const valorOriginal = Number(lancamento.valor);
+    if (isContaInvestimento(STATE.contas.find(conta => conta.id === contaId))) {
+      alert("Conta de investimento não pode ser usada para baixar lançamentos.");
+      return;
+    }
+
+    const valorOriginal = parseMoneyValue(lancamento.valor);
     const valorFinal = valorOriginal + juros - desconto;
     if (valorFinal > 0 && Math.abs(valorPago - valorOriginal) < 0.009 && Math.abs(valorFinal - valorOriginal) > 0.009) {
       valorPago = Number(valorFinal.toFixed(2));
@@ -5122,6 +5143,20 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     }
 
     const valorMovimentacao = Number(valorPago.toFixed(2));
+    const tabelaLancamento = tipo === "receita" ? "receitas" : "despesas";
+    const { data: lancamentoBanco, error: erroLancamentoBanco } = await supabase
+      .from(tabelaLancamento)
+      .select("*")
+      .eq("id", lancamento.id)
+      .eq("user_id", STATE.user.id)
+      .maybeSingle();
+
+    if (erroLancamentoBanco) throw erroLancamentoBanco;
+    if (!lancamentoBanco) {
+      alert("Lançamento não encontrado.");
+      return;
+    }
+    lancamentoOriginal = { ...lancamentoBanco };
 
     // 🔒 bloqueia baixa duplicada no banco
     if (!baixaParcial) {
@@ -5139,10 +5174,11 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     }
 
     // 🔹 cria movimentação (extrato)
+    const novaMovimentacaoId = uid();
     const { error: insertErr } = await supabase
       .from("movimentacoes")
       .insert([{
-        id: uid(),
+        id: novaMovimentacaoId,
         user_id: STATE.user.id,
         conta_id: contaId,
         tipo: tipo === "receita" ? "credito" : "debito",
@@ -5164,12 +5200,11 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
       }
       throw insertErr;
     }
-
-    const tabelaLancamento = tipo === "receita" ? "receitas" : "despesas";
+    movimentacaoCriadaId = novaMovimentacaoId;
 
     if (baixaParcial) {
       // 🔹 mantém em aberto apenas o saldo restante
-      await supabase
+      const { error: updateParcialErr } = await supabase
         .from(tabelaLancamento)
         .update({
           valor: restante,
@@ -5178,9 +5213,10 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
         })
         .eq("id", lancamento.id)
         .eq("user_id", STATE.user.id);
+      if (updateParcialErr) throw updateParcialErr;
     } else {
       // 🔹 marca lançamento como baixado
-      await supabase
+      const { error: updateBaixaErr } = await supabase
         .from(tabelaLancamento)
         .update({
           baixado: true,
@@ -5188,7 +5224,10 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
         })
         .eq("id", lancamento.id)
         .eq("user_id", STATE.user.id);
+      if (updateBaixaErr) throw updateBaixaErr;
     }
+
+    await ContasService.recalc(contaId);
 
     // 🔹 fecha modal e limpa estado
     document.getElementById("modal-baixa").classList.add("hidden");
@@ -5200,6 +5239,28 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
 
   } catch (err) {
     console.error("Erro ao confirmar baixa:", err);
+    if (movimentacaoCriadaId) {
+      await supabase
+        .from("movimentacoes")
+        .delete()
+        .eq("id", movimentacaoCriadaId)
+        .eq("user_id", STATE.user.id);
+    }
+    if (lancamentoOriginal?.id) {
+      const tabelaLancamento = BAIXA_ATUAL?.tipo === "receita" ? "receitas" : "despesas";
+      await supabase
+        .from(tabelaLancamento)
+        .update({
+          valor: lancamentoOriginal.valor,
+          conta_id: lancamentoOriginal.conta_id,
+          categoria_id: lancamentoOriginal.categoria_id,
+          baixado: lancamentoOriginal.baixado,
+          data_baixa: lancamentoOriginal.data_baixa
+        })
+        .eq("id", lancamentoOriginal.id)
+        .eq("user_id", STATE.user.id);
+    }
+    if (contaBaixaId) await ContasService.recalc(contaBaixaId);
     alert("Erro ao realizar a baixa.");
   } finally {
     // 🔓 libera trava SEMPRE

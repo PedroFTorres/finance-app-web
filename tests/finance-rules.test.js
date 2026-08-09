@@ -623,3 +623,24 @@ test("fluxo de pagamento parcial de fatura evita rollback depois de salvo", () =
   assert.match(js, /\.from\("movimentacoes"\)\s*[\s\S]*?\.delete\(\)/);
   assert.match(js, /\.from\("despesas"\)\s*[\s\S]*?\.delete\(\)/);
 });
+
+test("fluxo de baixa comum recalcula saldo e compensa falha apos criar movimentacao", () => {
+  const js = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
+
+  assert.match(js, /let movimentacaoCriadaId = null/);
+  assert.match(js, /const novaMovimentacaoId = uid\(\)/);
+  assert.match(js, /movimentacaoCriadaId = novaMovimentacaoId/);
+  assert.match(js, /if \(movimentacaoCriadaId\)/);
+  assert.match(js, /\.from\("movimentacoes"\)\s*[\s\S]*?\.delete\(\)/);
+  assert.match(js, /await ContasService\.recalc\(contaId\)/);
+  assert.match(js, /if \(contaBaixaId\) await ContasService\.recalc\(contaBaixaId\)/);
+});
+
+test("pagamento de fatura bloqueia conta de investimento mesmo se o select vier inconsistente", () => {
+  const js = fs.readFileSync(path.join(__dirname, "../cartao.js"), "utf8");
+
+  assert.match(js, /async function validarContaPagamentoCartao\(contaId\)/);
+  assert.match(js, /Conta de investimento não pode pagar fatura/);
+  assert.match(js, /const contaPagamento = await validarContaPagamentoCartao\(contaId\)/);
+  assert.match(js, /if \(!contaPagamento\.ok\)/);
+});
