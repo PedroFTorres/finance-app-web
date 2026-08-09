@@ -65,19 +65,87 @@ function listText(item, selector, fallback = "-") {
   return item?.querySelector(selector)?.textContent?.trim() || fallback;
 }
 
+function parseMoneyBR(value) {
+  const normalized = String(value ?? "")
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatMoneyBR(value) {
+  return Number(value || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+}
+
 function normalizeListItems(selector) {
   return Array.from(document.querySelectorAll(`${selector} > li`))
     .filter(item => !item.classList.contains("lanc-empty") && !item.classList.contains("fatura-empty"));
 }
 
-function buildLancamentosReportHTML(selector, emptyText) {
+function getLancamentosPeriodoLabel() {
+  const customStart = document.querySelector("#lanc-inicio")?.value;
+  const customEnd = document.querySelector("#lanc-fim")?.value;
+  if (customStart || customEnd) {
+    return `${formatDateBR(customStart) || "-"} a ${formatDateBR(customEnd) || "-"}`;
+  }
+  return document.querySelector("#lanc-mes-label")?.textContent?.trim() || "-";
+}
+
+function getLancamentosContaLabel() {
+  const select = document.querySelector("#select-contas");
+  const option = select?.selectedOptions?.[0];
+  return option?.textContent?.trim() || "Todas as contas";
+}
+
+function buildReportSummaryGrid(cards = []) {
+  const validCards = cards.filter(card => card && card.label);
+  if (!validCards.length) return "";
+
+  return `
+    <section class="print-summary-grid print-summary-grid-compact">
+      ${validCards.map(card => `
+        <div class="${card.tone ? `summary-${card.tone}` : ""}">
+          <span>${escapeHTML(card.label)}</span>
+          <strong>${escapeHTML(card.value ?? "-")}</strong>
+        </div>
+      `).join("")}
+    </section>
+  `;
+}
+
+function buildLancamentosReportHTML(selector, emptyText, reportTone = "debit") {
   const items = normalizeListItems(selector);
 
   if (!items.length) {
-    return `<p class="print-empty">${escapeHTML(emptyText)}</p>`;
+    return `
+      ${buildReportSummaryGrid([
+        { label: "Período", value: getLancamentosPeriodoLabel() },
+        { label: "Conta", value: getLancamentosContaLabel() },
+        { label: "Itens", value: "0" },
+        { label: "Total", value: formatMoneyBR(0), tone: reportTone }
+      ])}
+      <p class="print-empty">${escapeHTML(emptyText)}</p>
+    `;
   }
 
+  const total = items.reduce((sum, item) => sum + Math.abs(parseMoneyBR(listText(item, ".lanc-value"))), 0);
+
   return `
+    ${buildReportSummaryGrid([
+      { label: "Período", value: getLancamentosPeriodoLabel() },
+      { label: "Conta", value: getLancamentosContaLabel() },
+      { label: "Itens", value: `${items.length} lançamento(s)` },
+      { label: "Total", value: formatMoneyBR(total), tone: reportTone }
+    ])}
+    <section class="print-section">
+      <div class="section-title-row">
+        <h2>Movimentos do relatório</h2>
+        <span class="movement-count">${items.length} item(ns)</span>
+      </div>
     <div class="report-list">
       ${items.map((item, index) => {
         const isReceita = item.classList.contains("lanc-receita");
@@ -102,6 +170,7 @@ function buildLancamentosReportHTML(selector, emptyText) {
         `;
       }).join("")}
     </div>
+    </section>
   `;
 }
 
@@ -113,12 +182,13 @@ function buildFaturaReportHTML() {
   const total = document.querySelector("#fatura-total")?.textContent?.trim() || "-";
 
   return `
-    <section class="print-summary-grid print-summary-grid-compact">
-      <div><span>Cartão</span><strong>${escapeHTML(titulo)}</strong></div>
-      <div><span>Competência</span><strong>${escapeHTML(periodo)}</strong></div>
-      <div><span>Total da fatura</span><strong>${escapeHTML(total)}</strong></div>
-      ${summary ? `<div><span>Status</span><strong>${escapeHTML(summary.textContent.trim() || "-")}</strong></div>` : ""}
-    </section>
+    ${buildReportSummaryGrid([
+      { label: "Cartão", value: titulo },
+      { label: "Competência", value: periodo },
+      { label: "Itens", value: `${compras.length} item(ns)` },
+      { label: "Total da fatura", value: total, tone: "debit" },
+      summary ? { label: "Status", value: summary.textContent.trim() || "-" } : null
+    ])}
     <section class="print-section">
       <div class="section-title-row">
         <h2>Compras e abatimentos</h2>
@@ -212,8 +282,8 @@ function buildPrintStyles() {
 
       body {
         margin: 0;
-        padding: 22px;
-        background: #f7f7fb;
+        padding: 24px;
+        background: linear-gradient(180deg, #f5f1ff 0, #f7f7fb 220px);
         color: var(--ink);
         font-family: Inter, Arial, Helvetica, sans-serif;
         font-size: 13px;
@@ -222,10 +292,11 @@ function buildPrintStyles() {
       .report-page {
         max-width: 1060px;
         margin: 0 auto;
-        padding: 26px;
+        padding: 28px;
         background: #fff;
         border: 1px solid var(--line);
         border-radius: 8px;
+        box-shadow: 0 18px 48px rgba(47,36,99,0.08);
       }
 
       .print-header {
@@ -248,7 +319,7 @@ function buildPrintStyles() {
       h1 {
         margin: 0;
         color: var(--brand);
-        font-size: 26px;
+        font-size: 30px;
         line-height: 1.1;
       }
 
@@ -277,10 +348,18 @@ function buildPrintStyles() {
       .print-account-card > div,
       .print-summary-grid > div {
         min-height: 56px;
-        padding: 10px 12px;
+        padding: 12px 14px;
         border: 1px solid var(--line);
         border-radius: 8px;
         background: var(--soft);
+      }
+
+      .print-summary-grid > .summary-credit strong {
+        color: var(--green);
+      }
+
+      .print-summary-grid > .summary-debit strong {
+        color: var(--red);
       }
 
       .print-account-card > div:first-child {
@@ -313,6 +392,10 @@ function buildPrintStyles() {
         grid-template-columns: repeat(5, 1fr);
         gap: 10px;
         margin: 0 0 18px;
+      }
+
+      .print-summary-grid-compact {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
       }
 
       .print-summary-grid > div:last-child {
@@ -398,7 +481,7 @@ function buildPrintStyles() {
 
       .statement-list {
         display: grid;
-        gap: 8px;
+        gap: 7px;
       }
 
       .statement-row,
@@ -407,8 +490,8 @@ function buildPrintStyles() {
         grid-template-columns: 96px minmax(0, 1fr) 132px 132px;
         gap: 12px;
         align-items: center;
-        min-height: 58px;
-        padding: 10px 12px;
+        min-height: 56px;
+        padding: 10px 13px;
         border: 1px solid #ebe6f8;
         border-left: 5px solid var(--red);
         border-radius: 8px;
@@ -421,7 +504,7 @@ function buildPrintStyles() {
 
       .statement-row:nth-child(even),
       .report-row-alt {
-        background: #fbfaff;
+        background: linear-gradient(90deg, #fbfaff, #fff);
       }
 
       .statement-row-credit,
@@ -453,7 +536,7 @@ function buildPrintStyles() {
 
       .report-list {
         display: grid;
-        gap: 8px;
+        gap: 7px;
       }
 
       .report-tags {
@@ -549,11 +632,50 @@ function buildPrintStyles() {
         display: flex;
         justify-content: space-between;
         gap: 16px;
-        margin-top: 18px;
-        padding-top: 10px;
+        margin-top: 22px;
+        padding-top: 12px;
         border-top: 1px solid var(--line);
         color: #8a8497;
         font-size: 10px;
+      }
+
+      @media (max-width: 760px) {
+        body {
+          padding: 12px;
+        }
+
+        .print-header,
+        .section-title-row,
+        .report-footer {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .meta {
+          text-align: left;
+        }
+
+        .print-account-card,
+        .print-summary-grid,
+        .print-summary-grid-compact {
+          grid-template-columns: 1fr;
+        }
+
+        .print-account-card > div:first-child {
+          grid-column: auto;
+        }
+
+        .statement-row,
+        .report-row {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+
+        .statement-amount,
+        .statement-balance,
+        .report-value {
+          text-align: left;
+        }
       }
 
       @media print {
@@ -577,10 +699,16 @@ function buildPrintStyles() {
         .print-header,
         .print-account-card,
         .print-summary-grid,
+        .print-section,
         tr,
         .statement-row,
         .report-row {
           break-inside: avoid;
+        }
+
+        .statement-row,
+        .report-row {
+          box-shadow: none;
         }
       }
     </style>
@@ -668,13 +796,13 @@ function buildExtratoResumoHTML() {
   const saldoFinal = extrato?.dataset.saldoFinal || document.querySelector("#saldo-atual-conta-extrato")?.textContent || "-";
 
   return `
-    <section class="print-summary-grid">
-      <div><span>Saldo anterior</span><strong>${escapeHTML(saldoAnterior)}</strong></div>
-      <div><span>Total receitas</span><strong>${escapeHTML(totalReceitas)}</strong></div>
-      <div><span>Total despesas</span><strong>${escapeHTML(totalDespesas)}</strong></div>
-      <div><span>Saldo do período</span><strong>${escapeHTML(saldoPeriodo)}</strong></div>
-      <div><span>Saldo final</span><strong>${escapeHTML(saldoFinal)}</strong></div>
-    </section>
+    ${buildReportSummaryGrid([
+      { label: "Saldo anterior", value: saldoAnterior },
+      { label: "Total receitas", value: totalReceitas, tone: "credit" },
+      { label: "Total despesas", value: totalDespesas, tone: "debit" },
+      { label: "Saldo do período", value: saldoPeriodo },
+      { label: "Saldo final", value: saldoFinal }
+    ])}
   `;
 }
 
@@ -700,12 +828,12 @@ function gerarPDF(tipo) {
 
     if (tipo === "receitas") {
         titulo = "Contas a Receber";
-        conteudoHTML = buildLancamentosReportHTML("#list-receitas", "Nenhuma conta a receber encontrada.");
+        conteudoHTML = buildLancamentosReportHTML("#list-receitas", "Nenhuma conta a receber encontrada.", "credit");
     }
 
     if (tipo === "despesas") {
         titulo = "Contas a Pagar";
-        conteudoHTML = buildLancamentosReportHTML("#list-despesas", "Nenhuma conta a pagar encontrada.");
+        conteudoHTML = buildLancamentosReportHTML("#list-despesas", "Nenhuma conta a pagar encontrada.", "debit");
     }
 
     if (tipo === "fatura") {

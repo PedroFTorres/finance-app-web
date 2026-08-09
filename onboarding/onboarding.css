@@ -1,8 +1,8 @@
 #onboarding-guide{
   position:fixed;
   inset:0;
-  background:rgba(24,18,48,0.46);
-  backdrop-filter: blur(3px);
+  background:rgba(24,18,48,0.52);
+  backdrop-filter: blur(4px);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -16,12 +16,12 @@
 }
 .onboarding-box{
   background:white;
-  padding:26px;
+  padding:28px;
   border:1px solid #e5dcff;
   border-radius:8px;
   width:min(520px, calc(100vw - 32px));
   text-align:left;
-  box-shadow:0 20px 70px rgba(47,36,99,0.25);
+  box-shadow:0 24px 76px rgba(47,36,99,0.28);
 }
 
 .onboarding-intro{
@@ -32,7 +32,7 @@
 .onboarding-box h2{
   margin:0;
   color:#2f2463;
-  font-size:26px;
+  font-size:28px;
   line-height:1.1;
 }
 
@@ -70,7 +70,7 @@
   padding:9px 11px;
   border:1px solid #ece7fb;
   border-radius:8px;
-  background:#fbfaff;
+  background:linear-gradient(90deg, #fbfaff, #fff);
   color:#6f7280;
   font-size:14px;
   font-weight:800;
@@ -90,6 +90,7 @@
   border-color:#bca7ff;
   background:#f4efff;
   color:#2f2463;
+  box-shadow:0 8px 22px rgba(122,77,255,0.08);
 }
 
 .onboarding-checklist li.active::before{
@@ -130,7 +131,7 @@
   font-size:15px;
   font-weight:900;
   cursor:pointer;
-  box-shadow:0 10px 24px rgba(122,77,255,0.24);
+  box-shadow:0 12px 28px rgba(122,77,255,0.28);
 }
 
 .onboarding-skip{

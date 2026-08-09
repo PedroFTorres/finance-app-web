@@ -8,7 +8,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await waitForState();
 
-  // 🔥 espera o app terminar
   while (!window.APP_READY) {
     await new Promise(r => setTimeout(r, 100));
   }
@@ -51,9 +50,9 @@ async function concluirOnboarding(){
 }
 
 const onboardingSteps = [
-  "Conta bancária",
+  "Conta",
   "Categorias",
-  "Primeiro lançamento"
+  "Movimento"
 ];
 
 function clearHighlights() {
@@ -146,7 +145,7 @@ async function passoConta(){
 
   mostrarPainel({
     titulo: "Comece pela conta bancária",
-    texto: "Cadastre a conta que vai receber seus movimentos. Ela será a base do extrato, dos pagamentos e do saldo atual.",
+    texto: "Cadastre a conta principal para o Arolix montar saldo, extrato, pagamentos e previsões com uma base confiável.",
     etapa: 1,
     acaoTexto: "Adicionar conta",
     onAcao: () => btn?.click()
@@ -193,7 +192,7 @@ async function passoCategoria(){
 
   mostrarPainel({
     titulo: "Organize por categorias",
-    texto: "Crie categorias para enxergar despesas, receitas e compras do cartão nos gráficos e relatórios.",
+    texto: "Crie as categorias que você usa no dia a dia. Elas alimentam gráficos, relatórios e a leitura real das faturas.",
     etapa: 2,
     acaoTexto: "Adicionar categoria",
     onAcao: () => btnAdd?.click()
@@ -228,7 +227,7 @@ async function passoLancamento(){
 
   mostrarPainel({
     titulo: "Registre o primeiro lançamento",
-    texto: "Inclua uma receita ou despesa para a dashboard, o extrato e a previsão começarem a trabalhar com dados reais.",
+    texto: "Inclua uma receita ou despesa para validar o fluxo completo: dashboard, lançamentos, extrato e relatórios.",
     etapa: 3,
     acaoTexto: "Adicionar lançamento",
     onAcao: () => document.getElementById("btn-open-add-lanc")?.click()
