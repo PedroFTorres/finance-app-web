@@ -1056,9 +1056,14 @@ h1, h2, h3 {
   font-size: 20px;
 }
 
-.dashboard-grid canvas {
+.dashboard-grid canvas:not(.category-chart) {
   width: 100% !important;
   height: 340px !important;
+}
+
+.category-chart {
+  width: 100% !important;
+  min-height: 300px;
 }
 
 .category-bars {

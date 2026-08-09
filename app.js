@@ -3427,6 +3427,89 @@ function abrirModalEditarConta(conta) {
     });
   }
 
+  function renderCategoryChart(chartKey, canvasId, serie, options = {}) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !window.Chart) return;
+
+    try { if (STATE.charts[chartKey]) STATE.charts[chartKey].destroy(); } catch (e) {}
+
+    const labels = serie.vazio ? ['Sem dados'] : serie.labels;
+    const values = serie.vazio ? [0] : serie.values;
+    const colors = serie.vazio ? ['#e5e7eb'] : serie.colors;
+    const maxValue = Math.max(...values.map(value => Math.abs(Number(value || 0))), 1);
+    const chartHeight = Math.max(300, Math.min(620, labels.length * 46 + 76));
+    canvas.style.setProperty('height', `${chartHeight}px`, 'important');
+    canvas.dataset.empty = serie.vazio ? 'true' : 'false';
+
+    STATE.charts[chartKey] = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: options.label || 'Categorias',
+          data: values,
+          backgroundColor: colors,
+          borderRadius: 10,
+          borderSkipped: false,
+          maxBarThickness: 24
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        onHover: (event, elements) => {
+          canvas.style.cursor = !serie.vazio && elements.length ? 'pointer' : 'default';
+        },
+        onClick: (event, elements) => {
+          if (serie.vazio || !elements.length || typeof options.onClick !== 'function') return;
+          const index = elements[0].index;
+          const categoria = labels[index];
+          const items = serie.itemsByLabel?.[categoria] || [];
+          if (!items.length) return;
+
+          options.onClick({
+            tipo: options.tipo || 'categoria',
+            categoria,
+            total: Number(values[index] || 0),
+            items,
+            color: colors[index] || '#7a4dff'
+          });
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: context => context[0]?.label || 'Categoria',
+              label: context => serie.vazio ? 'Sem dados no período' : fmtMoney(Number(context.parsed.x || 0))
+            }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            suggestedMax: maxValue * 1.08,
+            ticks: {
+              callback: value => fmtMoney(Number(value)).replace('R$', 'R$ ')
+            },
+            grid: { color: '#eef0f4' }
+          },
+          y: {
+            ticks: {
+              color: '#302650',
+              font: { weight: 800 },
+              callback: function(value) {
+                const label = this.getLabelForValue(value);
+                return label.length > 24 ? `${label.slice(0, 24)}...` : label;
+              }
+            },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
   async function carregarDadosDashboard(inicio, fim) {
     try {
       const [resumo, comprasCartaoCategorias, auditoriaContas, auditoriaCartoes] = await Promise.all([
@@ -3529,9 +3612,11 @@ function abrirModalEditarConta(conta) {
   function drawReceitasPorCategoria(dados) {
     try {
       const serie = prepararSerieGrafico(agruparItensPorCategoria(dados.receitas));
-      try { if (STATE.charts.recCat) STATE.charts.recCat.destroy(); } catch (e) {}
-      STATE.charts.recCat = null;
-      renderCategoryBars(IDS.chartRecCat, serie, { tipo: 'receita', onClick: openDashboardCategoryDetail });
+      renderCategoryChart('recCat', IDS.chartRecCat, serie, {
+        tipo: 'receita',
+        label: 'Receitas por categoria',
+        onClick: openDashboardCategoryDetail
+      });
     } catch (e) { console.error('drawReceitasPorCategoria', e); }
   }
 
@@ -3539,9 +3624,11 @@ function abrirModalEditarConta(conta) {
     try {
       const baseCategorias = dados.despesasCategoriasGerenciais || dados.despesasComPrevisao;
       const serie = prepararSerieGrafico(agruparItensPorCategoria(baseCategorias));
-      try { if (STATE.charts.desCat) STATE.charts.desCat.destroy(); } catch (e) {}
-      STATE.charts.desCat = null;
-      renderCategoryBars(IDS.chartDesCat, serie, { tipo: 'despesa', onClick: openDashboardCategoryDetail });
+      renderCategoryChart('desCat', IDS.chartDesCat, serie, {
+        tipo: 'despesa',
+        label: 'Despesas por categoria',
+        onClick: openDashboardCategoryDetail
+      });
     } catch (e) { console.error('drawDespesasPorCategoria', e); }
   }
 
