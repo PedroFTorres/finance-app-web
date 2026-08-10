@@ -582,6 +582,27 @@ test("plano pro ou vip ativo libera limites ate a data de expiracao", () => {
   }), false);
 });
 
+test("frontend premium segue a mesma regra de expiracao do banco", () => {
+  const premiumClient = fs.readFileSync(path.join(__dirname, "../premium-access-client.js"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
+
+  assert.match(premiumClient, /subscription_ends_at/);
+  assert.match(premiumClient, /plano_expira_em/);
+  assert.match(premiumClient, /assinaturaNaoExpirou/);
+  assert.match(premiumClient, /planoNaoExpirou/);
+  assert.match(app, /premiumDateIsValid\(STATE\.profile\?\.subscription_ends_at\)/);
+  assert.match(app, /premiumDateIsValid\(STATE\.profile\?\.plano_expira_em\)/);
+});
+
+test("mensagem de bloqueio de plano aparece clara ao salvar lancamento", () => {
+  const app = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
+
+  assert.match(app, /function friendlySaveError/);
+  assert.match(app, /Plano Free permite ate 50 lancamentos/);
+  assert.match(app, /Verifique se sua assinatura está ativa ou faça upgrade/);
+  assert.doesNotMatch(app, /alert\('Erro ao salvar lançamento\. Veja console\.'\)/);
+});
+
 test("migracao do banco protege limites de plano nos inserts criticos", () => {
   const sql = fs.readFileSync(
     path.join(__dirname, "../supabase/migrations/202608090003_enforce_plan_limits.sql"),

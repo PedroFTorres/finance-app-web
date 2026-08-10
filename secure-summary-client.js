@@ -7,12 +7,14 @@
   "use strict";
 
   const FUNCTION_URL = "https://febwinynlbviadasgwlg.supabase.co/functions/v1/secure-summary";
+  const ENABLE_SECURE_SUMMARY = window.AROLIX_ENABLE_SECURE_SUMMARY === true;
 
   function fmtMoney(v) {
     return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
 
   async function carregarResumoSeguro() {
+    if (!ENABLE_SECURE_SUMMARY) return;
     if (!window.supabase?.auth) return;
     try {
       const { data } = await window.supabase.auth.getSession();

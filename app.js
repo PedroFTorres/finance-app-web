@@ -38,11 +38,36 @@
    function isVip() {
   return STATE.profile?.plano === "vip";
 }
+   function premiumDateIsValid(value) {
+  if (!value) return true;
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime()) && date > new Date();
+}
    function hasPremiumAccess() {
   const plano = String(STATE.profile?.plano || "").toLowerCase();
   const status = String(STATE.profile?.subscription_status || "").toLowerCase();
   const premiumPlan = plano === "pro" || plano === "vip";
-  return premiumPlan && status === "active";
+  return premiumPlan
+    && status === "active"
+    && premiumDateIsValid(STATE.profile?.subscription_ends_at)
+    && premiumDateIsValid(STATE.profile?.plano_expira_em);
+}
+   function friendlySaveError(error, fallback = "Erro ao salvar lançamento.") {
+  const raw = String(error?.message || error?.details || error?.hint || "");
+
+  if (/Plano Free permite ate 50 lancamentos/i.test(raw)) {
+    return "Seu plano Free permite até 50 lançamentos. Verifique se sua assinatura está ativa ou faça upgrade para continuar.";
+  }
+
+  if (/Plano Free permite ate 2 contas/i.test(raw)) {
+    return "Seu plano Free permite até 2 contas. Verifique se sua assinatura está ativa ou faça upgrade para continuar.";
+  }
+
+  if (/Cartao disponivel apenas no plano PRO/i.test(raw)) {
+    return "Cartão está disponível apenas no plano PRO/VIP ativo.";
+  }
+
+  return raw || fallback;
 }
   let BAIXA_ATUAL = null;
 let mesDashboardAtual = new Date();
@@ -3216,7 +3241,7 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
 
   } catch (e) {
     console.error('handleSaveModal', e);
-    alert('Erro ao salvar lançamento. Veja console.');
+    alert(friendlySaveError(e));
 
   } finally {
     // 🔓 sempre libera (mesmo com erro ou return)

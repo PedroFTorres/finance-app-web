@@ -8,7 +8,9 @@
     if (!profile) return false;
     const planoOk = ["pro", "vip"].includes((profile.plano || "").toLowerCase());
     const statusOk = (profile.subscription_status || "").toLowerCase() === "active";
-    return planoOk && statusOk;
+    const assinaturaNaoExpirou = !profile.subscription_ends_at || new Date(profile.subscription_ends_at) > new Date();
+    const planoNaoExpirou = !profile.plano_expira_em || new Date(profile.plano_expira_em) > new Date();
+    return planoOk && statusOk && assinaturaNaoExpirou && planoNaoExpirou;
   }
 
   function showUpgradeMessage() {
@@ -62,7 +64,7 @@
 
       const { data: profile, error } = await window.supabase
         .from("user_profiles")
-        .select("plano, subscription_status")
+        .select("plano, subscription_status, subscription_ends_at, plano_expira_em")
         .eq("id", user.id)
         .maybeSingle();
 
