@@ -603,14 +603,28 @@ test("mensagem de bloqueio de plano aparece clara ao salvar lancamento", () => {
   assert.doesNotMatch(app, /alert\('Erro ao salvar lançamento\. Veja console\.'\)/);
 });
 
-test("logos bancarias preservam banco em conta de investimento e incluem itau", () => {
+test("logos bancarias preservam banco em conta de investimento e cobrem catalogo principal", () => {
   const app = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
   const cartao = fs.readFileSync(path.join(__dirname, "../cartao.js"), "utf8");
-  const itauLogo = fs.readFileSync(path.join(__dirname, "../assets/banks/itau.svg"), "utf8");
+  const banksWithLogo = [
+    "bradesco",
+    "btg",
+    "inter",
+    "itau",
+    "mercadopago",
+    "picpay",
+    "safra",
+    "sicredi",
+    "sicoob",
+    "xp"
+  ];
 
-  assert.match(app, /code: 'itau'[\s\S]*?logo: 'assets\/banks\/itau\.svg'/);
-  assert.match(cartao, /code: 'itau'[\s\S]*?logo: 'assets\/banks\/itau\.svg'/);
-  assert.match(itauLogo, /Itaú/);
+  banksWithLogo.forEach((code) => {
+    const expectedLogo = `assets/banks/${code}.svg`;
+    assert.match(app, new RegExp(`code: '${code}'[\\s\\S]*?logo: '${expectedLogo.replace("/", "\\/")}'`));
+    assert.match(cartao, new RegExp(`code: '${code}'[\\s\\S]*?logo: '${expectedLogo.replace("/", "\\/")}'`));
+    assert.ok(fs.existsSync(path.join(__dirname, "..", expectedLogo)));
+  });
   assert.doesNotMatch(app, /tipo_conta === 'investimento'[\s\S]*?code: 'investimento'/);
 });
 
