@@ -463,36 +463,78 @@ function hasPremiumAccessRegra({
   return planoPremium && assinaturaAtiva && assinaturaNaoExpirou && planoNaoExpirou;
 }
 
+function hasFinancialAccessRegra({
+  plano = "free",
+  subscriptionStatus = "inactive",
+  subscriptionEndsAt = null,
+  planoExpiraEm = null,
+  trialStartedAt = null,
+  trialDays = 5,
+  now = new Date()
+} = {}) {
+  const planoNormalizado = String(plano || "free").toLowerCase();
+  const agora = now instanceof Date ? now : new Date(now);
+
+  if (planoNormalizado === "vip") {
+    return hasPremiumAccessRegra({ plano, subscriptionStatus, subscriptionEndsAt, planoExpiraEm, now: agora });
+  }
+
+  if (planoNormalizado === "pro") {
+    return hasPremiumAccessRegra({ plano, subscriptionStatus, subscriptionEndsAt, planoExpiraEm, now: agora });
+  }
+
+  const inicioTrial = trialStartedAt ? new Date(trialStartedAt) : null;
+  if (!inicioTrial || Number.isNaN(inicioTrial.getTime())) return false;
+
+  const fimTrial = new Date(inicioTrial.getTime() + Number(trialDays || 5) * 86400000);
+  return fimTrial > agora;
+}
+
+function hasInvestmentAccessRegra({
+  plano = "free",
+  subscriptionStatus = "inactive",
+  subscriptionEndsAt = null,
+  planoExpiraEm = null,
+  now = new Date()
+} = {}) {
+  return String(plano || "free").toLowerCase() === "vip"
+    && hasPremiumAccessRegra({ plano, subscriptionStatus, subscriptionEndsAt, planoExpiraEm, now });
+}
+
 function validarLimitePlano({
   recurso,
   plano = "free",
   subscriptionStatus = "inactive",
   subscriptionEndsAt = null,
   planoExpiraEm = null,
+  trialStartedAt = null,
   totalContas = 0,
   totalLancamentos = 0,
   now
 } = {}) {
-  const premium = hasPremiumAccessRegra({ plano, subscriptionStatus, subscriptionEndsAt, planoExpiraEm, now });
+  const financialAccess = hasFinancialAccessRegra({
+    plano,
+    subscriptionStatus,
+    subscriptionEndsAt,
+    planoExpiraEm,
+    trialStartedAt,
+    now
+  });
+  const investmentAccess = hasInvestmentAccessRegra({ plano, subscriptionStatus, subscriptionEndsAt, planoExpiraEm, now });
   const erros = [];
 
-  if (premium) {
-    return { ok: true, erros, premium };
+  if (recurso === "investimento" || recurso === "cvm") {
+    if (!investmentAccess) {
+      erros.push("Investimentos e CVM estão disponíveis apenas no plano VIP.");
+    }
+    return { ok: erros.length === 0, erros, financialAccess, investmentAccess };
   }
 
-  if (recurso === "conta" && Number(totalContas || 0) >= 2) {
-    erros.push("Plano Free permite ate 2 contas.");
+  if (!financialAccess) {
+    erros.push("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
   }
 
-  if (recurso === "cartao") {
-    erros.push("Cartao disponivel apenas no plano PRO.");
-  }
-
-  if (recurso === "lancamento" && Number(totalLancamentos || 0) >= 50) {
-    erros.push("Plano Free permite ate 50 lancamentos.");
-  }
-
-  return { ok: erros.length === 0, erros, premium };
+  return { ok: erros.length === 0, erros, financialAccess, investmentAccess };
 }
 
 module.exports = {
@@ -516,5 +558,7 @@ module.exports = {
   agruparItensPorCategoriaRegra,
   montarBaseDespesasPorCategoria,
   hasPremiumAccessRegra,
+  hasFinancialAccessRegra,
+  hasInvestmentAccessRegra,
   validarLimitePlano
 };

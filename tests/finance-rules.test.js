@@ -19,6 +19,8 @@ const {
   limparCategoriaDeItensRegra,
   montarBaseDespesasPorCategoria,
   hasPremiumAccessRegra,
+  hasFinancialAccessRegra,
+  hasInvestmentAccessRegra,
   validarLimitePlano,
   validarBaixaLancamento,
   validarPagamentoParcialCartao
@@ -531,23 +533,35 @@ test("classificadores protegem categorias contra movimentos tecnicos do cartao",
   assert.equal(isCompraCartaoGerencial({ descricao: "Estorno", valor: -10 }), false);
 });
 
-test("limites do plano free bloqueiam conta extra, cartao e lancamento acima do limite", () => {
-  assert.equal(validarLimitePlano({ recurso: "conta", totalContas: 1 }).ok, true);
+test("plano free libera app financeiro por 5 dias e bloqueia apos o teste", () => {
+  const now = new Date("2026-08-09T12:00:00Z");
 
-  const contaExtra = validarLimitePlano({ recurso: "conta", totalContas: 2 });
-  assert.equal(contaExtra.ok, false);
-  assert.match(contaExtra.erros.join(" "), /2 contas/);
+  assert.equal(hasFinancialAccessRegra({
+    plano: "free",
+    trialStartedAt: "2026-08-06T12:00:00Z",
+    now
+  }), true);
 
-  const cartaoFree = validarLimitePlano({ recurso: "cartao" });
-  assert.equal(cartaoFree.ok, false);
-  assert.match(cartaoFree.erros.join(" "), /PRO/);
+  assert.equal(validarLimitePlano({
+    recurso: "cartao",
+    plano: "free",
+    trialStartedAt: "2026-08-06T12:00:00Z",
+    totalContas: 99,
+    totalLancamentos: 999,
+    now
+  }).ok, true);
 
-  const lancamentoExtra = validarLimitePlano({ recurso: "lancamento", totalLancamentos: 50 });
-  assert.equal(lancamentoExtra.ok, false);
-  assert.match(lancamentoExtra.erros.join(" "), /50 lancamentos/);
+  const expirado = validarLimitePlano({
+    recurso: "lancamento",
+    plano: "free",
+    trialStartedAt: "2026-08-01T12:00:00Z",
+    now
+  });
+  assert.equal(expirado.ok, false);
+  assert.match(expirado.erros.join(" "), /período gratuito terminou/i);
 });
 
-test("plano pro ou vip ativo libera limites ate a data de expiracao", () => {
+test("pro ativo libera financeiro e apenas vip ativo libera investimentos", () => {
   const now = new Date("2026-08-09T12:00:00Z");
 
   assert.equal(hasPremiumAccessRegra({
@@ -559,13 +573,35 @@ test("plano pro ou vip ativo libera limites ate a data de expiracao", () => {
 
   assert.equal(validarLimitePlano({
     recurso: "cartao",
-    plano: "vip",
+    plano: "pro",
     subscriptionStatus: "active",
     planoExpiraEm: "2026-08-10T00:00:00Z",
     totalContas: 99,
     totalLancamentos: 999,
     now
   }).ok, true);
+
+  assert.equal(hasInvestmentAccessRegra({
+    plano: "pro",
+    subscriptionStatus: "active",
+    planoExpiraEm: "2026-08-10T00:00:00Z",
+    now
+  }), false);
+
+  assert.equal(validarLimitePlano({
+    recurso: "investimento",
+    plano: "pro",
+    subscriptionStatus: "active",
+    planoExpiraEm: "2026-08-10T00:00:00Z",
+    now
+  }).ok, false);
+
+  assert.equal(hasInvestmentAccessRegra({
+    plano: "vip",
+    subscriptionStatus: "active",
+    planoExpiraEm: "2026-08-10T00:00:00Z",
+    now
+  }), true);
 
   assert.equal(hasPremiumAccessRegra({
     plano: "pro",
@@ -588,18 +624,20 @@ test("frontend premium segue a mesma regra de expiracao do banco", () => {
 
   assert.match(premiumClient, /subscription_ends_at/);
   assert.match(premiumClient, /plano_expira_em/);
-  assert.match(premiumClient, /assinaturaNaoExpirou/);
-  assert.match(premiumClient, /planoNaoExpirou/);
+  assert.match(premiumClient, /trial_started_at/);
+  assert.match(premiumClient, /hasFinancialAccess/);
   assert.match(app, /premiumDateIsValid\(STATE\.profile\?\.subscription_ends_at\)/);
   assert.match(app, /premiumDateIsValid\(STATE\.profile\?\.plano_expira_em\)/);
+  assert.match(app, /function hasFinancialAccess/);
+  assert.match(app, /function hasInvestmentAccess/);
 });
 
 test("mensagem de bloqueio de plano aparece clara ao salvar lancamento", () => {
   const app = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
 
   assert.match(app, /function friendlySaveError/);
-  assert.match(app, /Plano Free permite ate 50 lancamentos/);
-  assert.match(app, /Verifique se sua assinatura está ativa ou faça upgrade/);
+  assert.match(app, /Seu período gratuito terminou/);
+  assert.match(app, /Investimentos e CVM estão disponíveis apenas para usuários VIP/);
   assert.doesNotMatch(app, /alert\('Erro ao salvar lançamento\. Veja console\.'\)/);
 });
 
@@ -632,21 +670,22 @@ test("logos bancarias preservam banco em conta de investimento e cobrem catalogo
   assert.doesNotMatch(app, /tipo_conta === 'investimento'[\s\S]*?code: 'investimento'/);
 });
 
-test("migracao do banco protege limites de plano nos inserts criticos", () => {
+test("migracao do banco protege regras finais de planos", () => {
   const sql = fs.readFileSync(
-    path.join(__dirname, "../supabase/migrations/202608090003_enforce_plan_limits.sql"),
+    path.join(__dirname, "../supabase/migrations/202608160001_plan_access_rules.sql"),
     "utf8"
   );
 
+  assert.match(sql, /trial_started_at/);
+  assert.match(sql, /arolix_has_financial_access/);
+  assert.match(sql, /arolix_has_investment_access/);
   assert.match(sql, /create or replace function public\.arolix_enforce_plan_limits\(\)/);
-  assert.match(sql, /before insert on public\.contas_bancarias/);
-  assert.match(sql, /before insert on public\.receitas/);
-  assert.match(sql, /before insert on public\.despesas/);
-  assert.match(sql, /before insert on public\.cartoes_credito/);
-  assert.match(sql, /Plano Free permite ate 2 contas/);
-  assert.match(sql, /Plano Free permite ate 50 lancamentos/);
-  assert.match(sql, /Cartao disponivel apenas no plano PRO/);
-  assert.doesNotMatch(sql, /security\s+definer/i);
+  assert.match(sql, /before insert or update or delete/);
+  assert.match(sql, /Investimentos e CVM estao disponiveis apenas no plano VIP/);
+  assert.match(sql, /Seu periodo gratuito terminou/);
+  assert.doesNotMatch(sql, /Plano Free permite ate 2 contas/);
+  assert.doesNotMatch(sql, /Plano Free permite ate 50 lancamentos/);
+  assert.doesNotMatch(sql, /Cartao disponivel apenas no plano PRO/);
 });
 
 test("fluxo de pagamento de fatura tem compensacao contra falha parcial", () => {

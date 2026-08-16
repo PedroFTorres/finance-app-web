@@ -1,16 +1,32 @@
 /* premium-access-client.js
-   Passo 3.2 — bloqueio premium no frontend com base em user_profiles.
+   Controle de acesso do app financeiro com base em user_profiles.
 */
 (function () {
   "use strict";
 
-  function hasPremiumAccess(profile) {
+  function dateIsValid(date) {
+    return !date || new Date(date) > new Date();
+  }
+
+  function hasFinancialAccess(profile) {
     if (!profile) return false;
-    const planoOk = ["pro", "vip"].includes((profile.plano || "").toLowerCase());
-    const statusOk = (profile.subscription_status || "").toLowerCase() === "active";
-    const assinaturaNaoExpirou = !profile.subscription_ends_at || new Date(profile.subscription_ends_at) > new Date();
-    const planoNaoExpirou = !profile.plano_expira_em || new Date(profile.plano_expira_em) > new Date();
-    return planoOk && statusOk && assinaturaNaoExpirou && planoNaoExpirou;
+    const plano = String(profile.plano || "free").toLowerCase();
+    const statusOk = String(profile.subscription_status || "").toLowerCase() === "active";
+    const paidOk = ["pro", "vip"].includes(plano)
+      && statusOk
+      && dateIsValid(profile.subscription_ends_at)
+      && dateIsValid(profile.plano_expira_em);
+
+    if (paidOk) return true;
+    if (plano !== "free") return false;
+
+    const trialStartedAt = profile.trial_started_at || profile.created_at;
+    if (!trialStartedAt) return false;
+
+    const start = new Date(trialStartedAt);
+    if (Number.isNaN(start.getTime())) return false;
+    const trialEndsAt = new Date(start.getTime() + 5 * 86400000);
+    return trialEndsAt > new Date();
   }
 
   function showUpgradeMessage() {
@@ -25,7 +41,7 @@
       font-size:14px;
     `;
     alert.appendChild(document.createTextNode(
-      "🔒 Recurso premium. Faça upgrade para liberar esta funcionalidade. "
+      "Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix. "
     ));
     const upgradeLink = document.createElement("a");
     upgradeLink.href = "upgrade.html";
@@ -38,19 +54,17 @@
     if (main) main.prepend(alert);
   }
 
-  function applyPremiumUI(accessGranted) {
-    // Exemplo de alvos premium (ajuste conforme seu app)
+  function applyAccessUI(accessGranted) {
     const premiumButtons = [
-      document.getElementById("btn-print-extrato"), // exemplo atual
+      document.getElementById("btn-print-extrato"),
     ].filter(Boolean);
 
     premiumButtons.forEach((btn) => {
       btn.disabled = !accessGranted;
       btn.style.opacity = accessGranted ? "1" : "0.55";
-      btn.title = accessGranted ? "" : "Recurso disponível apenas para assinantes Pro/VIP ativos";
+      btn.title = accessGranted ? "" : "Seu período gratuito terminou";
     });
 
-    // Se não tiver acesso, mostra aviso
     if (!accessGranted) showUpgradeMessage();
   }
 
@@ -64,7 +78,7 @@
 
       const { data: profile, error } = await window.supabase
         .from("user_profiles")
-        .select("plano, subscription_status, subscription_ends_at, plano_expira_em")
+        .select("plano, subscription_status, subscription_ends_at, plano_expira_em, trial_started_at, created_at")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -73,10 +87,10 @@
         return;
       }
 
-      const access = hasPremiumAccess(profile);
-      applyPremiumUI(access);
+      const access = hasFinancialAccess(profile);
+      applyAccessUI(access);
 
-      console.log("Premium access:", access, profile);
+      console.log("Financial access:", access, profile);
     } catch (err) {
       console.warn("Falha ao aplicar controle premium:", err);
     }

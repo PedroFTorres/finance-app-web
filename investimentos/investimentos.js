@@ -1,7 +1,3 @@
-const INVEST_ALLOWED_EMAILS = [
-  "pedrofernandot@gmail.com"
-];
-
 const IOF_TABLE = [
   0, 96, 93, 90, 86, 83, 80, 76, 73, 70, 66, 63, 60, 56, 53, 50,
   46, 43, 40, 36, 33, 30, 26, 23, 20, 16, 13, 10, 6, 3, 0
@@ -856,9 +852,18 @@ function setAccessAlert(text) {
   alert.classList.toggle("hidden", !text);
 }
 
+function premiumDateIsValid(date) {
+  return !date || new Date(date) > new Date();
+}
+
 function requireInvestmentAccess() {
-  const email = String(state.user?.email || "").toLowerCase();
-  return INVEST_ALLOWED_EMAILS.includes(email);
+  const profile = state.profile || {};
+  const plano = String(profile.plano || "").toLowerCase();
+  const status = String(profile.subscription_status || "").toLowerCase();
+  return plano === "vip"
+    && status === "active"
+    && premiumDateIsValid(profile.subscription_ends_at)
+    && premiumDateIsValid(profile.plano_expira_em);
 }
 
 async function loadSession() {
@@ -879,8 +884,13 @@ async function loadSession() {
   state.profile = profile || null;
 
   if (!requireInvestmentAccess()) {
-    setAccessAlert("Módulo de investimentos em beta privado. No lançamento público, ele será liberado por plano.");
-    el("form-investimento").classList.add("hidden");
+    setAccessAlert("Investimentos e CVM estão disponíveis apenas para usuários VIP.");
+    ["form-investimento", "form-resgate", "lista-investimentos"].forEach((id) => {
+      const node = el(id);
+      if (node) node.classList.add("hidden");
+    });
+    document.querySelectorAll(".invest-tabs, .invest-side").forEach((node) => node.classList.add("hidden"));
+    return false;
   }
 
   return true;

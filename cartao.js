@@ -394,13 +394,22 @@ if (contaFaturaConfirmar) {
   function hasPremiumAccess(profile) {
     const plano = String(profile?.plano || "").toLowerCase();
     const status = String(profile?.subscription_status || "").toLowerCase();
-    return (plano === "pro" || plano === "vip") && status === "active";
+    const premiumPlan = plano === "pro" || plano === "vip";
+    const assinaturaNaoExpirou = !profile?.subscription_ends_at || new Date(profile.subscription_ends_at) > new Date();
+    const planoNaoExpirou = !profile?.plano_expira_em || new Date(profile.plano_expira_em) > new Date();
+    if (premiumPlan && status === "active" && assinaturaNaoExpirou && planoNaoExpirou) return true;
+
+    const trialStartedAt = profile?.trial_started_at || profile?.created_at;
+    if (plano !== "free" || !trialStartedAt) return false;
+    const start = new Date(trialStartedAt);
+    if (Number.isNaN(start.getTime())) return false;
+    return new Date(start.getTime() + 5 * 86400000) > new Date();
   }
 
   async function requirePremiumAccess() {
     const { data: profile, error } = await supabase
       .from("user_profiles")
-      .select("plano, subscription_status")
+      .select("plano, subscription_status, subscription_ends_at, plano_expira_em, trial_started_at, created_at")
       .eq("id", state.user.id)
       .maybeSingle();
 
@@ -414,7 +423,7 @@ if (contaFaturaConfirmar) {
     state.profile = profile;
 
     if (!hasPremiumAccess(profile)) {
-      alert("Cartao disponivel apenas no plano PRO.");
+      alert("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
       window.location.href = "upgrade.html";
       return false;
     }

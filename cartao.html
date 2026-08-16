@@ -196,10 +196,24 @@
 <script src="supabase.js"></script>
 <script src="security.js?v=20260702-1"></script>
 <script type="module">
-  function hasPremiumAccess(profile) {
+  function dateIsValid(date) {
+    return !date || new Date(date) > new Date();
+  }
+
+  function hasFinancialAccess(profile) {
     const plano = String(profile?.plano || "").toLowerCase();
     const status = String(profile?.subscription_status || "").toLowerCase();
-    return (plano === "pro" || plano === "vip") && status === "active";
+    const paidOk = (plano === "pro" || plano === "vip")
+      && status === "active"
+      && dateIsValid(profile?.subscription_ends_at)
+      && dateIsValid(profile?.plano_expira_em);
+    if (paidOk) return true;
+
+    const trialStartedAt = profile?.trial_started_at || profile?.created_at;
+    if (plano !== "free" || !trialStartedAt) return false;
+    const start = new Date(trialStartedAt);
+    if (Number.isNaN(start.getTime())) return false;
+    return new Date(start.getTime() + 5 * 86400000) > new Date();
   }
 
   const { data: sessionResp } = await window.supabase.auth.getSession();
@@ -216,7 +230,7 @@
 
     const { data: profile, error } = await window.supabase
       .from("user_profiles")
-      .select("plano, subscription_status")
+      .select("plano, subscription_status, subscription_ends_at, plano_expira_em, trial_started_at, created_at")
       .eq("id", sessionResp.session.user.id)
       .maybeSingle();
 
@@ -224,8 +238,8 @@
       console.error("Erro ao validar acesso premium:", error);
       alert("Nao foi possivel validar seu plano agora. Tente novamente.");
       window.location.href = "app.html";
-    } else if (!hasPremiumAccess(profile)) {
-      alert("Cartao disponivel apenas no plano PRO.");
+    } else if (!hasFinancialAccess(profile)) {
+      alert("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
       window.location.href = "upgrade.html";
     } else {
       const originalAddEventListener = document.addEventListener.bind(document);

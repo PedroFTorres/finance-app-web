@@ -33,17 +33,17 @@
     subs: [] // para armazenar channels se quiser unsub later
   };
      function isPro() {
-  return STATE.profile?.plano === "pro";
+  return String(STATE.profile?.plano || "").toLowerCase() === "pro";
 }
    function isVip() {
-  return STATE.profile?.plano === "vip";
+  return String(STATE.profile?.plano || "").toLowerCase() === "vip";
 }
    function premiumDateIsValid(value) {
   if (!value) return true;
   const date = new Date(value);
   return !Number.isNaN(date.getTime()) && date > new Date();
 }
-   function hasPremiumAccess() {
+   function hasPaidAccess() {
   const plano = String(STATE.profile?.plano || "").toLowerCase();
   const status = String(STATE.profile?.subscription_status || "").toLowerCase();
   const premiumPlan = plano === "pro" || plano === "vip";
@@ -52,19 +52,28 @@
     && premiumDateIsValid(STATE.profile?.subscription_ends_at)
     && premiumDateIsValid(STATE.profile?.plano_expira_em);
 }
+   function hasFinancialAccess() {
+  if (hasPaidAccess()) return true;
+  const plano = String(STATE.profile?.plano || "free").toLowerCase();
+  if (plano !== "free") return false;
+  const startedAt = STATE.profile?.trial_started_at || STATE.profile?.created_at;
+  if (!startedAt) return false;
+  const start = new Date(startedAt);
+  if (Number.isNaN(start.getTime())) return false;
+  return new Date(start.getTime() + 5 * 86400000) > new Date();
+}
+   function hasInvestmentAccess() {
+  return isVip() && hasPaidAccess();
+}
    function friendlySaveError(error, fallback = "Erro ao salvar lançamento.") {
   const raw = String(error?.message || error?.details || error?.hint || "");
 
-  if (/Plano Free permite ate 50 lancamentos/i.test(raw)) {
-    return "Seu plano Free permite até 50 lançamentos. Verifique se sua assinatura está ativa ou faça upgrade para continuar.";
+  if (/periodo gratuito terminou|periodo de teste terminou|período gratuito terminou|periodo gratuito/i.test(raw)) {
+    return "Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.";
   }
 
-  if (/Plano Free permite ate 2 contas/i.test(raw)) {
-    return "Seu plano Free permite até 2 contas. Verifique se sua assinatura está ativa ou faça upgrade para continuar.";
-  }
-
-  if (/Cartao disponivel apenas no plano PRO/i.test(raw)) {
-    return "Cartão está disponível apenas no plano PRO/VIP ativo.";
+  if (/Investimentos.*VIP|CVM.*VIP|plano VIP/i.test(raw)) {
+    return "Investimentos e CVM estão disponíveis apenas para usuários VIP.";
   }
 
   return raw || fallback;
@@ -632,7 +641,7 @@ async function requireSessionOrRedirect() {
 const btnUpgrade = document.querySelector('[onclick*="upgrade.html"]');
 
 if (btnUpgrade && STATE.profile) {
-  if (hasPremiumAccess()) {
+  if (hasPaidAccess()) {
     btnUpgrade.style.display = "none";
   } else {
     btnUpgrade.style.display = "inline-block";
@@ -654,6 +663,24 @@ function goToUpgrade(msg) {
 
 // deixa global (importante!)
 window.goToUpgrade = goToUpgrade;
+
+const btnInvestimentos = document.getElementById("btn-investimentos");
+if (btnInvestimentos) {
+  btnInvestimentos.onclick = (event) => {
+    event.preventDefault();
+    if (!hasInvestmentAccess()) {
+      goToUpgrade("Investimentos e CVM estão disponíveis apenas para usuários VIP.");
+      return;
+    }
+    window.location.href = "investimentos/index.html";
+  };
+}
+
+document.querySelectorAll('[data-dashboard-tab="investimentos"], [data-dashboard-panel="investimentos"]').forEach((element) => {
+  if (!hasInvestmentAccess()) {
+    element.classList.add("hidden");
+  }
+});
      
      // ===================== AVATAR HEADER =====================
 
@@ -678,7 +705,8 @@ if (STATE.profile?.nome) {
     // fallback de segurança
     if (!STATE.profile) {
       STATE.profile = {
-        plan: "free",
+        plano: "free",
+        trial_started_at: STATE.user?.created_at || new Date().toISOString(),
         onboarding_completed: false
       };
     }
@@ -2128,8 +2156,8 @@ const UI = {
   btnSave.addEventListener("click", async function () {
     const editId = btnSave.dataset.editId;
      // 🔥 BLOQUEIO PLANO FREE
-if (!editId && !hasPremiumAccess() && STATE.contas.length >= 2) {
-  goToUpgrade("Plano Free permite até 2 contas.");
+if (!editId && !hasFinancialAccess()) {
+  goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
   return;
 }
     const bankCode = document.getElementById("modal-conta-banco")?.value || "";
@@ -2295,8 +2323,8 @@ const btnCartao = document.getElementById("btn-cartao");
 if (btnCartao) {
   btnCartao.addEventListener("click", () => {
 
-    if (!hasPremiumAccess()) {
-      goToUpgrade("Cartão disponível apenas no plano PRO.");
+    if (!hasFinancialAccess()) {
+      goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
       return;
     }
 
@@ -3044,13 +3072,9 @@ modal.setAttribute("aria-hidden", "false");
     const descricao = $(IDS.modalDesc).value.trim();
     const valor = Number($(IDS.modalValor).value || 0);
      // 🔥 BLOQUEIO DE LANÇAMENTOS (PLANO FREE)
-if (!hasPremiumAccess()) {
-  const totalLanc = (STATE.receitas?.length || 0) + (STATE.despesas?.length || 0);
-
-  if (totalLanc >= 50 && !saveBtn?.dataset?.editId) {
-    goToUpgrade("Plano Free permite até 50 lançamentos.");
-    return;
-  }
+if (!hasFinancialAccess() && !saveBtn?.dataset?.editId) {
+  goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
+  return;
 }
     const data = $(IDS.modalData).value || isoToday();
     const conta_id = $(IDS.modalConta).value || null;
