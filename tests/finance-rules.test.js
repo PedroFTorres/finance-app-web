@@ -606,21 +606,20 @@ test("mensagem de bloqueio de plano aparece clara ao salvar lancamento", () => {
 test("logos bancarias preservam banco em conta de investimento e cobrem catalogo principal", () => {
   const app = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
   const cartao = fs.readFileSync(path.join(__dirname, "../cartao.js"), "utf8");
-  const banksWithLogo = [
-    "bradesco",
-    "btg",
-    "inter",
-    "itau",
-    "mercadopago",
-    "picpay",
-    "safra",
-    "sicredi",
-    "sicoob",
-    "xp"
-  ];
+  const bankLogoFiles = {
+    bradesco: "assets/banks/bradesco.png",
+    btg: "assets/banks/btg.svg",
+    inter: "assets/banks/inter.png",
+    itau: "assets/banks/itau.png",
+    mercadopago: "assets/banks/mercadopago.png",
+    picpay: "assets/banks/picpay.svg",
+    safra: "assets/banks/safra.png",
+    sicredi: "assets/banks/sicredi.png",
+    sicoob: "assets/banks/sicoob.png",
+    xp: "assets/banks/xp.png"
+  };
 
-  banksWithLogo.forEach((code) => {
-    const expectedLogo = `assets/banks/${code}.svg`;
+  Object.entries(bankLogoFiles).forEach(([code, expectedLogo]) => {
     const expectedLogoPattern = `${expectedLogo.replace("/", "\\/")}(?:\\?v=\\d{8}-\\d)?`;
     assert.match(app, new RegExp(`code: '${code}'[\\s\\S]*?logo: '${expectedLogoPattern}'`));
     assert.match(cartao, new RegExp(`code: '${code}'[\\s\\S]*?logo: '${expectedLogoPattern}'`));
