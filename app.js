@@ -262,7 +262,7 @@ let mesExtratoAtual = new Date();
     { code: 'santander', name: 'Santander', aliases: ['santander'], initials: 'S', logo: 'assets/banks/santander.svg', color: '#e1251b', bg: '#fff1f1' },
     { code: 'bb', name: 'Banco do Brasil', aliases: ['banco do brasil', 'bb'], initials: 'BB', logo: 'assets/banks/bb.svg', color: '#f8d117', bg: '#fff8cc' },
     { code: 'caixa', name: 'Caixa Econômica Federal', aliases: ['caixa', 'cef', 'caixa economica'], initials: 'CX', logo: 'assets/banks/caixa.svg', color: '#005ca9', bg: '#eaf5ff' },
-    { code: 'itau', name: 'Itaú', aliases: ['itau', 'itaú'], initials: 'IT', color: '#ec7000', bg: '#fff2e8' },
+    { code: 'itau', name: 'Itaú', aliases: ['itau', 'itaú'], initials: 'IT', logo: 'assets/banks/itau.svg', color: '#ec7000', bg: '#fff2e8' },
     { code: 'bradesco', name: 'Bradesco', aliases: ['bradesco'], initials: 'BR', color: '#cc092f', bg: '#fff0f3' },
     { code: 'nubank', name: 'Nubank', aliases: ['nubank', 'nu bank', 'nu'], initials: 'NU', color: '#820ad1', bg: '#f7edff' },
     { code: 'inter', name: 'Inter', aliases: ['inter', 'banco inter'], initials: 'IN', color: '#ff7a00', bg: '#fff3e6' },
@@ -298,9 +298,6 @@ let mesExtratoAtual = new Date();
 
   function getBankFromConta(conta) {
     if (!conta) return findBankByCode('other');
-    if (conta.tipo_conta === 'investimento' && !normalizeBankText(conta.nome).includes('santander')) {
-      return { code: 'investimento', name: 'Investimento', aliases: [], initials: '💼', color: '#7c4dff', bg: '#f4f0ff' };
-    }
     return detectBankFromName(conta.nome);
   }
 

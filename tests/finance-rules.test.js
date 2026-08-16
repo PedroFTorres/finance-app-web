@@ -603,6 +603,17 @@ test("mensagem de bloqueio de plano aparece clara ao salvar lancamento", () => {
   assert.doesNotMatch(app, /alert\('Erro ao salvar lançamento\. Veja console\.'\)/);
 });
 
+test("logos bancarias preservam banco em conta de investimento e incluem itau", () => {
+  const app = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
+  const cartao = fs.readFileSync(path.join(__dirname, "../cartao.js"), "utf8");
+  const itauLogo = fs.readFileSync(path.join(__dirname, "../assets/banks/itau.svg"), "utf8");
+
+  assert.match(app, /code: 'itau'[\s\S]*?logo: 'assets\/banks\/itau\.svg'/);
+  assert.match(cartao, /code: 'itau'[\s\S]*?logo: 'assets\/banks\/itau\.svg'/);
+  assert.match(itauLogo, /Itaú/);
+  assert.doesNotMatch(app, /tipo_conta === 'investimento'[\s\S]*?code: 'investimento'/);
+});
+
 test("migracao do banco protege limites de plano nos inserts criticos", () => {
   const sql = fs.readFileSync(
     path.join(__dirname, "../supabase/migrations/202608090003_enforce_plan_limits.sql"),
