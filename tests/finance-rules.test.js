@@ -621,8 +621,9 @@ test("logos bancarias preservam banco em conta de investimento e cobrem catalogo
 
   banksWithLogo.forEach((code) => {
     const expectedLogo = `assets/banks/${code}.svg`;
-    assert.match(app, new RegExp(`code: '${code}'[\\s\\S]*?logo: '${expectedLogo.replace("/", "\\/")}'`));
-    assert.match(cartao, new RegExp(`code: '${code}'[\\s\\S]*?logo: '${expectedLogo.replace("/", "\\/")}'`));
+    const expectedLogoPattern = `${expectedLogo.replace("/", "\\/")}(?:\\?v=\\d{8}-\\d)?`;
+    assert.match(app, new RegExp(`code: '${code}'[\\s\\S]*?logo: '${expectedLogoPattern}'`));
+    assert.match(cartao, new RegExp(`code: '${code}'[\\s\\S]*?logo: '${expectedLogoPattern}'`));
     assert.ok(fs.existsSync(path.join(__dirname, "..", expectedLogo)));
   });
   assert.doesNotMatch(app, /tipo_conta === 'investimento'[\s\S]*?code: 'investimento'/);
