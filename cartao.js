@@ -50,7 +50,7 @@ function initCartaoPage() {
   const BANK_CATALOG = [
     { code: 'santander', name: 'Santander', aliases: ['santander'], initials: 'S', logo: 'assets/banks/santander.png?v=20260816-5', color: '#e1251b', bg: '#fff1f1' },
     { code: 'bb', name: 'Banco do Brasil', aliases: ['banco do brasil', 'bb'], initials: 'BB', logo: 'assets/banks/bb.png?v=20260816-5', color: '#f8d117', bg: '#fff8cc' },
-    { code: 'caixa', name: 'Caixa Econômica Federal', aliases: ['caixa', 'cef', 'caixa economica'], initials: 'CX', logo: 'assets/banks/caixa.png?v=20260816-5', color: '#005ca9', bg: '#eaf5ff' },
+    { code: 'caixa', name: 'Caixa Econômica Federal', aliases: ['caixa', 'cef', 'caixa economica'], initials: 'CX', logo: 'assets/banks/caixa.png?v=20260816-6', color: '#005ca9', bg: '#eaf5ff' },
     { code: 'itau', name: 'Itaú', aliases: ['itau', 'itaú'], initials: 'IT', logo: 'assets/banks/itau.png?v=20260816-4', color: '#ec7000', bg: '#fff2e8' },
     { code: 'bradesco', name: 'Bradesco', aliases: ['bradesco'], initials: 'BR', logo: 'assets/banks/bradesco.png?v=20260816-4', color: '#cc092f', bg: '#fff0f3' },
     { code: 'nubank', name: 'Nubank', aliases: ['nubank', 'nu bank', 'nu'], initials: 'NU', color: '#820ad1', bg: '#f7edff' },
