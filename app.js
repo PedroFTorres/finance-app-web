@@ -259,14 +259,14 @@ let mesExtratoAtual = new Date();
 
   const BANK_CATALOG = [
     { code: '', name: 'Selecione o banco', aliases: [], initials: '🏦', color: '#7c4dff', bg: '#f4f0ff' },
-    { code: 'santander', name: 'Santander', aliases: ['santander'], initials: 'S', logo: 'assets/banks/santander.svg', color: '#e1251b', bg: '#fff1f1' },
-    { code: 'bb', name: 'Banco do Brasil', aliases: ['banco do brasil', 'bb'], initials: 'BB', logo: 'assets/banks/bb.svg', color: '#f8d117', bg: '#fff8cc' },
-    { code: 'caixa', name: 'Caixa Econômica Federal', aliases: ['caixa', 'cef', 'caixa economica'], initials: 'CX', logo: 'assets/banks/caixa.svg', color: '#005ca9', bg: '#eaf5ff' },
+    { code: 'santander', name: 'Santander', aliases: ['santander'], initials: 'S', logo: 'assets/banks/santander.png?v=20260816-5', color: '#e1251b', bg: '#fff1f1' },
+    { code: 'bb', name: 'Banco do Brasil', aliases: ['banco do brasil', 'bb'], initials: 'BB', logo: 'assets/banks/bb.png?v=20260816-5', color: '#f8d117', bg: '#fff8cc' },
+    { code: 'caixa', name: 'Caixa Econômica Federal', aliases: ['caixa', 'cef', 'caixa economica'], initials: 'CX', logo: 'assets/banks/caixa.png?v=20260816-5', color: '#005ca9', bg: '#eaf5ff' },
     { code: 'itau', name: 'Itaú', aliases: ['itau', 'itaú'], initials: 'IT', logo: 'assets/banks/itau.png?v=20260816-4', color: '#ec7000', bg: '#fff2e8' },
     { code: 'bradesco', name: 'Bradesco', aliases: ['bradesco'], initials: 'BR', logo: 'assets/banks/bradesco.png?v=20260816-4', color: '#cc092f', bg: '#fff0f3' },
     { code: 'nubank', name: 'Nubank', aliases: ['nubank', 'nu bank', 'nu'], initials: 'NU', color: '#820ad1', bg: '#f7edff' },
     { code: 'inter', name: 'Inter', aliases: ['inter', 'banco inter'], initials: 'IN', logo: 'assets/banks/inter.png?v=20260816-4', color: '#ff7a00', bg: '#fff3e6' },
-    { code: 'c6', name: 'C6 Bank', aliases: ['c6', 'c6 bank'], initials: 'C6', color: '#111827', bg: '#f3f4f6' },
+    { code: 'c6', name: 'C6 Bank', aliases: ['c6', 'c6 bank'], initials: 'C6', logo: 'assets/banks/c6.png?v=20260816-5', color: '#111827', bg: '#f3f4f6' },
     { code: 'btg', name: 'BTG Pactual', aliases: ['btg', 'btg pactual'], initials: 'BTG', logo: 'assets/banks/btg.svg?v=20260816-3', color: '#0b1f3a', bg: '#edf4ff' },
     { code: 'safra', name: 'Safra', aliases: ['safra', 'banco safra'], initials: 'SF', logo: 'assets/banks/safra.png?v=20260816-4', color: '#0f3b82', bg: '#edf3ff' },
     { code: 'sicredi', name: 'Sicredi', aliases: ['sicredi'], initials: 'SI', logo: 'assets/banks/sicredi.png?v=20260816-4', color: '#39a935', bg: '#effaf0' },

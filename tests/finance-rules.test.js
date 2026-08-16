@@ -607,13 +607,17 @@ test("logos bancarias preservam banco em conta de investimento e cobrem catalogo
   const app = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
   const cartao = fs.readFileSync(path.join(__dirname, "../cartao.js"), "utf8");
   const bankLogoFiles = {
+    bb: "assets/banks/bb.png",
     bradesco: "assets/banks/bradesco.png",
     btg: "assets/banks/btg.svg",
+    c6: "assets/banks/c6.png",
+    caixa: "assets/banks/caixa.png",
     inter: "assets/banks/inter.png",
     itau: "assets/banks/itau.png",
     mercadopago: "assets/banks/mercadopago.png",
     picpay: "assets/banks/picpay.svg",
     safra: "assets/banks/safra.png",
+    santander: "assets/banks/santander.png",
     sicredi: "assets/banks/sicredi.png",
     sicoob: "assets/banks/sicoob.png",
     xp: "assets/banks/xp.png"
