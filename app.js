@@ -32,48 +32,30 @@
     charts: { recCat: null, desCat: null, resumo: null, investimentos: null },
     subs: [] // para armazenar channels se quiser unsub later
   };
-     function isPro() {
-  return String(STATE.profile?.plano || "").toLowerCase() === "pro";
-}
-   function isVip() {
-  return String(STATE.profile?.plano || "").toLowerCase() === "vip";
-}
-   function premiumDateIsValid(value) {
-  if (!value) return true;
-  const date = new Date(value);
-  return !Number.isNaN(date.getTime()) && date > new Date();
-}
-   function hasPaidAccess() {
-  const plano = String(STATE.profile?.plano || "").toLowerCase();
-  const status = String(STATE.profile?.subscription_status || "").toLowerCase();
-  const premiumPlan = plano === "pro" || plano === "vip";
-  return premiumPlan
-    && status === "active"
-    && premiumDateIsValid(STATE.profile?.subscription_ends_at)
-    && premiumDateIsValid(STATE.profile?.plano_expira_em);
-}
-   function hasFinancialAccess() {
-  if (hasPaidAccess()) return true;
-  const plano = String(STATE.profile?.plano || "free").toLowerCase();
-  if (plano !== "free") return false;
-  const startedAt = STATE.profile?.trial_started_at || STATE.profile?.created_at;
-  if (!startedAt) return false;
-  const start = new Date(startedAt);
-  if (Number.isNaN(start.getTime())) return false;
-  return new Date(start.getTime() + 5 * 86400000) > new Date();
-}
-   function hasInvestmentAccess() {
-  return isVip() && hasPaidAccess();
-}
+  function accessRules() {
+    return window.ArolixAccess || {};
+  }
+
+  function hasPaidAccess() {
+    return !!accessRules().hasPaidAccess?.(STATE.profile);
+  }
+
+  function hasFinancialAccess() {
+    return !!accessRules().hasFinancialAccess?.(STATE.profile);
+  }
+
+  function hasInvestmentAccess() {
+    return !!accessRules().hasInvestmentAccess?.(STATE.profile);
+  }
    function friendlySaveError(error, fallback = "Erro ao salvar lançamento.") {
   const raw = String(error?.message || error?.details || error?.hint || "");
 
   if (/periodo gratuito terminou|periodo de teste terminou|período gratuito terminou|periodo gratuito/i.test(raw)) {
-    return "Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.";
+    return accessRules().financialBlockedMessage?.() || "Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.";
   }
 
   if (/Investimentos.*VIP|CVM.*VIP|plano VIP/i.test(raw)) {
-    return "Investimentos e CVM estão disponíveis apenas para usuários VIP.";
+    return accessRules().investmentBlockedMessage?.() || "Investimentos e CVM estão disponíveis apenas para usuários VIP.";
   }
 
   return raw || fallback;
@@ -653,9 +635,13 @@ window.STATE = STATE;
      // =========================// UPGRADE FLOW (GLOBAL)// =========================
 
 function goToUpgrade(msg) {
-  alert(msg + "\n\n👉 Faça upgrade para liberar.");
+  const centralGoToUpgrade = accessRules().goToUpgrade;
+  if (typeof centralGoToUpgrade === "function") {
+    centralGoToUpgrade(msg);
+    return;
+  }
 
-  // pequeno delay pra UX melhor
+  alert(msg + "\n\nFaça upgrade para liberar.");
   setTimeout(() => {
     window.location.href = "upgrade.html";
   }, 500);

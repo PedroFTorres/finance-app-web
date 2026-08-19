@@ -852,18 +852,8 @@ function setAccessAlert(text) {
   alert.classList.toggle("hidden", !text);
 }
 
-function premiumDateIsValid(date) {
-  return !date || new Date(date) > new Date();
-}
-
 function requireInvestmentAccess() {
-  const profile = state.profile || {};
-  const plano = String(profile.plano || "").toLowerCase();
-  const status = String(profile.subscription_status || "").toLowerCase();
-  return plano === "vip"
-    && status === "active"
-    && premiumDateIsValid(profile.subscription_ends_at)
-    && premiumDateIsValid(profile.plano_expira_em);
+  return !!window.ArolixAccess?.hasInvestmentAccess(state.profile || {});
 }
 
 async function loadSession() {

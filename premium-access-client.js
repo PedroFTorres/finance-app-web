@@ -1,23 +1,36 @@
 /* premium-access-client.js
-   Controle de acesso do app financeiro com base em user_profiles.
+   Regras centrais de acesso do Arolix.
 */
 (function () {
   "use strict";
 
   function dateIsValid(date) {
-    return !date || new Date(date) > new Date();
+    if (!date) return true;
+    const parsed = new Date(date);
+    return !Number.isNaN(parsed.getTime()) && parsed > new Date();
+  }
+
+  function planOf(profile) {
+    return String(profile?.plano || "free").toLowerCase();
+  }
+
+  function statusOf(profile) {
+    return String(profile?.subscription_status || "").toLowerCase();
+  }
+
+  function hasPaidAccess(profile) {
+    const plano = planOf(profile);
+    return ["pro", "vip"].includes(plano)
+      && statusOf(profile) === "active"
+      && dateIsValid(profile?.subscription_ends_at)
+      && dateIsValid(profile?.plano_expira_em);
   }
 
   function hasFinancialAccess(profile) {
     if (!profile) return false;
-    const plano = String(profile.plano || "free").toLowerCase();
-    const statusOk = String(profile.subscription_status || "").toLowerCase() === "active";
-    const paidOk = ["pro", "vip"].includes(plano)
-      && statusOk
-      && dateIsValid(profile.subscription_ends_at)
-      && dateIsValid(profile.plano_expira_em);
+    const plano = planOf(profile);
 
-    if (paidOk) return true;
+    if (hasPaidAccess(profile)) return true;
     if (plano !== "free") return false;
 
     const trialStartedAt = profile.trial_started_at || profile.created_at;
@@ -28,6 +41,35 @@
     const trialEndsAt = new Date(start.getTime() + 5 * 86400000);
     return trialEndsAt > new Date();
   }
+
+  function hasInvestmentAccess(profile) {
+    return planOf(profile) === "vip" && hasPaidAccess(profile);
+  }
+
+  function financialBlockedMessage() {
+    return "Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.";
+  }
+
+  function investmentBlockedMessage() {
+    return "Investimentos e CVM estão disponíveis apenas para usuários VIP.";
+  }
+
+  function goToUpgrade(msg) {
+    alert((msg || financialBlockedMessage()) + "\n\nFaça upgrade para liberar.");
+    setTimeout(() => {
+      window.location.href = "upgrade.html";
+    }, 500);
+  }
+
+  window.ArolixAccess = {
+    dateIsValid,
+    hasPaidAccess,
+    hasFinancialAccess,
+    hasInvestmentAccess,
+    financialBlockedMessage,
+    investmentBlockedMessage,
+    goToUpgrade
+  };
 
   function showUpgradeMessage() {
     // Evita duplicar aviso
@@ -40,9 +82,7 @@
       background:#fff3cd;color:#664d03;border:1px solid #ffecb5;
       font-size:14px;
     `;
-    alert.appendChild(document.createTextNode(
-      "Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix. "
-    ));
+    alert.appendChild(document.createTextNode(`${financialBlockedMessage()} `));
     const upgradeLink = document.createElement("a");
     upgradeLink.href = "upgrade.html";
     upgradeLink.textContent = "Ir para upgrade";
