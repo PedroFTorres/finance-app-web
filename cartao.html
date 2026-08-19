@@ -63,6 +63,7 @@
   <h3 id="fatura-titulo"></h3>
   <p id="fatura-periodo"></p>
   <p id="fatura-total" class="valor-fatura"></p>
+  <div id="fatura-status-banner" class="fatura-status-banner hidden"></div>
 
   <ul id="lista-fatura" class="lista-fatura"></ul>
 
@@ -256,7 +257,7 @@
       };
 
       try {
-        await import("./cartao.js?v=20260816-5");
+        await import("./cartao.js?v=20260819-1");
       } finally {
         document.addEventListener = originalAddEventListener;
       }

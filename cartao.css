@@ -102,6 +102,35 @@
   overflow: hidden;
 }
 
+.fatura-status-banner {
+  margin: 12px 0 4px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid #fecaca;
+  background: linear-gradient(135deg, #fff1f2, #fff7ed);
+  color: #b91c1c;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-align: center;
+  text-transform: uppercase;
+  box-shadow: 0 10px 26px rgba(239, 68, 68, .08);
+}
+
+.fatura-status-banner.paga {
+  border-color: #bbf7d0;
+  background: linear-gradient(135deg, #f0fdf4, #ecfeff);
+  color: #15803d;
+}
+
+.lista-fatura.fatura-bloqueada li {
+  cursor: not-allowed;
+}
+
+.lista-fatura.fatura-bloqueada li:hover {
+  background: transparent;
+}
+
 .lista-fatura li.fatura-row {
   display: grid;
   grid-template-columns: 96px minmax(180px, 1fr) 88px 120px;

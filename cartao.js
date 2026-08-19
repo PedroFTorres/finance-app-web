@@ -941,6 +941,67 @@ if (btnFatNext) {
   };
 }
 
+  function isFaturaFechada(fatura) {
+    return fatura?.pago || fatura?.status === "fechada";
+  }
+
+  function getMesAnoFromISO(dateISO) {
+    if (!dateISO) return null;
+    const d = new Date(`${dateISO}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return null;
+    return {
+      ano: d.getFullYear(),
+      mes: d.getMonth() + 1
+    };
+  }
+
+  async function buscarFaturaDoLancamento(lancamento) {
+    const periodo = getMesAnoFromISO(lancamento?.data_fatura);
+    if (!periodo || !lancamento?.cartao_id) return null;
+
+    const { data, error } = await supabase
+      .from("cartao_faturas")
+      .select("id, status, pago, mes, ano")
+      .eq("user_id", state.user.id)
+      .eq("cartao_id", lancamento.cartao_id)
+      .eq("ano", periodo.ano)
+      .eq("mes", periodo.mes)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Erro ao validar fatura da compra:", error);
+      showToast("Não foi possível validar a fatura desta compra.", "error");
+      return { bloqueadaPorErro: true };
+    }
+
+    return data;
+  }
+
+  async function lancamentoEstaEmFaturaFechada(lancamento) {
+    const fatura = await buscarFaturaDoLancamento(lancamento);
+    return Boolean(fatura?.bloqueadaPorErro || isFaturaFechada(fatura));
+  }
+
+  async function podeEditarLancamentoCartao(lancamento) {
+    if (await lancamentoEstaEmFaturaFechada(lancamento)) {
+      showToast("Esta compra pertence a uma fatura fechada e não pode ser editada.", "warning");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function podeAlterarParcelas(parcelas = []) {
+    for (const parcela of parcelas) {
+      if (await lancamentoEstaEmFaturaFechada(parcela)) {
+        showToast("Esta compra tem parcela em fatura fechada e não pode ser alterada.", "warning");
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   // =========================== // CARREGAR FATURA / RENDER (USANDO data_fatura) // ===========================
   
 async function loadFaturaForSelected() {
@@ -1011,6 +1072,7 @@ async function loadFaturaForSelected() {
   });
 
   listaComprasFatura.innerHTML = "";
+  listaComprasFatura.classList.toggle("fatura-bloqueada", isFaturaFechada(state.faturaAtual));
 
   if (!compras || compras.length === 0) {
     listaComprasFatura.innerHTML = `
@@ -1068,20 +1130,52 @@ async function loadFaturaForSelected() {
   function updateButtonsForFatura() {
     const existingReabrir = document.getElementById("btn-reabrir-fatura");
     if (existingReabrir) existingReabrir.remove();
-    const statusEl = document.getElementById("status-fatura");
+    const statusEl = document.getElementById("fatura-status-banner");
+    const btnGerarDespesa = document.getElementById("btn-gerar-despesa");
+    const fechada = isFaturaFechada(state.faturaAtual);
+
+    if (btnFecharFatura) {
+      btnFecharFatura.disabled = false;
+      btnFecharFatura.textContent = "Fechar Fatura";
+    }
+
+    if (btnGerarDespesa) btnGerarDespesa.disabled = true;
 
     if (state.faturaAtual) {
      
       if (state.faturaAtual.pago) {
+        if (btnFecharFatura) {
+          btnFecharFatura.disabled = true;
+          btnFecharFatura.textContent = "Fatura Paga";
+        }
         if (btnPagarFatura) { btnPagarFatura.disabled = true; btnPagarFatura.textContent = "Fatura Paga"; }
-        if (statusEl) statusEl.textContent = "FATURA PAGA";
+        if (statusEl) {
+          statusEl.textContent = "Fatura paga";
+          statusEl.classList.remove("hidden");
+          statusEl.classList.add("paga");
+        }
         return;
       }
 
-      if (btnPagarFatura) { btnPagarFatura.disabled = false; btnPagarFatura.textContent = "Pagar Fatura"; }
-      if (statusEl) statusEl.textContent = "FATURA FECHADA";
+      if (statusEl) {
+        statusEl.classList.toggle("hidden", !fechada);
+        statusEl.classList.remove("paga");
+        statusEl.textContent = fechada ? "Fatura fechada" : "";
+      }
 
-      if (btnFecharFatura && btnFecharFatura.parentNode && !document.getElementById("btn-reabrir-fatura")) {
+      if (btnPagarFatura) {
+        btnPagarFatura.disabled = !fechada;
+        btnPagarFatura.textContent = fechada ? "Pagar Fatura" : "Pagar Fatura";
+      }
+
+      if (btnGerarDespesa) btnGerarDespesa.disabled = !fechada;
+
+      if (btnFecharFatura && fechada) {
+        btnFecharFatura.disabled = true;
+        btnFecharFatura.textContent = "Fatura Fechada";
+      }
+
+      if (fechada && btnFecharFatura && btnFecharFatura.parentNode && !document.getElementById("btn-reabrir-fatura")) {
         const btn = document.createElement("button");
         btn.id = "btn-reabrir-fatura";
         btn.className = "btn-secondary";
@@ -1093,7 +1187,11 @@ async function loadFaturaForSelected() {
 
     } else {
       if (btnPagarFatura) { btnPagarFatura.disabled = false; btnPagarFatura.textContent = "Gerar Despesa"; }
-      if (statusEl) statusEl.textContent = "";
+      if (statusEl) {
+        statusEl.textContent = "";
+        statusEl.classList.add("hidden");
+        statusEl.classList.remove("paga");
+      }
     }
   }
 
@@ -1142,6 +1240,25 @@ async function fecharFaturaComConta(conta_id) {
       return;
     }
 
+    const { data: faturaExistente, error: errFaturaExistente } = await supabase
+      .from("cartao_faturas")
+      .select("id, status, pago")
+      .eq("user_id", state.user.id)
+      .eq("cartao_id", activeCardId)
+      .eq("ano", ano)
+      .eq("mes", mes)
+      .maybeSingle();
+
+    if (errFaturaExistente) throw errFaturaExistente;
+
+    if (faturaExistente && (isFaturaFechada(faturaExistente) || faturaExistente.status !== "aberta")) {
+      modalContaFatura.classList.add("hidden");
+      state.faturaAtual = faturaExistente;
+      updateButtonsForFatura();
+      showToast("Esta fatura já está fechada.", "warning");
+      return;
+    }
+
     // 🔹 buscar compras do mês
     const { data: compras, error: errCompras } = await supabase
       .from("cartao_lancamentos")
@@ -1163,22 +1280,6 @@ async function fecharFaturaComConta(conta_id) {
 
     const card =
       state.cards.find(c => c.id === activeCardId) || { nome: "Cartão" };
-
-    const { data: faturaExistente, error: errBuscaFatura } = await supabase
-      .from("cartao_faturas")
-      .select("id,status,pago")
-      .eq("user_id", state.user.id)
-      .eq("cartao_id", activeCardId)
-      .eq("ano", ano)
-      .eq("mes", mes)
-      .maybeSingle();
-
-    if (errBuscaFatura) throw errBuscaFatura;
-
-    if (faturaExistente && faturaExistente.status !== "aberta") {
-      showToast("Esta fatura já foi fechada ou paga.", "warning");
-      return;
-    }
 
     let fData = null;
     let faturaCriada = false;
@@ -1276,8 +1377,32 @@ if (btnFecharFatura) {
       return;
     }
 
-    if (state.faturaAtual?.status === "fechada") {
+    if (isFaturaFechada(state.faturaAtual)) {
       showToast("Esta fatura já está fechada.", "error");
+      return;
+    }
+
+    const ano = mesFatura.getFullYear();
+    const mes = mesFatura.getMonth() + 1;
+    const { data: faturaExistente, error: errFaturaExistente } = await supabase
+      .from("cartao_faturas")
+      .select("id, status, pago")
+      .eq("user_id", state.user.id)
+      .eq("cartao_id", activeCardId)
+      .eq("ano", ano)
+      .eq("mes", mes)
+      .maybeSingle();
+
+    if (errFaturaExistente) {
+      console.error("Erro ao validar fatura antes de fechar:", errFaturaExistente);
+      showToast("Não foi possível validar esta fatura agora.", "error");
+      return;
+    }
+
+    if (isFaturaFechada(faturaExistente)) {
+      state.faturaAtual = faturaExistente;
+      updateButtonsForFatura();
+      showToast("Esta fatura já está fechada.", "warning");
       return;
     }
 
@@ -1927,6 +2052,8 @@ function popularFaturasLancamento() {
 
 async function abrirEdicaoAvista(l) {
   try {
+    if (!(await podeEditarLancamentoCartao(l))) return;
+
     const modal = document.getElementById("modal-editar-compra");
     if (!modal) {
       showToast("Modal de edição não encontrado.", "error");
@@ -2005,6 +2132,20 @@ async function abrirEdicaoAvista(l) {
 
     if (!desc || !valor || !data) return showToast("Preencha tudo!", "error");
 
+    const { data: lancamentoAtual, error: errLancamentoAtual } = await supabase
+      .from("cartao_lancamentos")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", state.user.id)
+      .maybeSingle();
+
+    if (errLancamentoAtual) {
+      console.error(errLancamentoAtual);
+      return showToast("Erro ao validar compra.", "error");
+    }
+
+    if (!lancamentoAtual || !(await podeEditarLancamentoCartao(lancamentoAtual))) return;
+
     const { error } = await supabase
       .from("cartao_lancamentos")
       .update({
@@ -2031,6 +2172,20 @@ async function abrirEdicaoAvista(l) {
     const id = viewEditarAvista.dataset.lancId;
     if (!confirm("Excluir compra?")) return;
 
+    const { data: lancamentoAtual, error: errLancamentoAtual } = await supabase
+      .from("cartao_lancamentos")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", state.user.id)
+      .maybeSingle();
+
+    if (errLancamentoAtual) {
+      console.error(errLancamentoAtual);
+      return showToast("Erro ao validar compra.", "error");
+    }
+
+    if (!lancamentoAtual || !(await podeEditarLancamentoCartao(lancamentoAtual))) return;
+
     await supabase
       .from("cartao_lancamentos")
       .delete()
@@ -2045,6 +2200,8 @@ async function abrirEdicaoAvista(l) {
   // ===========================// EDIÇÃO PARCELADA // ===========================
    async function abrirEdicaoCompraParcelada(c) {
   try {
+    if (!(await podeEditarLancamentoCartao(c))) return;
+
     const modal = document.getElementById("modal-editar-compra");
     if (!modal) {
       showToast("Modal de edição não encontrado.", "error");
@@ -2085,6 +2242,8 @@ async function abrirEdicaoAvista(l) {
       showToast("Nenhuma parcela disponível para edição.", "warning");
       return;
     }
+
+    if (!(await podeAlterarParcelas(parcelasDaCompra))) return;
 
     // estado global
     state.editingPurchaseParcels = parcelasDaCompra;
@@ -2181,7 +2340,9 @@ async function abrirEdicaoAvista(l) {
   // ===========================// MODAL EDITAR PARCELA// ===========================
   let parcelaEditandoId = null;
 
- function abrirModalEditarParcela(c) {
+ async function abrirModalEditarParcela(c) {
+  if (!(await podeEditarLancamentoCartao(c))) return;
+
   if (!modalEditarParcela || !modalParcelaValor || !modalParcelaData) {
     console.error("Modal de edição de parcela não encontrado no DOM");
     showToast("Erro interno ao editar parcela.", "error");
@@ -2219,6 +2380,20 @@ if (modalParcelaCancelar) {
     if (!novaData || !novoValor)
       return showToast("Preencha todos os campos.", "error");
 
+    const { data: parcelaAtual, error: errParcelaAtual } = await supabase
+      .from("cartao_lancamentos")
+      .select("*")
+      .eq("id", parcelaEditandoId)
+      .eq("user_id", state.user.id)
+      .maybeSingle();
+
+    if (errParcelaAtual) {
+      console.error(errParcelaAtual);
+      return showToast("Erro ao validar parcela.", "error");
+    }
+
+    if (!parcelaAtual || !(await podeEditarLancamentoCartao(parcelaAtual))) return;
+
     const { error } = await supabase
       .from("cartao_lancamentos")
       .update({ valor: novoValor, data_fatura: novaData })
@@ -2238,6 +2413,20 @@ if (modalParcelaCancelar) {
   // ===========================// EXCLUIR PARCELA// ===========================
   async function excluirParcela(id) {
     if (!confirm("Excluir somente esta parcela?")) return;
+
+    const { data: parcelaAtual, error: errParcelaAtual } = await supabase
+      .from("cartao_lancamentos")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", state.user.id)
+      .maybeSingle();
+
+    if (errParcelaAtual) {
+      console.error(errParcelaAtual);
+      return showToast("Erro ao validar parcela.", "error");
+    }
+
+    if (!parcelaAtual || !(await podeEditarLancamentoCartao(parcelaAtual))) return;
 
     const { error } = await supabase
       .from("cartao_lancamentos")
@@ -2262,6 +2451,8 @@ if (modalParcelaCancelar) {
     const parcela = state.editingPurchaseParcels.find((p) => p.id === id);
     if (!parcela)
       return showToast("Parcela não encontrada.", "error");
+
+    if (!(await podeEditarLancamentoCartao(parcela))) return;
 
     if (!confirm(`Antecipar parcela de ${formatReal(parcela.valor)}?`))
       return;
@@ -2323,6 +2514,8 @@ if (modalParcelaCancelar) {
   if (document.getElementById("btn-salvar-edicao"))
     document.getElementById("btn-salvar-edicao").onclick = async () => {
       try {
+        if (!(await podeAlterarParcelas(state.editingPurchaseParcels || []))) return;
+
         const desc = document.getElementById("edit-desc").value.trim();
         const total = Number(document.getElementById("edit-valor-total").value || 0);
         const dataIni = document.getElementById("edit-data-inicial").value;
@@ -2381,6 +2574,7 @@ if (modalParcelaCancelar) {
     document.getElementById("btn-excluir-compra").onclick = async () => {
       try {
         if (!state.editingPurchaseParcels || state.editingPurchaseParcels.length === 0) return;
+        if (!(await podeAlterarParcelas(state.editingPurchaseParcels))) return;
         if (!confirm("Excluir esta compra (todas parcelas)?")) return;
 
         const ids = state.editingPurchaseParcels.map(p => p.id);
