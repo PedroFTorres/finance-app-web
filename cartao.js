@@ -207,6 +207,7 @@ function initCartaoPage() {
     categories: [],
     editingPurchaseFull: null,       // para edição parcelada
     editingPurchaseParcels: [],      // parcelas em edição
+    editingPurchaseTotalParcels: 1,
     faturaAtual: null,
   };
 
@@ -353,6 +354,36 @@ if (contaFaturaConfirmar) {
 
   function limparDescricaoParcela(descricao = "") {
     return String(descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
+  }
+
+  function lerNumeracaoParcela(parcela, fallbackIndex = 0) {
+    const match = String(parcela?.descricao || "").match(/\((\d+)\/(\d+)\)\s*$/);
+    const totalInformado = Math.max(
+      Number(parcela?.parcelas || 0),
+      Number(match?.[2] || 0),
+      1
+    );
+    const atualInformado = Math.max(
+      Number(parcela?.parcela_atual || 0),
+      Number(match?.[1] || 0),
+      0
+    );
+    const atual = totalInformado > 1
+      ? Math.min(Math.max(atualInformado || fallbackIndex + 1, 1), totalInformado)
+      : 1;
+    const total = Math.max(
+      totalInformado,
+      1
+    );
+    return { atual, total };
+  }
+
+  function calcularTotalOriginalParcelas(parcelas = []) {
+    return Math.max(
+      1,
+      parcelas.length,
+      ...parcelas.map((parcela, index) => lerNumeracaoParcela(parcela, index).total)
+    );
   }
 
   function distribuirValorEmParcelas(total, quantidade) {
@@ -2098,6 +2129,7 @@ async function abrirEdicaoAvista(l) {
     // guarda estado
     state.editingPurchaseFull = l;
     state.editingPurchaseParcels = [l];
+    state.editingPurchaseTotalParcels = 1;
 
     // abre modal
     modal.classList.remove("hidden");
@@ -2263,15 +2295,18 @@ async function abrirEdicaoAvista(l) {
       return;
     }
 
+    const totalOriginalParcelas = calcularTotalOriginalParcelas(parcelasDaCompra);
+
     // estado global
     state.editingPurchaseParcels = parcelasEditaveis;
     state.editingPurchaseFull = parcelasEditaveis[0];
+    state.editingPurchaseTotalParcels = totalOriginalParcelas;
 
     // preencher campos principais
     elDesc.value = base;
     elValor.value = parcelasEditaveis.reduce((s, p) => s + Number(p.valor || 0), 0).toFixed(2);
     elData.value = parcelasEditaveis[0].data_compra || "";
-    elParcelas.value = parcelasEditaveis.length;
+    elParcelas.value = totalOriginalParcelas;
 
     // popular selects
     await popularSelectCategoriaEdicao(parcelasEditaveis[0].categoria_id);
@@ -2298,7 +2333,7 @@ async function abrirEdicaoAvista(l) {
   lista.innerHTML = "";
 
   const parcelas = state.editingPurchaseParcels || [];
-  const total = parcelas.length;
+  const total = Math.max(Number(state.editingPurchaseTotalParcels || 0), calcularTotalOriginalParcelas(parcelas));
 
   parcelas.forEach((p, index) => {
     const li = document.createElement("li");
@@ -2307,7 +2342,8 @@ async function abrirEdicaoAvista(l) {
 
     const info = document.createElement("div");
     info.className = "parcela-info";
-    info.appendChild(createTextElement("strong", `Parcela ${p.parcela_atual || index + 1}/${total}`, "parcela-title"));
+    const { atual } = lerNumeracaoParcela(p, index);
+    info.appendChild(createTextElement("strong", `Parcela ${atual}/${total}`, "parcela-title"));
     info.appendChild(createTextElement("small", `Compra: ${formatDateBR(p.data_compra)}`, "parcela-meta"));
 
     const fields = document.createElement("div");
@@ -2537,7 +2573,11 @@ if (modalParcelaCancelar) {
         const desc = document.getElementById("edit-desc").value.trim();
         const total = Number(document.getElementById("edit-valor-total").value || 0);
         const dataIni = document.getElementById("edit-data-inicial").value;
-        const totalParcelas = Number(document.getElementById("edit-total-parcelas").value || 1);
+        const totalParcelas = Math.max(
+          Number(state.editingPurchaseTotalParcels || 0),
+          Number(document.getElementById("edit-total-parcelas").value || 0),
+          calcularTotalOriginalParcelas(state.editingPurchaseParcels || [])
+        );
         const categoria = document.getElementById("edit-categoria").value;
         const cartao = document.getElementById("edit-cartao").value;
         const parcelas = state.editingPurchaseParcels || [];
@@ -2550,7 +2590,7 @@ if (modalParcelaCancelar) {
         const descLimpa = limparDescricaoParcela(desc);
 
         const updates = parcelas.map((parcela, index) => {
-          const numeroParcela = Number(parcela.parcela_atual || index + 1);
+          const { atual: numeroParcela } = lerNumeracaoParcela(parcela, index);
           const descricaoParcela = totalParcelas > 1
             ? `${descLimpa} (${numeroParcela}/${totalParcelas})`
             : descLimpa;
@@ -2563,7 +2603,9 @@ if (modalParcelaCancelar) {
               data_compra: dataIni,
               data_fatura: parcela.data_fatura || dataIni,
               categoria_id: categoria || null,
-              cartao_id: cartao
+              cartao_id: cartao,
+              parcelas: totalParcelas,
+              parcela_atual: numeroParcela
             })
             .eq("id", parcela.id)
             .eq("user_id", state.user.id);
