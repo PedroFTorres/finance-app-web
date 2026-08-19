@@ -942,7 +942,8 @@ if (btnFatNext) {
 }
 
   function isFaturaFechada(fatura) {
-    return fatura?.pago || fatura?.status === "fechada";
+    const status = String(fatura?.status || "").trim().toLowerCase();
+    return fatura?.pago === true || status === "fechada" || status === "paga";
   }
 
   function getMesAnoFromISO(dateISO) {
@@ -980,6 +981,18 @@ if (btnFatNext) {
   async function lancamentoEstaEmFaturaFechada(lancamento) {
     const fatura = await buscarFaturaDoLancamento(lancamento);
     return Boolean(fatura?.bloqueadaPorErro || isFaturaFechada(fatura));
+  }
+
+  async function filtrarParcelasEditaveis(parcelas = []) {
+    const editaveis = [];
+
+    for (const parcela of parcelas) {
+      if (!(await lancamentoEstaEmFaturaFechada(parcela))) {
+        editaveis.push(parcela);
+      }
+    }
+
+    return editaveis;
   }
 
   async function podeEditarLancamentoCartao(lancamento) {
@@ -2243,21 +2256,26 @@ async function abrirEdicaoAvista(l) {
       return;
     }
 
-    if (!(await podeAlterarParcelas(parcelasDaCompra))) return;
+    const parcelasEditaveis = await filtrarParcelasEditaveis(parcelasDaCompra);
+
+    if (!parcelasEditaveis.length) {
+      showToast("Esta compra pertence a uma fatura fechada e não pode ser editada.", "warning");
+      return;
+    }
 
     // estado global
-    state.editingPurchaseParcels = parcelasDaCompra;
-    state.editingPurchaseFull = parcelasDaCompra[0];
+    state.editingPurchaseParcels = parcelasEditaveis;
+    state.editingPurchaseFull = parcelasEditaveis[0];
 
     // preencher campos principais
     elDesc.value = base;
-    elValor.value = parcelasDaCompra.reduce((s, p) => s + Number(p.valor || 0), 0).toFixed(2);
-    elData.value = parcelasDaCompra[0].data_compra || "";
-    elParcelas.value = parcelasDaCompra.length;
+    elValor.value = parcelasEditaveis.reduce((s, p) => s + Number(p.valor || 0), 0).toFixed(2);
+    elData.value = parcelasEditaveis[0].data_compra || "";
+    elParcelas.value = parcelasEditaveis.length;
 
     // popular selects
-    await popularSelectCategoriaEdicao(parcelasDaCompra[0].categoria_id);
-    await popularSelectCartaoEdicao(parcelasDaCompra[0].cartao_id);
+    await popularSelectCategoriaEdicao(parcelasEditaveis[0].categoria_id);
+    await popularSelectCartaoEdicao(parcelasEditaveis[0].cartao_id);
 
     // renderizar parcelas (somente atuais + futuras)
     renderParcelasEdicao();
