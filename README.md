@@ -13,9 +13,9 @@ A integração de pagamento foi removida temporariamente. O foco atual é finali
 
 Planos mantidos no app:
 
-- `free`: plano gratuito com limites.
-- `pro`: plano pago futuro.
-- `vip`: acesso total gratuito concedido manualmente pelo administrador.
+- `free`: teste gratuito por 5 dias, com acesso financeiro completo, sem Investimentos/CVM.
+- `pro`: plano pago de 30 dias, com acesso financeiro completo, sem Investimentos/CVM.
+- `vip`: acesso por convite/manual, com tudo do Pro + Investimentos/CVM.
 
 ## Checklist para deixar o app profissional
 
@@ -28,7 +28,8 @@ Planos mantidos no app:
 
 ### 2) Planos e acesso
 - Manter os planos `free`, `pro` e `vip`.
-- Garantir limites do plano Free no banco, não apenas no front-end.
+- Garantir no banco que Free vencido e Pro vencido não gravem dados financeiros.
+- Manter Investimentos/CVM restritos ao plano VIP.
 - Permitir `vip` apenas por ação administrativa.
 - Bloquear/limitar funcionalidades premium quando assinatura estiver inativa.
 

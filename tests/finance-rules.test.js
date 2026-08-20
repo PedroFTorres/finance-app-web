@@ -625,11 +625,13 @@ test("frontend premium segue a mesma regra de expiracao do banco", () => {
   assert.match(premiumClient, /subscription_ends_at/);
   assert.match(premiumClient, /plano_expira_em/);
   assert.match(premiumClient, /trial_started_at/);
+  assert.match(premiumClient, /hasPaidAccess/);
   assert.match(premiumClient, /hasFinancialAccess/);
-  assert.match(app, /premiumDateIsValid\(STATE\.profile\?\.subscription_ends_at\)/);
-  assert.match(app, /premiumDateIsValid\(STATE\.profile\?\.plano_expira_em\)/);
-  assert.match(app, /function hasFinancialAccess/);
-  assert.match(app, /function hasInvestmentAccess/);
+  assert.match(premiumClient, /hasInvestmentAccess/);
+  assert.match(app, /window\.ArolixAccess/);
+  assert.match(app, /accessRules\(\)\.hasFinancialAccess/);
+  assert.match(app, /accessRules\(\)\.hasInvestmentAccess/);
+  assert.doesNotMatch(app, /premiumDateIsValid\(STATE\.profile/);
 });
 
 test("mensagem de bloqueio de plano aparece clara ao salvar lancamento", () => {

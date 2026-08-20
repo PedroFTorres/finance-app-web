@@ -2141,7 +2141,7 @@ const UI = {
    if (btnSave) {
   btnSave.addEventListener("click", async function () {
     const editId = btnSave.dataset.editId;
-     // 🔥 BLOQUEIO PLANO FREE
+     // Bloqueio central de acesso financeiro.
 if (!editId && !hasFinancialAccess()) {
   goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
   return;
@@ -3057,7 +3057,7 @@ modal.setAttribute("aria-hidden", "false");
     const tipo = $(IDS.modalTipo).value;
     const descricao = $(IDS.modalDesc).value.trim();
     const valor = Number($(IDS.modalValor).value || 0);
-     // 🔥 BLOQUEIO DE LANÇAMENTOS (PLANO FREE)
+     // Bloqueio central de acesso financeiro.
 if (!hasFinancialAccess() && !saveBtn?.dataset?.editId) {
   goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
   return;
