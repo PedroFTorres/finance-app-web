@@ -32,6 +32,7 @@
     charts: { recCat: null, desCat: null, resumo: null, investimentos: null },
     subs: [] // para armazenar channels se quiser unsub later
   };
+
   function accessRules() {
     return window.ArolixAccess || {};
   }
@@ -623,7 +624,7 @@ async function requireSessionOrRedirect() {
 const btnUpgrade = document.querySelector('[onclick*="upgrade.html"]');
 
 if (btnUpgrade && STATE.profile) {
-  if (hasPaidAccess()) {
+  if (hasFinancialAccess()) {
     btnUpgrade.style.display = "none";
   } else {
     btnUpgrade.style.display = "inline-block";
@@ -2142,7 +2143,7 @@ const UI = {
   btnSave.addEventListener("click", async function () {
     const editId = btnSave.dataset.editId;
      // Bloqueio central de acesso financeiro.
-if (!editId && !hasFinancialAccess()) {
+if (!hasFinancialAccess()) {
   goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
   return;
 }
@@ -3058,7 +3059,7 @@ modal.setAttribute("aria-hidden", "false");
     const descricao = $(IDS.modalDesc).value.trim();
     const valor = Number($(IDS.modalValor).value || 0);
      // Bloqueio central de acesso financeiro.
-if (!hasFinancialAccess() && !saveBtn?.dataset?.editId) {
+if (!hasFinancialAccess()) {
   goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
   return;
 }
@@ -5300,7 +5301,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
   }
 });
    
-   document.getElementById("juros-baixa")
+document.getElementById("juros-baixa")
   ?.addEventListener("input", atualizarValorFinalBaixa);
 
 document.getElementById("desconto-baixa")

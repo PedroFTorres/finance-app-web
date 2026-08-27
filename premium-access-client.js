@@ -4,46 +4,66 @@
 (function () {
   "use strict";
 
-  function dateIsValid(date) {
-    if (!date) return true;
-    const parsed = new Date(date);
-    return !Number.isNaN(parsed.getTime()) && parsed > new Date();
+  const TRIAL_DAYS = 5;
+
+  function parseDate(value) {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function addDays(date, days) {
+    const copy = new Date(date.getTime());
+    copy.setDate(copy.getDate() + days);
+    return copy;
   }
 
   function planOf(profile) {
-    return String(profile?.plano || "free").toLowerCase();
+    return String(profile?.plano || profile?.plan || "free").toLowerCase();
   }
 
   function statusOf(profile) {
     return String(profile?.subscription_status || "").toLowerCase();
   }
 
-  function hasPaidAccess(profile) {
-    const plano = planOf(profile);
-    return ["pro", "vip"].includes(plano)
+  function expirationOf(profile) {
+    return parseDate(profile?.subscription_ends_at || profile?.plano_expira_em);
+  }
+
+  function trialStartOf(profile) {
+    return parseDate(profile?.trial_started_at || profile?.created_at);
+  }
+
+  function isVip(profile) {
+    return planOf(profile) === "vip" && statusOf(profile) === "active";
+  }
+
+  function isPro(profile) {
+    const endsAt = expirationOf(profile);
+    return planOf(profile) === "pro"
       && statusOf(profile) === "active"
-      && dateIsValid(profile?.subscription_ends_at)
-      && dateIsValid(profile?.plano_expira_em);
+      && (!endsAt || endsAt >= new Date());
+  }
+
+  function hasTrialAccess(profile) {
+    const start = trialStartOf(profile);
+    return planOf(profile) === "free" && !!start && addDays(start, TRIAL_DAYS) >= new Date();
+  }
+
+  function hasPaidAccess(profile) {
+    return isPro(profile) || isVip(profile);
   }
 
   function hasFinancialAccess(profile) {
-    if (!profile) return false;
-    const plano = planOf(profile);
-
-    if (hasPaidAccess(profile)) return true;
-    if (plano !== "free") return false;
-
-    const trialStartedAt = profile.trial_started_at || profile.created_at;
-    if (!trialStartedAt) return false;
-
-    const start = new Date(trialStartedAt);
-    if (Number.isNaN(start.getTime())) return false;
-    const trialEndsAt = new Date(start.getTime() + 5 * 86400000);
-    return trialEndsAt > new Date();
+    return hasPaidAccess(profile) || hasTrialAccess(profile);
   }
 
   function hasInvestmentAccess(profile) {
-    return planOf(profile) === "vip" && hasPaidAccess(profile);
+    return isVip(profile);
+  }
+
+  function hasPremiumAccess(profile) {
+    return hasFinancialAccess(profile);
   }
 
   function financialBlockedMessage() {
@@ -54,47 +74,59 @@
     return "Investimentos e CVM estão disponíveis apenas para usuários VIP.";
   }
 
+  function getUpgradeMessage(message) {
+    return `${message || financialBlockedMessage()}\n\nAssine o Pro por R$ 9,90 para continuar usando o Arolix.`;
+  }
+
   function goToUpgrade(msg) {
-    alert((msg || financialBlockedMessage()) + "\n\nFaça upgrade para liberar.");
+    alert(getUpgradeMessage(msg));
     setTimeout(() => {
       window.location.href = "upgrade.html";
     }, 500);
   }
 
-  window.ArolixAccess = {
-    dateIsValid,
+  window.ArolixAccess = Object.assign(window.ArolixAccess || {}, {
+    AROLIX_TRIAL_DAYS: TRIAL_DAYS,
+    isPro,
+    isVip,
+    hasTrialAccess,
     hasPaidAccess,
     hasFinancialAccess,
     hasInvestmentAccess,
+    hasPremiumAccess,
     financialBlockedMessage,
     investmentBlockedMessage,
+    getUpgradeMessage,
     goToUpgrade
-  };
+  });
 
   function showUpgradeMessage() {
-    // Evita duplicar aviso
     if (document.getElementById("premium-upgrade-alert")) return;
 
-    const alert = document.createElement("div");
-    alert.id = "premium-upgrade-alert";
-    alert.style.cssText = `
-      margin:12px 0;padding:12px 14px;border-radius:10px;
-      background:#fff3cd;color:#664d03;border:1px solid #ffecb5;
-      font-size:14px;
-    `;
-    alert.appendChild(document.createTextNode(`${financialBlockedMessage()} `));
+    const alertBox = document.createElement("div");
+    alertBox.id = "premium-upgrade-alert";
+    alertBox.style.cssText = [
+      "margin:12px 0",
+      "padding:12px 14px",
+      "border-radius:10px",
+      "background:#fff3cd",
+      "color:#664d03",
+      "border:1px solid #ffecb5",
+      "font-size:14px"
+    ].join(";");
+    alertBox.appendChild(document.createTextNode(`${financialBlockedMessage()} `));
+
     const upgradeLink = document.createElement("a");
     upgradeLink.href = "upgrade.html";
     upgradeLink.textContent = "Ir para upgrade";
     upgradeLink.style.cssText = "margin-left:8px;font-weight:700;";
-    alert.appendChild(upgradeLink);
+    alertBox.appendChild(upgradeLink);
 
-    // coloca no topo do main
     const main = document.querySelector("main");
-    if (main) main.prepend(alert);
+    if (main) main.prepend(alertBox);
   }
 
-  function applyAccessUI(accessGranted) {
+  function applyFinancialAccessUI(accessGranted) {
     const premiumButtons = [
       document.getElementById("btn-print-extrato"),
     ].filter(Boolean);
@@ -108,12 +140,26 @@
     if (!accessGranted) showUpgradeMessage();
   }
 
-  async function loadProfileAndApplyAccess() {
-    if (!window.supabase?.auth) return;
+  function markInvestmentUnavailable(profile) {
+    const allowed = hasInvestmentAccess(profile);
+    document
+      .querySelectorAll('[data-requires-investment], a[href="investimentos.html"], button[data-target="investimentos"]')
+      .forEach((el) => {
+        el.classList.toggle("is-locked", !allowed);
+        if (!allowed) {
+          el.setAttribute("title", investmentBlockedMessage());
+        } else {
+          el.removeAttribute("title");
+        }
+      });
+  }
 
+  async function loadAndApplyAccess() {
     try {
-      const { data: sess } = await window.supabase.auth.getSession();
-      const user = sess?.session?.user;
+      if (!window.supabase?.auth) return;
+
+      const { data: sessionData } = await window.supabase.auth.getSession();
+      const user = sessionData?.session?.user;
       if (!user) return;
 
       const { data: profile, error } = await window.supabase
@@ -123,20 +169,25 @@
         .maybeSingle();
 
       if (error) {
-        console.warn("Erro ao carregar perfil premium:", error);
+        console.warn("Erro ao carregar perfil de acesso:", error);
         return;
       }
 
-      const access = hasFinancialAccess(profile);
-      applyAccessUI(access);
+      applyFinancialAccessUI(hasFinancialAccess(profile || {}));
+      markInvestmentUnavailable(profile || {});
 
-      console.log("Financial access:", access, profile);
+      console.log(
+        "Acesso financeiro:",
+        hasFinancialAccess(profile || {}),
+        "Acesso investimentos:",
+        hasInvestmentAccess(profile || {})
+      );
     } catch (err) {
-      console.warn("Falha ao aplicar controle premium:", err);
+      console.warn("Falha ao aplicar controle de acesso:", err);
     }
   }
 
   window.addEventListener("load", () => {
-    setTimeout(loadProfileAndApplyAccess, 1300);
+    setTimeout(loadAndApplyAccess, 600);
   });
 })();

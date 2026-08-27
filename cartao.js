@@ -430,7 +430,7 @@ if (contaFaturaConfirmar) {
       .maybeSingle();
 
     if (error) {
-      console.error("Erro ao validar acesso premium:", error);
+      console.error("Erro ao validar acesso:", error);
       alert("Nao foi possivel validar seu plano agora. Tente novamente.");
       window.location.href = "app.html";
       return false;
@@ -449,7 +449,7 @@ if (contaFaturaConfirmar) {
 
   function getCardGradient(i) {
   const gradients = [
-    // roxo premium (principal)
+    // roxo principal
     "linear-gradient(135deg, #5f4dff, #7b6dff)",
 
     // azul escuro elegante

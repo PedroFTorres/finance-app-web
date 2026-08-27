@@ -4,70 +4,64 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Planos - Arolix</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <main class="upgrade-container">
+    <h1>Planos Arolix</h1>
+    <p>Escolha o acesso ideal para usar o Arolix com segurança no controle financeiro.</p>
 
-<div class="upgrade-container">
-  <h1>Planos Arolix</h1>
-  <p>Escolha o acesso ideal para usar o Arolix com segurança no controle financeiro.</p>
+    <div class="plans">
+      <section class="plan free">
+        <h2>Teste grátis</h2>
+        <h3>R$ 0,00</h3>
 
-  <div class="plans">
-    <div class="plan free">
-      <h2>Teste grátis</h2>
-      <h3>R$ 0,00</h3>
+        <ul>
+          <li>5 dias de acesso financeiro completo</li>
+          <li>Dashboard, contas, lançamentos, cartões, auditoria, PDF, relatórios e categorias</li>
+          <li>Investimentos e CVM não inclusos</li>
+        </ul>
 
-      <ul>
-        <li>✔ 5 dias de acesso</li>
-        <li>✔ Contas, lançamentos e cartões</li>
-        <li>✔ Dashboard, auditoria e PDF</li>
-        <li>✖ Sem investimentos e CVM</li>
-      </ul>
+        <button class="btn-free" type="button" onclick="window.location.href='app.html'">
+          Continuar no app
+        </button>
+      </section>
 
-      <button class="btn-free" onclick="window.location.href='app.html'">
-        Continuar no app
-      </button>
+      <section class="plan pro">
+        <div class="badge">EM PREPARAÇÃO</div>
+        <h2 class="title-pro">Plano PRO</h2>
+        <h3 class="price-pro">R$ 9,90 / 30 dias</h3>
+
+        <ul>
+          <li>Acesso financeiro completo por 30 dias</li>
+          <li>Contas, lançamentos, cartões e faturas</li>
+          <li>Auditoria, PDF, relatórios e categorias</li>
+          <li>Investimentos e CVM não inclusos</li>
+        </ul>
+
+        <button class="btn-primary" type="button" disabled aria-disabled="true">
+          Checkout em preparação
+        </button>
+        <p>Pagamento por Pix ou cartão será liberado na integração com Asaas.</p>
+      </section>
+
+      <section class="plan vip">
+        <div class="badge">CONVITE</div>
+        <h2>Plano VIP</h2>
+        <h3>Acesso liberado</h3>
+
+        <ul>
+          <li>Tudo do Pro</li>
+          <li>Investimentos e consulta CVM</li>
+          <li>Liberação manual para usuários indicados</li>
+        </ul>
+
+        <button class="btn-secondary" type="button" disabled aria-disabled="true">
+          Liberação por convite
+        </button>
+      </section>
     </div>
-
-    <div class="plan pro">
-      <div class="badge">EM PREPARAÇÃO</div>
-
-      <h2 class="title-pro">Plano PRO</h2>
-      <h3 class="price-pro">R$ 9,90</h3>
-
-      <ul>
-        <li>✔ 30 dias de acesso</li>
-        <li>✔ Contas e lançamentos</li>
-        <li>✔ Cartões e faturas</li>
-        <li>✔ Auditoria e relatórios</li>
-        <li>✔ Exportação PDF</li>
-        <li>✖ Sem investimentos e CVM</li>
-      </ul>
-
-      <button class="btn-secondary" type="button" disabled>
-        Pix e cartão em breve
-      </button>
-    </div>
-
-    <div class="plan vip">
-      <div class="badge">CONVITE</div>
-
-      <h2>Plano VIP</h2>
-      <h3>Acesso liberado</h3>
-
-      <ul>
-        <li>✔ Tudo do Pro</li>
-        <li>✔ Investimentos</li>
-        <li>✔ Consulta CVM</li>
-        <li>✔ Acesso indicado manualmente</li>
-      </ul>
-
-      <button class="btn-secondary" type="button" disabled>
-        Liberação por convite
-      </button>
-    </div>
-  </div>
-</div>
-
+  </main>
 </body>
 </html>
