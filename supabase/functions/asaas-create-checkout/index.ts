@@ -48,10 +48,6 @@ function isoDatePlusDays(days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function appOrigin(request: Request) {
-  return Deno.env.get("APP_ORIGIN") || new URL(request.url).origin;
-}
-
 async function supabaseFetch(path: string, init: RequestInit = {}) {
   const supabaseUrl = env("SUPABASE_URL");
   const serviceRoleKey = env("SUPABASE_SERVICE_ROLE_KEY");
@@ -164,8 +160,7 @@ async function ensureAsaasCustomer(profile: Profile, email: string) {
   return customer.id as string;
 }
 
-async function createPayment(request: Request, customerId: string, userId: string) {
-  const origin = appOrigin(request);
+async function createPayment(customerId: string, userId: string) {
   const externalReference = `arolix:user:${userId}:plan:pro:${crypto.randomUUID()}`;
 
   const payment = await asaasFetch("/v3/payments", {
@@ -176,11 +171,7 @@ async function createPayment(request: Request, customerId: string, userId: strin
       value: PLAN_VALUE,
       dueDate: isoDatePlusDays(1),
       description: "Plano Pro Arolix - 30 dias",
-      externalReference,
-      callback: {
-        successUrl: `${origin}/app.html`,
-        autoRedirect: true
-      }
+      externalReference
     })
   });
 
@@ -243,7 +234,7 @@ Deno.serve(async (request) => {
     userId = user.id;
     const profile = await getProfile(user.id);
     customerId = await ensureAsaasCustomer(profile, user.email);
-    const payment = await createPayment(request, customerId, user.id);
+    const payment = await createPayment(customerId, user.id);
 
     return json({
       paymentId: payment?.id,
