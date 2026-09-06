@@ -29,7 +29,7 @@
       </section>
 
       <section class="plan pro">
-        <div class="badge">EM PREPARAÇÃO</div>
+        <div class="badge">ASAAS</div>
         <h2 class="title-pro">Plano PRO</h2>
         <h3 class="price-pro">R$ 9,90 / 30 dias</h3>
 
@@ -40,10 +40,10 @@
           <li>Investimentos e CVM não inclusos</li>
         </ul>
 
-        <button class="btn-primary" type="button" disabled aria-disabled="true">
-          Checkout em preparação
+        <button id="btn-assinar-pro" class="btn-primary" type="button">
+          Assinar Pro
         </button>
-        <p>Pagamento por Pix ou cartão será liberado na integração com Asaas.</p>
+        <p>Pagamento seguro via Asaas. A liberação acontece automaticamente após a confirmação.</p>
       </section>
 
       <section class="plan vip">
@@ -63,5 +63,44 @@
       </section>
     </div>
   </main>
+
+  <script src="vendor/supabase-2.108.2.js"></script>
+  <script src="config.js"></script>
+  <script src="supabase.js"></script>
+  <script>
+    const btnAssinarPro = document.getElementById("btn-assinar-pro");
+
+    btnAssinarPro?.addEventListener("click", async () => {
+      const originalText = btnAssinarPro.textContent;
+      btnAssinarPro.disabled = true;
+      btnAssinarPro.textContent = "Gerando pagamento...";
+
+      try {
+        const { data: sessionResp } = await window.supabase.auth.getSession();
+        if (!sessionResp?.session) {
+          alert("Entre na sua conta antes de assinar.");
+          window.location.href = "login.html";
+          return;
+        }
+
+        const { data, error } = await window.supabase.functions.invoke("asaas-create-checkout", {
+          body: { plan: "pro" }
+        });
+
+        if (error) throw error;
+        if (!data?.invoiceUrl) {
+          throw new Error("O Asaas nao retornou o link de pagamento.");
+        }
+
+        window.location.href = data.invoiceUrl;
+      } catch (error) {
+        console.error("Erro ao iniciar assinatura:", error);
+        alert(error?.message || "Nao foi possivel gerar o pagamento agora.");
+      } finally {
+        btnAssinarPro.disabled = false;
+        btnAssinarPro.textContent = originalText;
+      }
+    });
+  </script>
 </body>
 </html>
