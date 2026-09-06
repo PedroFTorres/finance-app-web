@@ -203,6 +203,29 @@ async function createPayment(request: Request, customerId: string, userId: strin
   return payment;
 }
 
+async function recordCheckoutFailure(userId: string | null, customerId: string | null, error: unknown) {
+  if (!userId) return;
+
+  const message = error instanceof Error ? error.message : "Erro ao criar pagamento.";
+  const eventId = `CHECKOUT_FAILED:${crypto.randomUUID()}`;
+
+  await supabaseFetch("/rest/v1/subscription_events", {
+    method: "POST",
+    body: JSON.stringify({
+      provider: "asaas",
+      event_id: eventId,
+      provider_event_id: eventId,
+      event_type: "CHECKOUT_FAILED",
+      user_id: userId,
+      customer_id: customerId,
+      payload: { message },
+      processed_at: new Date().toISOString()
+    })
+  }).catch((logError) => {
+    console.warn("Nao foi possivel registrar falha de checkout:", logError);
+  });
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -212,10 +235,14 @@ Deno.serve(async (request) => {
     return json({ error: "Metodo nao permitido." }, 405);
   }
 
+  let userId: string | null = null;
+  let customerId: string | null = null;
+
   try {
     const user = await getAuthenticatedUser(request);
+    userId = user.id;
     const profile = await getProfile(user.id);
-    const customerId = await ensureAsaasCustomer(profile, user.email);
+    customerId = await ensureAsaasCustomer(profile, user.email);
     const payment = await createPayment(request, customerId, user.id);
 
     return json({
@@ -227,6 +254,7 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     console.error("asaas-create-checkout:", error);
+    await recordCheckoutFailure(userId, customerId, error);
     return json({
       error: error instanceof Error ? error.message : "Erro ao criar pagamento."
     }, 400);
