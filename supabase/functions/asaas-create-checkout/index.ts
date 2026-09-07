@@ -48,6 +48,10 @@ function isoDatePlusDays(days: number) {
   return date.toISOString().slice(0, 10);
 }
 
+function appOrigin() {
+  return (Deno.env.get("APP_ORIGIN") || "https://arolix.com.br").replace(/\/+$/, "");
+}
+
 async function supabaseFetch(path: string, init: RequestInit = {}) {
   const supabaseUrl = env("SUPABASE_URL");
   const serviceRoleKey = env("SUPABASE_SERVICE_ROLE_KEY");
@@ -162,6 +166,7 @@ async function ensureAsaasCustomer(profile: Profile, email: string) {
 
 async function createPayment(customerId: string, userId: string) {
   const externalReference = `arolix:user:${userId}:plan:pro:${crypto.randomUUID()}`;
+  const successUrl = `${appOrigin()}/pagamento-retorno.html`;
 
   const payment = await asaasFetch("/v3/payments", {
     method: "POST",
@@ -171,7 +176,11 @@ async function createPayment(customerId: string, userId: string) {
       value: PLAN_VALUE,
       dueDate: isoDatePlusDays(1),
       description: "Plano Pro Arolix - 30 dias",
-      externalReference
+      externalReference,
+      callback: {
+        successUrl,
+        autoRedirect: true
+      }
     })
   });
 

@@ -102,6 +102,12 @@
           throw new Error("O Asaas nao retornou o link de pagamento.");
         }
 
+        sessionStorage.setItem("arolix_last_asaas_payment", JSON.stringify({
+          paymentId: data.paymentId,
+          externalReference: data.externalReference,
+          createdAt: new Date().toISOString()
+        }));
+
         window.location.href = data.invoiceUrl;
       } catch (error) {
         console.error("Erro ao iniciar assinatura:", error);

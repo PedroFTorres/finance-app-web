@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pagamento - Arolix</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="payment-return-page">
+  <main class="payment-return-shell">
+    <section class="payment-return-card" aria-live="polite">
+      <div id="payment-status-icon" class="payment-status-icon pending">...</div>
+      <p id="payment-status-kicker" class="payment-status-kicker">Pagamento Arolix</p>
+      <h1 id="payment-status-title">Verificando pagamento</h1>
+      <p id="payment-status-message">
+        Estamos confirmando seu pagamento com o Asaas. Isso pode levar alguns segundos.
+      </p>
+
+      <div id="payment-status-detail" class="payment-status-detail">
+        Aguardando confirmação segura pelo webhook.
+      </div>
+
+      <div class="payment-return-actions">
+        <a id="payment-open-app" class="btn-primary payment-return-action" href="app.html">Ir para o app</a>
+        <a class="btn-secondary payment-return-action" href="upgrade.html">Ver planos</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="vendor/supabase-2.108.2.js"></script>
+  <script src="config.js"></script>
+  <script src="supabase.js"></script>
+  <script>
+    const icon = document.getElementById("payment-status-icon");
+    const kicker = document.getElementById("payment-status-kicker");
+    const title = document.getElementById("payment-status-title");
+    const message = document.getElementById("payment-status-message");
+    const detail = document.getElementById("payment-status-detail");
+    const openApp = document.getElementById("payment-open-app");
+
+    const paidStatuses = new Set(["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"]);
+    const failedStatuses = new Set([
+      "OVERDUE",
+      "REFUNDED",
+      "REFUND_REQUESTED",
+      "REFUND_IN_PROGRESS",
+      "CHARGEBACK_REQUESTED",
+      "CHARGEBACK_DISPUTE",
+      "AWAITING_CHARGEBACK_REVERSAL",
+      "DELETED"
+    ]);
+
+    function lastPaymentId() {
+      try {
+        const data = JSON.parse(sessionStorage.getItem("arolix_last_asaas_payment") || "{}");
+        return data.paymentId || "";
+      } catch {
+        return "";
+      }
+    }
+
+    function setState(state, heading, text, extra) {
+      icon.className = `payment-status-icon ${state}`;
+      icon.textContent = state === "success" ? "OK" : state === "error" ? "!" : "...";
+      title.textContent = heading;
+      message.textContent = text;
+      detail.textContent = extra || "";
+      openApp.textContent = state === "success" ? "Entrar no Arolix" : "Voltar ao app";
+    }
+
+    async function fetchPaymentStatus(paymentId) {
+      const { data: sessionResp } = await window.supabase.auth.getSession();
+      if (!sessionResp?.session) {
+        window.location.href = "login.html";
+        return null;
+      }
+
+      const response = await fetch(`${window.APP_CONFIG.SUPABASE_URL}/functions/v1/asaas-payment-status`, {
+        method: "POST",
+        headers: {
+          apikey: window.APP_CONFIG.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${sessionResp.session.access_token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ paymentId })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Nao foi possivel consultar o pagamento.");
+      }
+      return data;
+    }
+
+    async function verifyPayment() {
+      const paymentId = lastPaymentId();
+      let attempts = 0;
+
+      const timer = setInterval(async () => {
+        attempts += 1;
+
+        try {
+          const data = await fetchPaymentStatus(paymentId);
+          if (!data) {
+            clearInterval(timer);
+            return;
+          }
+
+          const paymentStatus = String(data.paymentStatus || "").toUpperCase();
+
+          if (data.financialAccessActive || paidStatuses.has(paymentStatus)) {
+            clearInterval(timer);
+            sessionStorage.removeItem("arolix_last_asaas_payment");
+            setState(
+              "success",
+              "Pagamento confirmado",
+              "Seu Plano Pro foi liberado. Voce ja pode continuar usando o Arolix.",
+              data.subscriptionEndsAt ? `Acesso valido ate ${new Date(data.subscriptionEndsAt).toLocaleDateString("pt-BR")}.` : "Acesso ativo."
+            );
+            return;
+          }
+
+          if (failedStatuses.has(paymentStatus)) {
+            clearInterval(timer);
+            setState(
+              "error",
+              "Pagamento nao realizado",
+              "O Asaas nao confirmou esse pagamento. Voce pode tentar novamente pelo plano Pro.",
+              paymentStatus ? `Status Asaas: ${paymentStatus}.` : ""
+            );
+            return;
+          }
+
+          if (attempts >= 20) {
+            clearInterval(timer);
+            setState(
+              "pending",
+              "Pagamento em confirmacao",
+              "Ainda nao recebemos a confirmacao final do Asaas. Se voce ja pagou, aguarde alguns instantes e entre no app novamente.",
+              paymentStatus ? `Status Asaas: ${paymentStatus}.` : "Sem status de pagamento recente."
+            );
+            return;
+          }
+
+          kicker.textContent = "Pagamento Arolix";
+          detail.textContent = paymentStatus
+            ? `Status Asaas: ${paymentStatus}. Confirmando liberacao do plano...`
+            : "Aguardando retorno do Asaas...";
+        } catch (error) {
+          clearInterval(timer);
+          setState(
+            "error",
+            "Nao foi possivel verificar",
+            error?.message || "Nao conseguimos consultar o pagamento agora.",
+            "Tente entrar no app ou voltar aos planos."
+          );
+        }
+      }, 3000);
+    }
+
+    verifyPayment();
+  </script>
+</body>
+</html>
