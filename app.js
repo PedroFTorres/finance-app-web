@@ -1347,7 +1347,7 @@ const CategoriasService = {
       saldoDisponivelRealizado,
       saldoPendencias,
       investimentosPeriodo,
-      saldoPrevisto: saldoDisponivelRealizado + saldoPendencias
+      saldoPrevisto: saldoPendencias
     };
   }
 
@@ -1880,7 +1880,6 @@ const CategoriasService = {
   function gerarAuditoriaResumo(resumo, auditoriaContas, auditoriaCartoes, auditoriaCategorias, auditoriaTransportadas) {
     const investimentoLiquido = Number(resumo.investimentosPeriodo?.netInvestido || 0);
     const saldoPendenciasCalculado = Number(resumo.totalAReceber || 0) - Number(resumo.totalAPagar || 0);
-    const saldoDisponivelCalculado = Number(resumo.saldoRealizado || 0) - investimentoLiquido;
     const sum = (lista) => (lista || []).reduce((total, item) => total + Number(item.valor || 0), 0);
 
     const checks = [
@@ -1918,13 +1917,13 @@ const CategoriasService = {
       auditCheck({
         label: 'Saldo previsto',
         esperado: resumo.saldoPrevisto,
-        calculado: saldoDisponivelCalculado + saldoPendenciasCalculado,
-        formula: 'Realizado - investimento líquido + pendências',
+        calculado: saldoPendenciasCalculado,
+        formula: 'A receber - A pagar',
         detalhes: [
-          `Realizado: ${fmtMoney(resumo.saldoRealizado)}`,
-          `Investimento líquido: ${fmtMoney(investimentoLiquido)}`,
           `A receber: ${fmtMoney(resumo.totalAReceber)}`,
-          `A pagar: ${fmtMoney(resumo.totalAPagar)}`
+          `A pagar: ${fmtMoney(resumo.totalAPagar)}`,
+          `Realizado fica separado: ${fmtMoney(resumo.saldoRealizado)}`,
+          `Investimento líquido fica separado: ${fmtMoney(investimentoLiquido)}`
         ]
       })
     ];
@@ -4214,7 +4213,6 @@ function abrirModalEditarConta(conta) {
   }
 
   function buildDashboardDetail(type, dados) {
-    const investimentos = dados.investimentosPeriodo || {};
     const receitasPendentesMes = (dados.pendentesReceita || []).filter(item => !item.transportado);
     const despesasPendentesMes = (dados.pendentesDespesa || []).filter(item => !item.transportado);
 
@@ -4288,40 +4286,23 @@ function abrirModalEditarConta(conta) {
       previsto: {
         eyebrow: 'Saldo previsto',
         title: fmtMoney(dados.saldoPrevisto),
-        subtitle: 'Estimativa do dinheiro disponível após pendências e aplicações/resgates do período.',
-        explanation: 'Projeta quanto deve sobrar disponível depois de considerar o que já aconteceu, o que ainda falta receber ou pagar e o dinheiro aplicado em investimentos.',
-        formula: 'Saldo previsto = realizado - investimento líquido + a receber - a pagar',
-        formulaParts: ['Realizado', '- Investimento líquido', '+ A receber', '- A pagar', '= Saldo previsto'],
+        subtitle: 'Diferença entre o que ainda falta receber e o que ainda falta pagar no mês.',
+        explanation: 'Mostra o saldo operacional previsto das pendências abertas. O que já entrou ou saiu fica separado em Realizado, para não misturar caixa realizado com contas ainda pendentes.',
+        formula: 'Saldo previsto = a receber - a pagar',
+        formulaParts: ['A receber', '- A pagar', '= Saldo previsto'],
         notes: [
-          'Aplicação em investimento reduz o disponível para pagar contas.',
-          'Resgate aumenta o disponível porque volta para o caixa.'
+          'Recebido e pago ficam no card Realizado.',
+          'Investimentos ficam na aba Investimentos e não alteram este saldo operacional.'
         ],
         summary: [
-          { label: 'Realizado', value: dados.saldoRealizado || 0, help: 'Recebido menos pago.', tone: 'highlight' },
-          {
-            label: 'Investimento líquido',
-            value: -(investimentos.netInvestido || 0),
-            help: 'Aplicações menos resgates.',
-            tone: Number(investimentos.netInvestido || 0) > 0.009
-              ? 'negative'
-              : (Number(investimentos.netInvestido || 0) < -0.009 ? 'positive' : 'neutral')
-          },
           { label: 'A receber', value: dados.totalAReceber || 0, help: 'Entradas pendentes.', tone: 'positive' },
-          { label: 'A pagar', value: -(dados.totalAPagar || 0), help: 'Saídas pendentes.', tone: 'negative' }
+          { label: 'A pagar', value: -(dados.totalAPagar || 0), help: 'Saídas pendentes.', tone: 'negative' },
+          { label: 'Saldo previsto', value: dados.saldoPrevisto || 0, help: 'A receber menos a pagar.', tone: 'highlight' }
         ],
         groups: [
-          detailGroup('Aplicações do período', investimentos.aplicacoes || [], {
-            total: investimentos.totalAplicado || 0,
-            meta: item => item.nome || 'Aplicação',
-            valueGetter: item => Number(item.valor_aplicado || item.valor || 0),
-            tone: 'negative'
-          }),
-          detailGroup('Resgates do período', investimentos.resgates || [], {
-            total: investimentos.totalResgatado || 0,
-            meta: () => 'Resgate de investimento',
-            valueGetter: item => Number(item.valor_liquido || item.valor || 0),
-            tone: 'positive'
-          })
+          detailGroup('Receitas pendentes', dados.pendentesReceita || [], { tone: 'positive' }),
+          detailGroup('Despesas pendentes', dados.pendentesDespesa || [], { tone: 'negative' }),
+          detailGroup('Faturas abertas', dados.cartoesAbertos || [], { meta: item => `${item.movimentos || 0} movimento(s) do cartão`, tone: 'negative' })
         ]
       }
     };

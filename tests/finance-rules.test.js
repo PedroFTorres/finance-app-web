@@ -26,7 +26,7 @@ const {
   validarPagamentoParcialCartao
 } = require("../finance-rules");
 
-test("dashboard soma realizados, pendencias, investimentos e saldo previsto", () => {
+test("dashboard soma realizados, pendencias e saldo previsto operacional", () => {
   const resumo = calcularResumoFinanceiroRegra({
     receitasPeriodo: [
       { valor: 1000, baixado: false },
@@ -53,21 +53,25 @@ test("dashboard soma realizados, pendencias, investimentos e saldo previsto", ()
   assert.equal(resumo.saldoRealizado, 400);
   assert.equal(resumo.saldoPendencias, 420);
   assert.equal(resumo.saldoDisponivelRealizado, 200);
-  assert.equal(resumo.saldoPrevisto, 620);
+  assert.equal(resumo.saldoPrevisto, 420);
 });
 
-test("dashboard nao trata investimento como despesa e desconta apenas do disponivel", () => {
+test("dashboard nao trata investimento como despesa e nao mistura investimento no saldo previsto", () => {
   const resumo = calcularResumoFinanceiroRegra({
     receitasRecebidas: [{ valor: 1000 }],
     despesasPagas: [{ valor: 200 }],
+    receitasPeriodo: [{ valor: 600, baixado: false }],
+    despesasPeriodo: [{ valor: 450, baixado: false }],
     investimentosPeriodo: { netInvestido: 300 }
   });
 
   assert.equal(resumo.totalRecebido, 1000);
   assert.equal(resumo.totalPago, 200);
+  assert.equal(resumo.totalAReceber, 600);
+  assert.equal(resumo.totalAPagar, 450);
   assert.equal(resumo.saldoRealizado, 800);
   assert.equal(resumo.saldoDisponivelRealizado, 500);
-  assert.equal(resumo.saldoPrevisto, 500);
+  assert.equal(resumo.saldoPrevisto, 150);
 });
 
 test("dashboard inclui faturas transportadas no a pagar sem duplicar realizado", () => {
@@ -84,7 +88,7 @@ test("dashboard inclui faturas transportadas no a pagar sem duplicar realizado",
   assert.equal(resumo.totalTransportadoPagar, 450);
   assert.equal(resumo.saldoRealizado, 800);
   assert.equal(resumo.saldoPendencias, -1000);
-  assert.equal(resumo.saldoPrevisto, -200);
+  assert.equal(resumo.saldoPrevisto, -1000);
 });
 
 test("baixa com desconto aceita valor final e rejeita pagar acima do final", () => {

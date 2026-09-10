@@ -66,7 +66,7 @@ function calcularResumoFinanceiroRegra({
     saldoPendencias,
     saldoDisponivelRealizado,
     investimentosPeriodo: { ...investimentosPeriodo, netInvestido },
-    saldoPrevisto: roundCurrency(saldoDisponivelRealizado + saldoPendencias)
+    saldoPrevisto: saldoPendencias
   };
 }
 
