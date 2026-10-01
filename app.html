@@ -621,10 +621,10 @@
     <select id="conta-baixa-select" class="hidden"></select>
     <div id="conta-baixa-list" class="conta-baixa-list"></div>
 
-    <label>Comprovante PDF (opcional)</label>
-    <input type="file" id="comprovante-baixa" accept="application/pdf">
+    <label>Comprovantes em PDF (opcional)</label>
+    <input type="file" id="comprovante-baixa" accept="application/pdf" multiple>
     <small class="field-hint">
-      Anexe o comprovante em PDF na baixa total. Tamanho máximo: 10 MB.
+      Anexe boleto, nota e comprovante de pagamento em PDF na baixa total. Máximo: 10 MB por arquivo.
     </small>
 
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
@@ -678,7 +678,7 @@
   <script src="supabase.js"></script>
   <script src="security.js?v=20260702-1"></script>
   <script src="premium-access-client.js?v=20260819-1"></script>
-  <script src="app.js?v=20261001-1"></script>
+  <script src="app.js?v=20261001-2"></script>
   <script src="secure-summary-client.js?v=20260810-1"></script>
 
 <link rel="stylesheet" href="onboarding/onboarding.css?v=20260809-1">

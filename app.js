@@ -140,9 +140,9 @@ function getComprovanteInput() {
   return document.getElementById("comprovante-baixa");
 }
 
-function getComprovanteFile() {
+function getComprovanteFiles() {
   const input = getComprovanteInput();
-  return input?.files?.[0] || null;
+  return Array.from(input?.files || []);
 }
 
 function resetComprovanteInput() {
@@ -175,6 +175,31 @@ function validateComprovanteFile(file) {
   }
 }
 
+function getComprovantesItem(item) {
+  if (typeof item?.comprovantes === "string") {
+    try {
+      const parsed = JSON.parse(item.comprovantes);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch (_) {
+      // Ignore malformed legacy values and fall back to the old single-file fields.
+    }
+  }
+
+  if (Array.isArray(item?.comprovantes) && item.comprovantes.length > 0) {
+    return item.comprovantes;
+  }
+
+  if (item?.comprovante_path) {
+    return [{
+      path: item.comprovante_path,
+      nome: item.comprovante_nome || "Comprovante PDF",
+      uploaded_at: item.comprovante_uploaded_at || null
+    }];
+  }
+
+  return [];
+}
+
 async function uploadComprovanteBaixa(file, tipo, lancamentoId) {
   if (!file) return null;
 
@@ -200,15 +225,37 @@ async function uploadComprovanteBaixa(file, tipo, lancamentoId) {
   };
 }
 
-async function abrirComprovante(item) {
-  if (!item?.comprovante_path) {
+async function uploadComprovantesBaixa(files, tipo, lancamentoId) {
+  const enviados = [];
+
+  for (const file of files) {
+    const comprovante = await uploadComprovanteBaixa(file, tipo, lancamentoId);
+    if (comprovante) enviados.push(comprovante);
+  }
+
+  return enviados;
+}
+
+async function removeComprovantes(paths) {
+  const validPaths = (paths || []).filter(Boolean);
+  if (validPaths.length === 0) return;
+
+  const { error } = await supabase.storage
+    .from(COMPROVANTES_BUCKET)
+    .remove(validPaths);
+
+  if (error) console.warn("Não foi possível remover comprovantes:", error);
+}
+
+async function abrirComprovantePath(path) {
+  if (!path) {
     alert("Este lançamento ainda não tem comprovante.");
     return;
   }
 
   const { data, error } = await supabase.storage
     .from(COMPROVANTES_BUCKET)
-    .createSignedUrl(item.comprovante_path, 60 * 5);
+    .createSignedUrl(path, 60 * 5);
 
   if (error || !data?.signedUrl) {
     console.error("Erro ao abrir comprovante:", error);
@@ -217,6 +264,32 @@ async function abrirComprovante(item) {
   }
 
   window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+}
+
+async function abrirComprovantes(item) {
+  const comprovantes = getComprovantesItem(item);
+
+  if (comprovantes.length === 0) {
+    alert("Este lançamento ainda não tem comprovante.");
+    return;
+  }
+
+  if (comprovantes.length === 1) {
+    await abrirComprovantePath(comprovantes[0].path);
+    return;
+  }
+
+  const lista = comprovantes
+    .map((arquivo, index) => `${index + 1}. ${arquivo.nome || `Arquivo ${index + 1}`}`)
+    .join("\n");
+  const escolha = prompt(`Qual arquivo deseja abrir?\n\n${lista}`, "1");
+  const indice = Number(escolha) - 1;
+
+  if (!Number.isInteger(indice) || indice < 0 || indice >= comprovantes.length) {
+    return;
+  }
+
+  await abrirComprovantePath(comprovantes[indice].path);
 }
 
 // ================================ // CONTROLE DE PERÍODO — LANÇAMENTOS // ================================
@@ -2805,12 +2878,15 @@ if (item.transferencia_id) {
     });
     right.appendChild(btnBaixar);
   } else {
-    if (item.comprovante_path) {
+    const comprovantes = getComprovantesItem(item);
+    if (comprovantes.length > 0) {
       const btnComprovante = document.createElement("button");
-      btnComprovante.textContent = "Comprovante";
+      btnComprovante.textContent = comprovantes.length > 1
+        ? `Comprovantes (${comprovantes.length})`
+        : "Comprovante";
       btnComprovante.classList.add("receipt");
       btnComprovante.addEventListener("click", () => {
-        abrirComprovante(item);
+        abrirComprovantes(item);
       });
       right.appendChild(btnComprovante);
     }
@@ -2839,17 +2915,14 @@ if (item.transferencia_id) {
           .eq("user_id", STATE.user.id);
       }
 
-      if (item.comprovante_path) {
-        await supabase.storage
-          .from(COMPROVANTES_BUCKET)
-          .remove([item.comprovante_path]);
-      }
+      await removeComprovantes(comprovantes.map(arquivo => arquivo.path));
 
       await supabase
         .from(tipo === "receita" ? "receitas" : "despesas")
         .update({
           baixado: false,
           data_baixa: null,
+          comprovantes: [],
           comprovante_path: null,
           comprovante_nome: null,
           comprovante_uploaded_at: null
@@ -5212,7 +5285,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
   let movimentacaoCriadaId = null;
   let lancamentoOriginal = null;
   let contaBaixaId = null;
-  let comprovanteEnviadoPath = null;
+  let comprovantesEnviadosPaths = [];
 
   try {
     if (!BAIXA_ATUAL) {
@@ -5227,7 +5300,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     const juros = parseMoneyValue(document.getElementById("juros-baixa").value);
     const desconto = parseMoneyValue(document.getElementById("desconto-baixa").value);
     const contaId = document.getElementById("conta-baixa-select").value;
-    const comprovanteFile = getComprovanteFile();
+    const comprovanteFiles = getComprovanteFiles();
     contaBaixaId = contaId;
 
     if (!dataBaixa || !contaId) {
@@ -5248,12 +5321,12 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     const restante = Number((valorFinal - valorPago).toFixed(2));
     const baixaParcial = restante > 0.009;
 
-    if (baixaParcial && comprovanteFile) {
-      alert("Nesta primeira versão, o comprovante PDF pode ser anexado apenas em baixa total.");
+    if (baixaParcial && comprovanteFiles.length > 0) {
+      alert("Nesta primeira versão, os comprovantes em PDF podem ser anexados apenas em baixa total.");
       return;
     }
 
-    validateComprovanteFile(comprovanteFile);
+    comprovanteFiles.forEach(validateComprovanteFile);
 
     if (valorFinal <= 0) {
       alert("O valor final da baixa precisa ser maior que zero.");
@@ -5343,12 +5416,13 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
         .eq("user_id", STATE.user.id);
       if (updateParcialErr) throw updateParcialErr;
     } else {
-      const comprovante = await uploadComprovanteBaixa(
-        comprovanteFile,
+      const comprovantes = await uploadComprovantesBaixa(
+        comprovanteFiles,
         tipo,
         lancamento.id
       );
-      comprovanteEnviadoPath = comprovante?.path || null;
+      comprovantesEnviadosPaths = comprovantes.map(arquivo => arquivo.path);
+      const comprovantePrincipal = comprovantes[0] || null;
 
       // 🔹 marca lançamento como baixado
       const { error: updateBaixaErr } = await supabase
@@ -5356,9 +5430,10 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
         .update({
           baixado: true,
           data_baixa: dataBaixa,
-          comprovante_path: comprovante?.path || null,
-          comprovante_nome: comprovante?.nome || null,
-          comprovante_uploaded_at: comprovante?.uploaded_at || null
+          comprovantes,
+          comprovante_path: comprovantePrincipal?.path || null,
+          comprovante_nome: comprovantePrincipal?.nome || null,
+          comprovante_uploaded_at: comprovantePrincipal?.uploaded_at || null
         })
         .eq("id", lancamento.id)
         .eq("user_id", STATE.user.id);
@@ -5378,11 +5453,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
 
   } catch (err) {
     console.error("Erro ao confirmar baixa:", err);
-    if (comprovanteEnviadoPath) {
-      await supabase.storage
-        .from(COMPROVANTES_BUCKET)
-        .remove([comprovanteEnviadoPath]);
-    }
+    await removeComprovantes(comprovantesEnviadosPaths);
     if (movimentacaoCriadaId) {
       await supabase
         .from("movimentacoes")
@@ -5400,6 +5471,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
           categoria_id: lancamentoOriginal.categoria_id,
           baixado: lancamentoOriginal.baixado,
           data_baixa: lancamentoOriginal.data_baixa,
+          comprovantes: lancamentoOriginal.comprovantes || [],
           comprovante_path: lancamentoOriginal.comprovante_path || null,
           comprovante_nome: lancamentoOriginal.comprovante_nome || null,
           comprovante_uploaded_at: lancamentoOriginal.comprovante_uploaded_at || null
