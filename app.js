@@ -17,6 +17,8 @@
    let IS_CREATING_CONTA = false;
    let IS_BAIXANDO = false;
    let IS_TRANSFERINDO = false;
+   const COMPROVANTES_BUCKET = "comprovantes";
+   const MAX_COMPROVANTE_BYTES = 10 * 1024 * 1024;
 
   /* ============================ CONFIG & ESTADO GLOBAL ============================ */
    
@@ -132,6 +134,89 @@ function atualizarValorFinalBaixa() {
       currency: "BRL"
     });
   }
+}
+
+function getComprovanteInput() {
+  return document.getElementById("comprovante-baixa");
+}
+
+function getComprovanteFile() {
+  const input = getComprovanteInput();
+  return input?.files?.[0] || null;
+}
+
+function resetComprovanteInput() {
+  const input = getComprovanteInput();
+  if (input) input.value = "";
+}
+
+function sanitizeFileName(name = "comprovante.pdf") {
+  const cleaned = String(name)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+
+  return cleaned.endsWith(".pdf") ? cleaned : `${cleaned || "comprovante"}.pdf`;
+}
+
+function validateComprovanteFile(file) {
+  if (!file) return;
+
+  const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name || "");
+  if (!isPdf) {
+    throw new Error("O comprovante precisa ser um arquivo PDF.");
+  }
+
+  if (file.size > MAX_COMPROVANTE_BYTES) {
+    throw new Error("O comprovante deve ter no máximo 10 MB.");
+  }
+}
+
+async function uploadComprovanteBaixa(file, tipo, lancamentoId) {
+  if (!file) return null;
+
+  validateComprovanteFile(file);
+
+  const safeName = sanitizeFileName(file.name);
+  const path = `${STATE.user.id}/${tipo}/${lancamentoId}/${Date.now()}-${safeName}`;
+
+  const { error } = await supabase.storage
+    .from(COMPROVANTES_BUCKET)
+    .upload(path, file, {
+      cacheControl: "3600",
+      contentType: "application/pdf",
+      upsert: false
+    });
+
+  if (error) throw error;
+
+  return {
+    path,
+    nome: file.name || safeName,
+    uploaded_at: new Date().toISOString()
+  };
+}
+
+async function abrirComprovante(item) {
+  if (!item?.comprovante_path) {
+    alert("Este lançamento ainda não tem comprovante.");
+    return;
+  }
+
+  const { data, error } = await supabase.storage
+    .from(COMPROVANTES_BUCKET)
+    .createSignedUrl(item.comprovante_path, 60 * 5);
+
+  if (error || !data?.signedUrl) {
+    console.error("Erro ao abrir comprovante:", error);
+    alert("Não foi possível abrir o comprovante.");
+    return;
+  }
+
+  window.open(data.signedUrl, "_blank", "noopener,noreferrer");
 }
 
 // ================================ // CONTROLE DE PERÍODO — LANÇAMENTOS // ================================
@@ -2720,6 +2805,16 @@ if (item.transferencia_id) {
     });
     right.appendChild(btnBaixar);
   } else {
+    if (item.comprovante_path) {
+      const btnComprovante = document.createElement("button");
+      btnComprovante.textContent = "Comprovante";
+      btnComprovante.classList.add("receipt");
+      btnComprovante.addEventListener("click", () => {
+        abrirComprovante(item);
+      });
+      right.appendChild(btnComprovante);
+    }
+
     const btnCancelar = document.createElement("button");
     btnCancelar.textContent = "Cancelar Baixa";
     btnCancelar.addEventListener("click", async () => {
@@ -2744,11 +2839,20 @@ if (item.transferencia_id) {
           .eq("user_id", STATE.user.id);
       }
 
+      if (item.comprovante_path) {
+        await supabase.storage
+          .from(COMPROVANTES_BUCKET)
+          .remove([item.comprovante_path]);
+      }
+
       await supabase
         .from(tipo === "receita" ? "receitas" : "despesas")
         .update({
           baixado: false,
-          data_baixa: null
+          data_baixa: null,
+          comprovante_path: null,
+          comprovante_nome: null,
+          comprovante_uploaded_at: null
         })
         .eq("id", item.id)
         .eq("user_id", STATE.user.id);
@@ -2979,6 +3083,7 @@ openModalEditSemEscopo(item, tipo) {
     },
      abrirModalBaixa(tipo, lancamento) {
   BAIXA_ATUAL = { tipo, lancamento };
+  resetComprovanteInput();
 
   document.getElementById("data-baixa").value =
     lancamento.data || new Date().toISOString().slice(0, 10);
@@ -5107,6 +5212,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
   let movimentacaoCriadaId = null;
   let lancamentoOriginal = null;
   let contaBaixaId = null;
+  let comprovanteEnviadoPath = null;
 
   try {
     if (!BAIXA_ATUAL) {
@@ -5121,6 +5227,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     const juros = parseMoneyValue(document.getElementById("juros-baixa").value);
     const desconto = parseMoneyValue(document.getElementById("desconto-baixa").value);
     const contaId = document.getElementById("conta-baixa-select").value;
+    const comprovanteFile = getComprovanteFile();
     contaBaixaId = contaId;
 
     if (!dataBaixa || !contaId) {
@@ -5140,6 +5247,13 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
     }
     const restante = Number((valorFinal - valorPago).toFixed(2));
     const baixaParcial = restante > 0.009;
+
+    if (baixaParcial && comprovanteFile) {
+      alert("Nesta primeira versão, o comprovante PDF pode ser anexado apenas em baixa total.");
+      return;
+    }
+
+    validateComprovanteFile(comprovanteFile);
 
     if (valorFinal <= 0) {
       alert("O valor final da baixa precisa ser maior que zero.");
@@ -5229,12 +5343,22 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
         .eq("user_id", STATE.user.id);
       if (updateParcialErr) throw updateParcialErr;
     } else {
+      const comprovante = await uploadComprovanteBaixa(
+        comprovanteFile,
+        tipo,
+        lancamento.id
+      );
+      comprovanteEnviadoPath = comprovante?.path || null;
+
       // 🔹 marca lançamento como baixado
       const { error: updateBaixaErr } = await supabase
         .from(tabelaLancamento)
         .update({
           baixado: true,
-          data_baixa: dataBaixa
+          data_baixa: dataBaixa,
+          comprovante_path: comprovante?.path || null,
+          comprovante_nome: comprovante?.nome || null,
+          comprovante_uploaded_at: comprovante?.uploaded_at || null
         })
         .eq("id", lancamento.id)
         .eq("user_id", STATE.user.id);
@@ -5245,6 +5369,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
 
     // 🔹 fecha modal e limpa estado
     document.getElementById("modal-baixa").classList.add("hidden");
+    resetComprovanteInput();
     BAIXA_ATUAL = null;
 
     // 🔹 atualiza telas
@@ -5253,6 +5378,11 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
 
   } catch (err) {
     console.error("Erro ao confirmar baixa:", err);
+    if (comprovanteEnviadoPath) {
+      await supabase.storage
+        .from(COMPROVANTES_BUCKET)
+        .remove([comprovanteEnviadoPath]);
+    }
     if (movimentacaoCriadaId) {
       await supabase
         .from("movimentacoes")
@@ -5269,13 +5399,16 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
           conta_id: lancamentoOriginal.conta_id,
           categoria_id: lancamentoOriginal.categoria_id,
           baixado: lancamentoOriginal.baixado,
-          data_baixa: lancamentoOriginal.data_baixa
+          data_baixa: lancamentoOriginal.data_baixa,
+          comprovante_path: lancamentoOriginal.comprovante_path || null,
+          comprovante_nome: lancamentoOriginal.comprovante_nome || null,
+          comprovante_uploaded_at: lancamentoOriginal.comprovante_uploaded_at || null
         })
         .eq("id", lancamentoOriginal.id)
         .eq("user_id", STATE.user.id);
     }
     if (contaBaixaId) await ContasService.recalc(contaBaixaId);
-    alert("Erro ao realizar a baixa.");
+    alert(friendlySaveError(err, "Erro ao realizar a baixa."));
   } finally {
     // 🔓 libera trava SEMPRE
     IS_BAIXANDO = false;

@@ -2319,6 +2319,19 @@ button:hover { opacity: .9; }
   font-size: 12px;
 }
 
+.lanc-actions .receipt {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 #box-pendencias .lanc-item {
   max-width: 940px;
 }
