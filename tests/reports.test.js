@@ -144,3 +144,36 @@ test('balanço separa vencidos anteriores e conta cada pendência uma única vez
   assert.equal(balance.months[0].projected, 100);
   assert.equal(balance.months[1].projected, -50);
 });
+
+test('categoria de cartão reúne faturas abertas e fechadas inclusive com filtro de categoria', () => {
+  const report = buildReport(data, { ...options, mode: 'pagar', category: 'card' });
+  assert.equal(report.total, 130); // Fatura fechada 90 + aberta 50 - adiantamento 10.
+  assert.equal(report.groups.length, 1);
+  assert.equal(report.groups[0].id, 'card');
+  assert.equal(report.rows.filter(row => row.provisional).length, 1);
+});
+
+test('abrir ou fechar a fatura mantém o valor da categoria de cartão sem duplicar compras', () => {
+  const open = { categories: data.categories, cards: data.cards,
+    purchases: [{ id: 'p', cartao_id: 'cc', valor: 120, tipo: 'compra', data_fatura: '2026-07-01' }] };
+  const closed = { ...open,
+    invoices: [{ id: 'f', cartao_id: 'cc', mes: 7, ano: 2026, status: 'fechada', pago: false }],
+    expenses: [{ id: 'd', cartao_fatura_id: 'f', categoria_id: 'card', valor: 120, baixado: false, data: '2026-07-20' }] };
+  const filter = { ...options, category: 'card' };
+  assert.equal(buildBalance(open, filter).pagar, 120);
+  assert.equal(buildBalance(closed, filter).pagar, 120);
+  assert.equal(buildBalance(closed, filter).rows.length, 1);
+});
+
+test('pagamento parcial do cartão entra em pago e reduz apenas o restante previsto', () => {
+  const sample = { categories: data.categories, cards: data.cards,
+    expenses: [{ id: 'paid', categoria_id: 'card', valor: 30, baixado: true, data_baixa: '2026-07-03', cartao_pagamento_parcial: true }],
+    purchases: [
+      { id: 'purchase', cartao_id: 'cc', valor: 100, tipo: 'compra', data_fatura: '2026-07-01' },
+      { id: 'payment', cartao_id: 'cc', valor: -30, tipo: 'pagamento', data_fatura: '2026-07-01' }
+    ] };
+  const balance = buildBalance(sample, { ...options, category: 'card' });
+  assert.equal(balance.pagos, 30);
+  assert.equal(balance.pagar, 70);
+  assert.equal(balance.projected, -100);
+});

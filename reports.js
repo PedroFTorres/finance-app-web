@@ -99,6 +99,7 @@
       row.appendChild(node('td', fmt(item.value)));
       if (item.purchaseDate && mode === 'cartao') row.children[1].appendChild(node('p', `Compra em ${dateBR(item.purchaseDate)}`));
       if (item.overdue) row.children[1].appendChild(node('p', 'Vencido antes do período'));
+      if (item.provisional) row.children[1].appendChild(node('p', 'Fatura aberta · valor provisório'));
     });
     wrapper.appendChild(table);
     return wrapper;
@@ -157,6 +158,9 @@
     $('report-note').textContent = mode === 'cartao'
       ? 'Compras e parcelas por mês de fatura, com a data original da compra no detalhamento. Pagamentos da fatura não entram nesta visão. Este total não deve ser somado ao relatório de despesas pagas.'
       : 'Recebido e pago usam a data da baixa e incluem juros e descontos. Previsões usam o vencimento dos lançamentos cadastrados, incluindo faturas abertas sem duplicar faturas fechadas. O saldo mostra o resultado deste período, não o saldo bancário. Transferências e investimentos ficam fora. Recorrências futuras entram quando seus lançamentos já estão cadastrados.';
+    if (mode === 'balanco' && options.account !== 'all') {
+      $('report-note').textContent += ' Faturas abertas ainda sem conta de pagamento definida aparecem em Todas as contas.';
+    }
     $('report-category-heading').textContent = mode === 'balanco' ? 'Balanço por categoria' : 'Compras por categoria';
     $('report-monthly-heading').textContent = mode === 'balanco' ? 'Planejamento mês a mês' : 'Compras por mês de fatura';
     const content = $('report-content');

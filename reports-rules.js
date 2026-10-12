@@ -8,6 +8,8 @@
     const accounts = new Map((data.accounts || []).map(item => [item.id, item.nome]));
     const cards = new Map((data.cards || []).map(item => [item.id, item.nome]));
     const cardDetails = new Map((data.cards || []).map(item => [item.id, item]));
+    const cardCategory = (data.categories || []).find(item => String(item.nome || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase() === 'cartao de credito');
     const income = mode === 'recebidos' || mode === 'receber';
     const pending = mode === 'receber' || mode === 'pagar';
     const records = income ? data.income || [] : data.expenses || [];
@@ -43,7 +45,7 @@
           const invoice = invoices.get(key);
           if (invoice && (invoice.pago === true || ['fechada', 'paga'].includes(invoice.status))) continue;
           const row = groups.get(key) || normalize(item, { id: `invoice-${key}`, description: `Fatura aberta — ${cards.get(item.cartao_id) || 'Cartão'}`,
-            categoryId: 'open-invoice', category: 'Faturas abertas de cartão', account: 'Conta ainda não definida',
+            categoryId: cardCategory?.id || 'card-invoice', category: cardCategory?.nome || 'Cartão de Crédito', account: 'Conta ainda não definida',
             date: dueDate, value: 0, provisional: true, overdue: dueDate < start });
           row.value = money(row.value + Number(item.valor || 0));
           groups.set(key, row);
