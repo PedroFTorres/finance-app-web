@@ -382,10 +382,6 @@ if (contaFaturaConfirmar) {
     renderParcelasEdicao();
   }
 
-  function formatISO(d) {
-    return window.ArolixRuntime.localISODate(new Date(d));
-  }
-
   async function requirePremiumAccess() {
     const { data: profile, error } = await supabase
       .from("user_profiles")
@@ -2242,34 +2238,53 @@ if (modalParcelaCancelar) {
   }
 
   // ===========================// ANTECIPAR PARCELA// ===========================
+  let IS_ANTICIPATING_PARCEL = false;
   async function anteciparParcela(id) {
-    const parcela = state.editingPurchaseParcels.find((p) => p.id === id);
-    if (!parcela)
-      return showToast("Parcela não encontrada.", "error");
+    if (IS_ANTICIPATING_PARCEL) return;
+    IS_ANTICIPATING_PARCEL = true;
+    let antecipacaoSalva = false;
+    try {
+      const { data: parcela, error } = await supabase.from("cartao_lancamentos")
+        .select("*").eq("id", id).eq("user_id", state.user.id).maybeSingle();
+      if (error) throw error;
+      if (!parcela) throw new Error("Parcela não encontrada.");
+      if (!(Number(parcela.valor) > 0) || parcela.tipo === "pagamento") {
+        throw new Error("Somente parcelas de compras podem ser antecipadas.");
+      }
 
-    if (!(await podeEditarLancamentoCartao(parcela))) return;
+      const hoje = new Date();
+      const destino = window.ArolixRuntime.localISODate(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
+      if (!parcela.data_fatura || parcela.data_fatura.slice(0, 7) <= destino.slice(0, 7)) {
+        throw new Error("Esta parcela já está na fatura atual ou em uma fatura anterior.");
+      }
+      if (!(await podeEditarLancamentoCartao(parcela))) return;
+      if (!(await podeEditarLancamentoCartao({ ...parcela, data_fatura: destino }))) return;
+      if (!confirm(`Mover a parcela de ${formatReal(parcela.valor)} para a fatura deste mês? O valor será somado como compra e removido da fatura futura.`)) return;
 
-    if (!confirm(`Antecipar parcela de ${formatReal(parcela.valor)}?`))
-      return;
-
-    const hoje = formatISO(new Date());
-
-    await supabase.from("cartao_lancamentos").insert([{
-      id: crypto.randomUUID(),
-      user_id: state.user.id,
-      cartao_id: parcela.cartao_id,
-      descricao: `Antecipação ${parcela.descricao}`,
-      valor: -Math.abs(parcela.valor),
-      data_compra: hoje,
-      data_fatura: hoje,
-      parcelas: 1,
-      parcela_atual: 1,
-      tipo: "pagamento",
-      billed: false
-    }]);
-
-    showToast("Parcela antecipada.");
-    await loadFaturaForSelected();
+      // Move the original debit; preserve purchase date, amount, category and numbering.
+      const { data: atualizada, error: erroUpdate } = await supabase.from("cartao_lancamentos")
+        .update({ data_fatura: destino })
+        .eq("id", id).eq("user_id", state.user.id)
+        .eq("data_fatura", parcela.data_fatura)
+        .select("id").maybeSingle();
+      if (erroUpdate) throw erroUpdate;
+      if (!atualizada) throw new Error("A parcela mudou ou não pôde ser atualizada. Reabra a edição e tente novamente.");
+      antecipacaoSalva = true;
+      state.editingPurchaseParcels = state.editingPurchaseParcels.map(p => p.id === id ? { ...p, data_fatura: destino } : p);
+      renderParcelasEdicao();
+      mesFatura = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      popularMesFatura();
+      atualizarEstadoBotoesMes();
+      await loadFaturaForSelected();
+      showToast("Parcela movida para a fatura atual como compra.");
+    } catch (error) {
+      console.error("Erro ao antecipar parcela:", error);
+      showToast(antecipacaoSalva
+        ? "Antecipação salva, mas não consegui atualizar a tela. Recarregue a página."
+        : error.message || "Não foi possível antecipar a parcela.", "error");
+    } finally {
+      IS_ANTICIPATING_PARCEL = false;
+    }
   }
 
   // ===========================// POPULAR SELECTS PARA EDIÇÃO// ===========================
