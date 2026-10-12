@@ -7,6 +7,7 @@
    <link rel="icon" type="image/png" href="favicon.png">
 
   <link rel="stylesheet" href="styles.css?v=20261001-1" />
+  <link rel="stylesheet" href="reports.css?v=20261012-1" />
 </head>
 
 <body>
@@ -20,6 +21,7 @@
       <button class="menu-btn" data-target="contas">Contas</button>
       <button class="menu-btn" data-target="categorias">Categorias</button>
       <button class="menu-btn" data-target="lanc">Lançamentos</button>
+      <button class="menu-btn" data-target="relatorios">Relatórios</button>
       <button id="btn-transferir" class="btn-secondary" aria-label="Transferir entre contas">Transferir</button>
       <button class="menu-btn" id="btn-cartao">Cartão</button>
       <button class="menu-btn" id="btn-investimentos" onclick="window.location.href='investimentos/index.html'">Investimentos</button>
@@ -354,6 +356,7 @@
       </div>
 
       <div class="lanc-header-actions">
+        <button class="btn-secondary" onclick="App.showScreen('relatorios')">Relatórios</button>
         <button id="btn-open-add-lanc" class="btn-primary">Adicionar lançamento</button>
       </div>
     </div>
@@ -794,6 +797,49 @@
   </div>
 </div>
     
+  <section class="screen hidden" data-screen="relatorios">
+    <div class="card-panel reports-panel">
+      <div class="reports-heading">
+        <div><h2>Relatórios</h2><p>Entenda de onde vem o dinheiro, onde ele foi gasto e os compromissos futuros.</p></div>
+        <div class="reports-actions">
+          <button id="report-refresh" class="btn-secondary">Consultar novamente</button>
+          <button id="report-export" class="btn-secondary" disabled>Exportar CSV</button>
+          <button id="report-print" class="btn-primary" disabled>Imprimir / PDF</button>
+        </div>
+      </div>
+      <div class="reports-tabs" aria-label="Tipo de relatório">
+        <button data-report-mode="recebidos" aria-pressed="true">Recebidos</button>
+        <button data-report-mode="pagos" aria-pressed="false">Pagos</button>
+        <button data-report-mode="receber" aria-pressed="false">A receber</button>
+        <button data-report-mode="pagar" aria-pressed="false">A pagar</button>
+        <button data-report-mode="cartao" aria-pressed="false">Compras no cartão</button>
+      </div>
+      <div class="reports-filters">
+        <label>Período<select id="report-period"><option value="month">Mês</option><option value="year">Ano</option><option value="custom">Personalizado</option><option value="future">Próximos 12 meses</option></select></label>
+        <label id="report-month-label">Mês<input type="month" id="report-month"></label>
+        <label id="report-year-label" class="hidden">Ano<input type="number" id="report-year" min="1900" max="2200"></label>
+        <label>De<input type="date" id="report-start"></label>
+        <label>Até<input type="date" id="report-end"></label>
+        <label id="report-account-label">Conta<select id="report-account"><option value="all">Todas as contas</option></select></label>
+        <label id="report-card-label" class="hidden">Cartão<select id="report-card"><option value="all">Todos os cartões</option></select></label>
+        <label>Categoria<select id="report-category"><option value="all">Todas as categorias</option></select></label>
+        <label id="report-overdue-label" class="reports-check hidden"><input type="checkbox" id="report-overdue">Incluir vencidos antes do período</label>
+      </div>
+      <p id="report-status" role="status" aria-live="polite"></p>
+      <p id="report-period-caption"></p>
+      <div class="reports-summary">
+        <div><span id="report-total-label">Receitas recebidas</span><strong id="report-total">—</strong></div>
+        <div><span>Lançamentos</span><strong id="report-count">—</strong></div>
+        <div><span>Categorias</span><strong id="report-category-count">—</strong></div>
+      </div>
+      <p id="report-note" class="reports-note"></p>
+      <h3>Por categoria <small>· clique para ver os lançamentos</small></h3>
+      <div id="report-content"></div>
+      <h3>Totais por mês</h3>
+      <div class="reports-table-wrap"><table class="reports-table"><thead><tr><th>Mês</th><th>Total</th></tr></thead><tbody id="report-monthly"></tbody></table></div>
+    </div>
+  </section>
+  </main>
   <!-- Scripts start only after all forms and modals exist. -->
   <script src="vendor/supabase-2.108.2.js"></script>
   <script src="vendor/chart-4.5.1.min.js"></script>
@@ -803,7 +849,9 @@
   <script src="premium-access-client.js?v=20261012-1"></script>
   <script src="runtime-utils.js?v=20261012-1"></script>
   <script src="finance-rules.js?v=20261012-1"></script>
-  <script src="app.js?v=20261012-1"></script>
+  <script src="reports-rules.js?v=20261012-1"></script>
+  <script src="reports.js?v=20261012-1"></script>
+  <script src="app.js?v=20261012-2"></script>
   <link rel="stylesheet" href="onboarding/onboarding.css?v=20260809-1">
   <script src="onboarding/onboarding.js?v=20261012-1"></script>
 </body>

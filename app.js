@@ -4404,7 +4404,7 @@ async init() {
   await atualizarDashboardPorMes();
 },
   
-showScreen(name) {
+showScreen(name, reportMode) {
   // Esconde todas as telas
   document.querySelectorAll(IDS.screens)
     .forEach(s => s.classList.add('hidden'));
@@ -4449,6 +4449,7 @@ if (name === 'contas') {
 if (name === 'categorias') {
   UI.renderCategorias();
 }
+if (name === 'relatorios') window.ArolixReports.open(reportMode);
 
 },
 
@@ -5312,6 +5313,9 @@ if (btnConfirmar) {
     window.App = App;
     await App.init();
     window.APP_READY = true;
+    if (new URLSearchParams(window.location.search).get('relatorio') === 'cartao') {
+      App.showScreen('relatorios', 'cartao');
+    }
 
   } catch (e) {
     console.error('bootstrap error', e);
