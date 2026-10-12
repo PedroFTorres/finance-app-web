@@ -67,42 +67,14 @@ function initCartaoPage() {
     { code: 'other', name: 'Outro banco', aliases: [], initials: '🏦', color: '#7c4dff', bg: '#f4f0ff' }
   ];
 
-  function normalizeBankText(text) {
-    return String(text || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-  }
 
-  function detectBankFromName(name) {
-    const normalized = normalizeBankText(name);
-    return BANK_CATALOG.find(bank => bank.aliases.some(alias => normalized.includes(normalizeBankText(alias))))
-      || BANK_CATALOG[BANK_CATALOG.length - 1];
-  }
+function detectBankFromName(name) {
+  return window.ArolixRuntime.detectBank(name, BANK_CATALOG, BANK_CATALOG[BANK_CATALOG.length - 1]);
+}
 
-  function createBankLogo(bank) {
-    const logo = document.createElement('span');
-    logo.className = 'bank-logo';
-    logo.style.setProperty('--bank-color', bank.color || '#7c4dff');
-    logo.style.setProperty('--bank-bg', bank.bg || '#f4f0ff');
-    logo.textContent = bank.initials || '🏦';
-
-    if (bank.logo) {
-      const img = document.createElement('img');
-      img.src = bank.logo;
-      img.alt = `Logo ${bank.name}`;
-      img.loading = 'lazy';
-      img.addEventListener('load', () => {
-        logo.textContent = '';
-        logo.classList.add('bank-logo-with-image');
-        logo.appendChild(img);
-      }, { once: true });
-    }
-
-    logo.setAttribute('aria-hidden', 'true');
-    return logo;
-  }
+function createBankLogo(bank) {
+  return window.ArolixRuntime.createBankLogo(bank);
+}
 
   function createContaOptionContent(conta, todas = []) {
     const frag = document.createDocumentFragment();
@@ -226,7 +198,6 @@ function initCartaoPage() {
   const viewHistorico = document.getElementById("view-historico");
   const boxPagAntecipado = document.getElementById("box-pag-antecipado");
   const modalEditarCompra = document.getElementById("modal-editar-compra");
-  let viewEditarAvista = document.getElementById("view-editar-avista"); // pode ser criado dinamicamente
   let activeCardId = null;
 
  
@@ -294,11 +265,6 @@ function initCartaoPage() {
   };
 }
 
-  const btnPagamentoAntecipado = document.getElementById("btn-pagamento-antecipado");
-  const contaPagAntecipado = document.getElementById("conta-pag-antecipado");
-  const valorPagAntecipado = document.getElementById("valor-pag-antecipado");
-  const dataPagAntecipado = document.getElementById("data-pag-antecipado");
-  const btnConfirmarPagAntecipado = document.getElementById("btn-confirmar-pag-antecipado");
 
   const listaFaturasHistorico = document.getElementById("lista-faturas-historico");
 
@@ -335,10 +301,8 @@ if (contaFaturaConfirmar) {
 }
 
 
-  const toastContainer = document.getElementById("toast-container");
 
   let mesFatura = new Date();
-  let mesLanc = new Date();
  
   // =========================== // HELPERS // ===========================
   function formatReal(v) {
@@ -419,7 +383,7 @@ if (contaFaturaConfirmar) {
   }
 
   function formatISO(d) {
-    return new Date(d).toISOString().slice(0,10);
+    return window.ArolixRuntime.localISODate(new Date(d));
   }
 
   async function requirePremiumAccess() {
@@ -622,43 +586,7 @@ async function ajustarFaturaFechadaAposPagamentoParcial({ dataFatura, valorPago,
 }
 
 function computeContaBalance(conta, movs = []) {
-  const saldoInicial = Number(conta?.saldo_inicial || 0);
-  const dataSaldo = conta?.data_saldo || null;
-  const moneyEq = (a, b) => Math.abs(Number(a || 0) - Number(b || 0)) < 0.000001;
-  const sumMovs = (lista) => (lista || []).reduce((total, m) => {
-    const valor = Number(m.valor || 0);
-    return total + (m.tipo === "credito" ? valor : -valor);
-  }, 0);
-  const movsAteDataSaldo = dataSaldo
-    ? (movs || []).filter(m => m.data && m.data <= dataSaldo)
-    : [];
-  const saldoAteDataSaldo = sumMovs(movsAteDataSaldo);
-
-  if (dataSaldo && movsAteDataSaldo.length > 0 && moneyEq(saldoAteDataSaldo, saldoInicial)) {
-    return sumMovs(movs || []);
-  }
-
-  let saldo = saldoInicial;
-  let saldoInicialJaRepresentadoNoCampo = false;
-
-  (movs || []).forEach(m => {
-    const valor = Number(m.valor || 0);
-    const isSaldoInicialDuplicado =
-      !saldoInicialJaRepresentadoNoCampo &&
-      m.tipo === "credito" &&
-      String(m.descricao || "").trim().toLowerCase() === "saldo inicial" &&
-      moneyEq(valor, saldoInicial) &&
-      (!dataSaldo || m.data === dataSaldo);
-
-    if (isSaldoInicialDuplicado) {
-      saldoInicialJaRepresentadoNoCampo = true;
-      return;
-    }
-
-    saldo += m.tipo === "credito" ? valor : -valor;
-  });
-
-  return saldo;
+  return window.ArolixRuntime.computeContaBalance(conta, movs);
 }
 
 async function recalcularSaldoConta(contaId) {
@@ -673,11 +601,11 @@ async function recalcularSaldoConta(contaId) {
 
   if (errConta) throw errConta;
 
-  const { data: movs, error: errMovs } = await supabase
+  const { data: movs, error: errMovs } = await window.ArolixRuntime.selectAll(supabase
     .from("movimentacoes")
     .select("tipo,valor,descricao,data")
     .eq("conta_id", contaId)
-    .eq("user_id", state.user.id);
+    .eq("user_id", state.user.id));
 
   if (errMovs) throw errMovs;
 
@@ -700,25 +628,15 @@ async function recalcularSaldoConta(contaId) {
     viewFaturas,
     viewLancamento,
     viewHistorico,
-    boxPagAntecipado,
-    viewEditarAvista
+    boxPagAntecipado
   ].forEach(v => v?.classList.add("hidden"));
 }
 
-function abrirModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (!modal) return;
-
-  modal.classList.remove("hidden");
-  modal.setAttribute("aria-hidden", "false");
+function showView(view) {
+  hideAllViews();
+  view?.classList.remove('hidden');
 }
-function fecharModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (!modal) return;
 
-  modal.classList.add("hidden");
-  modal.setAttribute("aria-hidden", "true");
-}
 
 
   // =========================== // SESSÃO // ===========================
@@ -782,10 +700,10 @@ if (btnVoltarEdicao) {
   // =========================== // CARDS — carregar / renderizar / excluir// ===========================
   
   async function loadCards() {
-    const { data } = await supabase.from("cartoes_credito")
+    const { data } = await window.ArolixRuntime.selectAll(supabase.from("cartoes_credito")
       .select("*")
       .eq("user_id", state.user.id)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }));
 
     state.cards = data || [];
     
@@ -835,11 +753,11 @@ function renderCardsSidebar() {
 }
   // ===========================// CATEGORIAS // ===========================
 async function loadCategorias() {
-  const { data } = await supabase
+  const { data } = await window.ArolixRuntime.selectAll(supabase
     .from("categorias")
     .select("*")
     .eq("user_id", state.user.id)
-    .order("nome");
+    .order("nome"));
 
   state.categories = data || [];
 
@@ -939,7 +857,8 @@ async function definirMesInicialAberto() {
 // ◀ mês anterior
 if (btnFatPrev) {
   btnFatPrev.onclick = async () => {
-    mesFatura.setMonth(mesFatura.getMonth() - 1);
+    mesFatura.setDate(1);
+  mesFatura.setMonth(mesFatura.getMonth() - 1);
     popularMesFatura();
 atualizarEstadoBotoesMes();
 await loadFaturaForSelected();
@@ -950,7 +869,8 @@ await loadFaturaForSelected();
 // ▶ próximo mês
 if (btnFatNext) {
   btnFatNext.onclick = async () => {
-    mesFatura.setMonth(mesFatura.getMonth() + 1);
+    mesFatura.setDate(1);
+  mesFatura.setMonth(mesFatura.getMonth() + 1);
     popularMesFatura();
     atualizarEstadoBotoesMes();
     await loadFaturaForSelected();
@@ -1069,17 +989,18 @@ async function loadFaturaForSelected() {
     }
 
     // 👉 se está PAGA, pula para o próximo mês
-    mesFatura.setMonth(mesFatura.getMonth() + 1);
+    mesFatura.setDate(1);
+  mesFatura.setMonth(mesFatura.getMonth() + 1);
   }
 
   const ano = mesFatura.getFullYear();
   const mesZero = mesFatura.getMonth();
   const mes = mesZero + 1;
 
-  const inicio = new Date(ano, mesZero, 1).toISOString().slice(0, 10);
-  const fim = new Date(ano, mesZero + 1, 0).toISOString().slice(0, 10);
+  const inicio = window.ArolixRuntime.localISODate(new Date(ano, mesZero, 1));
+  const fim = window.ArolixRuntime.localISODate(new Date(ano, mesZero + 1, 0));
 
-  const { data: compras } = await supabase
+  const { data: compras } = await window.ArolixRuntime.selectAll(supabase
     .from("cartao_lancamentos")
     .select("*")
     .eq("cartao_id", cartao_id)
@@ -1087,7 +1008,7 @@ async function loadFaturaForSelected() {
     .gte("data_fatura", inicio)
     .lte("data_fatura", fim)
     .order("data_compra", { ascending: true })
-    .order("data_fatura", { ascending: true });
+    .order("data_fatura", { ascending: true }));
 
   const card = state.cards.find(c => c.id === cartao_id);
 
@@ -1229,11 +1150,11 @@ async function loadFaturaForSelected() {
   async function carregarContasModal() {
   if (!contaFaturaSelect) return;
 
-  const { data: contas } = await supabase
+  const { data: contas } = await window.ArolixRuntime.selectAll(supabase
     .from("contas_bancarias")
     .select("id, nome, tipo_conta")
     .eq("user_id", state.user.id)
-    .order("nome");
+    .order("nome"));
 
   const contasPagamento = popularSelectContasPagamento(contaFaturaSelect, contas || []);
   renderContaLogoSelect({
@@ -1254,13 +1175,9 @@ async function fecharFaturaComConta(conta_id) {
     const mesZero = mesFatura.getMonth();
     const mes = mesZero + 1;
 
-    const inicio = new Date(ano, mesZero, 1)
-      .toISOString()
-      .slice(0, 10);
+    const inicio = window.ArolixRuntime.localISODate(new Date(ano, mesZero, 1));
 
-    const fim = new Date(ano, mesZero + 1, 0)
-      .toISOString()
-      .slice(0, 10);
+    const fim = window.ArolixRuntime.localISODate(new Date(ano, mesZero + 1, 0));
 
     const venc = document.getElementById("conta-fatura-vencimento")?.value;
 
@@ -1289,13 +1206,13 @@ async function fecharFaturaComConta(conta_id) {
     }
 
     // 🔹 buscar compras do mês
-    const { data: compras, error: errCompras } = await supabase
+    const { data: compras, error: errCompras } = await window.ArolixRuntime.selectAll(supabase
       .from("cartao_lancamentos")
       .select("*")
       .eq("cartao_id", activeCardId)
       .eq("user_id", state.user.id)
       .gte("data_fatura", inicio)
-      .lte("data_fatura", fim);
+      .lte("data_fatura", fim));
 
     if (errCompras) throw errCompras;
 
@@ -1384,7 +1301,8 @@ async function fecharFaturaComConta(conta_id) {
     showToast("Fatura fechada com sucesso!", "success");
 
     // 🔥 Avança para o próximo mês
-    mesFatura.setMonth(mesFatura.getMonth() + 1);
+    mesFatura.setDate(1);
+  mesFatura.setMonth(mesFatura.getMonth() + 1);
     popularMesFatura();
     await loadFaturaForSelected();
 
@@ -1695,7 +1613,7 @@ let dataBase = new Date(anoFatura, mesFatura - 1, 1);
     1
   );
 
-  const dataFaturaISO = dataFatura.toISOString().slice(0, 10);
+  const dataFaturaISO = window.ArolixRuntime.localISODate(dataFatura);
 
   await supabase.from("cartao_lancamentos").insert([{
     id: crypto.randomUUID(),
@@ -1762,11 +1680,11 @@ if (btnPagParcial) {
 
     const selectConta = document.getElementById("pag-parcial-conta");
 
-    const { data: contas } = await supabase
+    const { data: contas } = await window.ArolixRuntime.selectAll(supabase
       .from("contas_bancarias")
       .select("id, nome, tipo_conta")
       .eq("user_id", state.user.id)
-      .order("nome");
+      .order("nome"));
 
     const contasPagamento = popularSelectContasPagamento(selectConta, contas || []);
     renderContaLogoSelect({
@@ -1777,7 +1695,7 @@ if (btnPagParcial) {
 
     document.getElementById("pag-parcial-valor").value = "";
     document.getElementById("pag-parcial-data").value =
-      new Date().toISOString().slice(0,10);
+      window.ArolixRuntime.localISODate(new Date());
 
     modalPagParcial.classList.remove("hidden");
   };
@@ -1819,11 +1737,11 @@ if (btnConfirmarPagParcial) {
       return;
     }
 
-    const dataFatura = new Date(
+    const dataFatura = window.ArolixRuntime.localISODate(new Date(
       mesFatura.getFullYear(),
       mesFatura.getMonth(),
       1
-    ).toISOString().slice(0,10);
+    ));
 
     pagamentoParcialEmProcessamento = true;
     btnConfirmarPagParcial.disabled = true;
@@ -1831,7 +1749,7 @@ if (btnConfirmarPagParcial) {
     try {
       const categoriaId = await getOrCreateCategoria("Cartão de Crédito");
 
-      const { data: pagamentosExistentes, error: erroBuscaPagamento } = await supabase
+      const { data: pagamentosExistentes, error: erroBuscaPagamento } = await window.ArolixRuntime.selectAll(supabase
         .from("cartao_lancamentos")
         .select("id, valor")
         .eq("user_id", state.user.id)
@@ -1839,7 +1757,7 @@ if (btnConfirmarPagParcial) {
         .eq("tipo", "pagamento")
         .eq("descricao", "Pagamento parcial da fatura")
         .eq("data_compra", data)
-        .eq("data_fatura", dataFatura);
+        .eq("data_fatura", dataFatura));
 
       if (erroBuscaPagamento) throw erroBuscaPagamento;
 
@@ -1852,14 +1770,14 @@ if (btnConfirmarPagParcial) {
         return;
       }
 
-      const { data: despesasExistentes, error: erroBuscaDespesa } = await supabase
+      const { data: despesasExistentes, error: erroBuscaDespesa } = await window.ArolixRuntime.selectAll(supabase
         .from("despesas")
         .select("id, valor")
         .eq("user_id", state.user.id)
         .eq("conta_id", contaId)
         .eq("descricao", "Pagamento parcial cartão")
         .eq("data_baixa", data)
-        .eq("cartao_pagamento_parcial", true);
+        .eq("cartao_pagamento_parcial", true));
 
       if (erroBuscaDespesa) throw erroBuscaDespesa;
 
@@ -2000,15 +1918,6 @@ if (btnConfirmarPagParcial) {
 }
 
   // ===========================// HISTÓRICO DE FATURAS// ===========================
-  async function loadHistoricoFaturas() {
-    const { data } = await supabase.from("cartao_faturas").select("*, cartoes_credito(nome)").eq("user_id", state.user.id).order("created_at", { ascending: false });
-    listaFaturasHistorico.innerHTML = "";
-    (data || []).forEach((f) => {
-      const li = document.createElement("li");
-      li.textContent = `${f.cartoes_credito?.nome} • ${f.mes}/${f.ano} — ${formatReal(f.valor_total || 0)} — ${f.pago ? "Paga" : f.status}`;
-      listaFaturasHistorico.appendChild(li);
-    });
-  }
   
   // ===========================// FATURAS — SELECT DO LANÇAMENTO// ===========================
   
@@ -2039,45 +1948,8 @@ function popularFaturasLancamento() {
 }
 
   // ===========================// SELECTS AUXILIARES// ===========================
-  async function loadSelectsForLanc() {
-    await loadCategorias();
-    const { data: contas } = await supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id);
-
-    popularSelectContasPagamento(selectContaPagamento, contas || [], { mostrarSaldo: true });
-  }
 
   // ===========================// EDIÇÃO À VISTA DINÂMICA// ===========================
-  function ensureAvistaViewExists() {
-    if (viewEditarAvista) return;
-    const right = document.querySelector(".right-column") || document.body;
-
-    const div = document.createElement("div");
-    div.id = "view-editar-avista";
-    div.className = "panel view hidden";
-    div.innerHTML = `
-      <div class="panel-header">
-        <h2>Editar Compra (À vista)</h2>
-        <button id="btn-avista-voltar" class="btn-secondary">Voltar</button>
-      </div>
-      <div class="form">
-        <label>Descrição</label><input id="avista-desc">
-        <label>Valor</label><input id="avista-valor" type="number" step="0.01">
-        <label>Data</label><input id="avista-data" type="date">
-        <label>Categoria</label><select id="avista-categoria"></select>
-        <label>Cartão</label><select id="avista-cartao"></select>
-        <div class="actions-row">
-          <button id="btn-avista-salvar" class="btn-primary">Salvar</button>
-          <button id="btn-avista-excluir" class="btn-danger">Excluir</button>
-        </div>
-      </div>`;
-
-    right.appendChild(div);
-    viewEditarAvista = div;
-
-   
-    document.getElementById("btn-avista-salvar").onclick = salvarEdicaoAvista;
-    document.getElementById("btn-avista-excluir").onclick = excluirCompraAvista;
-     }
 
 async function abrirEdicaoAvista(l) {
   try {
@@ -2126,106 +1998,9 @@ async function abrirEdicaoAvista(l) {
   }
 }
 
-  async function popularSelectCategoriaAvista(id) {
-    const { data } = await supabase
-      .from("categorias")
-      .select("*")
-      .eq("user_id", state.user.id)
-      .order("nome");
-    const sel = document.getElementById("avista-categoria");
-    sel.innerHTML = "";
-    (data || []).forEach((c) => {
-      const op = new Option(c.nome, c.id);
-      if (c.id === id) op.selected = true;
-      sel.appendChild(op);
-    });
-  }
 
-  async function popularSelectCartaoAvista(id) {
-    const { data } = await supabase.from("cartoes_credito").select("*").eq("user_id", state.user.id);
-    const sel = document.getElementById("avista-cartao");
-    sel.innerHTML = "";
-    (data || []).forEach((c) => {
-      const op = new Option(c.nome, c.id);
-      if (c.id === id) op.selected = true;
-      sel.appendChild(op);
-    });
-  }
 
-  async function salvarEdicaoAvista() {
-    const id = viewEditarAvista.dataset.lancId;
-    const desc = document.getElementById("avista-desc").value.trim();
-    const valor = Number(document.getElementById("avista-valor").value || 0);
-    const data = document.getElementById("avista-data").value;
-    const cat = document.getElementById("avista-categoria").value;
-    const cartao = document.getElementById("avista-cartao").value;
 
-    if (!desc || !valor || !data) return showToast("Preencha tudo!", "error");
-
-    const { data: lancamentoAtual, error: errLancamentoAtual } = await supabase
-      .from("cartao_lancamentos")
-      .select("*")
-      .eq("id", id)
-      .eq("user_id", state.user.id)
-      .maybeSingle();
-
-    if (errLancamentoAtual) {
-      console.error(errLancamentoAtual);
-      return showToast("Erro ao validar compra.", "error");
-    }
-
-    if (!lancamentoAtual || !(await podeEditarLancamentoCartao(lancamentoAtual))) return;
-
-    const { error } = await supabase
-      .from("cartao_lancamentos")
-      .update({
-        descricao: desc,
-        valor,
-        data_compra: data,
-        categoria_id: cat,
-        cartao_id: cartao,
-      })
-      .eq("id", id)
-      .eq("user_id", state.user.id);
-
-    if (error) {
-      console.error(error);
-      return showToast("Erro ao salvar.", "error");
-    }
-
-    showToast("Compra salva!");
-    await loadFaturaForSelected();
-    
-  }
-
-  async function excluirCompraAvista() {
-    const id = viewEditarAvista.dataset.lancId;
-    if (!confirm("Excluir compra?")) return;
-
-    const { data: lancamentoAtual, error: errLancamentoAtual } = await supabase
-      .from("cartao_lancamentos")
-      .select("*")
-      .eq("id", id)
-      .eq("user_id", state.user.id)
-      .maybeSingle();
-
-    if (errLancamentoAtual) {
-      console.error(errLancamentoAtual);
-      return showToast("Erro ao validar compra.", "error");
-    }
-
-    if (!lancamentoAtual || !(await podeEditarLancamentoCartao(lancamentoAtual))) return;
-
-    await supabase
-      .from("cartao_lancamentos")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", state.user.id);
-
-    showToast("Compra excluída.");
-    await loadFaturaForSelected();
- 
-  }
 
   // ===========================// EDIÇÃO PARCELADA // ===========================
    async function abrirEdicaoCompraParcelada(c) {
@@ -2251,14 +2026,14 @@ async function abrirEdicaoAvista(l) {
     // descrição base (remove "(x/y)") para encontrar todas as parcelas da mesma compra
     const base = limparDescricaoParcela(c.descricao);
 
-    const { data: parcelas, error } = await supabase
+    const { data: parcelas, error } = await window.ArolixRuntime.selectAll(supabase
       .from("cartao_lancamentos")
       .select("*")
       .eq("cartao_id", c.cartao_id)
       .eq("user_id", state.user.id)
       .eq("data_compra", c.data_compra)
       .eq("parcelas", c.parcelas)
-      .order("parcela_atual", { ascending: true });
+      .order("parcela_atual", { ascending: true }));
 
     if (error) {
       console.error(error);
@@ -2379,25 +2154,6 @@ async function abrirEdicaoAvista(l) {
   // ===========================// MODAL EDITAR PARCELA// ===========================
   let parcelaEditandoId = null;
 
- async function abrirModalEditarParcela(c) {
-  if (!(await podeEditarLancamentoCartao(c))) return;
-
-  if (!modalEditarParcela || !modalParcelaValor || !modalParcelaData) {
-    console.error("Modal de edição de parcela não encontrado no DOM");
-    showToast("Erro interno ao editar parcela.", "error");
-    return;
-  }
-
-  parcelaEditandoId = c.id;
-
-  modalParcelaValor.value = Number(c.valor || 0);
-  modalParcelaData.value =
-    c.data_fatura ||
-    c.data_compra ||
-    new Date().toISOString().slice(0, 10);
-
-  modalEditarParcela.classList.remove("hidden");
-}
 
 
   function fecharModalEditarParcela() {
@@ -2518,11 +2274,11 @@ if (modalParcelaCancelar) {
 
   // ===========================// POPULAR SELECTS PARA EDIÇÃO// ===========================
   async function popularSelectCategoriaEdicao(id) {
-    const { data } = await supabase
+    const { data } = await window.ArolixRuntime.selectAll(supabase
       .from("categorias")
       .select("*")
       .eq("user_id", state.user.id)
-      .order("nome");
+      .order("nome"));
     const sel = document.getElementById("edit-categoria");
     sel.innerHTML = "";
     (data || []).forEach((c) => {
@@ -2533,7 +2289,7 @@ if (modalParcelaCancelar) {
   }
 
   async function popularSelectCartaoEdicao(id) {
-    const { data } = await supabase.from("cartoes_credito").select("*").eq("user_id", state.user.id);
+    const { data } = await window.ArolixRuntime.selectAll(supabase.from("cartoes_credito").select("*").eq("user_id", state.user.id));
     const sel = document.getElementById("edit-cartao");
     sel.innerHTML = "";
     (data || []).forEach((c) => {
@@ -2645,7 +2401,7 @@ if (modalParcelaCancelar) {
   // ===========================// LOAD SELECTS FOR LANCAMENTO // ===========================
   async function loadSelectsForLanc() {
     await loadCategorias();
-    const { data: contas } = await supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id);
+    const { data: contas } = await window.ArolixRuntime.selectAll(supabase.from("contas_bancarias").select("*").eq("user_id", state.user.id));
 
    popularSelectContasPagamento(selectContaPagamento, contas || []);
 
@@ -2669,7 +2425,7 @@ if (modalParcelaCancelar) {
 
   // ===========================// HISTÓRICO & LOADS INICIAIS// ===========================
   async function loadHistoricoFaturas() {
-    const { data } = await supabase.from("cartao_faturas").select("*, cartoes_credito(nome)").eq("user_id", state.user.id).order("created_at", { ascending: false });
+    const { data } = await window.ArolixRuntime.selectAll(supabase.from("cartao_faturas").select("*, cartoes_credito(nome)").eq("user_id", state.user.id).order("created_at", { ascending: false }));
     listaFaturasHistorico.innerHTML = "";
     (data || []).forEach((f) => {
       const li = document.createElement("li");

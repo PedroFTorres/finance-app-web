@@ -56,15 +56,7 @@ function money(value) {
 }
 
 function parseMoneyBR(value) {
-  if (typeof value === "number") return value;
-  const normalized = String(value || "")
-    .trim()
-    .replace(/\s/g, "")
-    .replace(/[R$]/g, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
-  const number = Number(normalized);
-  return Number.isFinite(number) ? number : 0;
+  return window.ArolixRuntime.parseMoney(value);
 }
 
 function parsePercentBR(value, fallback = 0) {
@@ -94,7 +86,7 @@ function parseDecimalBR(value) {
 }
 
 function isoToday() {
-  return new Date().toISOString().slice(0, 10);
+  return window.ArolixRuntime.localISODate(new Date());
 }
 
 function parseISODate(value) {
@@ -103,10 +95,7 @@ function parseISODate(value) {
 }
 
 function addMonthsISO(iso, amount) {
-  const date = parseISODate(iso);
-  if (!date) return isoToday();
-  date.setMonth(date.getMonth() + Number(amount || 0));
-  return date.toISOString().slice(0, 10);
+  return window.ArolixRuntime.addMonthsClamped(iso, Number(amount || 0));
 }
 
 function yearMonthFromISO(iso) {
@@ -124,18 +113,7 @@ function daysBetween(startISO, endISO = isoToday()) {
 }
 
 function businessDaysBetween(startISO, endISO = isoToday()) {
-  const start = parseISODate(startISO);
-  const end = parseISODate(endISO);
-  if (!start || !end || end < start) return 0;
-
-  let count = 0;
-  const cursor = new Date(start);
-  while (cursor <= end) {
-    const day = cursor.getDay();
-    if (day !== 0 && day !== 6) count += 1;
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return Math.max(0, count - 1);
+  return window.ArolixRuntime.businessDaysBetween(startISO, endISO);
 }
 
 function irRateByDays(days) {
@@ -157,7 +135,7 @@ function addDaysISO(startISO, days) {
   const totalDays = Number(days || 0);
   if (!start || !Number.isFinite(totalDays) || totalDays <= 0) return null;
   start.setDate(start.getDate() + totalDays);
-  return start.toISOString().slice(0, 10);
+  return window.ArolixRuntime.localISODate(start);
 }
 
 function normalizeCnpj(value) {
@@ -578,15 +556,6 @@ function groupId(item) {
   return item?.produto_grupo_id || item?.id || "";
 }
 
-function resgatesByInvestimento() {
-  return (state.resgates || []).reduce((acc, resgate) => {
-    const key = resgate.investimento_id;
-    if (!key) return acc;
-    acc[key] = acc[key] || [];
-    acc[key].push(resgate);
-    return acc;
-  }, {});
-}
 
 function principalResgatado(investimentoId) {
   return (state.resgates || [])
@@ -599,6 +568,7 @@ function principalDisponivel(aporte) {
 }
 
 function canRedeemAporte(aporte, dataResgate = isoToday()) {
+  if (dataResgate < aporte.data_aplicacao) return { ok: false, reason: 'A data do resgate é anterior à aplicação' };
   if (aporte.liquidez === "diaria") return { ok: true, reason: "" };
   if (aporte.liquidez === "carencia") {
     const dataCarencia = aporte.data_carencia || addDaysISO(aporte.data_aplicacao, aporte.dias_carencia);
@@ -690,7 +660,7 @@ function buildResgatePreview(produtoGrupoId, valorPrincipal, dataResgate = isoTo
     const principal = Math.min(disponivel, restante);
     const proporcao = principal / Number(aporte.valor_aplicado || 1);
     const calcTotal = calculateInvestimento(aporte, dataResgate);
-    const rendimento = Math.max(0, calcTotal.rendimentoBruto * proporcao);
+    const rendimento = calcTotal.rendimentoBruto * proporcao;
     const iof = Math.max(0, calcTotal.iof * proporcao);
     const ir = Math.max(0, calcTotal.ir * proporcao);
     const liquido = principal + rendimento - iof - ir;
@@ -857,6 +827,7 @@ function requireInvestmentAccess() {
 }
 
 async function loadSession() {
+  if (!(await window.ArolixSecurity.requireMfaForProtectedPage())) return false;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     window.location.href = "../login.html";
@@ -887,11 +858,11 @@ async function loadSession() {
 }
 
 async function loadContas() {
-  const { data, error } = await supabase
+  const { data, error } = await window.ArolixRuntime.selectAll(supabase
     .from("contas_bancarias")
     .select("id,nome,saldo_atual,saldo_inicial,data_saldo,tipo_conta")
     .eq("user_id", state.user.id)
-    .order("nome");
+    .order("nome"));
 
   if (error) throw error;
   state.contas = await contasComSaldoCalculado(data || []);
@@ -901,10 +872,10 @@ async function loadContas() {
 async function contasComSaldoCalculado(contas) {
   if (!contas.length) return [];
 
-  const { data: movs, error } = await supabase
+  const { data: movs, error } = await window.ArolixRuntime.selectAll(supabase
     .from("movimentacoes")
     .select("conta_id,tipo,valor,descricao,data")
-    .eq("user_id", state.user.id);
+    .eq("user_id", state.user.id));
 
   if (error) throw error;
 
@@ -924,43 +895,7 @@ async function contasComSaldoCalculado(contas) {
 }
 
 function computeContaBalance(conta, movs = []) {
-    const saldoInicial = Number(conta.saldo_inicial || 0);
-    const dataSaldo = conta.data_saldo || null;
-    const moneyEq = (a, b) => Math.abs(Number(a || 0) - Number(b || 0)) < 0.000001;
-    const sumMovs = (lista) => (lista || []).reduce((total, mov) => {
-      const valor = Number(mov.valor || 0);
-      return total + (mov.tipo === "credito" ? valor : -valor);
-    }, 0);
-    const movsAteDataSaldo = dataSaldo
-      ? (movs || []).filter(mov => mov.data && mov.data <= dataSaldo)
-      : [];
-    const saldoAteDataSaldo = sumMovs(movsAteDataSaldo);
-
-    if (dataSaldo && movsAteDataSaldo.length > 0 && moneyEq(saldoAteDataSaldo, saldoInicial)) {
-      return sumMovs(movs || []);
-    }
-
-    let saldo = saldoInicial;
-    let saldoInicialJaDescontado = false;
-
-    (movs || []).forEach((mov) => {
-      const valor = Number(mov.valor || 0);
-      const isSaldoInicialDuplicado =
-        !saldoInicialJaDescontado &&
-        mov.tipo === "credito" &&
-        String(mov.descricao || "").trim().toLowerCase() === "saldo inicial" &&
-        moneyEq(valor, saldoInicial) &&
-        (!dataSaldo || mov.data === dataSaldo);
-
-      if (isSaldoInicialDuplicado) {
-        saldoInicialJaDescontado = true;
-        return;
-      }
-
-      saldo += mov.tipo === "credito" ? valor : -valor;
-    });
-
-    return saldo;
+  return window.ArolixRuntime.computeContaBalance(conta, movs);
 }
 
 function renderContaOptions() {
@@ -1025,11 +960,11 @@ function toggleCarenciaFields() {
 }
 
 async function loadInvestimentos() {
-  const { data, error } = await supabase
+  const { data, error } = await window.ArolixRuntime.selectAll(supabase
     .from("investimentos")
     .select("*")
     .eq("user_id", state.user.id)
-    .order("data_aplicacao", { ascending: false });
+    .order("data_aplicacao", { ascending: false }));
 
   if (error) throw error;
   state.investimentos = data || [];
@@ -1040,11 +975,11 @@ async function loadInvestimentos() {
 }
 
 async function loadResgates() {
-  const { data, error } = await supabase
+  const { data, error } = await window.ArolixRuntime.selectAll(supabase
     .from("investimento_resgates")
     .select("*")
     .eq("user_id", state.user.id)
-    .order("data_resgate", { ascending: false });
+    .order("data_resgate", { ascending: false }));
 
   if (error) {
     console.warn("Tabela de resgates ainda não disponível.", error);
@@ -1361,126 +1296,49 @@ async function atualizarCotasFundoPelaCvm(produtoId) {
 async function recalcConta(contaId) {
   if (!contaId) return;
 
-  const { data: conta } = await supabase
+  const { data: conta, error: contaError } = await supabase
     .from("contas_bancarias")
     .select("saldo_inicial,data_saldo")
     .eq("id", contaId)
     .eq("user_id", state.user.id)
     .maybeSingle();
 
+  if (contaError) throw contaError;
+  if (!conta) throw new Error('Conta não encontrada para recalcular o saldo.');
   const saldoInicial = Number(conta?.saldo_inicial || 0);
   const dataSaldo = conta?.data_saldo || null;
 
-  const { data: movs, error } = await supabase
+  const { data: movs, error } = await window.ArolixRuntime.selectAll(supabase
     .from("movimentacoes")
     .select("tipo,valor,descricao,data")
     .eq("conta_id", contaId)
-    .eq("user_id", state.user.id);
+    .eq("user_id", state.user.id));
 
   if (error) throw error;
 
   const saldo = computeContaBalance({ saldo_inicial: saldoInicial, data_saldo: dataSaldo }, movs || []);
 
-  await supabase
+  const { error: updateError } = await supabase
     .from("contas_bancarias")
     .update({ saldo_atual: Number(saldo.toFixed(2)) })
     .eq("id", contaId)
     .eq("user_id", state.user.id);
+  if (updateError) throw updateError;
 }
 
 async function registrarTransferenciaInvestimento(investimento, origemId, destinoId) {
-  const valor = Number(investimento.valor_aplicado || 0);
-  const transferenciaId = uid();
-  const descricao = `Aplicação ${investmentTypeLabel(investimento.tipo)} — ${investimento.nome}`;
-
-  const { error: errTransf } = await supabase.from("transferencias").insert([{
-    id: transferenciaId,
-    user_id: state.user.id,
-    conta_origem: origemId,
-    conta_destino: destinoId,
-    valor,
+  return window.ArolixRuntime.transfer(supabase, {
+    id: uid(), origem: origemId, destino: destinoId, valor: investimento.valor_aplicado,
     data: investimento.data_aplicacao,
-    descricao
-  }]);
-  if (errTransf) throw errTransf;
-
-  const { error: errMov } = await supabase.from("movimentacoes").insert([
-    {
-      id: uid(),
-      user_id: state.user.id,
-      conta_id: origemId,
-      tipo: "debito",
-      valor,
-      data: investimento.data_aplicacao,
-      descricao: `Aplicação enviada — ${investimento.nome}`,
-      transferencia_id: transferenciaId
-    },
-    {
-      id: uid(),
-      user_id: state.user.id,
-      conta_id: destinoId,
-      tipo: "credito",
-      valor,
-      data: investimento.data_aplicacao,
-      descricao: `Aplicação recebida — ${investimento.nome}`,
-      transferencia_id: transferenciaId
-    }
-  ]);
-  if (errMov) throw errMov;
-
-  await Promise.all([
-    recalcConta(origemId),
-    recalcConta(destinoId)
-  ]);
-
-  return transferenciaId;
+    descricao: `Aplicação ${investmentTypeLabel(investimento.tipo, investimento)} — ${investimento.nome}`
+  });
 }
 
 async function registrarTransferenciaResgate({ produtoNome, valorLiquido, dataResgate, origemId, destinoId }) {
-  const transferenciaId = uid();
-  const descricao = `Resgate investimento — ${produtoNome}`;
-
-  const { error: errTransf } = await supabase.from("transferencias").insert([{
-    id: transferenciaId,
-    user_id: state.user.id,
-    conta_origem: origemId,
-    conta_destino: destinoId,
-    valor: Number(valorLiquido.toFixed(2)),
-    data: dataResgate,
-    descricao
-  }]);
-  if (errTransf) throw errTransf;
-
-  const { error: errMov } = await supabase.from("movimentacoes").insert([
-    {
-      id: uid(),
-      user_id: state.user.id,
-      conta_id: origemId,
-      tipo: "debito",
-      valor: Number(valorLiquido.toFixed(2)),
-      data: dataResgate,
-      descricao: `Resgate enviado — ${produtoNome}`,
-      transferencia_id: transferenciaId
-    },
-    {
-      id: uid(),
-      user_id: state.user.id,
-      conta_id: destinoId,
-      tipo: "credito",
-      valor: Number(valorLiquido.toFixed(2)),
-      data: dataResgate,
-      descricao: `Resgate recebido — ${produtoNome}`,
-      transferencia_id: transferenciaId
-    }
-  ]);
-  if (errMov) throw errMov;
-
-  await Promise.all([
-    recalcConta(origemId),
-    recalcConta(destinoId)
-  ]);
-
-  return transferenciaId;
+  return window.ArolixRuntime.transfer(supabase, {
+    id: uid(), origem: origemId, destino: destinoId, valor: valorLiquido,
+    data: dataResgate, descricao: `Resgate investimento — ${produtoNome}`
+  });
 }
 
 function renderResgatePreview() {
@@ -1521,9 +1379,11 @@ async function handleSubmit(event) {
   event.preventDefault();
   if (!requireInvestmentAccess()) return;
 
-  const button = event.submitter;
+  const button = event.submitter || event.target.querySelector('[type="submit"]');
+  if (!button || button.disabled) return;
   button.disabled = true;
   setMessage("");
+  let persisted = false;
 
   try {
     const nome = el("invest-nome").value.trim();
@@ -1562,6 +1422,22 @@ async function handleSubmit(event) {
 
     if (gerarTransferencia && origemId === destinoId) {
       throw new Error("Conta origem e destino precisam ser diferentes.");
+    }
+
+    if (!destinoId || state.contas.find(c => c.id === destinoId)?.tipo_conta !== 'investimento') {
+      throw new Error('Selecione uma conta de investimento para guardar esta aplicação.');
+    }
+    if (gerarTransferencia && state.contas.find(c => c.id === origemId)?.tipo_conta === 'investimento') {
+      throw new Error('Selecione uma conta corrente para a origem da aplicação.');
+    }
+    if (!isFundo && liquidez === 'vencimento' && !el('invest-vencimento').value) {
+      throw new Error('Informe o vencimento desta aplicação.');
+    }
+    if (!isFundo && el('invest-vencimento').value && el('invest-vencimento').value < dataAplicacao) {
+      throw new Error('O vencimento não pode ser anterior à aplicação.');
+    }
+    if (!isFundo && liquidez === 'carencia' && dataCarencia < dataAplicacao) {
+      throw new Error('A carência não pode terminar antes da aplicação.');
     }
 
     const classeFundo = isFundo ? (el("invest-classe-fundo").value.trim() || null) : null;
@@ -1611,9 +1487,9 @@ async function handleSubmit(event) {
       tipo: tipoProduto,
       indexador: isFundo ? "manual" : "cdi",
       nome,
-      instituicao: isFundo
-        ? (el("invest-administrador").value.trim() || "Banco do Brasil")
-        : "Santander",
+      instituicao: produtoExistente?.base.instituicao
+        || (isFundo && el('invest-administrador').value.trim())
+        || state.contas.find(c => c.id === destinoId)?.nome || 'Instituição não informada',
       cnpj_emissor: cnpjFundo,
       valor_aplicado: Number(valor.toFixed(2)),
       data_aplicacao: dataAplicacao,
@@ -1638,14 +1514,22 @@ async function handleSubmit(event) {
     }
 
     await insertInvestimento(investimento);
-
-    if (gerarTransferencia) {
-      const transferenciaId = await registrarTransferenciaInvestimento(investimento, origemId, destinoId);
-      await supabase
-        .from("investimentos")
-        .update({ transferencia_id: transferenciaId })
-        .eq("id", investimento.id)
-        .eq("user_id", state.user.id);
+    let transferenciaId = null;
+    try {
+      if (gerarTransferencia) {
+        transferenciaId = await registrarTransferenciaInvestimento(investimento, origemId, destinoId);
+        const { error: linkError } = await supabase
+          .from('investimentos').update({ transferencia_id: transferenciaId })
+          .eq('id', investimento.id).eq('user_id', state.user.id);
+        if (linkError) throw linkError;
+      }
+      persisted = true;
+    } catch (transferError) {
+      const { error: deleteError } = await supabase.from('investimentos').delete()
+        .eq('id', investimento.id).eq('user_id', state.user.id);
+      if (deleteError) throw new Error('Não foi possível concluir nem desfazer a aplicação. Reabra a carteira antes de tentar novamente.');
+      if (transferenciaId) await window.ArolixRuntime.deleteTransfer(supabase, transferenciaId);
+      throw transferError;
     }
 
     event.target.reset();
@@ -1669,12 +1553,13 @@ async function handleSubmit(event) {
     toggleInvestmentTypeFields();
     setInvestmentFormMode(state.formMode);
 
+    if (gerarTransferencia) await Promise.all([recalcConta(origemId), recalcConta(destinoId)]);
     await loadContas();
     await loadInvestimentos();
     setMessage("Aplicação salva com sucesso.", true);
   } catch (error) {
     console.error(error);
-    setMessage(error.message || "Erro ao salvar aplicação.");
+    setMessage(persisted ? 'Aplicação salva. Reabra a carteira para atualizar os saldos; não repita o aporte.' : (error.message || 'Erro ao salvar aplicação.'));
   } finally {
     button.disabled = false;
   }
@@ -1684,9 +1569,11 @@ async function handleResgateSubmit(event) {
   event.preventDefault();
   if (!requireInvestmentAccess()) return;
 
-  const button = event.submitter;
+  const button = event.submitter || event.target.querySelector('[type="submit"]');
+  if (!button || button.disabled) return;
   button.disabled = true;
   setResgateMessage("");
+  let persisted = false;
 
   try {
     const produtoId = el("resgate-produto").value;
@@ -1698,6 +1585,9 @@ async function handleResgateSubmit(event) {
 
     if (!preview.ok) throw new Error(preview.message);
     if (!contaDestinoId) throw new Error("Selecione a conta corrente que vai receber o resgate.");
+    if (state.contas.find(c => c.id === contaDestinoId)?.tipo_conta === 'investimento') {
+      throw new Error('Selecione uma conta corrente para receber o resgate.');
+    }
 
     const contaInvestimentoId = preview.group.base.conta_investimento_id;
     if (!contaInvestimentoId) throw new Error("Este produto não possui conta de investimento destino.");
@@ -1732,17 +1622,21 @@ async function handleResgateSubmit(event) {
         destinoId: contaDestinoId
       });
 
-      await supabase
+      const { error: linkError } = await supabase
         .from("investimento_resgates")
         .update({ transferencia_id: transferenciaId })
         .in("id", rows.map(r => r.id))
         .eq("user_id", state.user.id);
+      if (linkError) throw linkError;
+      persisted = true;
     } catch (transferError) {
-      await supabase
+      const { error: deleteError } = await supabase
         .from("investimento_resgates")
         .delete()
         .in("id", rows.map(r => r.id))
         .eq("user_id", state.user.id);
+      if (deleteError) throw new Error('Não foi possível concluir nem desfazer o resgate. Reabra a carteira antes de tentar novamente.');
+      if (transferenciaId) await window.ArolixRuntime.deleteTransfer(supabase, transferenciaId);
       throw transferError;
     }
 
@@ -1750,12 +1644,13 @@ async function handleResgateSubmit(event) {
     el("resgate-data").value = isoToday();
     el("resgate-valor").value = "0,00";
 
+    await Promise.all([recalcConta(contaInvestimentoId), recalcConta(contaDestinoId)]);
     await loadContas();
     await loadInvestimentos();
     setResgateMessage("Resgate registrado com sucesso.", true);
   } catch (error) {
     console.error(error);
-    setResgateMessage(error.message || "Erro ao registrar resgate.");
+    setResgateMessage(persisted ? 'Resgate salvo. Reabra a carteira para atualizar os saldos; não repita o resgate.' : (error.message || 'Erro ao registrar resgate.'));
   } finally {
     button.disabled = false;
   }

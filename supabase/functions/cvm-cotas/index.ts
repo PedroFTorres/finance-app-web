@@ -108,7 +108,7 @@ function scanCsvLine(scanner: CsvQuotaScanner, rawLine: string) {
     return;
   }
 
-  if (!scanner.headersParsed || !line.includes(scanner.formattedCnpj)) return;
+  if (!scanner.headersParsed || (!line.includes(scanner.formattedCnpj) && !line.includes(scanner.cnpj))) return;
 
   const values = line.split(";");
   const rowCnpj = normalizeCnpj(values[scanner.cnpjIndex]);
@@ -131,10 +131,26 @@ function scanCsvChunk(scanner: CsvQuotaScanner, chunk: string, final = false) {
     scanCsvLine(scanner, line);
   }
 
-  if (final && scanner.remainder) {
-    scanCsvLine(scanner, scanner.remainder);
-    scanner.remainder = "";
-  }
+}
+
+async function requireInvestmentAccess(request: Request) {
+  const authorization = request.headers.get('Authorization');
+  if (!authorization?.startsWith('Bearer ')) return false;
+  const url = Deno.env.get('SUPABASE_URL');
+  const key = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!url || !key) throw new Error('Configuracao de autenticacao indisponivel.');
+  const headers = { Authorization: authorization, apikey: key, 'Content-Type': 'application/json' };
+  const userResponse = await fetch(`${url}/auth/v1/user`, { headers });
+  const user = await userResponse.json().catch(() => null);
+  if (!userResponse.ok || !user?.id) return false;
+  const token = authorization.slice(7).split('.')[1];
+  const claims = JSON.parse(atob(token.replace(/-/g, '+').replace(/_/g, '/')));
+  if (claims.aal !== 'aal2') return false;
+  const response = await fetch(`${url}/rest/v1/rpc/arolix_has_investment_access`, {
+    method: 'POST', headers, body: JSON.stringify({ p_user_id: user.id })
+  });
+  if (!response.ok) return false;
+  return await response.json() === true;
 }
 
 async function fetchCvmQuota(yearMonth: string, cnpj: string, dateISO: string) {
@@ -212,14 +228,25 @@ Deno.serve(async (request) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  if (request.method !== 'POST') return new Response('Metodo nao permitido.', { status: 405, headers: corsHeaders });
+
   try {
+    if (!(await requireInvestmentAccess(request))) {
+      return new Response(JSON.stringify({ error: 'Entre com MFA em uma conta VIP ativa para consultar cotas.' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     const body = await request.json().catch(() => ({}));
     const cnpj = normalizeCnpjCvm(body.cnpj);
     const dateISO = String(body.date || new Date().toISOString().slice(0, 10)).slice(0, 10);
-    const maxBackMonths = Math.min(36, Math.max(0, Number(body.maxBackMonths ?? 15)));
+    const months = Number(body.maxBackMonths ?? 15);
+    if (!Number.isFinite(months)) throw new Error('Quantidade de meses invalida.');
+    const maxBackMonths = Math.min(36, Math.max(0, Math.floor(months)));
 
     if (cnpj.length !== 14) throw new Error("CNPJ de fundo invalido.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) throw new Error("Data invalida.");
+    const date = new Date(`${dateISO}T00:00:00Z`);
+    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== dateISO) throw new Error('Data invalida.');
 
     const quota = await findQuota(cnpj, dateISO, maxBackMonths);
     return new Response(JSON.stringify(quota), {

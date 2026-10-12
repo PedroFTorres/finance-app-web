@@ -1,45 +1,5 @@
 // print.js — relatórios de impressão/PDF
 
-function cloneAndStripActions(selectorTable) {
-  const original = document.querySelector(selectorTable);
-  if (!original) return null;
-
-  // clona a tabela inteira
-  const clone = original.cloneNode(true);
-
-  // identificar índice da coluna 'Ações' (th)
-  const thead = clone.querySelector("thead");
-  let actionIndex = -1;
-  if (thead) {
-    const ths = Array.from(thead.querySelectorAll("th"));
-    actionIndex = ths.findIndex(th => /Ações|Acoes|Ação/i.test(th.textContent));
-    // se encontrado, remove o th
-    if (actionIndex >= 0) ths[actionIndex].remove();
-  }
-
-  // remover botões e colunas de ação do body
-  const rows = clone.querySelectorAll("tbody tr");
-  rows.forEach(tr => {
-    // remover o botão (caso exista)
-    tr.querySelectorAll("button, .action-btn, .nav-btn").forEach(b => b.remove());
-    // se actionIndex válido, remover a célula correspondente
-    if (actionIndex >= 0) {
-      const tds = tr.querySelectorAll("td");
-      if (tds[actionIndex]) tds[actionIndex].remove();
-    }
-  });
-
-  // também limpar qualquer coluna de ações no tfoot (ex.: totais)
-  const tfoot = clone.querySelector("tfoot");
-  if (tfoot && actionIndex >= 0) {
-    tfoot.querySelectorAll("tr").forEach(r => {
-      const tds = r.querySelectorAll("td");
-      if (tds[actionIndex]) tds[actionIndex].remove();
-    });
-  }
-
-  return clone.outerHTML;
-}
 
 function escapeHTML(value) {
   return String(value ?? "")

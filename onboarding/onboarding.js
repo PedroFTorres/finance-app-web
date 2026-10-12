@@ -1,18 +1,16 @@
-async function waitForState() {
-  while (!window.STATE || !STATE.profile) {
+async function waitForState(timeout = 15000) {
+  const start = Date.now();
+  while (!window.STATE?.profile || !window.APP_READY) {
+    if (Date.now() - start >= timeout) return false;
     await new Promise(r => setTimeout(r, 100));
   }
+  return true;
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
 
-  await waitForState();
-
-  while (!window.APP_READY) {
-    await new Promise(r => setTimeout(r, 100));
-  }
-
-  if (STATE.profile?.onboarding_completed) return;
+  if (!(await waitForState())) return;
+  if (window.STATE.profile?.onboarding_completed) return;
 
   iniciarOnboarding();
 
@@ -46,7 +44,7 @@ async function concluirOnboarding(){
   .update({
     onboarding_completed: true
   })
-  .eq("id", STATE.user.id);
+  .eq("id", window.STATE.user.id);
 }
 
 const onboardingSteps = [
@@ -113,24 +111,12 @@ function mostrarPainel({ titulo, texto, etapa, acaoTexto, onAcao }){
 
 function irParaTela(tela){
 
-  if (window.App && App.showScreen) {
-    App.showScreen(tela);
+  if (window.App?.showScreen) {
+    window.App.showScreen(tela);
   }
 
 }
 
-function destacar(selector){
-
-  const el = document.querySelector(selector);
-
-  if (!el) {
-    console.error("Elemento não encontrado:", selector);
-    return;
-  }
-
-  el.classList.add("onboarding-highlight");
-
-}
 
 async function passoConta(){
 
@@ -159,7 +145,7 @@ async function verificarConta(){
   const { data } = await supabase
   .from("contas_bancarias")
   .select("id")
-  .eq("user_id", STATE.user.id)
+  .eq("user_id", window.STATE.user.id)
   .limit(1);
 
   if(data && data.length > 0){
@@ -200,7 +186,7 @@ async function verificarCategoria(){
   const { data } = await supabase
   .from("categorias")
   .select("id")
-  .eq("user_id", STATE.user.id)
+  .eq("user_id", window.STATE.user.id)
   .limit(1);
 
   if(data && data.length > 0){
@@ -237,17 +223,17 @@ async function verificarLancamento(){
     supabase
       .from("receitas")
       .select("id")
-      .eq("user_id", STATE.user.id)
+      .eq("user_id", window.STATE.user.id)
       .limit(1),
     supabase
       .from("despesas")
       .select("id")
-      .eq("user_id", STATE.user.id)
+      .eq("user_id", window.STATE.user.id)
       .limit(1),
     supabase
       .from("movimentacoes")
       .select("id")
-      .eq("user_id", STATE.user.id)
+      .eq("user_id", window.STATE.user.id)
       .limit(1)
   ]);
 

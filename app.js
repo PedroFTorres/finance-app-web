@@ -9,7 +9,6 @@
    - Robusto: checagens, mensagens de console e handlers
 */
 
-/* eslint-disable no-unused-vars */
 (() => {
   'use strict';
  
@@ -39,9 +38,19 @@
     return window.ArolixAccess || {};
   }
 
-  function hasPaidAccess() {
-    return !!accessRules().hasPaidAccess?.(STATE.profile);
+  function showDataError(error) {
+    console.error('Falha ao atualizar dados', error);
+    let message = document.getElementById('data-load-error');
+    if (!message) {
+      message = document.createElement('p');
+      message.id = 'data-load-error';
+      message.className = 'dashboard-carry-alert';
+      message.setAttribute('role', 'alert');
+      document.querySelector('main')?.prepend(message);
+    }
+    message.textContent = 'Não foi possível atualizar todos os dados. Os valores na tela podem estar desatualizados. Reabra a página para tentar novamente.';
   }
+
 
   function hasFinancialAccess() {
     return !!accessRules().hasFinancialAccess?.(STATE.profile);
@@ -65,6 +74,8 @@
 }
   let BAIXA_ATUAL = null;
 let mesDashboardAtual = new Date();
+let dashboardRequest = 0;
+let lancamentosRequest = 0;
    function renderMesDashboard() {
   const el = document.getElementById("dash-mes-label");
   const auditEl = document.getElementById("audit-mes-label");
@@ -80,13 +91,16 @@ let mesDashboardAtual = new Date();
 }
 
 async function atualizarDashboardPorMes() {
+  try {
+  const request = ++dashboardRequest;
   const ano = mesDashboardAtual.getFullYear();
   const mes = mesDashboardAtual.getMonth();
 
-  const inicio = new Date(ano, mes, 1).toISOString().slice(0,10);
-  const fim = new Date(ano, mes + 1, 0).toISOString().slice(0,10);
+  const inicio = window.ArolixRuntime.localISODate(new Date(ano, mes, 1));
+  const fim = window.ArolixRuntime.localISODate(new Date(ano, mes + 1, 0));
 
   const dadosDashboard = await carregarDadosDashboard(inicio, fim);
+  if (request !== dashboardRequest) return;
   STATE.dashboardDados = dadosDashboard;
 
   drawResumo(dadosDashboard);
@@ -95,6 +109,7 @@ async function atualizarDashboardPorMes() {
   drawInvestimentosDashboard(dadosDashboard);
 
   renderMesDashboard();
+  } catch (error) { showDataError(error); }
 }
    
 function atualizarValorFinalBaixa() {
@@ -340,10 +355,6 @@ let mesExtratoAtual = new Date();
     dashAudit: 'dashboard-audit',
 
     // contas (tabs)
-    btnAddConta: 'btn-add-conta',
-    contaNome: 'conta-nome',
-    contaSaldo: 'conta-saldo',
-    contaDataSaldo: 'conta-data-saldo',
     selectContasLista: 'select-contas-lista',
     tabBtns: '.tab-btn',
     tabCadastro: 'tab-cadastro',
@@ -428,52 +439,23 @@ let mesExtratoAtual = new Date();
     { code: 'other', name: 'Outro banco', aliases: [], initials: '🏦', color: '#7c4dff', bg: '#f4f0ff' }
   ];
 
-  function normalizeBankText(text) {
-    return String(text || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-  }
 
   function findBankByCode(code) {
     return BANK_CATALOG.find(bank => bank.code === code) || BANK_CATALOG[BANK_CATALOG.length - 1];
   }
 
-  function detectBankFromName(name) {
-    const normalized = normalizeBankText(name);
-    return BANK_CATALOG.find(bank => bank.code && bank.aliases.some(alias => normalized.includes(normalizeBankText(alias))))
-      || BANK_CATALOG[BANK_CATALOG.length - 1];
-  }
+function detectBankFromName(name) {
+  return window.ArolixRuntime.detectBank(name, BANK_CATALOG, findBankByCode('other'));
+}
 
   function getBankFromConta(conta) {
     if (!conta) return findBankByCode('other');
     return detectBankFromName(conta.nome);
   }
 
-  function createBankLogo(bank) {
-    const logo = document.createElement('span');
-    logo.className = 'bank-logo';
-    logo.style.setProperty('--bank-color', bank.color || '#7c4dff');
-    logo.style.setProperty('--bank-bg', bank.bg || '#f4f0ff');
-    logo.textContent = bank.initials || '🏦';
-    if (bank.logo) {
-      const img = document.createElement('img');
-      img.src = bank.logo;
-      img.alt = `Logo ${bank.name}`;
-      img.loading = 'lazy';
-      img.addEventListener('load', () => {
-        logo.textContent = '';
-        logo.classList.add('bank-logo-with-image');
-        logo.appendChild(img);
-      }, { once: true });
-      img.addEventListener('error', () => {
-        logo.classList.remove('bank-logo-with-image');
-      }, { once: true });
-    }
-    logo.setAttribute('aria-hidden', 'true');
-    return logo;
-  }
+function createBankLogo(bank) {
+  return window.ArolixRuntime.createBankLogo(bank);
+}
 
   function populateBankSelect(selectedCode = '') {
     const select = document.getElementById('modal-conta-banco');
@@ -634,7 +616,7 @@ let mesExtratoAtual = new Date();
     const el = document.getElementById(id);
     if (el) el.textContent = text;
   }
-  function isoToday() { return new Date().toISOString().slice(0,10); }
+  function isoToday() { return window.ArolixRuntime.localISODate(new Date()); }
   const IOF_TABLE_INVESTIMENTOS = {
     0: 96, 1: 96, 2: 93, 3: 90, 4: 86, 5: 83, 6: 80, 7: 76, 8: 73, 9: 70,
     10: 66, 11: 63, 12: 60, 13: 56, 14: 53, 15: 50, 16: 46, 17: 43, 18: 40,
@@ -653,19 +635,9 @@ let mesExtratoAtual = new Date();
     if (!start || !end) return 0;
     return Math.max(0, Math.floor((end - start) / 86400000));
   }
-  function businessDaysBetweenISO(startISO, endISO) {
-    const start = parseISODateSafe(startISO);
-    const end = parseISODateSafe(endISO);
-    if (!start || !end || end <= start) return 0;
-    let count = 0;
-    const cursor = new Date(start);
-    while (cursor <= end) {
-      const day = cursor.getDay();
-      if (day !== 0 && day !== 6) count += 1;
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    return Math.max(0, count - 1);
-  }
+  function businessDaysBetweenISO(startISO, endISO = isoToday()) {
+  return window.ArolixRuntime.businessDaysBetween(startISO, endISO);
+}
   function irRateByDaysInvestimentos(days) {
     if (days <= 180) return 22.5;
     if (days <= 360) return 20;
@@ -700,7 +672,6 @@ let mesExtratoAtual = new Date();
     return v.toString(16);
   });
 }
-  function safeGet(elId) { const e = $(elId); return e ? e.value : null; }
  function renderMesLanc() {
   const el = document.getElementById("lanc-mes-label");
   if (!el) return;
@@ -876,25 +847,23 @@ if (emailEl) {
   const ContasService = {
     async load() {
       try {
-        const { data, error } = await supabase.from('contas_bancarias').select('*').eq('user_id', STATE.user.id).order('nome');
+        const { data, error } = await window.ArolixRuntime.selectAll(supabase.from('contas_bancarias').select('*').eq('user_id', STATE.user.id).order('nome'));
         if (error) throw error;
         STATE.contas = data || [];
         return STATE.contas;
       } catch (e) {
         console.error('ContasService.load', e);
-        STATE.contas = [];
-        return [];
+        throw e;
       }
     },
     async applyComputedBalances() {
       try {
         if (!STATE.user?.id || !Array.isArray(STATE.contas) || STATE.contas.length === 0) return;
-        await syncMovimentacoesBaixadasSemExtrato();
 
-        const { data: movs, error } = await supabase
+        const { data: movs, error } = await window.ArolixRuntime.selectAll(supabase
           .from('movimentacoes')
           .select('conta_id,tipo,valor,descricao,data')
-          .eq('user_id', STATE.user.id);
+          .eq('user_id', STATE.user.id));
 
         if (error) throw error;
 
@@ -915,6 +884,7 @@ if (emailEl) {
         });
       } catch (e) {
         console.error('ContasService.applyComputedBalances', e);
+        throw e;
       }
     },
    async create({ nome, agencia, numero_conta, gerente, contato, saldo_inicial, data_saldo, tipo_conta }) {
@@ -941,7 +911,7 @@ if (emailEl) {
 
     // 🔹 cria lançamento do saldo inicial no extrato
     if (Number(saldo_inicial) !== 0) {
-      await supabase.from('movimentacoes').insert([{
+      const { error: initialError } = await supabase.from('movimentacoes').insert([{
         id: uid(),
         user_id: STATE.user.id,
         conta_id: item.id,
@@ -950,9 +920,14 @@ if (emailEl) {
         data: data_saldo,
         descricao: 'Saldo inicial'
       }]);
+      if (initialError) {
+        const { error: rollbackError } = await supabase.from('contas_bancarias').delete()
+          .eq('id', item.id).eq('user_id', STATE.user.id);
+        if (rollbackError) throw new Error('Conta criada, mas o saldo inicial não foi salvo. Confira a conta antes de tentar novamente.');
+        throw initialError;
+      }
     }
 
-    await this.load();
     return item;
 
   } catch (e) {
@@ -965,148 +940,51 @@ if (emailEl) {
     async recalc(conta_id) {
       try {
         if (!conta_id) return null;
-         const { data: conta } = await supabase
+         const { data: conta, error: contaError } = await supabase
           .from('contas_bancarias')
           .select('saldo_inicial,data_saldo')
           .eq('id', conta_id)
           .eq('user_id', STATE.user.id)
           .maybeSingle();
-        const { data: movs } = await supabase
+        if (contaError) throw contaError;
+        if (!conta) throw new Error('Conta não encontrada para recalcular o saldo.');
+        const { data: movs, error: movimentosError } = await window.ArolixRuntime.selectAll(supabase
           .from('movimentacoes')
           .select('tipo,valor,descricao,data')
           .eq('conta_id', conta_id)
-          .eq('user_id', STATE.user.id);
+          .eq('user_id', STATE.user.id));
 
+        if (movimentosError) throw movimentosError;
         const saldo = computeContaBalance(conta, movs || []);
 
-        await supabase
+        const { error: updateError } = await supabase
           .from('contas_bancarias')
           .update({ saldo_atual: saldo })
           .eq('id', conta_id)
           .eq('user_id', STATE.user.id);
+        if (updateError) throw updateError;
         // atualizar cache local se existir
         const idx = STATE.contas.findIndex(c => c.id === conta_id);
-        if (idx >= 0) { STATE.contas[idx].saldo_atual = saldo; }
+        if (idx >= 0) { STATE.contas[idx].saldo_atual = saldo; STATE.contas[idx].saldo_calculado = saldo; }
         return saldo;
-      } catch (e) { console.error('ContasService.recalc', e); return null; }
+      } catch (e) { console.error('ContasService.recalc', e); throw e; }
     }
   };
 
-  function computeContaBalance(conta, movs = []) {
-    const saldoInicial = Number(conta?.saldo_inicial || 0);
-    const dataSaldo = conta?.data_saldo || null;
-    const moneyEq = (a, b) => Math.abs(Number(a || 0) - Number(b || 0)) < 0.000001;
-    const sumMovs = (lista) => (lista || []).reduce((total, m) => {
-      const valor = Number(m.valor || 0);
-      return total + (m.tipo === 'credito' ? valor : -valor);
-    }, 0);
-    const movsAteDataSaldo = dataSaldo
-      ? (movs || []).filter(m => m.data && m.data <= dataSaldo)
-      : [];
-    const saldoAteDataSaldo = sumMovs(movsAteDataSaldo);
+function computeContaBalance(conta, movs = []) {
+  return window.ArolixRuntime.computeContaBalance(conta, movs);
+}
 
-    if (dataSaldo && movsAteDataSaldo.length > 0 && moneyEq(saldoAteDataSaldo, saldoInicial)) {
-      return sumMovs(movs || []);
-    }
 
-    let saldo = saldoInicial;
-    let saldoInicialJaRepresentadoNoCampo = false;
-
-    (movs || []).forEach(m => {
-      const valor = Number(m.valor || 0);
-      const isSaldoInicialDuplicado =
-        !saldoInicialJaRepresentadoNoCampo &&
-        m.tipo === 'credito' &&
-        String(m.descricao || '').trim().toLowerCase() === 'saldo inicial' &&
-        moneyEq(valor, saldoInicial) &&
-        (!dataSaldo || m.data === dataSaldo);
-
-      if (isSaldoInicialDuplicado) {
-        saldoInicialJaRepresentadoNoCampo = true;
-        return;
-      }
-
-      saldo += m.tipo === 'credito' ? valor : -valor;
-    });
-
-    return saldo;
-  }
-
-  let sincronizandoMovimentosBaixados = false;
-
-  async function syncMovimentacoesBaixadasSemExtrato() {
-    if (sincronizandoMovimentosBaixados || !STATE.user?.id) return;
-    sincronizandoMovimentosBaixados = true;
-
-    try {
-      const [receitasResp, despesasResp] = await Promise.all([
-        supabase
-          .from('receitas')
-          .select('id,conta_id,descricao,valor,data_baixa')
-          .eq('user_id', STATE.user.id)
-          .eq('baixado', true)
-          .not('conta_id', 'is', null),
-        supabase
-          .from('despesas')
-          .select('id,conta_id,descricao,valor,data_baixa')
-          .eq('user_id', STATE.user.id)
-          .eq('baixado', true)
-          .not('conta_id', 'is', null)
-      ]);
-
-      if (receitasResp.error) throw receitasResp.error;
-      if (despesasResp.error) throw despesasResp.error;
-
-      const baixados = [
-        ...(receitasResp.data || []).map(item => ({ ...item, tipo_mov: 'credito' })),
-        ...(despesasResp.data || []).map(item => ({ ...item, tipo_mov: 'debito' }))
-      ].filter(item => item.id && item.conta_id && item.data_baixa);
-
-      if (baixados.length === 0) return;
-
-      const ids = baixados.map(item => item.id);
-      const { data: movs, error: errMovs } = await supabase
-        .from('movimentacoes')
-        .select('lancamento_id')
-        .eq('user_id', STATE.user.id)
-        .in('lancamento_id', ids);
-
-      if (errMovs) throw errMovs;
-
-      const idsComMovimento = new Set((movs || []).map(m => m.lancamento_id).filter(Boolean));
-      const faltantes = baixados.filter(item => !idsComMovimento.has(item.id));
-
-      if (faltantes.length === 0) return;
-
-      const { error: errInsert } = await supabase
-        .from('movimentacoes')
-        .insert(faltantes.map(item => ({
-          id: uid(),
-          user_id: STATE.user.id,
-          conta_id: item.conta_id,
-          tipo: item.tipo_mov,
-          valor: Number(item.valor || 0),
-          descricao: item.descricao || (item.tipo_mov === 'credito' ? 'Recebimento' : 'Pagamento'),
-          data: item.data_baixa,
-          lancamento_id: item.id
-        })));
-
-      if (errInsert && errInsert.code !== '23505') throw errInsert;
-    } catch (e) {
-      console.error('syncMovimentacoesBaixadasSemExtrato', e);
-    } finally {
-      sincronizandoMovimentosBaixados = false;
-    }
-  }
 
 const CategoriasService = {
   async load() {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await window.ArolixRuntime.selectAll(supabase
         .from('categorias')
         .select('*')
         .eq('user_id', STATE.user.id)
-        .order('nome');
+        .order('nome'));
 
       if (error) throw error;
 
@@ -1115,8 +993,7 @@ const CategoriasService = {
 
     } catch (e) {
       console.error('CategoriasService.load', e);
-      STATE.categorias = [];
-      return [];
+      throw e;
     }
   },
 
@@ -1150,12 +1027,12 @@ const CategoriasService = {
         const tabela = tipo === 'receita' ? 'receitas' : 'despesas';
         let q = supabase.from(tabela).select('*').eq('user_id', STATE.user.id).gte('data', inicio).lte('data', fim).order('data', { ascending: true });
         if (conta_id && conta_id !== 'all') q = q.eq('conta_id', conta_id);
-        const { data, error } = await q;
+        const { data, error } = await window.ArolixRuntime.selectAll(q);
         if (error) throw error;
         return data || [];
       } catch (e) {
         console.error('LancService.fetch', e);
-        return [];
+        throw e;
       }
     },
     async fetchTransportados(tipo, conta_id = 'all', inicio) {
@@ -1171,7 +1048,7 @@ const CategoriasService = {
 
         if (conta_id && conta_id !== 'all') q = q.eq('conta_id', conta_id);
 
-        const { data, error } = await q;
+        const { data, error } = await window.ArolixRuntime.selectAll(q);
         if (error) throw error;
 
         return (data || []).map(item => ({
@@ -1183,7 +1060,7 @@ const CategoriasService = {
           }));
       } catch (e) {
         console.error('LancService.fetchTransportados', e);
-        return [];
+        throw e;
       }
     },
     async fetchBaixadosComValorReal(tipo, conta_id='all', inicio, fim) {
@@ -1200,18 +1077,18 @@ const CategoriasService = {
 
         if (conta_id && conta_id !== 'all') q = q.eq('conta_id', conta_id);
 
-        const { data, error } = await q;
+        const { data, error } = await window.ArolixRuntime.selectAll(q);
         if (error) throw error;
 
         const lancamentos = data || [];
         if (lancamentos.length === 0) return [];
 
         const ids = lancamentos.map(item => item.id).filter(Boolean);
-        const { data: movs, error: errMovs } = await supabase
+        const { data: movs, error: errMovs } = await window.ArolixRuntime.selectIn(batch => supabase
           .from('movimentacoes')
           .select('lancamento_id, valor, descricao, data')
           .eq('user_id', STATE.user.id)
-          .in('lancamento_id', ids);
+          .in('lancamento_id', batch), ids);
 
         if (errMovs) throw errMovs;
 
@@ -1234,7 +1111,7 @@ const CategoriasService = {
         });
       } catch (e) {
         console.error('LancService.fetchBaixadosComValorReal', e);
-        return [];
+        throw e;
       }
     },
     async fetchBaixasParciais(tipo, conta_id='all', inicio, fim) {
@@ -1252,7 +1129,7 @@ const CategoriasService = {
 
         if (conta_id && conta_id !== 'all') q = q.eq('conta_id', conta_id);
 
-        const { data, error } = await q;
+        const { data, error } = await window.ArolixRuntime.selectAll(q);
         if (error) throw error;
 
         return (data || []).map(item => ({
@@ -1269,7 +1146,7 @@ const CategoriasService = {
         }));
       } catch (e) {
         console.error('LancService.fetchBaixasParciais', e);
-        return [];
+        throw e;
       }
     },
     async insert(t) {
@@ -1326,13 +1203,13 @@ const CategoriasService = {
         // quando o usuário filtra uma conta específica.
         if (conta_id && conta_id !== 'all') return [];
 
-        const { data: lancamentos, error: errLanc } = await supabase
+        const { data: lancamentos, error: errLanc } = await window.ArolixRuntime.selectAll(supabase
           .from('cartao_lancamentos')
           .select('id, cartao_id, descricao, valor, data_compra, data_fatura, tipo')
           .eq('user_id', STATE.user.id)
           .gte('data_fatura', inicio)
           .lte('data_fatura', fim)
-          .order('data_fatura', { ascending: true });
+          .order('data_fatura', { ascending: true }));
 
         if (errLanc) throw errLanc;
         if (!lancamentos || lancamentos.length === 0) return [];
@@ -1341,16 +1218,16 @@ const CategoriasService = {
 
         const [{ data: cartoes, error: errCartoes }, { data: faturas, error: errFaturas }] = await Promise.all([
           cartaoIds.length
-            ? supabase
+            ? window.ArolixRuntime.selectIn(batch => supabase
                 .from('cartoes_credito')
                 .select('id, nome')
                 .eq('user_id', STATE.user.id)
-                .in('id', cartaoIds)
+                .in('id', batch), cartaoIds)
             : Promise.resolve({ data: [], error: null }),
-          supabase
+          window.ArolixRuntime.selectAll(supabase
             .from('cartao_faturas')
             .select('id, cartao_id, mes, ano, status, pago')
-            .eq('user_id', STATE.user.id)
+            .eq('user_id', STATE.user.id))
         ]);
 
         if (errCartoes) throw errCartoes;
@@ -1404,7 +1281,7 @@ const CategoriasService = {
           .sort((a, b) => new Date(a.data) - new Date(b.data));
       } catch (e) {
         console.error('LancService.fetchPrevisoesCartao', e);
-        return [];
+        throw e;
       }
     },
     async fetchCartoesTransportados() {
@@ -1440,72 +1317,17 @@ const CategoriasService = {
       LancService.fetchCartoesTransportados(conta_id, inicio)
     ]);
 
-    const sum = (lista) => (lista || []).reduce((s, item) => s + Number(item.valor || 0), 0);
-    const pendentesReceita = [
-      ...(receitasTransportadas || []),
-      ...(receitasPeriodo || []).filter(item => item.baixado !== true)
-    ];
-    const pendentesDespesa = [
-      ...(despesasTransportadas || []),
-      ...(despesasPeriodo || []).filter(item => item.baixado !== true)
-    ];
-    const cartoesAbertosLista = (cartoesAbertos || []).map(item => ({
-      ...item,
-      categoria_nome: item.categoria_nome || 'Cartão de crédito aberto'
-    }));
-    const cartoesTransportadosLista = (cartoesTransportados || []).map(item => ({
-      ...item,
-      categoria_nome: item.categoria_nome || 'Cartão de crédito transportado'
-    }));
-    const cartoesPendentesLista = [...cartoesTransportadosLista, ...cartoesAbertosLista];
-
-    const receitasRealizadas = [...(receitasRecebidas || []), ...(receitasParciais || [])];
-    const despesasRealizadas = [...(despesasPagas || []), ...(despesasParciais || [])];
-    const totalRecebido = sum(receitasRealizadas);
-    const totalPago = sum(despesasRealizadas);
-    const totalAReceber = sum(pendentesReceita);
-    const totalDespesasPendentes = sum(pendentesDespesa);
-    const totalCartoesAbertos = sum(cartoesAbertosLista);
-    const totalCartoesTransportados = sum(cartoesTransportadosLista);
-    const totalTransportadoReceber = sum(receitasTransportadas);
-    const totalTransportadoPagar = sum(despesasTransportadas) + totalCartoesTransportados;
-    const totalAPagar = totalDespesasPendentes + totalCartoesAbertos + totalCartoesTransportados;
     const investimentosPeriodo = await fetchResumoInvestimentosPeriodo(inicio, fim);
-    const saldoRealizado = totalRecebido - totalPago;
-    const saldoPendencias = totalAReceber - totalAPagar;
-    const saldoDisponivelRealizado = saldoRealizado - investimentosPeriodo.netInvestido;
-
+    const resumo = window.ArolixFinance.calcularResumoFinanceiroRegra({
+      receitasPeriodo, despesasPeriodo, receitasTransportadas, despesasTransportadas,
+      receitasRecebidas, despesasPagas, receitasParciais, despesasParciais,
+      cartoesAbertos, cartoesTransportados, investimentosPeriodo
+    });
+    const cartoesPendentes = [...cartoesTransportados, ...cartoesAbertos];
     return {
-      receitasPeriodo: receitasPeriodo || [],
-      despesasPeriodo: despesasPeriodo || [],
-      receitasRecebidas: receitasRealizadas,
-      despesasPagas: despesasRealizadas,
-      receitasParciais: receitasParciais || [],
-      despesasParciais: despesasParciais || [],
-      receitasTransportadas: receitasTransportadas || [],
-      despesasTransportadas: despesasTransportadas || [],
-      cartoesTransportados: cartoesTransportadosLista,
-      pendentesReceita,
-      pendentesDespesa,
-      cartoesAbertos: cartoesAbertosLista,
-      cartoesPendentes: cartoesPendentesLista,
-      despesasComPrevisao: [...(despesasPeriodo || []), ...(despesasTransportadas || []), ...cartoesPendentesLista],
-      totalRecebido,
-      totalPago,
-      totalAReceber,
-      totalDespesasPendentes,
-      totalCartoesAbertos,
-      totalCartoesTransportados,
-      totalTransportadoReceber,
-      totalTransportadoPagar,
-      totalAPagar,
-      totalReceitas: totalRecebido + totalAReceber,
-      totalDespesas: totalPago + totalAPagar,
-      saldoRealizado,
-      saldoDisponivelRealizado,
-      saldoPendencias,
-      investimentosPeriodo,
-      saldoPrevisto: saldoPendencias
+      ...resumo, receitasPeriodo, despesasPeriodo, receitasParciais, despesasParciais,
+      receitasTransportadas, despesasTransportadas, cartoesPendentes,
+      despesasComPrevisao: [...despesasPeriodo, ...despesasTransportadas, ...cartoesPendentes]
     };
   }
 
@@ -1536,30 +1358,30 @@ const CategoriasService = {
         { data: carteiraAportes, error: errCarteiraAportes },
         { data: carteiraResgates, error: errCarteiraResgates }
       ] = await Promise.all([
-        supabase
+        window.ArolixRuntime.selectAll(supabase
           .from('investimentos')
           .select('id,nome,valor_aplicado,data_aplicacao,status')
           .eq('user_id', STATE.user.id)
           .neq('status', 'cancelado')
           .gte('data_aplicacao', inicio)
-          .lte('data_aplicacao', fim),
-        supabase
+          .lte('data_aplicacao', fim)),
+        window.ArolixRuntime.selectAll(supabase
           .from('investimento_resgates')
           .select('id,valor_liquido,rendimento_bruto,iof,ir,data_resgate')
           .eq('user_id', STATE.user.id)
           .gte('data_resgate', inicio)
-          .lte('data_resgate', fim),
-        supabase
+          .lte('data_resgate', fim)),
+        window.ArolixRuntime.selectAll(supabase
           .from('investimentos')
           .select('id,nome,valor_aplicado,data_aplicacao,percentual_cdi,cdi_anual_referencia,status')
           .eq('user_id', STATE.user.id)
           .neq('status', 'cancelado')
-          .lte('data_aplicacao', isoToday()),
-        supabase
+          .lte('data_aplicacao', isoToday())),
+        window.ArolixRuntime.selectAll(supabase
           .from('investimento_resgates')
           .select('investimento_id,valor_principal_resgatado,valor_liquido,rendimento_bruto,iof,ir,data_resgate')
           .eq('user_id', STATE.user.id)
-          .lte('data_resgate', isoToday())
+          .lte('data_resgate', isoToday()))
       ]);
 
       if (errAplicacoes || errResgates || errCarteiraAportes || errCarteiraResgates) {
@@ -1640,14 +1462,14 @@ const CategoriasService = {
   async function fetchAuditoriaSaldosContas() {
     try {
       const [{ data: contas, error: errContas }, { data: movs, error: errMovs }] = await Promise.all([
-        supabase
+        window.ArolixRuntime.selectAll(supabase
           .from('contas_bancarias')
           .select('id,nome,saldo_atual,saldo_inicial,data_saldo,tipo_conta')
-          .eq('user_id', STATE.user.id),
-        supabase
+          .eq('user_id', STATE.user.id)),
+        window.ArolixRuntime.selectAll(supabase
           .from('movimentacoes')
           .select('id,conta_id,tipo,valor,descricao,data')
-          .eq('user_id', STATE.user.id)
+          .eq('user_id', STATE.user.id))
       ]);
 
       if (errContas || errMovs) throw (errContas || errMovs);
@@ -1703,22 +1525,22 @@ const CategoriasService = {
         { data: lancamentos, error: errLancamentos },
         { data: despesas, error: errDespesas }
       ] = await Promise.all([
-        supabase
+        window.ArolixRuntime.selectAll(supabase
           .from('cartao_faturas')
           .select('id,cartao_id,mes,ano,status,pago,valor_total,data_vencimento,cartoes_credito(nome)')
           .eq('user_id', STATE.user.id)
           .eq('ano', ano)
-          .eq('mes', mes),
-        supabase
+          .eq('mes', mes)),
+        window.ArolixRuntime.selectAll(supabase
           .from('cartao_lancamentos')
           .select('id,cartao_id,descricao,valor,data_compra,data_fatura,tipo,despesa_id,categoria_id')
           .eq('user_id', STATE.user.id)
           .gte('data_fatura', inicio)
-          .lte('data_fatura', fim),
-        supabase
+          .lte('data_fatura', fim)),
+        window.ArolixRuntime.selectAll(supabase
           .from('despesas')
           .select('id,descricao,valor,data,data_baixa,baixado,cartao_fatura_id,cartao_pagamento_parcial,categoria_id,conta_id')
-          .eq('user_id', STATE.user.id)
+          .eq('user_id', STATE.user.id))
       ]);
 
       if (errFaturas || errLancamentos || errDespesas) throw (errFaturas || errLancamentos || errDespesas);
@@ -1996,10 +1818,10 @@ const CategoriasService = {
         divergencias.push(`Total transportado a pagar ${fmtMoney(resumo.totalTransportadoPagar)} diferente da soma ${fmtMoney(totalDespesasTransportadas + totalCartoesTransportados)}.`);
       }
 
-      const { data: faturas, error: errFaturas } = await supabase
+      const { data: faturas, error: errFaturas } = await window.ArolixRuntime.selectAll(supabase
         .from('cartao_faturas')
         .select('id,cartao_id,mes,ano,status,pago,valor_total,cartoes_credito(nome)')
-        .eq('user_id', STATE.user.id);
+        .eq('user_id', STATE.user.id));
 
       if (errFaturas) throw errFaturas;
 
@@ -2137,42 +1959,7 @@ const CategoriasService = {
     }
   }
 
-  const MovService = {
-    async insert(m) {
-      try {
-        const item = Object.assign({ id: uid(), user_id: STATE.user.id }, m);
-        const { error } = await supabase.from('movimentacoes').insert([item]);
-        if (error) throw error;
-        return item;
-      } catch (e) { console.error('MovService.insert', e); throw e; }
-    },
-    async delete(id) {
-      try {
-        const { error } = await supabase.from('movimentacoes') .delete().eq('id', id).eq('user_id', STATE.user.id); 
 
-        if (error) throw error;
-        return true;
-      } catch (e) { console.error('MovService.delete', e); throw e; }
-    }
-  };
-
-  const ExtratoService = {
-    async fetch(conta_id='all', inicio, fim) {
-      try {
-        let q = supabase
-          .from('movimentacoes')
-          .select('*')
-          .eq('user_id', STATE.user.id)
-          .gte('data', inicio)
-          .lte('data', fim)
-          .order('data', { ascending: true });
-        if (conta_id && conta_id !== 'all') q = q.eq('conta_id', conta_id);
-        const { data, error } = await q;
-        if (error) throw error;
-        return data || [];
-      } catch (e) { console.error('ExtratoService.fetch', e); return []; }
-    }
-  };
 
 /* ============================ UI FUNCTIONS ============================ */
 const UI = {
@@ -2236,12 +2023,9 @@ const UI = {
 
     // ===================== MODAL CONTA =====================
 
-    const modal = document.getElementById("modal-conta");
     populateBankSelect();
     document.getElementById("modal-conta-banco")?.addEventListener("change", applyBankNameSuggestion);
 
-    const btnOpen = document.getElementById("btn-open-modal-conta");
-    const btnCancel = document.getElementById("btn-cancelar-conta");
     const btnSave = document.getElementById("btn-salvar-conta");
 
    document.addEventListener("click", function (e) {
@@ -2298,10 +2082,15 @@ const UI = {
 
    if (btnSave) {
   btnSave.addEventListener("click", async function () {
+    if (IS_CREATING_CONTA) return;
+    IS_CREATING_CONTA = true;
+    btnSave.disabled = true;
+    let accountSaved = false;
+    try {
     const editId = btnSave.dataset.editId;
      // Bloqueio central de acesso financeiro.
 if (!hasFinancialAccess()) {
-  goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
+  window.goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
   return;
 }
     const bankCode = document.getElementById("modal-conta-banco")?.value || "";
@@ -2316,14 +2105,14 @@ if (!hasFinancialAccess()) {
       data_saldo: document.getElementById("modal-conta-data").value
     };
 
-    if (!conta.nome) {
-      alert("Informe o nome da conta.");
+    if (!conta.nome || (!editId && !conta.data_saldo) || !Number.isFinite(conta.saldo_inicial)) {
+      alert("Informe o nome, o saldo e a data da conta.");
       return;
     }
 
     if (editId) {
 
-     await supabase
+     const { error: updateError } = await supabase
   .from("contas_bancarias")
   .update({
     nome: conta.nome,
@@ -2334,7 +2123,9 @@ if (!hasFinancialAccess()) {
   })
   .eq("id", editId)
   .eq("user_id", STATE.user.id);
+      if (updateError) throw updateError;
 
+      accountSaved = true;
       await ContasService.recalc(editId);
 
       delete btnSave.dataset.editId;
@@ -2343,11 +2134,18 @@ if (!hasFinancialAccess()) {
 
       // 🔥 MODO CRIAÇÃO
       await ContasService.create(conta);
+      accountSaved = true;
     }
 
     document.getElementById("modal-conta").classList.add("hidden");
 
     await App.reloadAll();
+    } catch (error) {
+      alert(accountSaved ? 'Conta salva. Reabra a página para atualizar os saldos.' : friendlySaveError(error, 'Não foi possível salvar a conta.'));
+    } finally {
+      IS_CREATING_CONTA = false;
+      btnSave.disabled = false;
+    }
   });
 }
 
@@ -2404,55 +2202,6 @@ if (!hasFinancialAccess()) {
       const btnFE = $(IDS.btnFiltrarExtrato);
       if (btnFE) btnFE.addEventListener('click', (e) => { e.preventDefault(); App.renderExtrato(); });
 
-      // add conta / categoria in tabs
-      const btnAddConta = $(IDS.btnAddConta);
-     if (btnAddConta) btnAddConta.addEventListener('click', async () => {
-
-
-  if (IS_CREATING_CONTA) return;
-  IS_CREATING_CONTA = true;
-
-  const modalLoading = document.getElementById("modal-loading");
-  btnAddConta.disabled = true;
-
-  try {
-    if (modalLoading) modalLoading.classList.remove("hidden");
-
-    const nome = $(IDS.contaNome).value?.trim();
-    const saldo = $(IDS.contaSaldo).value;
-    const data_saldo = $(IDS.contaDataSaldo).value;
-
-    if (!nome || !data_saldo) {
-      alert('Preencha nome e data do saldo.');
-      return;
-    }
-
-    await ContasService.create({
-      nome,
-      saldo_inicial: Number(saldo || 0),
-      data_saldo
-    });
-
-    alert('Conta criada com sucesso.');
-
-    // limpa campos (feedback visual)
-    $(IDS.contaNome).value = '';
-    $(IDS.contaSaldo).value = '';
-    $(IDS.contaDataSaldo).value = '';
-
-    await App.reloadAll();
-
-  } catch (e) {
-    console.error('Erro ao criar conta', e);
-    alert('Erro ao criar conta. Veja o console.');
-
-  } finally {
-    IS_CREATING_CONTA = false;
-    btnAddConta.disabled = false;
-    if (modalLoading) modalLoading.classList.add("hidden");
-  }
-});
-
       const btnAddCat = $(IDS.btnAddCategoria);
       if (btnAddCat) btnAddCat.addEventListener('click', async () => {
         const nome = $(IDS.categoriaNome).value?.trim();
@@ -2468,7 +2217,7 @@ if (btnCartao) {
   btnCartao.addEventListener("click", () => {
 
     if (!hasFinancialAccess()) {
-      goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
+      window.goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
       return;
     }
 
@@ -2483,6 +2232,8 @@ if (btnCartao) {
   const selModalCat = $(IDS.modalCategoria);
   const selExtr = $(IDS.selectExtrato);
   const selLista = $(IDS.selectContasLista);
+  const previousSelections = new Map([selFilter, selModalConta, selModalCat, selExtr, selLista]
+    .filter(Boolean).map(select => [select, select.value]));
 
   // Limpar selects
   [selFilter, selModalConta, selModalCat, selExtr, selLista].forEach(el => {
@@ -2541,6 +2292,9 @@ if (btnCartao) {
   if (selExtr && (!selExtr.value || selExtr.value.trim() === ''))
     selExtr.value = 'all';
 
+  for (const [select, value] of previousSelections) {
+    if (Array.from(select.options).some(option => option.value === value)) select.value = value;
+  }
   renderExtratoContaPicker();
 },
     renderCategorias() {
@@ -2896,11 +2650,11 @@ if (item.transferencia_id) {
     btnCancelar.addEventListener("click", async () => {
       if (!confirm("Cancelar baixa?")) return;
 
-      const { data: movs } = await supabase
+      const { data: movs } = await window.ArolixRuntime.selectAll(supabase
         .from("movimentacoes")
         .select("id")
         .eq("lancamento_id", item.id)
-        .eq("user_id", STATE.user.id);
+        .eq("user_id", STATE.user.id));
 
       if (!movs || movs.length === 0) {
         alert("Nenhuma movimentação encontrada.");
@@ -3159,7 +2913,7 @@ openModalEditSemEscopo(item, tipo) {
   resetComprovanteInput();
 
   document.getElementById("data-baixa").value =
-    lancamento.data || new Date().toISOString().slice(0, 10);
+    lancamento.data || window.ArolixRuntime.localISODate(new Date());
 
   document.getElementById("juros-baixa").value = "";
   document.getElementById("desconto-baixa").value = "";
@@ -3237,7 +2991,7 @@ modal.setAttribute("aria-hidden", "false");
     const valor = Number($(IDS.modalValor).value || 0);
      // Bloqueio central de acesso financeiro.
 if (!hasFinancialAccess()) {
-  goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
+  window.goToUpgrade("Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
   return;
 }
     const data = $(IDS.modalData).value || isoToday();
@@ -3386,13 +3140,13 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
         const dt = new Date(base);
 
         if (i > 1) {
-          if (recorrencia === 'monthly') dt.setMonth(dt.getMonth() + (i - 1));
+          if (recorrencia === 'monthly') dt.setTime(new Date(window.ArolixRuntime.addMonthsClamped(data, i - 1) + 'T00:00:00').getTime());
           else if (recorrencia === 'weekly') dt.setDate(dt.getDate() + 7 * (i - 1));
           else if (recorrencia === 'fortnight') dt.setDate(dt.getDate() + 15 * (i - 1));
-          else if (recorrencia === 'annual') dt.setFullYear(dt.getFullYear() + (i - 1));
+          else if (recorrencia === 'annual') dt.setTime(new Date(window.ArolixRuntime.addMonthsClamped(data, 12 * (i - 1)) + 'T00:00:00').getTime());
         }
 
-        const dISO = dt.toISOString().slice(0, 10);
+        const dISO = window.ArolixRuntime.localISODate(dt);
 
         await LancService.insert({
           tipo,
@@ -3499,7 +3253,7 @@ function abrirModalEditarConta(conta) {
   }
 
   function agruparItensPorCategoria(lista, fallback = 'Sem categoria') {
-    const grupos = {};
+    const grupos = Object.create(null);
     (lista || []).forEach(item => {
       const nome = item.categoria_nome || categoriaNome(item.categoria_id) || fallback;
       if (!grupos[nome]) {
@@ -3530,13 +3284,13 @@ function abrirModalEditarConta(conta) {
 
   async function fetchComprasCartaoPorCategoria(inicio, fim) {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await window.ArolixRuntime.selectAll(supabase
         .from('cartao_lancamentos')
         .select('id, descricao, valor, data_fatura, categoria_id, tipo, cartao_id')
         .eq('user_id', STATE.user.id)
         .gte('data_fatura', inicio)
         .lte('data_fatura', fim)
-        .order('data_fatura', { ascending: true });
+        .order('data_fatura', { ascending: true }));
 
       if (error) throw error;
 
@@ -3597,91 +3351,7 @@ function abrirModalEditarConta(conta) {
     };
   }
 
-  function chartMoneyTooltip(context) {
-    if (context.dataset?.metaVazio) return 'Sem dados no período';
-    const value = context.parsed?.x ?? context.parsed?.y ?? context.parsed ?? 0;
-    return `Valor: ${fmtMoney(value)}`;
-  }
 
-  function renderCategoryBars(containerId, serie, options = {}) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    if (serie.vazio) {
-      container.classList.add('category-bars-empty');
-      container.innerHTML = '<p>Sem dados no período</p>';
-      return;
-    }
-
-    container.classList.remove('category-bars-empty');
-    const max = Math.max(...serie.values.map(v => Math.abs(Number(v || 0))), 1);
-
-    serie.labels.forEach((label, index) => {
-      const value = Number(serie.values[index] || 0);
-      const percent = Math.max((Math.abs(value) / max) * 100, 2);
-      const color = serie.colors[index % serie.colors.length] || '#7a4dff';
-
-      const row = document.createElement('div');
-      row.className = 'category-bar-row';
-      row.title = `${label}: ${fmtMoney(value)}`;
-      const items = serie.itemsByLabel?.[label] || [];
-
-      if (typeof options.onClick === 'function' && items.length) {
-        row.classList.add('category-bar-row-clickable');
-        row.setAttribute('role', 'button');
-        row.setAttribute('tabindex', '0');
-        row.setAttribute('aria-label', `Ver lançamentos da categoria ${label}`);
-        const openDetail = () => options.onClick({
-          tipo: options.tipo || 'categoria',
-          categoria: label,
-          total: value,
-          items,
-          color
-        });
-        row.addEventListener('click', openDetail);
-        row.addEventListener('keydown', event => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            openDetail();
-          }
-        });
-      }
-
-      const top = document.createElement('div');
-      top.className = 'category-bar-top';
-
-      const name = document.createElement('span');
-      name.className = 'category-bar-label';
-      name.textContent = label;
-
-      const amount = document.createElement('strong');
-      amount.className = 'category-bar-value';
-      amount.textContent = fmtMoney(value);
-
-      const valueGroup = document.createElement('span');
-      valueGroup.className = 'category-bar-value-group';
-      valueGroup.appendChild(amount);
-      if (typeof options.onClick === 'function' && items.length) {
-        valueGroup.appendChild(createTextElement('span', 'Ver detalhes', 'category-bar-action'));
-      }
-
-      top.append(name, valueGroup);
-
-      const track = document.createElement('div');
-      track.className = 'category-bar-track';
-
-      const fill = document.createElement('div');
-      fill.className = 'category-bar-fill';
-      fill.style.width = `${percent}%`;
-      fill.style.background = `linear-gradient(90deg, ${color}, ${color}cc)`;
-
-      track.appendChild(fill);
-      row.append(top, track);
-      container.appendChild(row);
-    });
-  }
 
   function renderCategoryChart(chartKey, canvasId, serie, options = {}) {
     const canvas = document.getElementById(canvasId);
@@ -4682,102 +4352,31 @@ function abrirModalEditarConta(conta) {
       });
     } catch (e) { console.error('drawInvestimentosDashboard', e); }
   }
-async function transferirEntreContas({
-  contaOrigem,
-  contaDestino,
-  valor,
-  data,
-  descricao
-}) {
-  if (!contaOrigem || !contaDestino) {
-    alert("Selecione as duas contas.");
-    return;
-  }
-
-  if (contaOrigem === contaDestino) {
-    alert("A conta de origem e destino devem ser diferentes.");
-    return;
-  }
-
-  if (!valor || valor <= 0) {
-    alert("Informe um valor válido.");
-    return;
-  }
-
-  const transferenciaId = uid();
-
-  // 1️⃣ Registrar transferência
-  await supabase.from("transferencias").insert([{
-    id: transferenciaId,
-    user_id: STATE.user.id,
-    conta_origem: contaOrigem,
-    conta_destino: contaDestino,
-    valor: valor,
-    data: data,
-    descricao: descricao
-  }]);
-
-  // 2️⃣ Débito na conta origem
-  await supabase.from("movimentacoes").insert([{
-    id: uid(),
-    user_id: STATE.user.id,
-    conta_id: contaOrigem,
-    tipo: "debito",
-    valor: valor,
-    data: data,
-    descricao: `Transferência enviada — ${descricao}`,
-    transferencia_id: transferenciaId
-  }]);
-
-  // 3️⃣ Crédito na conta destino
-  await supabase.from("movimentacoes").insert([{
-    id:uid() ,
-    user_id: STATE.user.id,
-    conta_id: contaDestino,
-    tipo: "credito",
-    valor: valor,
-    data: data,
-    descricao: `Transferência recebida — ${descricao}`,
-    transferencia_id: transferenciaId
-  }]);
-
- // 4️⃣ Atualizar telas
-await App.reloadAll();
-await App.refreshLancamentos();
-await App.renderExtrato(); // 🔥 ADICIONE ESTA LINHA
-
-alert("Transferência realizada com sucesso.");
-
-}
-// ================================// EXCLUIR TRANSFERÊNCIA (NOVA) // ================================
-async function excluirTransferencia(transferenciaId) {
-  if (!confirm("Deseja excluir esta transferência?")) return;
-
+async function transferirEntreContas({ contaOrigem, contaDestino, valor, data, descricao }) {
+  await window.ArolixRuntime.transfer(supabase, {
+    id: uid(), origem: contaOrigem, destino: contaDestino, valor, data, descricao
+  });
   try {
-    // 1️⃣ remove movimentações ligadas
-    await supabase
-      .from("movimentacoes")
-      .delete()
-      .eq("transferencia_id", transferenciaId)
-      .eq("user_id", STATE.user.id);
-
-    // 2️⃣ remove o registro principal
-    await supabase
-      .from("transferencias")
-      .delete()
-      .eq("id", transferenciaId)
-      .eq("user_id", STATE.user.id);
-
-    // 3️⃣ atualiza tudo
     await App.reloadAll();
     await App.refreshLancamentos();
     await App.renderExtrato();
-
-    alert("Transferência excluída com sucesso.");
-
-  } catch (err) {
-    console.error(err);
-    alert("Erro ao excluir transferência.");
+  } catch (error) {
+    console.error('Transferência salva; atualização de tela falhou', error);
+    alert('Transferência salva. Reabra a página para atualizar os saldos.');
+  }
+}
+// ================================// EXCLUIR TRANSFERÊNCIA (NOVA) // ================================
+async function excluirTransferencia(transferenciaId) {
+  if (!confirm('Deseja excluir esta transferência?')) return;
+  try {
+    await window.ArolixRuntime.deleteTransfer(supabase, transferenciaId);
+    await App.reloadAll();
+    await App.refreshLancamentos();
+    await App.renderExtrato();
+    alert('Transferência excluída com sucesso.');
+  } catch (error) {
+    console.error(error);
+    alert(error.message || 'Erro ao excluir transferência.');
   }
 }
 
@@ -4854,40 +4453,33 @@ if (name === 'categorias') {
 },
 
     subscribeRealtime() {
-      // we create channels per table; store refs on STATE.subs to unsubscribe if needed
-      try {
-        const chReceitas = supabase.channel('chan_receitas').on('postgres_changes', { event: '*', schema: 'public', table: 'receitas' }, payload => {
-          console.debug('realtime receitas', payload);
-          this.refreshLancamentos();
-          atualizarDashboardPorMes();
-        }).subscribe();
-        const chDespesas = supabase.channel('chan_despesas').on('postgres_changes', { event: '*', schema: 'public', table: 'despesas' }, payload => { console.debug('realtime despesas', payload); this.refreshLancamentos(); atualizarDashboardPorMes(); }).subscribe();
-      const chMov = supabase.channel('chan_mov')
-  .on(
-    'postgres_changes',
-    { event: '*', schema: 'public', table: 'movimentacoes' },
-    payload => {
-      console.debug('realtime mov', payload);
-      this.refreshLancamentos();
-      this.reloadCatsContas();
-    }
-  )
-  .subscribe();
-        const chCartaoLanc = supabase.channel('chan_cartao_lancamentos').on('postgres_changes', { event: '*', schema: 'public', table: 'cartao_lancamentos' }, payload => {
-          console.debug('realtime cartao_lancamentos', payload);
-          this.refreshLancamentos();
-          atualizarDashboardPorMes();
-        }).subscribe();
-        const chCartaoFaturas = supabase.channel('chan_cartao_faturas').on('postgres_changes', { event: '*', schema: 'public', table: 'cartao_faturas' }, payload => {
-          console.debug('realtime cartao_faturas', payload);
-          this.refreshLancamentos();
-          atualizarDashboardPorMes();
-        }).subscribe();
-
-        const chCats = supabase.channel('chan_cats').on('postgres_changes', { event: '*', schema: 'public', table: 'categorias' }, payload => { console.debug('realtime categorias', payload); this.reloadCatsContas(); }).subscribe();
-        const chContas = supabase.channel('chan_contas').on('postgres_changes', { event: '*', schema: 'public', table: 'contas_bancarias' }, payload => { console.debug('realtime contas', payload); this.reloadCatsContas(); }).subscribe();
-        STATE.subs.push(chReceitas, chDespesas, chMov, chCartaoLanc, chCartaoFaturas, chCats, chContas);
-      } catch (e) { console.warn('subscribeRealtime failed', e); }
+      if (STATE.subs.length) return;
+      let timer;
+      let running = false;
+      let pending = false;
+      const refresh = async () => {
+        if (running) { pending = true; return; }
+        running = true;
+        try {
+          await this.reloadCatsContas();
+          await Promise.all([this.refreshLancamentos(), atualizarDashboardPorMes()]);
+        } catch (error) { showDataError(error); }
+        finally {
+          running = false;
+          if (pending) { pending = false; schedule(); }
+        }
+      };
+      const schedule = () => {
+        clearTimeout(timer);
+        timer = setTimeout(refresh, 150);
+      };
+      for (const table of ['receitas', 'despesas', 'movimentacoes', 'cartao_lancamentos',
+        'cartao_faturas', 'categorias', 'contas_bancarias', 'investimentos', 'investimento_resgates']) {
+        const channel = supabase.channel('arolix_' + table)
+          .on('postgres_changes', {event:'*', schema:'public', table,
+            filter:'user_id=eq.' + STATE.user.id}, schedule).subscribe();
+        STATE.subs.push(channel);
+      }
     },
 
     async reloadCatsContas() {
@@ -4898,6 +4490,7 @@ if (name === 'categorias') {
     },
 
     async refreshLancamentos() {
+      const request = ++lancamentosRequest;
       try {
         const conta_id = $(IDS.selectContas)?.value || 'all';
         let inicio, fim;
@@ -4914,11 +4507,12 @@ if (!inicio || !fim) {
  else {
   const ano = mesLancAtual.getFullYear();
   const mes = mesLancAtual.getMonth();
-  inicio = new Date(ano, mes, 1).toISOString().slice(0,10);
-  fim = new Date(ano, mes + 1, 0).toISOString().slice(0,10);
+  inicio = window.ArolixRuntime.localISODate(new Date(ano, mes, 1));
+  fim = window.ArolixRuntime.localISODate(new Date(ano, mes + 1, 0));
 }
 
         const resumoPeriodo = await calcularResumoFinanceiroPeriodo({ conta_id, inicio, fim });
+        if (request !== lancamentosRequest) return;
 
         setTextById("lanc-resumo-recebido", fmtMoney(resumoPeriodo.totalRecebido));
         setTextById("lanc-resumo-pago", fmtMoney(resumoPeriodo.totalPago));
@@ -4959,6 +4553,7 @@ if (FILTRO_LANCAMENTOS === "pagos" || FILTRO_LANCAMENTOS === "recebidos") {
 }
 
 
+if (request !== lancamentosRequest) return;
 STATE.receitas = r;
 STATE.despesas = d;
 STATE.cartaoPrevistos = previsoesCartao || [];
@@ -5072,6 +4667,7 @@ if (boxReceitas && boxDespesas && listas) {
 
        } catch (e) {
         console.error('refreshLancamentos', e);
+        showDataError(e);
       }
     },
 
@@ -5101,8 +4697,8 @@ if (modoPeriodoExtrato === "custom") {
   const ano = mesExtratoAtual.getFullYear();
   const mes = mesExtratoAtual.getMonth();
 
-  inicio = new Date(ano, mes, 1).toISOString().slice(0, 10);
-  fim = new Date(ano, mes + 1, 0).toISOString().slice(0, 10);
+  inicio = window.ArolixRuntime.localISODate(new Date(ano, mes, 1));
+  fim = window.ArolixRuntime.localISODate(new Date(ano, mes + 1, 0));
 }
 
 
@@ -5115,7 +4711,8 @@ if (modoPeriodoExtrato === "custom") {
 
     if (inicio) qAntes = qAntes.lt("data", inicio);
 
-    const { data: movsAntes } = await qAntes;
+    const { data: movsAntes, error: erroAntes } = await window.ArolixRuntime.selectAll(qAntes);
+    if (erroAntes) throw erroAntes;
 
     let saldo = 0;
     (movsAntes || []).forEach(m => {
@@ -5137,7 +4734,7 @@ if (modoPeriodoExtrato === "custom") {
     if (inicio) qPeriodo = qPeriodo.gte("data", inicio);
     if (fim) qPeriodo = qPeriodo.lte("data", fim);
 
-    const { data: movsPeriodo, error } = await qPeriodo;
+    const { data: movsPeriodo, error } = await window.ArolixRuntime.selectAll(qPeriodo);
     if (error) {
       console.error("Erro extrato:", error);
       return;
@@ -5286,6 +4883,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
   let lancamentoOriginal = null;
   let contaBaixaId = null;
   let comprovantesEnviadosPaths = [];
+  let baixaPersistida = false;
 
   try {
     if (!BAIXA_ATUAL) {
@@ -5440,6 +5038,7 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
       if (updateBaixaErr) throw updateBaixaErr;
     }
 
+    baixaPersistida = true;
     await ContasService.recalc(contaId);
 
     // 🔹 fecha modal e limpa estado
@@ -5453,6 +5052,13 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
 
   } catch (err) {
     console.error("Erro ao confirmar baixa:", err);
+    if (baixaPersistida) {
+      document.getElementById('modal-baixa').classList.add('hidden');
+      BAIXA_ATUAL = null;
+      resetComprovanteInput();
+      alert('Baixa salva. Reabra a página para atualizar os saldos; não repita o pagamento.');
+      return;
+    }
     await removeComprovantes(comprovantesEnviadosPaths);
     if (movimentacaoCriadaId) {
       await supabase
@@ -5479,7 +5085,9 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
         .eq("id", lancamentoOriginal.id)
         .eq("user_id", STATE.user.id);
     }
-    if (contaBaixaId) await ContasService.recalc(contaBaixaId);
+    if (contaBaixaId) {
+      try { await ContasService.recalc(contaBaixaId); } catch (error) { showDataError(error); }
+    }
     alert(friendlySaveError(err, "Erro ao realizar a baixa."));
   } finally {
     // 🔓 libera trava SEMPRE
@@ -5549,7 +5157,8 @@ if (e.target.closest("#lanc-next")) {
   }
    if (e.target.closest("#extrato-prev")) {
     modoPeriodoExtrato = "mes";
-    mesExtratoAtual.setMonth(mesExtratoAtual.getMonth() - 1);
+    mesExtratoAtual.setDate(1);
+  mesExtratoAtual.setMonth(mesExtratoAtual.getMonth() - 1);
     renderMesExtrato();
     App.renderExtrato();
     return;
@@ -5557,7 +5166,8 @@ if (e.target.closest("#lanc-next")) {
 
   if (e.target.closest("#extrato-next")) {
     modoPeriodoExtrato = "mes";
-    mesExtratoAtual.setMonth(mesExtratoAtual.getMonth() + 1);
+    mesExtratoAtual.setDate(1);
+  mesExtratoAtual.setMonth(mesExtratoAtual.getMonth() + 1);
     renderMesExtrato();
     App.renderExtrato();
     return;
@@ -5619,7 +5229,7 @@ if (btnTransferir) {
     document.getElementById("transf-valor").value = "";
     document.getElementById("transf-desc").value = "";
     document.getElementById("transf-data").value =
-      new Date().toISOString().slice(0, 10);
+      window.ArolixRuntime.localISODate(new Date());
   };
 }
 
@@ -5698,22 +5308,14 @@ if (btnConfirmar) {
       modalConta.classList.add("hidden");
     }
 
-    // 🔥 Carrega dados iniciais
-    await Promise.all([
-      CategoriasService.load(),
-      ContasService.load()
-    ]);
-    await ContasService.applyComputedBalances();
-
-    UI.populateSelects();
-    UI.renderCategorias();
-    UI.renderContasCards();
-
     // 🔥 Inicializa aplicação
+    window.App = App;
     await App.init();
+    window.APP_READY = true;
 
   } catch (e) {
     console.error('bootstrap error', e);
+    showDataError(e);
   }
 })();
 
@@ -5727,21 +5329,25 @@ document.getElementById("select-contas-extrato")
   });
    
    document.getElementById("dash-prev")?.addEventListener("click", async () => {
+  mesDashboardAtual.setDate(1);
   mesDashboardAtual.setMonth(mesDashboardAtual.getMonth() - 1);
   await atualizarDashboardPorMes();
 });
 
 document.getElementById("dash-next")?.addEventListener("click", async () => {
+  mesDashboardAtual.setDate(1);
   mesDashboardAtual.setMonth(mesDashboardAtual.getMonth() + 1);
   await atualizarDashboardPorMes();
 });
 
 document.getElementById("audit-prev")?.addEventListener("click", async () => {
+  mesDashboardAtual.setDate(1);
   mesDashboardAtual.setMonth(mesDashboardAtual.getMonth() - 1);
   await atualizarDashboardPorMes();
 });
 
 document.getElementById("audit-next")?.addEventListener("click", async () => {
+  mesDashboardAtual.setDate(1);
   mesDashboardAtual.setMonth(mesDashboardAtual.getMonth() + 1);
   await atualizarDashboardPorMes();
 });

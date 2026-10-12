@@ -728,7 +728,9 @@ test("fluxo de baixa comum recalcula saldo e compensa falha apos criar movimenta
   assert.match(js, /if \(movimentacaoCriadaId\)/);
   assert.match(js, /\.from\("movimentacoes"\)\s*[\s\S]*?\.delete\(\)/);
   assert.match(js, /await ContasService\.recalc\(contaId\)/);
-  assert.match(js, /if \(contaBaixaId\) await ContasService\.recalc\(contaBaixaId\)/);
+  assert.match(js, /if \(contaBaixaId\)\s*\{\s*try \{ await ContasService\.recalc\(contaBaixaId\)/);
+  assert.match(js, /if \(baixaPersistida\)/);
+  assert.match(js, /baixaPersistida = true/);
 });
 
 test("pagamento de fatura bloqueia conta de investimento mesmo se o select vier inconsistente", () => {

@@ -114,11 +114,9 @@ async function getProfile(userId: string) {
 function isActiveFinancialAccess(profile: Profile) {
   const plan = String(profile.plano || "").toLowerCase();
   const status = String(profile.subscription_status || "").toLowerCase();
-  const expiration = profile.subscription_ends_at || profile.plano_expira_em;
-  const expirationOk = !expiration || new Date(expiration).getTime() > Date.now();
-
-  if (plan === "vip" && status === "active") return true;
-  return plan === "pro" && status === "active" && expirationOk;
+  const expirationOk = [profile.subscription_ends_at, profile.plano_expira_em]
+    .every(date => !date || new Date(date).getTime() > Date.now());
+  return ['pro', 'vip'].includes(plan) && status === 'active' && expirationOk;
 }
 
 function extractUserIdFromReference(reference: unknown) {

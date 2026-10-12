@@ -1,6 +1,7 @@
 window.ArolixSecurity = (() => {
-  const LOGIN_URL = "login.html";
-  const PROFILE_URL = "perfil.html";
+  const BASE_URL = new URL('.', document.currentScript.src);
+  const LOGIN_URL = new URL('login.html', BASE_URL).href;
+  const PROFILE_URL = new URL('perfil.html', BASE_URL).href;
 
   function getCurrentPage() {
     return window.location.pathname.split("/").pop() || "app.html";
@@ -60,7 +61,7 @@ window.ArolixSecurity = (() => {
     }
 
     if (!mfaState.hasVerifiedMfa) {
-      if (getCurrentPage() !== PROFILE_URL) {
+      if (getCurrentPage() !== 'perfil.html') {
         alert("Ative a verificação em duas etapas para continuar usando o app.");
         window.location.href = PROFILE_URL;
         return false;

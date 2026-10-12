@@ -418,7 +418,7 @@ function agruparItensPorCategoriaRegra(lista = [], {
   fallback = "Sem categoria",
   categoriasPorId = {}
 } = {}) {
-  const grupos = {};
+  const grupos = Object.create(null);
 
   (lista || []).forEach(item => {
     const nome = item.categoria_nome || categoriasPorId[item.categoria_id] || fallback;
@@ -537,7 +537,7 @@ function validarLimitePlano({
   return { ok: erros.length === 0, erros, financialAccess, investmentAccess };
 }
 
-module.exports = {
+const financeRules = {
   roundCurrency,
   sumValues,
   calcularResumoFinanceiroRegra,
@@ -562,3 +562,5 @@ module.exports = {
   hasInvestmentAccessRegra,
   validarLimitePlano
 };
+if (typeof module !== 'undefined' && module.exports) module.exports = financeRules;
+else window.ArolixFinance = financeRules;

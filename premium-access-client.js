@@ -26,28 +26,32 @@
     return String(profile?.subscription_status || "").toLowerCase();
   }
 
-  function expirationOf(profile) {
-    return parseDate(profile?.subscription_ends_at || profile?.plano_expira_em);
-  }
 
   function trialStartOf(profile) {
     return parseDate(profile?.trial_started_at || profile?.created_at);
   }
 
   function isVip(profile) {
-    return planOf(profile) === "vip" && statusOf(profile) === "active";
+    return planOf(profile) === 'vip' && hasValidSubscription(profile);
   }
 
   function isPro(profile) {
-    const endsAt = expirationOf(profile);
-    return planOf(profile) === "pro"
-      && statusOf(profile) === "active"
-      && (!endsAt || endsAt >= new Date());
+    return planOf(profile) === 'pro' && hasValidSubscription(profile);
+  }
+
+  function hasValidSubscription(profile) {
+    const now = new Date();
+    return statusOf(profile) === 'active'
+      && [profile?.subscription_ends_at, profile?.plano_expira_em].every(value => {
+        if (!value) return true;
+        const date = parseDate(value);
+        return !!date && date > now;
+      });
   }
 
   function hasTrialAccess(profile) {
     const start = trialStartOf(profile);
-    return planOf(profile) === "free" && !!start && addDays(start, TRIAL_DAYS) >= new Date();
+    return planOf(profile) === "free" && !!start && addDays(start, TRIAL_DAYS) > new Date();
   }
 
   function hasPaidAccess(profile) {
