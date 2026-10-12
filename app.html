@@ -7,7 +7,7 @@
    <link rel="icon" type="image/png" href="favicon.png">
 
   <link rel="stylesheet" href="styles.css?v=20261001-1" />
-  <link rel="stylesheet" href="reports.css?v=20261012-1" />
+  <link rel="stylesheet" href="reports.css?v=20261012-2" />
 </head>
 
 <body>
@@ -800,7 +800,7 @@
   <section class="screen hidden" data-screen="relatorios">
     <div class="card-panel reports-panel">
       <div class="reports-heading">
-        <div><h2>Relatórios</h2><p>Entenda de onde vem o dinheiro, onde ele foi gasto e os compromissos futuros.</p></div>
+        <div><h2>Balanço financeiro</h2><p>O que já aconteceu, o que ainda está previsto e como o período deve terminar.</p></div>
         <div class="reports-actions">
           <button id="report-refresh" class="btn-secondary">Consultar novamente</button>
           <button id="report-export" class="btn-secondary" disabled>Exportar CSV</button>
@@ -808,10 +808,7 @@
         </div>
       </div>
       <div class="reports-tabs" aria-label="Tipo de relatório">
-        <button data-report-mode="recebidos" aria-pressed="true">Recebidos</button>
-        <button data-report-mode="pagos" aria-pressed="false">Pagos</button>
-        <button data-report-mode="receber" aria-pressed="false">A receber</button>
-        <button data-report-mode="pagar" aria-pressed="false">A pagar</button>
+        <button data-report-mode="balanco" aria-pressed="true">Balanço do período</button>
         <button data-report-mode="cartao" aria-pressed="false">Compras no cartão</button>
       </div>
       <div class="reports-filters">
@@ -823,20 +820,30 @@
         <label id="report-account-label">Conta<select id="report-account"><option value="all">Todas as contas</option></select></label>
         <label id="report-card-label" class="hidden">Cartão<select id="report-card"><option value="all">Todos os cartões</option></select></label>
         <label>Categoria<select id="report-category"><option value="all">Todas as categorias</option></select></label>
-        <label id="report-overdue-label" class="reports-check hidden"><input type="checkbox" id="report-overdue">Incluir vencidos antes do período</label>
+        <label id="report-overdue-label" class="reports-check"><input type="checkbox" id="report-overdue">Incluir vencidos antes do período</label>
       </div>
       <p id="report-status" role="status" aria-live="polite"></p>
       <p id="report-period-caption"></p>
-      <div class="reports-summary">
-        <div><span id="report-total-label">Receitas recebidas</span><strong id="report-total">—</strong></div>
+      <div id="report-balance-summary" class="reports-summary reports-balance-summary">
+        <div class="report-income"><span>Já recebido</span><strong id="report-received">—</strong></div>
+        <div class="report-expense"><span>Já pago</span><strong id="report-paid">—</strong></div>
+        <div class="report-income"><span>Previsto a receber</span><strong id="report-receivable">—</strong></div>
+        <div class="report-expense"><span>Previsto a pagar</span><strong id="report-payable">—</strong></div>
+      </div>
+      <div id="report-balance-result" class="reports-balance-result">
+        <div><span>Saldo realizado</span><strong id="report-realized">—</strong><small>Recebido menos pago</small></div>
+        <div><span>Saldo projetado do período</span><strong id="report-projected">—</strong><small>Realizado + previsto a receber − previsto a pagar</small></div>
+      </div>
+      <div id="report-card-summary" class="reports-summary hidden">
+        <div><span>Compras no cartão</span><strong id="report-total">—</strong></div>
         <div><span>Lançamentos</span><strong id="report-count">—</strong></div>
         <div><span>Categorias</span><strong id="report-category-count">—</strong></div>
       </div>
       <p id="report-note" class="reports-note"></p>
-      <h3>Por categoria <small>· clique para ver os lançamentos</small></h3>
+      <h3 id="report-category-heading">Balanço por categoria</h3>
       <div id="report-content"></div>
-      <h3>Totais por mês</h3>
-      <div class="reports-table-wrap"><table class="reports-table"><thead><tr><th>Mês</th><th>Total</th></tr></thead><tbody id="report-monthly"></tbody></table></div>
+      <h3 id="report-monthly-heading">Planejamento mês a mês</h3>
+      <div class="reports-table-wrap"><table class="reports-table"><thead id="report-monthly-head"></thead><tbody id="report-monthly"></tbody></table></div>
     </div>
   </section>
   </main>
@@ -849,8 +856,8 @@
   <script src="premium-access-client.js?v=20261012-1"></script>
   <script src="runtime-utils.js?v=20261012-1"></script>
   <script src="finance-rules.js?v=20261012-1"></script>
-  <script src="reports-rules.js?v=20261012-1"></script>
-  <script src="reports.js?v=20261012-1"></script>
+  <script src="reports-rules.js?v=20261012-2"></script>
+  <script src="reports.js?v=20261012-2"></script>
   <script src="app.js?v=20261012-2"></script>
   <link rel="stylesheet" href="onboarding/onboarding.css?v=20260809-1">
   <script src="onboarding/onboarding.js?v=20261012-1"></script>

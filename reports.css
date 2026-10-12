@@ -30,7 +30,23 @@
 .reports-note { font-size:13px; background:#f8f7ff; padding:14px; border-radius:10px; }
 .reports-empty { text-align:center; padding:35px; border:1px dashed #ded5f5; border-radius:14px; }
 .reports-error { color:#a72b19!important; background:#fff2eb; padding:16px; border-radius:12px; }
+.reports-balance-summary { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.reports-summary .report-income { border-left:4px solid #21b66f; }
+.reports-summary .report-expense { border-left:4px solid #ef5663; }
+.reports-balance-result { display:grid; grid-template-columns:1fr 1.5fr; gap:20px; padding:24px; border:1px solid #e3dafb; background:#f6f3ff; border-radius:16px; }
+.reports-balance-result span,.reports-balance-result small { display:block; color:#6b647a; }
+.reports-balance-result strong { display:block; font-size:28px; margin:8px 0; font-variant-numeric:tabular-nums; }
+.reports-panel .report-negative { color:#c23745; }
+.reports-panel .report-positive { color:#168855; }
+.reports-balance-table td:not(:first-child),.reports-balance-table th:not(:first-child) { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.reports-balance-table td:first-child { white-space:normal; min-width:160px; }
+.reports-balance-table { min-width:760px; }
+.reports-detail-heading { margin-top:24px; }
+.reports-status-label { display:inline-block; background:#f0eaff; border-radius:7px; padding:4px 7px; font-size:12px; white-space:nowrap; }
+.reports-category-preview { font-size:13px; }
+.reports-table tfoot { background:#f1ebff; font-weight:bold; }
 @media(max-width:850px) { .reports-filters { grid-template-columns:repeat(2,minmax(0,1fr)); } .reports-summary strong { font-size:21px; } .reports-panel { padding:18px; } }
+@media(max-width:850px) { .reports-balance-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } .reports-balance-result { grid-template-columns:1fr; } }
 @media(max-width:1000px) {
   .top-header { flex-direction:column; align-items:stretch; gap:12px; }
   .top-header .top-menu { display:flex; overflow-x:auto; max-width:100%; gap:8px; padding-bottom:4px; }
@@ -39,3 +55,4 @@
 }
 @media(max-width:500px) { .reports-filters,.reports-summary { grid-template-columns:1fr; } .reports-group summary { flex-wrap:wrap; } }
 @media print { body>* { display:none!important; } body>main { display:block!important; } main>* { display:none!important; } main>[data-screen="relatorios"] { display:block!important; } .reports-filters,.reports-tabs,.reports-actions { display:none!important; } .reports-panel { box-shadow:none; padding:0; } .reports-group { break-inside:avoid; } .reports-summary { grid-template-columns:repeat(3,1fr); } }
+@media print { .reports-balance-summary { grid-template-columns:repeat(4,1fr); } .reports-balance-result { grid-template-columns:1fr 1.5fr; } .reports-table-wrap { overflow:visible; } .reports-balance-table { min-width:0; font-size:11px; } .reports-table td,.reports-table th { padding:8px 5px; } .reports-balance-table td:first-child { min-width:0; } }

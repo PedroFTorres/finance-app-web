@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildReport } = require('../reports-rules.js');
+const { buildReport, buildBalance } = require('../reports-rules.js');
 const options = { mode: 'pagos', start: '2026-07-01', end: '2026-07-31' };
 const data = {
   categories: [{ id: 'food', nome: 'Alimentação' }, { id: 'salary', nome: 'Salário' }, { id: 'card', nome: 'Cartão de crédito' }],
@@ -92,4 +92,55 @@ test('previsão de fatura usa vencimento do cartão, mesmo quando o período com
   assert.equal(report.total, 100);
   assert.equal(report.rows[0].date, '2026-07-20');
   assert.equal(buildReport(sample, { mode: 'pagar', start: '2026-07-12', end: '2026-07-19' }).total, 0);
+});
+
+test('balanço reúne realizado e previsto sem repetir valores pagos nas pendências', () => {
+  const balance = buildBalance(data, options);
+  assert.equal(balance.recebidos, 2652);
+  assert.equal(balance.pagos, 105.30);
+  assert.equal(balance.receber, 0);
+  assert.equal(balance.pagar, 200);
+  assert.equal(balance.realized, 2546.70);
+  assert.equal(balance.projected, 2346.70);
+  assert.equal(balance.months[0].projected, balance.projected);
+  assert.equal(balance.groups.reduce((sum, group) => sum + group.projected, 0), balance.projected);
+});
+
+test('balanço futuro mostra previsão e déficit, sem supor recebimentos ou pagamentos', () => {
+  const sample = { income: [{ id: 'r', valor: 10100, data: '2026-09-15', baixado: false }],
+    expenses: [{ id: 'd', valor: 10373.11, data: '2026-09-20', baixado: false }] };
+  const balance = buildBalance(sample, { start: '2026-08-01', end: '2026-10-31' });
+  assert.equal(balance.recebidos, 0);
+  assert.equal(balance.pagos, 0);
+  assert.equal(balance.projected, -273.11);
+  assert.equal(balance.months.length, 3);
+  assert.equal(balance.months[0].projected, 0);
+  assert.equal(balance.months[1].projected, -273.11);
+  assert.equal(balance.months[2].projected, 0);
+});
+
+test('balanço por categoria reúne todas as situações com os mesmos filtros', () => {
+  const balance = buildBalance(data, { ...options, category: 'food' });
+  assert.equal(balance.groups.length, 1);
+  assert.equal(balance.pagos, 105.30);
+  assert.equal(balance.pagar, 70);
+  assert.equal(balance.projected, -175.30);
+  assert.equal(balance.rows.length, 2);
+});
+
+test('balanço anual soma meses sem incluir investimentos como receita', () => {
+  const balance = buildBalance(data, { start: '2026-01-01', end: '2026-12-31' });
+  assert.equal(balance.months.length, 12);
+  assert.equal(balance.recebidos, 2652);
+  assert.equal(balance.months.reduce((sum, item) => sum + item.projected, 0), balance.projected);
+});
+
+test('balanço separa vencidos anteriores e conta cada pendência uma única vez', () => {
+  const sample = { income: [{ id: 'a', valor: 100, baixado: false, data: '2026-06-20' }],
+    expenses: [{ id: 'b', valor: 50, baixado: false, data: '2026-07-20' }] };
+  const balance = buildBalance(sample, { ...options, overdue: true });
+  assert.equal(balance.projected, 50);
+  assert.equal(balance.months[0].month, 'overdue');
+  assert.equal(balance.months[0].projected, 100);
+  assert.equal(balance.months[1].projected, -50);
 });

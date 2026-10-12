@@ -85,7 +85,43 @@
       groups: Array.from(groups.values()).sort((a, b) => b.total - a.total),
       months: Array.from(months, ([month, total]) => ({ month, total })).sort((a, b) => a.month.localeCompare(b.month)) };
   }
-  const api = { buildReport };
+  function buildBalance(data, options) {
+    const lanes = ['recebidos', 'pagos', 'receber', 'pagar'];
+    const totals = () => ({ recebidos: 0, pagos: 0, receber: 0, pagar: 0 });
+    const finish = item => ({ ...item, realized: money(item.recebidos - item.pagos),
+      projected: money(item.recebidos - item.pagos + item.receber - item.pagar) });
+    const sum = totals(), groups = new Map(), months = new Map(), rows = [];
+    // Include empty months so a future period is presented as a complete plan.
+    const [year, month] = options.start.split('-').map(Number);
+    const cursor = new Date(year, month - 1, 1);
+    while (true) {
+      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+      if (key > options.end.slice(0, 7)) break;
+      months.set(key, { month: key, ...totals() });
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    for (const lane of lanes) {
+      const report = buildReport(data, { ...options, mode: lane });
+      sum[lane] = report.total;
+      for (const item of report.rows) {
+        const row = { ...item, lane };
+        rows.push(row);
+        const group = groups.get(row.categoryId) || { id: row.categoryId, name: row.category, rows: [], ...totals() };
+        group[lane] = money(group[lane] + row.value);
+        group.rows.push(row);
+        groups.set(group.id, group);
+        const key = row.overdue ? 'overdue' : row.date.slice(0, 7);
+        const period = months.get(key) || { month: key, ...totals() };
+        period[lane] = money(period[lane] + row.value);
+        months.set(key, period);
+      }
+    }
+    rows.sort((a, b) => a.date.localeCompare(b.date) || a.description.localeCompare(b.description));
+    return { ...finish(sum), rows,
+      groups: Array.from(groups.values(), finish).sort((a, b) => a.name.localeCompare(b.name)),
+      months: Array.from(months.values(), finish).sort((a, b) => a.month === 'overdue' ? -1 : b.month === 'overdue' ? 1 : a.month.localeCompare(b.month)) };
+  }
+  const api = { buildReport, buildBalance };
   root.ArolixReportsRules = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
