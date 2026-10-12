@@ -105,8 +105,8 @@
     return wrapper;
   }
 
-  const balanceHeadings = ['Recebido', 'Pago', 'Previsto a receber', 'Previsto a pagar', 'Saldo projetado'];
-  const balanceValues = item => [item.recebidos, item.pagos, item.receber, item.pagar, item.projected];
+  const balanceHeadings = ['Já recebido', 'Já pago', 'Falta receber', 'Falta pagar', 'Saldo previsto'];
+  const balanceValues = item => [item.recebidos, item.pagos, item.receber, item.pagar, item.pendingBalance];
   function amountCell(value, isBalance = false) {
     return node('td', fmt(value), isBalance ? value < 0 ? 'report-negative' : 'report-positive' : '');
   }
@@ -148,16 +148,16 @@
     if (mode === 'balanco') {
       const values = { 'report-received': result.recebidos, 'report-paid': result.pagos,
         'report-receivable': result.receber, 'report-payable': result.pagar,
-        'report-realized': result.realized, 'report-projected': result.projected };
+        'report-realized': result.realized, 'report-pending-balance': result.pendingBalance };
       Object.entries(values).forEach(([id, value]) => { $(id).textContent = fmt(value); });
-      ['report-realized', 'report-projected'].forEach(id => {
+      ['report-realized', 'report-pending-balance'].forEach(id => {
         $(id).classList.toggle('report-negative', values[id] < 0);
         $(id).classList.toggle('report-positive', values[id] >= 0);
       });
     }
     $('report-note').textContent = mode === 'cartao'
       ? 'Compras e parcelas por mês de fatura, com a data original da compra no detalhamento. Pagamentos da fatura não entram nesta visão. Este total não deve ser somado ao relatório de despesas pagas.'
-      : 'Recebido e pago usam a data da baixa e incluem juros e descontos. Previsões usam o vencimento dos lançamentos cadastrados, incluindo faturas abertas sem duplicar faturas fechadas. O saldo mostra o resultado deste período, não o saldo bancário. Transferências e investimentos ficam fora. Recorrências futuras entram quando seus lançamentos já estão cadastrados.';
+      : 'Resultado realizado = já recebido menos já pago. Saldo previsto = falta receber menos falta pagar, considerando as pendências do período e as faturas abertas. Juros e descontos entram nos valores pagos. As previsões usam os lançamentos já cadastrados; transferências e investimentos ficam fora.';
     if (mode === 'balanco' && options.account !== 'all') {
       $('report-note').textContent += ' Faturas abertas ainda sem conta de pagamento definida aparecem em Todas as contas.';
     }
@@ -173,7 +173,8 @@
     result.groups.forEach(group => {
       const detail = node('details', '', 'reports-group');
       const summary = node('summary', '');
-      summary.append(node('span', group.name), node('small', `${group.rows.length} lançamento(s)`), node('strong', fmt(mode === 'balanco' ? group.projected : group.total)));
+      summary.append(node('span', group.name), node('small', `${group.rows.length} lançamento(s)`));
+      if (mode === 'cartao') summary.appendChild(node('strong', fmt(group.total)));
       detail.append(summary, renderTable(group.rows));
       content.appendChild(detail);
     });
@@ -222,7 +223,7 @@
       snapshot = null; result = null;
       $('report-content').replaceChildren();
       $('report-total').textContent = '—';
-      ['report-count', 'report-category-count', 'report-received', 'report-paid', 'report-receivable', 'report-payable', 'report-realized', 'report-projected'].forEach(id => { $(id).textContent = '—'; });
+      ['report-count', 'report-category-count', 'report-received', 'report-paid', 'report-receivable', 'report-payable', 'report-realized', 'report-pending-balance'].forEach(id => { $(id).textContent = '—'; });
       $('report-monthly').replaceChildren();
       $('report-status').className = 'reports-error';
       $('report-status').textContent = `Não foi possível carregar o relatório. ${error.message || 'Tente novamente.'}`;
@@ -259,7 +260,7 @@
       const rows = mode === 'balanco' ? [
         ['Balanço do período', dateBR(loadedOptions.start), dateBR(loadedOptions.end)],
         ['Resumo', ...balanceHeadings], ['Total', ...balanceValues(result).map(decimal)],
-        ['Saldo realizado', decimal(result.realized)], [],
+        ['Resultado realizado', decimal(result.realized)], [],
         ['Categoria', ...balanceHeadings], ...result.groups.map(group => [group.name, ...balanceValues(group).map(decimal)]), [],
         ['Mês', ...balanceHeadings], ...result.months.map(item => [item.month === 'overdue' ? 'Vencidos antes do período' : item.month, ...balanceValues(item).map(decimal)]), [],
         ['Data', 'Descrição', 'Categoria', 'Conta', 'Situação', 'Valor'],

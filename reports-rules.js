@@ -91,7 +91,7 @@
     const lanes = ['recebidos', 'pagos', 'receber', 'pagar'];
     const totals = () => ({ recebidos: 0, pagos: 0, receber: 0, pagar: 0 });
     const finish = item => ({ ...item, realized: money(item.recebidos - item.pagos),
-      projected: money(item.recebidos - item.pagos + item.receber - item.pagar) });
+      pendingBalance: money(item.receber - item.pagar) });
     const sum = totals(), groups = new Map(), months = new Map(), rows = [];
     // Include empty months so a future period is presented as a complete plan.
     const [year, month] = options.start.split('-').map(Number);

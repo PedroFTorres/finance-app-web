@@ -101,9 +101,9 @@ test('balanço reúne realizado e previsto sem repetir valores pagos nas pendên
   assert.equal(balance.receber, 0);
   assert.equal(balance.pagar, 200);
   assert.equal(balance.realized, 2546.70);
-  assert.equal(balance.projected, 2346.70);
-  assert.equal(balance.months[0].projected, balance.projected);
-  assert.equal(balance.groups.reduce((sum, group) => sum + group.projected, 0), balance.projected);
+  assert.equal(balance.pendingBalance, -200);
+  assert.equal(balance.months[0].pendingBalance, balance.pendingBalance);
+  assert.equal(balance.groups.reduce((sum, group) => sum + group.pendingBalance, 0), balance.pendingBalance);
 });
 
 test('balanço futuro mostra previsão e déficit, sem supor recebimentos ou pagamentos', () => {
@@ -112,11 +112,11 @@ test('balanço futuro mostra previsão e déficit, sem supor recebimentos ou pag
   const balance = buildBalance(sample, { start: '2026-08-01', end: '2026-10-31' });
   assert.equal(balance.recebidos, 0);
   assert.equal(balance.pagos, 0);
-  assert.equal(balance.projected, -273.11);
+  assert.equal(balance.pendingBalance, -273.11);
   assert.equal(balance.months.length, 3);
-  assert.equal(balance.months[0].projected, 0);
-  assert.equal(balance.months[1].projected, -273.11);
-  assert.equal(balance.months[2].projected, 0);
+  assert.equal(balance.months[0].pendingBalance, 0);
+  assert.equal(balance.months[1].pendingBalance, -273.11);
+  assert.equal(balance.months[2].pendingBalance, 0);
 });
 
 test('balanço por categoria reúne todas as situações com os mesmos filtros', () => {
@@ -124,7 +124,7 @@ test('balanço por categoria reúne todas as situações com os mesmos filtros',
   assert.equal(balance.groups.length, 1);
   assert.equal(balance.pagos, 105.30);
   assert.equal(balance.pagar, 70);
-  assert.equal(balance.projected, -175.30);
+  assert.equal(balance.pendingBalance, -70);
   assert.equal(balance.rows.length, 2);
 });
 
@@ -132,17 +132,17 @@ test('balanço anual soma meses sem incluir investimentos como receita', () => {
   const balance = buildBalance(data, { start: '2026-01-01', end: '2026-12-31' });
   assert.equal(balance.months.length, 12);
   assert.equal(balance.recebidos, 2652);
-  assert.equal(balance.months.reduce((sum, item) => sum + item.projected, 0), balance.projected);
+  assert.equal(balance.months.reduce((sum, item) => sum + item.pendingBalance, 0), balance.pendingBalance);
 });
 
 test('balanço separa vencidos anteriores e conta cada pendência uma única vez', () => {
   const sample = { income: [{ id: 'a', valor: 100, baixado: false, data: '2026-06-20' }],
     expenses: [{ id: 'b', valor: 50, baixado: false, data: '2026-07-20' }] };
   const balance = buildBalance(sample, { ...options, overdue: true });
-  assert.equal(balance.projected, 50);
+  assert.equal(balance.pendingBalance, 50);
   assert.equal(balance.months[0].month, 'overdue');
-  assert.equal(balance.months[0].projected, 100);
-  assert.equal(balance.months[1].projected, -50);
+  assert.equal(balance.months[0].pendingBalance, 100);
+  assert.equal(balance.months[1].pendingBalance, -50);
 });
 
 test('categoria de cartão reúne faturas abertas e fechadas inclusive com filtro de categoria', () => {
@@ -175,5 +175,22 @@ test('pagamento parcial do cartão entra em pago e reduz apenas o restante previ
   const balance = buildBalance(sample, { ...options, category: 'card' });
   assert.equal(balance.pagos, 30);
   assert.equal(balance.pagar, 70);
-  assert.equal(balance.projected, -100);
+  assert.equal(balance.realized, -30);
+  assert.equal(balance.pendingBalance, -70);
+});
+
+test('saldo previsto de outubro usa somente o que falta receber e pagar', () => {
+  const sample = {
+    income: [
+      { id: 'received', valor: 21014.53, baixado: true, data_baixa: '2026-10-05' },
+      { id: 'receivable', valor: 9223, baixado: false, data: '2026-10-15' }
+    ],
+    expenses: [
+      { id: 'paid', valor: 12470.04, baixado: true, data_baixa: '2026-10-05' },
+      { id: 'payable', valor: 8416.43, baixado: false, data: '2026-10-20' }
+    ]
+  };
+  const balance = buildBalance(sample, { start: '2026-10-01', end: '2026-10-31' });
+  assert.equal(balance.realized, 8544.49);
+  assert.equal(balance.pendingBalance, 806.57);
 });

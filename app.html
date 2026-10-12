@@ -800,7 +800,7 @@
   <section class="screen hidden" data-screen="relatorios">
     <div class="card-panel reports-panel">
       <div class="reports-heading">
-        <div><h2>Balanço financeiro</h2><p>O que já aconteceu, o que ainda está previsto e como o período deve terminar.</p></div>
+        <div><h2>Balanço financeiro</h2><p>Acompanhe o que já foi realizado e o que ainda falta receber e pagar.</p></div>
         <div class="reports-actions">
           <button id="report-refresh" class="btn-secondary">Consultar novamente</button>
           <button id="report-export" class="btn-secondary" disabled>Exportar CSV</button>
@@ -827,12 +827,12 @@
       <div id="report-balance-summary" class="reports-summary reports-balance-summary">
         <div class="report-income"><span>Já recebido</span><strong id="report-received">—</strong></div>
         <div class="report-expense"><span>Já pago</span><strong id="report-paid">—</strong></div>
-        <div class="report-income"><span>Previsto a receber</span><strong id="report-receivable">—</strong></div>
-        <div class="report-expense"><span>Previsto a pagar</span><strong id="report-payable">—</strong></div>
+        <div class="report-income"><span>Falta receber</span><strong id="report-receivable">—</strong></div>
+        <div class="report-expense"><span>Falta pagar</span><strong id="report-payable">—</strong></div>
       </div>
       <div id="report-balance-result" class="reports-balance-result">
-        <div><span>Saldo realizado</span><strong id="report-realized">—</strong><small>Recebido menos pago</small></div>
-        <div><span>Saldo projetado do período</span><strong id="report-projected">—</strong><small>Realizado + previsto a receber − previsto a pagar</small></div>
+        <div><span>Resultado realizado</span><strong id="report-realized">—</strong><small>Já recebido − já pago</small></div>
+        <div><span>Saldo previsto</span><strong id="report-pending-balance">—</strong><small>Falta receber − falta pagar</small></div>
       </div>
       <div id="report-card-summary" class="reports-summary hidden">
         <div><span>Compras no cartão</span><strong id="report-total">—</strong></div>
@@ -856,8 +856,8 @@
   <script src="premium-access-client.js?v=20261012-1"></script>
   <script src="runtime-utils.js?v=20261012-1"></script>
   <script src="finance-rules.js?v=20261012-1"></script>
-  <script src="reports-rules.js?v=20261012-3"></script>
-  <script src="reports.js?v=20261012-3"></script>
+  <script src="reports-rules.js?v=20261012-4"></script>
+  <script src="reports.js?v=20261012-4"></script>
   <script src="app.js?v=20261012-2"></script>
   <link rel="stylesheet" href="onboarding/onboarding.css?v=20260809-1">
   <script src="onboarding/onboarding.js?v=20261012-1"></script>
