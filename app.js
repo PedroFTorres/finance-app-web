@@ -4417,6 +4417,7 @@ showScreen(name, reportMode) {
   $all(IDS.menuBtns).forEach(b =>
     b.classList.toggle('active', b.dataset.target === name)
   );
+  window.dispatchEvent(new CustomEvent('arolix:screen-change', { detail: name }));
 
   // =========================/ LANÇAMENTOS — APENAS UI// =========================
   if (name === 'lanc') {
@@ -5315,6 +5316,9 @@ if (btnConfirmar) {
     window.APP_READY = true;
     if (new URLSearchParams(window.location.search).get('relatorio') === 'cartao') {
       App.showScreen('relatorios', 'cartao');
+    } else {
+      const initialScreen = new URLSearchParams(window.location.search).get('tela');
+      if (['dashboard', 'contas', 'categorias', 'lanc', 'relatorios'].includes(initialScreen)) App.showScreen(initialScreen);
     }
 
   } catch (e) {

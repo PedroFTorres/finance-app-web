@@ -409,17 +409,17 @@ if (contaFaturaConfirmar) {
 
   function getCardGradient(i) {
   const gradients = [
-    // roxo principal
-    "linear-gradient(135deg, #5f4dff, #7b6dff)",
+    // Arolix: tons sóbrios, com contraste estável para os textos do cartão.
+    "linear-gradient(120deg, #353044, #252335)",
 
     // azul escuro elegante
-    "linear-gradient(135deg, #1f3c88, #3a6df0)",
+    "linear-gradient(120deg, #303e54, #252e40)",
 
     // cinza grafite (corporativo)
-    "linear-gradient(135deg, #2c2c2c, #4b4b4b)",
+    "linear-gradient(120deg, #41444d, #2d3039)",
 
     // verde escuro discreto
-    "linear-gradient(135deg, #1f7a63, #2ea98c)"
+    "linear-gradient(120deg, #36514b, #263b35)"
   ];
 
   return gradients[i % gradients.length];

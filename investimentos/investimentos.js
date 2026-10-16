@@ -1693,7 +1693,7 @@ async function boot() {
   el("invest-data").value = isoToday();
   el("resgate-data").value = isoToday();
   toggleCarenciaFields();
-  activateInvestmentTab("aplicacao", "novo");
+  activateInvestmentTab("carteira");
 
   try {
     const ok = await loadSession();

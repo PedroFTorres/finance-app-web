@@ -6,8 +6,9 @@
   <title>Investimentos - Arolix</title>
   <link rel="icon" type="image/png" href="../favicon.png">
   <link rel="stylesheet" href="investimentos.css?v=20260731-2">
+  <link rel="stylesheet" href="../interface.css?v=20261016-1">
 </head>
-<body>
+<body class="arolix-app" data-module="investimentos">
   <header class="invest-header">
     <div>
       <img src="../logo-arolix.png" alt="Arolix" class="invest-logo">
@@ -37,13 +38,13 @@
     <section id="access-alert" class="alert hidden"></section>
 
     <nav class="invest-tabs" aria-label="Menu do módulo de investimentos">
-      <button class="invest-tab active" type="button" data-invest-tab="aplicacao" data-invest-mode="novo">Nova aplicação</button>
+      <button class="invest-tab active" type="button" data-invest-tab="carteira">Carteira</button>
+      <button class="invest-tab" type="button" data-invest-tab="aplicacao" data-invest-mode="novo">Nova aplicação</button>
       <button class="invest-tab" type="button" data-invest-tab="aplicacao" data-invest-mode="aporte">Aporte</button>
       <button class="invest-tab" type="button" data-invest-tab="resgate">Resgate</button>
-      <button class="invest-tab" type="button" data-invest-tab="carteira">Carteira</button>
     </nav>
 
-    <section id="panel-aplicacao" class="grid invest-tab-panel active">
+    <section id="panel-aplicacao" class="grid invest-tab-panel hidden">
       <form id="form-investimento" class="panel">
         <h2 id="invest-form-title">Nova aplicação</h2>
 
@@ -235,7 +236,7 @@
       </form>
     </section>
 
-    <section id="panel-carteira" class="panel invest-tab-panel hidden">
+    <section id="panel-carteira" class="panel invest-tab-panel active">
       <div class="section-title">
         <h2>Produtos e aportes cadastrados</h2>
         <button id="btn-recarregar" class="btn-secondary">Recarregar</button>
@@ -245,6 +246,7 @@
     </section>
   </main>
 
+  <script src="../interface.js?v=20261016-1"></script>
   <script src="../vendor/supabase-2.108.2.js"></script>
   <script src="../vendor/jszip-3.10.1.min.js"></script>
   <script src="../config.js"></script>
@@ -252,6 +254,6 @@
   <script src="../premium-access-client.js?v=20261012-1"></script>
   <script src="../runtime-utils.js?v=20261012-1"></script>
   <script src="../security.js?v=20261012-1"></script>
-  <script src="investimentos.js?v=20261012-1"></script>
+  <script src="investimentos.js?v=20261016-1"></script>
 </body>
 </html>

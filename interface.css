@@ -1,0 +1,285 @@
+/* Arolix interface v2 — shared visual system, layered after legacy screen styles. */
+.arolix-app {
+  --roxo:#7552cf; --roxo-claro:#f0ebfa; --purple:#7552cf; --purple-dark:#6441ba; --purple-soft:#f0ebfa;
+  --text:#252b3b; --muted:#818898; --bg:#f5f6f9; --panel:#fff; --border:#e8ebf1;
+  --green:#168262; --red:#be5261; --radius:14px; --shadow:none;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--text); background:var(--bg); font-size:14px; line-height:1.45;
+}
+.arolix-app *, .arolix-app *::before, .arolix-app *::after { box-sizing:border-box; }
+.arolix-app button,.arolix-app input,.arolix-app select,.arolix-app textarea { font-family:inherit; }
+.arolix-app button,.arolix-app a,.arolix-app input,.arolix-app select { touch-action:manipulation; }
+.arolix-app button:focus-visible,.arolix-app a:focus-visible,.arolix-app input:focus-visible,.arolix-app select:focus-visible { outline:3px solid #bba7ee; outline-offset:3px; }
+.arolix-app h1,.arolix-app h2,.arolix-app h3 { color:var(--text); font-weight:600; letter-spacing:-.4px; }
+.arolix-app h1,.arolix-app .screen>h2,.arolix-app .lanc-header h2,.arolix-app .dashboard-header h2,.arolix-app .reports-heading h2 { font-size:28px; letter-spacing:-.9px; }
+.arolix-app h3 { font-size:16px; }
+.arolix-app strong,.arolix-app b { font-weight:600; }
+.arolix-app .top-header,.arolix-app .invest-header { position:relative;top:auto;min-height:76px;height:auto;margin-left:228px;padding:17px 36px;background:#fff;border-bottom:1px solid var(--border);color:var(--text);display:flex;justify-content:space-between;align-items:center;gap:15px;z-index:20; }
+.arolix-app .top-bar,.arolix-app .invest-header nav { gap:10px;flex-wrap:wrap;justify-content:flex-end; }
+.arolix-app .top-bar h2,.arolix-app .invest-header>div:not(.shell-breadcrumb) { display:none; }
+.arolix-app .top-header>.top-bar:has(h2) { display:none; }
+.arolix-app .top-header button,.arolix-app .top-header a,.arolix-app .invest-header button { font-size:12px;padding:8px 12px;border-radius:7px;min-height:34px; }
+.arolix-app .user-email,.arolix-app #user-email { font-size:12px;color:#626b7e; }
+.arolix-app #header-avatar { border:1px solid var(--border); }
+.arolix-app .shell-breadcrumb { display:flex;gap:15px;align-items:center;color:#8c94a3;font-size:12px;white-space:nowrap; }
+.arolix-app .shell-breadcrumb strong { color:#596276;font-weight:500; }
+.shell-breadcrumb-slash { color:#c0c6d1; }
+.arolix-app>main { max-width:1600px;margin:0 0 0 228px;padding:33px 36px 48px;min-width:0; }
+.arolix-app .app-logo-center { display:none; }
+.arolix-sidebar { position:fixed;inset:0 auto 0 0;width:228px;background:#fff;border-right:1px solid var(--border);padding:32px 17px 22px;display:flex;flex-direction:column;z-index:40;overflow-y:auto; }
+.shell-brand { display:block;padding:0 19px;margin-bottom:40px; }
+.shell-brand img { display:block;width:144px;height:auto; }
+.shell-nav-heading { display:block;font-size:9px;letter-spacing:1.45px;color:#929aa9;font-weight:600;margin:0 16px 14px; }
+.arolix-app .shell-primary-nav,.arolix-app .shell-secondary-nav { display:flex;flex-direction:column;align-items:stretch;gap:5px;max-width:none;overflow:visible;padding:0; }
+.arolix-app .shell-nav-item { display:flex;gap:12px;align-items:center;justify-content:flex-start;margin:0;width:100%;padding:12px 15px;min-height:43px;border:0;background:transparent;box-shadow:none;border-radius:8px;color:#717b8f;font-size:13px;font-weight:500;line-height:1.4;text-align:left;text-decoration:none;white-space:nowrap; }
+.arolix-app .shell-nav-item:hover { background:#f7f8fa;color:#343c50; }
+.arolix-app .shell-nav-item.active { color:#6f4bc3;background:var(--roxo-claro);font-weight:600; }
+.shell-icon { display:inline-flex;flex-shrink:0;align-items:center;justify-content:center; }
+.shell-icon svg { width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round; }
+.shell-secondary-heading { margin-top:28px; }
+.arolix-app .shell-more { display:none; }
+.shell-sidebar-footer { margin-top:auto;padding:24px 15px 0;color:#8992a2;display:grid;gap:7px;font-size:11px; }
+.shell-sidebar-footer strong { font-size:12px;color:#4b5365; }
+.shell-menu-backdrop { display:none; }
+.arolix-app .btn-primary,.arolix-app .btn-add-lanc,.arolix-app #btn-open-add-lanc { background:var(--roxo);border:1px solid var(--roxo);color:#fff;border-radius:8px;box-shadow:0 3px 5px #7552cf12;min-height:40px;font-size:13px;font-weight:550;padding:10px 16px; }
+.arolix-app .btn-primary:hover { background:#6441ba;border-color:#6441ba; }
+.arolix-app .btn-secondary,.arolix-app .btn-outline,.arolix-app .listas button { background:#fff;border:1px solid #e0e4ed;color:#626b7e;border-radius:8px;min-height:37px;font-size:12px;font-weight:500;padding:8px 12px;box-shadow:none; }
+.arolix-app .btn-secondary:hover,.arolix-app .btn-outline:hover { background:#faf8ff;border-color:#d5c9ee; }
+.arolix-app .arolix-sidebar .shell-nav-item { border:0; }
+.arolix-app .btn-danger,.arolix-app .danger { background:#fff3f4;border:1px solid #f1dadd;color:#b34b5c;border-radius:8px;box-shadow:none;font-size:12px;font-weight:500; }
+.arolix-app button:disabled { opacity:.5;cursor:not-allowed; }
+.arolix-app input:not([type=checkbox]):not([type=radio]),.arolix-app select,.arolix-app textarea { border:1px solid #e0e4ed;border-radius:8px;background:#fff;color:#434d62;box-shadow:none;font-size:13px;min-width:0; }
+.arolix-app label { color:#687287;font-size:12px;font-weight:500; }
+.arolix-app .card-panel,.arolix-app .box,.arolix-app .card,.arolix-app .panel { border:1px solid var(--border);border-radius:14px;box-shadow:none;background:#fff;min-width:0; }
+.arolix-app .dashboard-panel,.arolix-app .lanc-panel,.arolix-app .reports-panel { padding:0;border:0;background:transparent;box-shadow:none; }
+.arolix-app .dashboard-header,.arolix-app .lanc-header,.arolix-app .reports-heading { margin-bottom:27px;align-items:center; }
+.arolix-app .dashboard-subtitle,.arolix-app .lanc-header p,.arolix-app .reports-heading p { font-size:13px;color:#858d9d;line-height:1.6; }
+.arolix-app .dashboard-period-nav,.arolix-app .lanc-period-card { background:#fff;border:1px solid #e0e4ed;border-radius:8px;padding:4px;gap:3px; }
+.arolix-app .dashboard-period-nav strong,.arolix-app .lanc-period-card strong { color:#606b80;font-size:13px;min-width:118px; }
+.arolix-app .dashboard-period-nav button,.arolix-app .lanc-period-card button { border:0;min-height:32px;min-width:32px;padding:6px;background:#fff; }
+.arolix-app .dashboard-kpis,.arolix-app .lanc-summary-grid { gap:16px;margin:22px 0; }
+.arolix-app .kpi-card,.arolix-app .lanc-summary-card { background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:none;padding:21px;text-align:left; }
+.arolix-app .kpi-card span,.arolix-app .lanc-summary-card>span { color:#838c9d;text-transform:none;letter-spacing:0;font-size:12px;font-weight:500; }
+.arolix-app .kpi-card strong,.arolix-app .lanc-summary-card strong { font-size:26px;font-weight:600;letter-spacing:-.6px;color:#283043;margin:12px 0 6px;font-variant-numeric:tabular-nums; }
+.arolix-app .kpi-card small,.arolix-app .lanc-summary-card small { color:#929aaa;font-size:11px; }
+.arolix-app .kpi-card { cursor:pointer; }
+.arolix-app .kpi-card:hover { border-color:#d5c8ed;box-shadow:0 3px 12px #49337006; }
+.arolix-app .kpi-income,.arolix-app .kpi-expense,.arolix-app .kpi-realized,.arolix-app .kpi-forecast,.arolix-app .lanc-summary-card { border-left-width:1px; }
+.arolix-app .kpi-forecast { background:#282536;color:#fff;border-color:#282536; }
+.arolix-app .kpi-forecast span,.arolix-app .kpi-forecast small { color:#bcb3d0; }
+.arolix-app .kpi-forecast strong { color:#fff; }
+.arolix-app .dashboard-grid { gap:24px; }
+.arolix-app .dashboard-grid .card { padding:24px; }
+.arolix-app .dashboard-grid h3 { font-size:16px;color:#30394b; }
+.arolix-app .dashboard-tabs,.arolix-app .invest-tabs { background:transparent;border:0;padding:0;gap:8px;border-radius:0;margin-bottom:20px; }
+.arolix-app .dashboard-tab,.arolix-app .invest-tab,.arolix-app .reports-tabs button { color:#7c8596;background:#fff;border:1px solid var(--border);padding:10px 16px;border-radius:8px;font-size:12px;font-weight:500;box-shadow:none; }
+.arolix-app .dashboard-tab.active,.arolix-app .invest-tab.active,.arolix-app .reports-tabs button[aria-pressed=true] { background:var(--roxo-claro);color:#7050b5;border-color:#e2d8f2; }
+.arolix-app .lanc-toolbar,.arolix-app .reports-filters { background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;gap:14px; }
+.arolix-app .lanc-account-filter select { min-height:37px; }
+.arolix-app .lanc-layout { display:flex;flex-direction:column;gap:0;height:auto;min-height:0; }
+.shell-ledger-tools { display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;background:#fff;border:1px solid var(--border);border-radius:12px 12px 0 0; }
+.arolix-app .lanc-menu { display:flex;flex-direction:row;align-items:center;gap:4px;flex-wrap:wrap;border:0;background:transparent;padding:0;box-shadow:none;border-radius:0; }
+.arolix-app .lanc-menu button { padding:9px 11px;width:auto;border:0;background:transparent;color:#8992a2;border-radius:7px;font-size:12px;font-weight:500;min-height:36px; }
+.arolix-app .lanc-menu button.active { background:var(--roxo-claro);color:#7350bd; }
+.arolix-app .lanc-menu button small { background:#f5f6fa;color:#9199a9;border-radius:5px;min-width:18px;padding:2px 5px;font-size:10px;font-weight:500; }
+.arolix-app .lanc-menu button.active small { background:#fff;color:#9277ba; }
+.shell-ledger-search { display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:7px;padding:0 10px;min-width:180px; }
+.shell-ledger-search .shell-icon { color:#9aa2b2; }
+.arolix-app .shell-ledger-search input:not([type=checkbox]):not([type=radio]) { border:0;padding:10px 0;background:none;width:160px;outline-offset:5px; }
+.shell-search-note { font-size:11px;color:#8a93a4;padding:12px 20px;margin:0;background:#fff; }
+.shell-search-hidden { display:none!important; }
+.arolix-app .lanc-content { min-width:0;overflow:visible;padding-right:0; }
+.arolix-app .listas { gap:16px;min-width:0;margin-top:0; }
+.arolix-app #box-pendencias .lanc-item { max-width:none;width:100%; }
+.arolix-app .listas .box { margin:0;border-radius:0 0 12px 12px;padding:0;overflow:hidden; }
+.arolix-app .listas .box h3 { font-size:15px;font-weight:600;padding:20px 22px;margin:0; }
+.arolix-app .lanc-box-title { padding:0; }
+.arolix-app .lanc-box-title p { padding:0 22px 16px;font-size:12px;margin:0;color:#929aaa; }
+.arolix-app .listas ul { margin:0;padding:0; }
+.arolix-app .listas li.lanc-item { display:grid;grid-template-columns:minmax(0,1fr) 125px auto;align-items:center;gap:15px;padding:18px 21px!important;border:0;border-top:1px solid #edf0f5;border-radius:0;box-shadow:none;background:#fff;transform:none;min-width:0;margin:0; }
+.arolix-app .listas li.lanc-item:nth-child(even) { background:#fbfbfd; }
+.arolix-app .listas li.lanc-item:hover { background:#f7f5fc;transform:none; }
+.arolix-app .lanc-item-main { display:grid;grid-template-columns:82px minmax(0,1fr);align-items:center;gap:16px;min-width:0;margin:0; }
+.arolix-app .listas li.lanc-item>.lanc-item-main { overflow:visible;white-space:normal; }
+.arolix-app .lanc-date { font-size:12px;font-weight:500;color:#929aab; }
+.arolix-app .lanc-title { font-size:13px;font-weight:600;color:#414b61;line-height:1.5; }
+.arolix-app .lanc-meta { gap:7px;margin-top:7px; }
+.arolix-app .lanc-chip { padding:2px 5px;border-radius:4px;background:#f3f4f7;color:#939aaa;font-size:10px;font-weight:500; }
+.arolix-app .lanc-chip-muted { background:transparent; }
+.arolix-app .lanc-status-open { background:#fff5e6;color:#b08543; }
+.arolix-app .lanc-status-done { background:#f1f3f6;color:#8a94a6; }
+.arolix-app .lanc-value { font-size:14px;font-weight:550;letter-spacing:-.2px;text-align:right;white-space:nowrap; }
+.arolix-app .lanc-value-income { color:#168262; }
+.arolix-app .lanc-value-expense { color:#48536a; }
+.arolix-app .lanc-actions { gap:6px;flex-wrap:wrap;justify-content:flex-end; }
+.arolix-app .lanc-actions button { font-size:11px;min-height:32px;padding:7px 10px; }
+.arolix-app .listas li.lanc-provisorio-cartao { border-top:1px solid #efe9db;border-left:3px solid #d6ad65;background:#fffcf5; }
+.arolix-app .lanc-badge-provisorio { background:#faf0db;color:#b68c47;border-radius:5px;font-size:10px;font-weight:500;padding:5px 7px; }
+.arolix-app .lanc-value-card { color:#ab8143;font-size:14px; }
+.arolix-app .lanc-subtitle { color:#a3a8b3;font-size:11px; }
+.arolix-app .card-totais { display:flex;align-items:center;gap:26px;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:12px;margin:20px 0 0;padding:19px 22px; }
+.arolix-app .card-totais h3 { font-size:13px;margin:0 auto 0 0; }
+.arolix-app .card-totais .totais-row { display:grid;grid-template-columns:1fr;gap:5px;border:0;padding:0;background:none;border-radius:0;margin:0; }
+.arolix-app .totais-row strong { color:#939aaa;font-size:11px;font-weight:500; }
+.arolix-app .totais-row span { color:#525c70;font-size:14px;font-weight:600; }
+.arolix-app .reports-summary>div { background:#fff;border-color:var(--border);border-radius:12px;padding:20px; }
+.arolix-app .reports-summary strong { font-size:25px;letter-spacing:-.6px; }
+.arolix-app .reports-balance-result { border:1px solid #e3ddee;background:linear-gradient(110deg,#f2edf9,#fff);border-radius:12px; }
+.arolix-app .reports-note { background:#f0f1f5;color:#8891a2;font-size:12px; }
+.arolix-app .reports-table th { background:#fafbfc;color:#8b95a6;font-size:10px;letter-spacing:.6px;font-weight:500; }
+.arolix-app .reports-table td { font-size:12px;padding-block:16px; }
+.arolix-app .reports-table tfoot { background:#f0ebf8; }
+.arolix-app .reports-group { border-color:var(--border);border-radius:9px; }
+.arolix-app .reports-group summary { background:#fff;font-size:13px; }
+.arolix-app .reports-balance-table { background:#fff;border:1px solid var(--border); }
+.arolix-app .reports-balance-table tbody tr:nth-child(even) { background:#fbfbfd; }
+.arolix-app .conta-card,.arolix-app .account-card,.arolix-app .category-card { box-shadow:none;border-color:var(--border);border-radius:12px; }
+.arolix-app .bank-logo { border-radius:9px; }
+.arolix-app table { font-variant-numeric:tabular-nums; }
+.arolix-app .modal-content,.arolix-app .modal-card,.arolix-app .modal-dialog { border:1px solid #e7e0f0;border-radius:14px;box-shadow:0 24px 80px #28203320; }
+.arolix-app .modal-content h3,.arolix-app .modal-card h3 { color:#30394b;font-size:20px; }
+.arolix-app .modal-backdrop { backdrop-filter:blur(2px); }
+.arolix-app .shell-page-heading { margin-bottom:28px; }
+.arolix-app .shell-page-heading h1 { margin:8px 0; }
+.shell-eyebrow { font-size:9px;letter-spacing:1.5px;color:#949dad;font-weight:500; }
+.arolix-app .shell-page-heading p { font-size:13px;color:#8992a2; }
+.arolix-app .cartoes-layout { grid-template-columns:250px minmax(0,1fr);gap:24px; }
+.arolix-app .cartoes-sidebar,.arolix-app .cartoes-conteudo { min-width:0;background:#fff;border:1px solid var(--border);border-radius:14px;padding:22px; }
+.arolix-app .cartoes-sidebar h3 { font-size:16px; }
+.arolix-app .card-item { box-shadow:none;border-radius:12px; }
+.arolix-app .card-tile { background:linear-gradient(120deg,#353044,#252335);color:#fff;border:1px solid #3f3650;border-radius:12px;box-shadow:none;padding:20px; }
+.arolix-app .card-tile.active { outline:2px solid #b9a4e3;outline-offset:3px;transform:none; }
+.arolix-app .card-tile:hover { transform:none;box-shadow:0 5px 15px #2c243315; }
+.arolix-app .card-tile::before { opacity:.12; }
+.arolix-app .card-tile .nome { font-size:13px;font-weight:550;color:#fff; }
+.arolix-app .card-tile .info { font-size:10px;color:#cbc4d6; }
+.arolix-app #fatura-titulo { color:#384257;font-size:18px; }
+.arolix-app #fatura-periodo { color:#929bad;font-size:12px; }
+.arolix-app #fatura-total { color:#30394c;font-size:32px;letter-spacing:-1px;font-weight:600;padding:16px 0;border-block:1px solid #eef0f5; }
+.arolix-app .filtro-periodo { border:1px solid var(--border);border-radius:8px;padding:4px;width:fit-content; }
+.arolix-app .filtro-periodo button { border:0; }
+.arolix-app .filtro-periodo strong { color:#68748b;font-size:13px;font-weight:500; }
+.arolix-app .lista-fatura { border:1px solid var(--border);border-radius:8px; }
+.arolix-app .lista-fatura li.fatura-row { grid-template-columns:85px minmax(0,1fr) 68px 105px;padding:17px 14px;gap:13px;font-size:13px;border-color:#eef0f5; }
+.arolix-app .lista-fatura li.fatura-row:nth-child(even) { background:#fafbfc; }
+.arolix-app .lista-fatura li.fatura-row:hover { background:#f6f4fb;transform:none; }
+.arolix-app .fatura-data { color:#959dad;font-weight:500;font-size:11px; }
+.arolix-app .fatura-desc { color:#454f64;font-weight:550;font-size:13px; }
+.arolix-app .fatura-meta { color:#98a0ad;font-size:10px; }
+.arolix-app .fatura-parcela { border:1px solid #e6dfef;background:#faf8fd;color:#9a89b2;border-radius:5px;min-width:0;padding:5px 7px;font-size:10px;font-weight:500; }
+.arolix-app .fatura-valor { color:#4d586d;font-size:13px;font-weight:550; }
+.arolix-app .lista-fatura .valor-pagamento { color:#168262;font-size:13px;font-weight:550; }
+.arolix-app .fatura-status-banner { text-align:left;font-size:12px;letter-spacing:0;text-transform:none;background:#fff7eb;border:1px solid #f0e6cf;color:#a68044;box-shadow:none;padding:12px 15px;border-radius:8px; }
+.arolix-app .fatura-status-banner.paga { background:#f0f7f3;color:#358c6d;border-color:#dcece4; }
+.arolix-app .hero-card { background:transparent;border:0;box-shadow:none;border-radius:0;padding:0 0 27px; }
+.arolix-app .hero-card h1 { color:var(--text);font-size:29px;letter-spacing:-.8px; }
+.arolix-app .hero-card p { font-size:13px;color:#929aaa;max-width:580px; }
+.arolix-app .hero-values { background:#292536;border:1px solid #302a42;border-radius:12px;min-width:250px;padding:22px; }
+.arolix-app .hero-values strong { color:#fff;font-size:28px;letter-spacing:-.8px; }
+.arolix-app .panel { padding:24px; }
+.arolix-app .panel h2,.arolix-app .invest-item h3 { color:#394257; }
+.arolix-app .summary-list div { background:#fafbfc;border:1px solid var(--border);border-radius:10px; }
+.arolix-app .summary-list strong { color:#414b60;font-size:22px; }
+.arolix-app .invest-card,.arolix-app .invest-item,.arolix-app .resgate-preview { border-color:var(--border);border-radius:12px;box-shadow:none; }
+.arolix-app .invest-badge { background:var(--roxo-claro);color:var(--roxo); }
+.arolix-app .invest-list { gap:18px; }
+.arolix-app .btn-icon { border-radius:7px; }
+@media(max-width:1200px) {
+  .arolix-sidebar { width:205px;padding-inline:13px; }
+  .arolix-app>main,.arolix-app .top-header,.arolix-app .invest-header { margin-left:205px; }
+  .arolix-app>main { padding:28px 24px; }
+  .arolix-app .top-header,.arolix-app .invest-header { padding-inline:24px; }
+  .arolix-app .shell-nav-item { font-size:12px;padding-inline:13px; }
+  .shell-ledger-tools { flex-wrap:wrap; }
+  .arolix-app .kpi-card strong,.arolix-app .lanc-summary-card strong { font-size:23px; }
+  .arolix-app .cartoes-layout { grid-template-columns:215px minmax(0,1fr);gap:18px; }
+  .arolix-app .cartoes-sidebar,.arolix-app .cartoes-conteudo { padding:18px; }
+}
+@media(max-width:1000px) {
+  .arolix-app .cartoes-layout { grid-template-columns:minmax(0,1fr); }
+  .arolix-app .cartoes-sidebar { position:static; }
+  .arolix-app .cards-list { display:flex;overflow:auto;gap:12px; }
+  .arolix-app .card-item { min-width:200px; }
+  .arolix-app .card-tile { min-width:210px;flex:0 0 210px; }
+  .arolix-app .dashboard-kpis,.arolix-app .lanc-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .arolix-app .hero-card { flex-wrap:wrap; }
+  .arolix-app .hero-values { min-width:0;width:100%;text-align:left; }
+  .arolix-app .listas li.lanc-item { grid-template-columns:minmax(0,1fr) auto; }
+  .arolix-app .lanc-actions,.arolix-app .lanc-provisorio-info { grid-column:1 / -1;justify-content:flex-end; }
+  .arolix-app .lanc-item-main { grid-template-columns:70px minmax(0,1fr);gap:10px; }
+  .arolix-app .reports-filters { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:720px) {
+  .arolix-sidebar { position:relative;inset:auto;width:100%;height:60px;padding:18px 20px;overflow:visible;border:0;background:#fff; }
+  .shell-brand { padding:0;margin:0;width:110px; }
+  .shell-brand img { width:110px; }
+  .arolix-sidebar>.shell-nav-heading,.shell-sidebar-footer { display:none; }
+  .arolix-app .shell-primary-nav { position:fixed;inset:auto 0 0;display:flex;flex-direction:row;align-items:stretch;gap:1px;background:#ffffffef;backdrop-filter:blur(12px);border-top:1px solid var(--border);padding:7px 5px calc(7px + env(safe-area-inset-bottom));z-index:90; }
+  .arolix-app .shell-primary-nav .shell-nav-item { flex:1 1 0;min-width:0;width:auto;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;padding:7px 0;font-size:9px;border-radius:7px;white-space:normal;text-align:center; }
+  .arolix-app .shell-primary-nav .shell-icon svg { width:18px;height:18px; }
+  .arolix-app .shell-more { display:flex; }
+  .arolix-app .shell-secondary-nav { display:none;position:fixed;bottom:88px;left:12px;right:12px;background:#fff;border:1px solid var(--border);box-shadow:0 15px 50px #24203320;border-radius:12px;padding:12px;z-index:100; }
+  .arolix-app.shell-menu-open .shell-secondary-nav { display:flex; }
+  .shell-menu-open .shell-menu-backdrop { display:block;position:fixed;inset:0;background:#29243830;border:0;border-radius:0;z-index:35; }
+  .arolix-app .top-header,.arolix-app .invest-header { margin-left:0;padding:12px 18px;min-height:54px;gap:10px;flex-direction:row;flex-wrap:wrap;background:var(--bg);border-bottom:0; }
+  .arolix-app .shell-breadcrumb { font-size:10px;gap:9px; }
+  .arolix-app .top-bar,.arolix-app .invest-header nav { gap:6px; }
+  .arolix-app #user-email { max-width:115px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px; }
+  .arolix-app .top-header button,.arolix-app .top-header a,.arolix-app .invest-header button { font-size:11px;padding:7px 9px;min-height:33px; }
+  .arolix-app>main { margin-left:0;padding:22px 16px calc(105px + env(safe-area-inset-bottom)); }
+  .arolix-app h1,.arolix-app .screen>h2,.arolix-app .lanc-header h2,.arolix-app .dashboard-header h2,.arolix-app .reports-heading h2 { font-size:26px; }
+  .arolix-app .dashboard-header,.arolix-app .lanc-header,.arolix-app .reports-heading { align-items:flex-start;flex-direction:column;gap:18px;margin-bottom:20px; }
+  .arolix-app .dashboard-period-nav { width:100%;justify-content:space-between; }
+  .arolix-app .lanc-header-actions { flex-wrap:wrap; }
+  .arolix-app .kpi-card,.arolix-app .lanc-summary-card { padding:17px 14px; }
+  .arolix-app .kpi-card strong,.arolix-app .lanc-summary-card strong { font-size:22px; }
+  .arolix-app .kpi-card small,.arolix-app .lanc-summary-card small { font-size:10px; }
+  .arolix-app .dashboard-grid .card { padding:20px 16px; }
+  .arolix-app .lanc-toolbar { flex-wrap:wrap; }
+  .arolix-app .lanc-account-filter { width:100%;margin-left:0; }
+  .arolix-app .lanc-account-filter select { width:100%; }
+  .shell-ledger-tools { padding:13px;gap:13px; }
+  .arolix-app .lanc-menu { gap:3px; }
+  .arolix-app .lanc-menu button { font-size:11px;padding:8px 9px; }
+  .shell-ledger-search { width:100%; }
+  .arolix-app .shell-ledger-search input:not([type=checkbox]):not([type=radio]) { width:100%; }
+  .arolix-app .listas li.lanc-item { padding:16px 13px!important;gap:10px; }
+  .arolix-app .lanc-item-main { grid-template-columns:60px minmax(0,1fr);align-items:start;gap:9px; }
+  .arolix-app .lanc-date { font-size:9px;white-space:nowrap;line-height:1.6; }
+  .arolix-app .lanc-title { font-size:12px;white-space:normal;overflow-wrap:anywhere; }
+  .arolix-app .lanc-value { font-size:12px; }
+  .arolix-app .lanc-chip { font-size:9px; }
+  .arolix-app .lanc-chip-muted { display:none; }
+  .arolix-app .lanc-actions { justify-content:flex-end; }
+  .arolix-app .lanc-actions button { min-height:36px;font-size:11px; }
+  .arolix-app .card-totais { gap:18px;padding:18px; }
+  .arolix-app .card-totais h3 { width:100%; }
+  .arolix-app .card-totais .totais-row { flex:1 1 120px; }
+  .arolix-app .reports-filters { grid-template-columns:1fr; }
+  .arolix-app .reports-balance-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .arolix-app .reports-summary strong { font-size:22px; }
+  .arolix-app .reports-balance-result { padding:20px; }
+  .arolix-app .reports-balance-result strong { font-size:26px; }
+  .arolix-app .cartoes-sidebar,.arolix-app .cartoes-conteudo { padding:17px; }
+  .arolix-app .lista-fatura li.fatura-row { grid-template-columns:55px minmax(0,1fr) 80px;gap:9px;padding:16px 10px; }
+  .arolix-app .fatura-data { font-size:9px;grid-column:1;grid-row:1 / 3; }
+  .arolix-app .fatura-info { grid-column:2;grid-row:1; }
+  .arolix-app .fatura-desc { font-size:12px;white-space:normal;overflow-wrap:anywhere; }
+  .arolix-app .fatura-meta { display:none; }
+  .arolix-app .fatura-parcela { grid-column:2;grid-row:2;font-size:9px;justify-self:start; }
+  .arolix-app .fatura-valor,.arolix-app .lista-fatura .valor-pagamento { grid-column:3;grid-row:1 / 3;font-size:12px; }
+  .arolix-app .panel { padding:20px 17px; }
+  .arolix-app .invest-tabs { gap:5px;flex-wrap:wrap; }
+  .arolix-app .invest-tab { font-size:11px;padding:9px 11px; }
+  .arolix-app .hero-values strong { font-size:28px; }
+}
+@media(prefers-reduced-motion:reduce) { .arolix-app * { transition:none!important; } }
+@media print {
+  .arolix-app .arolix-sidebar,.arolix-app .top-header,.arolix-app .invest-header,.arolix-app .shell-menu-backdrop { display:none!important; }
+  .arolix-app>main { margin:0;padding:0;max-width:none; }
+  .arolix-app .reports-panel { padding:0; }
+  .arolix-app .reports-filters { display:none!important; }
+  .arolix-app .reports-balance-summary { grid-template-columns:repeat(4,1fr); }
+  .arolix-app .reports-table { font-size:10px; }
+  .arolix-app .reports-table td,.arolix-app .reports-table th { font-size:10px;padding:6px 4px; }
+}

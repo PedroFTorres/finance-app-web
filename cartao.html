@@ -8,10 +8,11 @@
 
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="cartao.css">
+<link rel="stylesheet" href="interface.css?v=20261016-1">
 
 </head>
 
-<body>
+<body class="arolix-app" data-module="cartao">
 
   <!-- TOPO -->
   <header class="top-header">
@@ -226,7 +227,7 @@
       alert(window.ArolixAccess?.financialBlockedMessage?.() || "Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
       window.location.href = "upgrade.html";
     } else {
-      await import("./cartao.js?v=20261012-2");
+      await import("./cartao.js?v=20261016-1");
     }
   }
 </script>
@@ -331,5 +332,6 @@
   </div>
 </div>
 
+<script src="interface.js?v=20261016-1"></script>
 </body>
 </html>
