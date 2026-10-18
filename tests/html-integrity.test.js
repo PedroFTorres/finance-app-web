@@ -7,7 +7,7 @@ const eslintRequire = createRequire(fs.realpathSync(require.resolve('eslint/pack
 const espree = eslintRequire('espree');
 const root = path.join(__dirname, '..');
 const files = [...fs.readdirSync(root).filter(f=>f.endsWith('.html')),
-  'investimentos/index.html'];
+  'investimentos/index.html', 'capitalizacao/index.html'];
 
 for (const file of files) {
   test(`HTML íntegro e scripts válidos: ${file}`, () => {

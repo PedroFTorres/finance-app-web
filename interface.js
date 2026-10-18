@@ -12,12 +12,13 @@
     relatorios: '<path d="M4 3v17h17M9 15V9M14 15V5M19 15v-4"/>',
     contas: '<path d="m3 9 9-6 9 6H3Zm2 3v7m7-7v7m7-7v7M2 22h20"/>',
     categorias: '<path d="M3 3h8l10 10-8 8L3 11V3Z"/><circle cx="7" cy="7" r="1"/>',
+    capitalizacao: '<rect x="3" y="5" width="18" height="15" rx="3"/><path d="M3 10h18M8 5V3m8 2V3m-8 12h2m4 0h2"/>',
     transferir: '<path d="M3 7h17m-5-5 5 5-5 5M21 17H4m5-5-5 5 5 5"/>',
     auditoria: '<path d="m12 3 8 4v6c0 4-8 8-8 8s-8-4-8-8V7l8-4Z"/><path d="m8 12 3 3 5-6"/>',
     more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
     search: '<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>'
   };
-  const names = { dashboard: 'Visão geral', lanc: 'Lançamentos', cartao: 'Cartões', investimentos: 'Investimentos', relatorios: 'Balanço', contas: 'Contas', categorias: 'Categorias', transferir: 'Transferir', auditoria: 'Auditoria', more: 'Mais' };
+  const names = { dashboard: 'Visão geral', lanc: 'Lançamentos', cartao: 'Cartões', investimentos: 'Investimentos', relatorios: 'Balanço', contas: 'Contas', categorias: 'Categorias', capitalizacao: 'Capitalização', transferir: 'Transferir', auditoria: 'Auditoria', more: 'Mais' };
   function icon(name) {
     const span = document.createElement('span');
     span.className = 'shell-icon';
@@ -51,11 +52,11 @@
     const original = oldItems.find(node => node.dataset.target === name || node.id === `btn-${name}`);
     if (original) return decorate(original, name);
     const anchor = document.createElement('a');
-    anchor.href = name === 'cartao' ? url('cartao.html') : name === 'investimentos' ? url('investimentos/index.html') : url(`app.html?tela=${name}`);
+    anchor.href = name === 'cartao' ? url('cartao.html') : ['investimentos', 'capitalizacao'].includes(name) ? url(`${name}/index.html`) : url(`app.html?tela=${name}`);
     return decorate(anchor, name);
   }
   const primaryItems = ['dashboard', 'lanc', 'cartao', 'investimentos', 'relatorios'].map(navItem);
-  const secondaryItems = ['contas', 'categorias'].map(navItem);
+  const secondaryItems = ['contas', 'categorias', 'capitalizacao'].map(navItem);
   if (module === 'app') secondaryItems.push(...['transferir', 'auditoria'].map(navItem));
   mainNav.replaceChildren(...primaryItems);
   secondary.append(...secondaryItems);

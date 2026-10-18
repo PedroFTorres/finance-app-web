@@ -21,5 +21,5 @@ export default [
       'no-unused-vars': ['warn', { args: 'none', caughtErrors: 'none', ignoreRestSiblings: true }]
     }
   },
-  { files: ['tests/**/*.js', 'scripts/**/*.js', 'finance-rules.js', 'runtime-utils.js', 'reports-rules.js'], languageOptions: { globals: { ...globals.browser, ...globals.node } } }
+  { files: ['tests/**/*.js', 'scripts/**/*.js', 'finance-rules.js', 'runtime-utils.js', 'reports-rules.js', 'capitalizacao/regras.js'], languageOptions: { globals: { ...globals.browser, ...globals.node } } }
 ];

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Capitalização — Arolix</title>
+  <link rel="icon" href="../favicon.png">
+  <link rel="stylesheet" href="../investimentos/investimentos.css?v=20260731-2">
+  <link rel="stylesheet" href="../interface.css?v=20261018-1">
+  <link rel="stylesheet" href="capitalizacao.css?v=20261018-1">
+</head>
+<body class="arolix-app" data-module="capitalizacao">
+  <header class="invest-header"><nav><a class="btn-secondary" href="../app.html">Voltar ao app</a><button id="sair" class="btn-danger" type="button">Sair</button></nav></header>
+  <main>
+    <header class="cap-heading"><div><span class="shell-eyebrow">COMPROMISSOS COM RESGATE</span><h1>Capitalização</h1><p>Parcelas, sorteios e resgates em um só lugar. Separado dos investimentos e do saldo disponível.</p></div><button id="novo-titulo" class="btn-primary" type="button" disabled>Novo título</button></header>
+    <p id="cap-status" role="status" aria-live="polite">Carregando seus títulos…</p>
+    <div id="cap-content" class="hidden">
+      <section class="cap-kpis" aria-label="Resumo de capitalização">
+        <article><span>Títulos ativos</span><strong id="cap-ativos">—</strong><small>Planos em acompanhamento</small></article>
+        <article><span>Total contribuído</span><strong id="cap-pago">—</strong><small>Parcelas com pagamento confirmado</small></article>
+        <article><span>Prêmios recebidos</span><strong id="cap-premios">—</strong><small>Somente receitas já baixadas</small></article>
+        <article><span>Resgates recebidos</span><strong id="cap-resgatado">—</strong><small>Devoluções de capital registradas</small></article>
+      </section>
+      <p class="cap-note">O total contribuído não é o saldo resgatável hoje. As estimativas não são dinheiro disponível para gastos e não entram no Dashboard como receita.</p>
+      <section id="cap-list" class="cap-list" aria-label="Seus títulos"></section>
+      <p class="cap-help">Os registros deste módulo apenas acompanham lançamentos existentes. Para pagar uma parcela, use Lançamentos ou Cartões. Os comprovantes continuam acessíveis no lançamento original.</p>
+    </div>
+    <dialog id="title-dialog" aria-labelledby="title-heading">
+      <form id="title-form">
+        <header class="cap-dialog-heading"><h2 id="title-heading">Novo título</h2><button type="button" data-close="title-dialog" class="btn-secondary" aria-label="Fechar cadastro">✕</button></header>
+        <label for="modelo">Condições do produto</label><select id="modelo"><option value="outro">Outro / tabela não informada</option value="raspa48">Raspa DinDin 48 meses — SUSEP 15414.662222/2024-10</option><option value="raspa60">Raspa DinDin 60 meses — tabela não informada</option></select>
+        <p class="cap-help">Escolha somente o produto correspondente ao seu contrato. O prazo de 60 meses não utiliza a tabela de 48.</p>
+        <label for="nome">Nome do título</label><input id="nome" required maxlength="160" placeholder="Ex.: Meu DinDin 48 meses">
+        <div class="cap-fields"><div><label for="instituicao">Instituição</label><input id="instituicao" required maxlength="160" value="Santander"></div><div><label for="numero">Número do título</label><input id="numero" maxlength="80" placeholder="Opcional"></div><div><label for="proposta">Número da proposta</label><input id="proposta" maxlength="80"></div><div><label for="sorte">Número da sorte</label><input id="sorte" maxlength="80"></div></div>
+        <label for="susep">Processo SUSEP</label><input id="susep" maxlength="80">
+        <div class="cap-fields"><div><label for="parcela">Parcela atual (R$)</label><input id="parcela" required inputmode="decimal" placeholder="0,00"></div><div><label for="prazo">Prazo em meses</label><input id="prazo" required type="number" min="1" max="600"></div><div><label for="inicio">Início da vigência</label><input id="inicio" required type="date"></div><div><label for="fim">Fim previsto da vigência</label><input id="fim" required type="date"></div><div><label for="dia">Dia da cobrança</label><input id="dia" required type="number" min="1" max="31"></div><div><label for="reajuste">Reajuste das parcelas</label><select id="reajuste"><option value="nao_informado">Não informado</option><option value="igpm_anual">IGP-M anual</option></select></div></div>
+        <label for="titulo-status">Situação</label><select id="titulo-status"><option value="ativo">Ativo</option><option value="encerrado">Encerrado</option></select>
+        <details><summary>Valor de resgate consultado no banco</summary><p class="cap-help">Opcional. É uma consulta informativa, não um resgate nem um crédito em conta.</p><div class="cap-fields"><div><label for="cotacao">Valor informado (R$)</label><input id="cotacao" inputmode="decimal" placeholder="Sem informação"></div><div><label for="data-cotacao">Data da consulta</label><input id="data-cotacao" type="date"></div></div></details>
+        <label for="observacoes">Observações</label><textarea id="observacoes" maxlength="2000" rows="2"></textarea>
+        <p id="title-status" class="cap-message" role="status"></p><footer><button type="button" data-close="title-dialog" class="btn-secondary">Cancelar</button><button id="salvar-titulo" class="btn-primary">Salvar título</button></footer>
+      </form>
+    </dialog>
+    <dialog id="links-dialog" aria-labelledby="links-heading">
+      <header class="cap-dialog-heading"><h2 id="links-heading">Vincular pagamentos</h2><button type="button" data-close="links-dialog" class="btn-secondary" aria-label="Fechar vínculos">✕</button></header>
+      <p id="link-title"></p>
+      <p class="cap-note">Selecione apenas parcelas deste título. Vincular não paga, não duplica e não altera o lançamento. Parcelas futuras vinculadas avançam o acompanhamento ao serem baixadas.</p>
+      <label for="link-search">Buscar por nome ou número do título</label><input id="link-search" type="search" placeholder="Ex.: DinDin ou número do título">
+      <div class="cap-fields"><div><label for="link-source">Origem</label><select id="link-source"><option value="despesa">Lançamentos de despesas</option><option value="cartao">Compras do cartão</option></select></div><div><label for="link-mode">Vincular</label><select id="link-mode"><option value="one">Itens selecionados</option><option value="series">Série recorrente dos itens selecionados</option></select></div></div>
+      <p class="cap-help">A série inclui apenas parcelas já cadastradas da mesma recorrência. Para compras no cartão, selecione os itens individualmente. A contribuição é confirmada após a quitação da fatura.</p>
+      <div id="link-options" class="cap-options"></div><p id="link-status" class="cap-message" role="status"></p><footer><button type="button" data-close="links-dialog" class="btn-secondary">Fechar</button><button id="save-links" class="btn-primary" type="button">Vincular selecionados</button></footer>
+    </dialog>
+    <dialog id="events-dialog" aria-labelledby="events-heading">
+      <form id="event-form"><header class="cap-dialog-heading"><h2 id="events-heading">Prêmios e resgates</h2><button type="button" data-close="events-dialog" class="btn-secondary" aria-label="Fechar recebimentos">✕</button></header>
+      <p id="event-title"></p><p class="cap-note">Vincule uma receita existente. Nenhum crédito adicional é gerado na conta. Prêmios só aparecem como recebidos após a baixa.</p>
+      <div id="event-list"></div><label for="event-type">Tipo de recebimento</label><select id="event-type"><option value="premio">Prêmio / raspadinha</option><option value="resgate">Resgate do título</option></select>
+      <label for="event-search">Buscar receita</label><input id="event-search" type="search" placeholder="Descrição da receita"><label for="event-source">Receita existente</label><select id="event-source" required></select>
+      <p class="cap-help">Registre a entrada em Lançamentos primeiro. O resgate deve ter categoria própria de devolução de capital, separado de salário e prêmios. Após o resgate integral, marque o título como Encerrado em Editar dados.</p>
+      <p id="event-status" class="cap-message" role="status"></p><footer><button type="button" data-close="events-dialog" class="btn-secondary">Fechar</button><button class="btn-primary" id="save-event">Vincular receita</button></footer></form>
+    </dialog>
+  </main>
+  <script src="../interface.js?v=20261018-2"></script>
+  <script src="../vendor/supabase-2.108.2.js"></script><script src="../config.js"></script><script src="../supabase.js"></script>
+  <script src="../premium-access-client.js?v=20261012-1"></script><script src="../runtime-utils.js?v=20261012-1"></script><script src="../security.js?v=20261012-1"></script>
+  <script src="regras.js?v=20261018-1"></script><script src="capitalizacao.js?v=20261018-1"></script>
+</body>
+</html>
