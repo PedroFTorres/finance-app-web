@@ -19,6 +19,8 @@
       categoryId: item.categoria_id || 'uncategorized',
       category: categories.get(item.categoria_id) || 'Sem categoria',
       accountId: item.conta_id, account: accounts.get(item.conta_id) || 'Sem conta',
+      sourceId: item.id, invoiceId: item.cartao_fatura_id || null,
+      partialCardPayment: item.cartao_pagamento_parcial === true,
       ...extra
     });
     let rows = [];
@@ -45,6 +47,7 @@
           const invoice = invoices.get(key);
           if (invoice && (invoice.pago === true || ['fechada', 'paga'].includes(invoice.status))) continue;
           const row = groups.get(key) || normalize(item, { id: `invoice-${key}`, description: `Fatura aberta — ${cards.get(item.cartao_id) || 'Cartão'}`,
+            invoiceKey: key,
             categoryId: cardCategory?.id || 'card-invoice', category: cardCategory?.nome || 'Cartão de Crédito', account: 'Conta ainda não definida',
             date: dueDate, value: 0, provisional: true, overdue: dueDate < start });
           row.value = money(row.value + Number(item.valor || 0));
@@ -87,6 +90,57 @@
       groups: Array.from(groups.values()).sort((a, b) => b.total - a.total),
       months: Array.from(months, ([month, total]) => ({ month, total })).sort((a, b) => a.month.localeCompare(b.month)) };
   }
+  // Decompõe SOMENTE a representação do balanço. Não cria despesas adicionais.
+  function expandCardCategories(data, rows) {
+    const invoices = new Map((data.invoices || []).map(item => [item.id, keyInvoice(item)]));
+    const categories = new Map((data.categories || []).map(item => [item.id, item.nome]));
+    const batches = new Map();
+    const partialKeys = new Map();
+    for (const purchase of data.purchases || []) {
+      if (!purchase.data_fatura) continue;
+      const key = `${purchase.cartao_id}:${purchase.data_fatura.slice(0,7)}`;
+      const batch = batches.get(key) || { items: [], payments: 0 };
+      if (purchase.tipo === 'pagamento') {
+        batch.payments = money(batch.payments + Number(purchase.valor || 0));
+        if (purchase.despesa_id) partialKeys.set(purchase.despesa_id, key);
+      } else {
+        batch.items.push(purchase);
+      }
+      batches.set(key, batch);
+    }
+    return rows.flatMap(row => {
+      const key = row.invoiceKey || invoices.get(row.invoiceId) || (row.partialCardPayment ? partialKeys.get(row.sourceId) : null);
+      const batch = batches.get(key);
+      const base = money((batch?.items || []).reduce((sum, item) => sum + Number(item.valor || 0), 0));
+      // Sem vínculo inequívoco ou sem compras positivas líquidas, mantém o valor
+      // original: não atribui a academia/alimentação por suposição.
+      if (!batch || base <= 0 || row.value <= 0) return [row];
+      const remaining = money(Math.max(0, base + batch.payments));
+      const principal = row.partialCardPayment ? Math.min(row.value, base) : Math.min(row.value, remaining);
+      const target = Math.round(principal * 100);
+      const divisor = Math.round(base * 100);
+      // Maiores restos: soma exata em centavos inclusive com estornos negativos.
+      const parts = batch.items.map((item, index) => {
+        const raw = target * Math.round(Number(item.valor || 0) * 100) / divisor;
+        return { item, index, cents: Math.floor(raw), fraction: raw - Math.floor(raw) };
+      });
+      const remainder = target - parts.reduce((sum, part) => sum + part.cents, 0);
+      const ranked = [...parts].sort((a,b) => b.fraction - a.fraction || a.index - b.index);
+      for (let i=0; i<remainder; i++) ranked[i % ranked.length].cents++;
+      const split = parts.filter(part => part.cents !== 0).map(({item, cents}) => ({
+        ...row, id: `${row.id}:purchase:${item.id}`, value: cents / 100,
+        categoryId: item.categoria_id || 'uncategorized', category: categories.get(item.categoria_id) || 'Sem categoria',
+        description: `${item.descricao || 'Compra no cartão'} · ${row.description}`,
+        purchaseDate: item.data_compra || '', cardBreakdown: true,
+        proportional: target !== divisor
+      }));
+      const difference = money(row.value - principal);
+      if (difference) split.push({ ...row, id:`${row.id}:unallocated`, value:difference,
+        categoryId:'card-adjustments', category:'Cartão — juros e ajustes sem categoria',
+        description:`Juros ou diferença sem detalhamento · ${row.description}`, cardAdjustment:true });
+      return split;
+    });
+  }
   function buildBalance(data, options) {
     const lanes = ['recebidos', 'pagos', 'receber', 'pagar'];
     const totals = () => ({ recebidos: 0, pagos: 0, receber: 0, pagar: 0 });
@@ -103,9 +157,11 @@
       cursor.setMonth(cursor.getMonth() + 1);
     }
     for (const lane of lanes) {
-      const report = buildReport(data, { ...options, mode: lane });
-      sum[lane] = report.total;
-      for (const item of report.rows) {
+      const report = buildReport(data, { ...options, mode: lane, category: 'all' });
+      let laneRows = lane === 'pagos' || lane === 'pagar' ? expandCardCategories(data, report.rows) : report.rows;
+      if (options.category && options.category !== 'all') laneRows = laneRows.filter(row => row.categoryId === options.category);
+      sum[lane] = money(laneRows.reduce((total,row) => total + row.value,0));
+      for (const item of laneRows) {
         const row = { ...item, lane };
         rows.push(row);
         const group = groups.get(row.categoryId) || { id: row.categoryId, name: row.category, rows: [], ...totals() };

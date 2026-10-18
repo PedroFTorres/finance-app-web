@@ -74,8 +74,37 @@
     };
     const [linkedIncome, linkedExpense] = await Promise.all([resolve('receitas'), resolve('despesas')]);
     const unique = items => Array.from(new Map(items.map(item => [item.id, item])).values());
+    const expenses = unique([...pendingExpense, ...paidExpense, ...linkedExpense]);
+    const related = async (table, column, ids) => {
+      const { data, error } = await window.ArolixRuntime.selectIn(batch => base(table).in(column,batch).order('id'), ids);
+      if (error) throw error;
+      return data || [];
+    };
+    // A baixa de uma fatura pode ocorrer em outro mês/ano. Resolve somente seu
+    // contexto, com user_id e paginação, antes de detalhar as categorias.
+    const invoiceIds = [...new Set(expenses.map(item => item.cartao_fatura_id).filter(Boolean))];
+    const partialIds = expenses.filter(item => item.cartao_pagamento_parcial).map(item => item.id);
+    const [extraInvoices, paymentReferences] = await Promise.all([
+      related('cartao_faturas', 'id', invoiceIds), related('cartao_lancamentos', 'despesa_id', partialIds)
+    ]);
+    const allInvoices = unique([...invoices, ...extraInvoices]);
+    const windows = new Map();
+    const include = (cardId, month) => {
+      if (!cardId || !/^\d{4}-\d{2}$/.test(month)) return;
+      const span = windows.get(cardId) || { start:month, end:month };
+      if (month < span.start) span.start = month;
+      if (month > span.end) span.end = month;
+      windows.set(cardId,span);
+    };
+    allInvoices.filter(item => invoiceIds.includes(item.id)).forEach(item => include(item.cartao_id,`${item.ano}-${String(item.mes).padStart(2,'0')}`));
+    paymentReferences.forEach(item => include(item.cartao_id,String(item.data_fatura || '').slice(0,7)));
+    const extraPurchases = await Promise.all(Array.from(windows, ([cardId, span]) => {
+      const [year,month] = span.end.split('-').map(Number);
+      const last = new Date(year,month,0).getDate();
+      return all(base('cartao_lancamentos').eq('cartao_id',cardId).gte('data_fatura',`${span.start}-01`).lte('data_fatura',`${span.end}-${String(last).padStart(2,'0')}`));
+    }));
     return { income: unique([...pendingIncome, ...paidIncome, ...linkedIncome]),
-      expenses: unique([...pendingExpense, ...paidExpense, ...linkedExpense]), movements, purchases, invoices, cards,
+      expenses, movements, purchases:unique([...purchases,...paymentReferences,...extraPurchases.flat()]), invoices:allInvoices, cards,
       categories: window.STATE.categorias || [], accounts: window.STATE.contas || [] };
   }
 
@@ -100,6 +129,10 @@
       if (item.purchaseDate && mode === 'cartao') row.children[1].appendChild(node('p', `Compra em ${dateBR(item.purchaseDate)}`));
       if (item.overdue) row.children[1].appendChild(node('p', 'Vencido antes do período'));
       if (item.provisional) row.children[1].appendChild(node('p', 'Fatura aberta · valor provisório'));
+      if (item.cardBreakdown) row.children[1].appendChild(node('p', item.proportional
+        ? 'Cartão · valor distribuído proporcionalmente entre as compras da fatura'
+        : 'Cartão · categoria da compra, sem somar o pagamento da fatura novamente'));
+      if (item.cardAdjustment) row.children[1].appendChild(node('p', 'Diferença preservada sem atribuir a uma categoria de compra por suposição'));
     });
     wrapper.appendChild(table);
     return wrapper;
@@ -157,7 +190,7 @@
     }
     $('report-note').textContent = mode === 'cartao'
       ? 'Compras e parcelas por mês de fatura, com a data original da compra no detalhamento. Pagamentos da fatura não entram nesta visão. Este total não deve ser somado ao relatório de despesas pagas.'
-      : 'Resultado realizado = já recebido menos já pago. Saldo previsto = falta receber menos falta pagar, considerando as pendências do período e as faturas abertas. Juros e descontos entram nos valores pagos. As previsões usam os lançamentos já cadastrados; transferências e investimentos ficam fora.';
+      : 'Resultado realizado = já recebido menos já pago. Saldo previsto = falta receber menos falta pagar. As faturas são detalhadas pelas categorias das compras, sem duplicar o pagamento. Pagamentos parciais e abatimentos são distribuídos proporcionalmente; diferenças sem detalhamento ficam em ajustes do cartão. Juros e descontos entram nos valores pagos. As previsões usam os lançamentos já cadastrados; transferências e investimentos ficam fora.';
     if (mode === 'balanco' && options.account !== 'all') {
       $('report-note').textContent += ' Faturas abertas ainda sem conta de pagamento definida aparecem em Todas as contas.';
     }
