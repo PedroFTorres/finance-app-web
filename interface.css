@@ -139,6 +139,17 @@
 .arolix-app .modal-content,.arolix-app .modal-card,.arolix-app .modal-dialog { border:1px solid #e7e0f0;border-radius:14px;box-shadow:0 24px 80px #28203320; }
 .arolix-app .modal-content h3,.arolix-app .modal-card h3 { color:#30394b;font-size:20px; }
 .arolix-app .modal-backdrop { backdrop-filter:blur(2px); }
+.arolix-app .receipt-edit-box { display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:18px;padding:16px;border:1px solid var(--border);border-radius:10px;background:#faf9fd; }
+.arolix-app .receipt-edit-box p,.arolix-app #comprovantes-help { color:#687287;font-size:12px;line-height:1.6; }
+.arolix-app .receipt-edit-box p { margin:5px 0 0; }
+.arolix-app .receipt-modal { z-index:100001;padding:16px; }
+.arolix-app .receipt-modal .modal-content { max-width:540px;max-height:90dvh;overflow-y:auto; }
+.arolix-app .receipt-modal .actions-row { display:flex;gap:8px;flex-wrap:wrap;margin-top:18px; }
+.arolix-app .receipt-files { padding:0;list-style:none;display:grid;gap:8px; }
+.arolix-app .receipt-files button { max-width:100%;text-align:left;overflow-wrap:anywhere; }
+.arolix-app #comprovantes-edicao { width:100%;padding:10px;margin-top:8px; }
+.arolix-app #comprovantes-status { font-size:12px;line-height:1.6; }
+@media(max-width:720px) { .arolix-app .receipt-edit-box { align-items:flex-start;flex-direction:column; } }
 .arolix-app .shell-page-heading { margin-bottom:28px; }
 .arolix-app .shell-page-heading h1 { margin:8px 0; }
 .shell-eyebrow { font-size:9px;letter-spacing:1.5px;color:#949dad;font-weight:500; }

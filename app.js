@@ -221,7 +221,7 @@ async function uploadComprovanteBaixa(file, tipo, lancamentoId) {
   validateComprovanteFile(file);
 
   const safeName = sanitizeFileName(file.name);
-  const path = `${STATE.user.id}/${tipo}/${lancamentoId}/${Date.now()}-${safeName}`;
+  const path = `${STATE.user.id}/${tipo}/${lancamentoId}/${uid()}-${safeName}`;
 
   const { error } = await supabase.storage
     .from(COMPROVANTES_BUCKET)
@@ -242,13 +242,17 @@ async function uploadComprovanteBaixa(file, tipo, lancamentoId) {
 
 async function uploadComprovantesBaixa(files, tipo, lancamentoId) {
   const enviados = [];
-
-  for (const file of files) {
-    const comprovante = await uploadComprovanteBaixa(file, tipo, lancamentoId);
-    if (comprovante) enviados.push(comprovante);
+  files.forEach(validateComprovanteFile);
+  try {
+    for (const file of files) {
+      const comprovante = await uploadComprovanteBaixa(file, tipo, lancamentoId);
+      if (comprovante) enviados.push(comprovante);
+    }
+    return enviados;
+  } catch (error) {
+    await removeComprovantes(enviados.map(arquivo => arquivo.path));
+    throw error;
   }
-
-  return enviados;
 }
 
 async function removeComprovantes(paths) {
@@ -260,6 +264,107 @@ async function removeComprovantes(paths) {
     .remove(validPaths);
 
   if (error) console.warn("Não foi possível remover comprovantes:", error);
+}
+
+// Anexar depois da baixa altera somente os metadados dos documentos.
+// Não passa pela edição financeira nem propaga anexos para a recorrência.
+async function appendComprovantesLancamento(tipo, id, files) {
+  if (!STATE.user?.id || !hasFinancialAccess()) throw new Error("Acesso não autorizado.");
+  if (!["receita", "despesa"].includes(tipo) || !id) throw new Error("Lançamento inválido.");
+  if (!files.length) throw new Error("Selecione pelo menos um PDF.");
+  files.forEach(validateComprovanteFile);
+  const tabela = tipo === "receita" ? "receitas" : "despesas";
+  const { data: original, error } = await supabase.from(tabela)
+    .select("id, baixado, comprovantes, comprovante_path, comprovante_nome, comprovante_uploaded_at")
+    .eq("id", id).eq("user_id", STATE.user.id).maybeSingle();
+  if (error) throw error;
+  if (!original?.baixado) throw new Error("O lançamento não está mais baixado. Atualize a lista antes de anexar.");
+  const enviados = await uploadComprovantesBaixa(files, tipo, id);
+  try {
+    const comprovantes = [...getComprovantesItem(original), ...enviados];
+    const principal = comprovantes[0];
+    let query = supabase.from(tabela).update({
+      comprovantes,
+      comprovante_path: principal.path,
+      comprovante_nome: principal.nome,
+      comprovante_uploaded_at: principal.uploaded_at
+    }).eq("id", id).eq("user_id", STATE.user.id).eq("baixado", true);
+    // Evita sobrescrever anexos enviados em outra aba durante o upload.
+    query = original.comprovantes == null
+      ? query.is("comprovantes", null)
+      : query.eq("comprovantes", JSON.stringify(original.comprovantes));
+    const { data: saved, error: saveError } = await query.select("id").maybeSingle();
+    if (saveError) throw saveError;
+    if (!saved) throw new Error("O lançamento foi atualizado em outra janela. Tente anexar novamente.");
+    return comprovantes;
+  } catch (saveError) {
+    await removeComprovantes(enviados.map(arquivo => arquivo.path));
+    throw saveError;
+  }
+}
+
+let IS_SAVING_COMPROVANTES = false;
+function openComprovantesEditor(item, tipo) {
+  const modal = document.getElementById("modal-comprovantes");
+  const input = document.getElementById("comprovantes-edicao");
+  const save = document.getElementById("salvar-comprovantes");
+  const cancel = document.getElementById("cancelar-comprovantes");
+  const status = document.getElementById("comprovantes-status");
+  const list = document.getElementById("comprovantes-existentes");
+  if (!modal || IS_SAVING_COMPROVANTES) return;
+  const previousFocus = document.activeElement;
+  const renderFiles = () => {
+    list.replaceChildren();
+    getComprovantesItem(item).forEach(arquivo => {
+      const li = document.createElement("li");
+      const button = createTextElement("button", arquivo.nome || "Comprovante PDF", "btn-secondary");
+      button.type = "button";
+      button.onclick = () => abrirComprovantePath(arquivo.path);
+      li.appendChild(button); list.appendChild(li);
+    });
+  };
+  renderFiles(); input.value = ""; status.textContent = "";
+  document.getElementById("comprovantes-lancamento").textContent = item.descricao || "Lançamento baixado";
+  modal.classList.remove("hidden"); modal.setAttribute("aria-hidden", "false");
+  const close = () => {
+    if (IS_SAVING_COMPROVANTES) return;
+    modal.classList.add("hidden"); modal.setAttribute("aria-hidden", "true");
+    document.removeEventListener("keydown", onKey);
+    previousFocus?.focus();
+  };
+  const onKey = event => {
+    if (event.key === "Escape") { event.stopImmediatePropagation(); close(); }
+    if (event.key === "Tab") {
+      const controls = Array.from(modal.querySelectorAll("button:not(:disabled), input:not(:disabled)"));
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+  };
+  document.addEventListener("keydown", onKey);
+  cancel.onclick = close;
+  save.onclick = async () => {
+    if (IS_SAVING_COMPROVANTES) return;
+    IS_SAVING_COMPROVANTES = true;
+    save.disabled = true; cancel.disabled = true; input.disabled = true;
+    status.textContent = "Enviando comprovantes…";
+    try {
+      const comprovantes = await appendComprovantesLancamento(tipo, item.id, Array.from(input.files || []));
+      Object.assign(item, { comprovantes });
+      input.value = ""; renderFiles();
+      status.textContent = "Comprovantes salvos. A baixa e os valores não foram alterados.";
+      cancel.textContent = "Concluir";
+      await App.refreshLancamentos();
+    } catch (error) {
+      console.error("Erro ao anexar comprovantes", error);
+      status.textContent = error.message || "Não foi possível anexar. Tente novamente.";
+    } finally {
+      IS_SAVING_COMPROVANTES = false;
+      save.disabled = false; cancel.disabled = false; input.disabled = false;
+    }
+  };
+  cancel.textContent = "Fechar";
+  input.focus();
 }
 
 async function abrirComprovantePath(path) {
@@ -2633,6 +2738,12 @@ if (item.transferencia_id) {
     right.appendChild(btnBaixar);
   } else {
     const comprovantes = getComprovantesItem(item);
+    // Faturas continuam bloqueadas para edição financeira, mas aceitam anexos.
+    if (!item.baixa_parcial) {
+      const btnAnexar = createTextElement("button", "Anexar PDF", "receipt");
+      btnAnexar.addEventListener("click", () => openComprovantesEditor(item, tipo));
+      right.appendChild(btnAnexar);
+    }
     if (comprovantes.length > 0) {
       const btnComprovante = document.createElement("button");
       btnComprovante.textContent = comprovantes.length > 1
@@ -2695,8 +2806,10 @@ if (item.transferencia_id) {
 },
     // open add modal (clean)
    openAddModal() {
+  document.getElementById("editar-comprovantes-box")?.classList.add("hidden");
   const modal = $(IDS.modalAdd);
   if (!modal) return;
+  modal.querySelector("h3").textContent = "Adicionar lançamento";
 
   // clear fields
   $(IDS.modalTipo).value = 'despesa';
@@ -2828,6 +2941,13 @@ openModalEdit(item, tipo) {
 openModalEditSemEscopo(item, tipo) {
   const modal = $(IDS.modalAdd);
   if (!modal) return;
+  modal.querySelector("h3").textContent = "Editar lançamento";
+
+  const anexosBox = document.getElementById("editar-comprovantes-box");
+  if (anexosBox) {
+    anexosBox.classList.toggle("hidden", !item.baixado || item.baixa_parcial === true);
+    document.getElementById("editar-comprovantes").onclick = () => openComprovantesEditor(item, tipo);
+  }
 
   // =========================// PREENCHER CAMPOS// =========================
   $(IDS.modalTipo).value = tipo;

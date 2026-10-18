@@ -8,7 +8,7 @@
 
   <link rel="stylesheet" href="styles.css?v=20261001-1" />
   <link rel="stylesheet" href="reports.css?v=20261012-2" />
-  <link rel="stylesheet" href="interface.css?v=20261016-1" />
+  <link rel="stylesheet" href="interface.css?v=20261018-1" />
 </head>
 
 <body class="arolix-app" data-module="app">
@@ -549,6 +549,13 @@
         <input id="modal-parcelas" type="number" min="1" value="1" />
       </div>
     </div>
+    <section id="editar-comprovantes-box" class="receipt-edit-box hidden" aria-label="Comprovantes do lançamento">
+      <div>
+        <strong>Comprovantes</strong>
+        <p>Esqueceu de anexar na baixa? Adicione os PDFs agora, sem alterar o pagamento.</p>
+      </div>
+      <button type="button" id="editar-comprovantes" class="btn-secondary">Adicionar comprovantes</button>
+    </section>
       <!-- AVISO: LANÇAMENTO JÁ BAIXADO -->
     <div id="aviso-baixado" class="alert-warning hidden" style="margin-top:14px;">
       <strong>⚠️ Lançamento já baixado</strong><br>
@@ -639,6 +646,23 @@
       </button>
     </div>
 
+  </div>
+</div>
+
+<!-- Documentos são salvos separadamente da edição financeira. -->
+<div id="modal-comprovantes" class="modal hidden receipt-modal" aria-hidden="true">
+  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="comprovantes-title" aria-describedby="comprovantes-help">
+    <h3 id="comprovantes-title">Comprovantes</h3>
+    <p id="comprovantes-lancamento"></p>
+    <p id="comprovantes-help">Adicione PDFs de até 10 MB cada. Os arquivos existentes serão mantidos. Esta ação não altera valores, datas ou a baixa do lançamento.</p>
+    <ul id="comprovantes-existentes" class="receipt-files" aria-label="Arquivos já anexados"></ul>
+    <label for="comprovantes-edicao">Selecionar novos comprovantes</label>
+    <input type="file" id="comprovantes-edicao" accept="application/pdf,.pdf" multiple>
+    <p id="comprovantes-status" role="status" aria-live="polite"></p>
+    <div class="actions-row">
+      <button type="button" id="salvar-comprovantes" class="btn-primary">Salvar comprovantes</button>
+      <button type="button" id="cancelar-comprovantes" class="btn-secondary">Fechar</button>
+    </div>
   </div>
 </div>
 
@@ -860,7 +884,7 @@
   <script src="finance-rules.js?v=20261012-1"></script>
   <script src="reports-rules.js?v=20261012-4"></script>
   <script src="reports.js?v=20261012-4"></script>
-  <script src="app.js?v=20261016-1"></script>
+  <script src="app.js?v=20261018-1"></script>
   <link rel="stylesheet" href="onboarding/onboarding.css?v=20260809-1">
   <script src="onboarding/onboarding.js?v=20261012-1"></script>
 </body>
