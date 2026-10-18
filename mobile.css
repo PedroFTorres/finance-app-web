@@ -1,0 +1,58 @@
+/* Shared mobile/install layer. Desktop keeps the existing workspace layout. */
+.lanc-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.pwa-install-button{font:inherit;font-size:13px;min-height:44px;padding:10px 14px;border:1px solid #e2d8f2;border-radius:9px;background:#f0ebfa;color:#6441ba;cursor:pointer;margin-top:12px}
+.shell-secondary-nav .pwa-install-button{margin:8px 0 0;text-align:left}
+.pwa-install-dialog{box-sizing:border-box;max-width:calc(100vw - 32px);width:440px;max-height:85dvh;overflow:auto;padding:26px;border:1px solid #e8ebf1;border-radius:18px;color:#252b3b;background:#fff;font:15px/1.65 system-ui,sans-serif;box-shadow:0 24px 80px #28203330}
+.pwa-install-dialog::backdrop{background:#25233570;backdrop-filter:blur(4px)}
+.pwa-install-dialog h2{font-size:23px;margin:0 0 12px}.pwa-install-dialog h3{font-size:16px;margin-bottom:6px}.pwa-install-dialog ol{padding-left:22px}.pwa-install-dialog li{margin-bottom:10px}.pwa-install-note{color:#687287;font-size:13px}.pwa-install-dialog button{font:inherit;min-height:44px;padding:10px 18px;border:0;border-radius:9px;background:#7552cf;color:#fff;cursor:pointer}
+@media(display-mode:standalone){body{min-height:100dvh}.arolix-sidebar{padding-top:calc(32px + env(safe-area-inset-top))}}
+@media(max-width:720px){
+  html{scroll-padding-bottom:110px;scroll-padding-top:24px}
+  body{min-width:0}
+  body *,body *::before,body *::after{box-sizing:border-box}
+  input:not([type=checkbox]):not([type=radio]),select,textarea,
+  .arolix-app input:not([type=checkbox]):not([type=radio]),.arolix-app select,.arolix-app textarea{font-size:16px;min-height:44px;max-width:100%}
+  input,select,textarea{scroll-margin-block:90px}
+  button,.arolix-app .btn-primary,.arolix-app .btn-secondary,.arolix-app .btn-outline,.arolix-app .lanc-actions button{min-height:44px}
+  .arolix-sidebar{height:auto;min-height:60px;padding:calc(18px + env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 18px max(20px,env(safe-area-inset-left))}
+  .arolix-app>main{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+  .arolix-app .shell-secondary-nav{bottom:calc(88px + env(safe-area-inset-bottom));max-height:calc(100dvh - 190px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto}
+  .arolix-app .shell-secondary-nav a,.arolix-app .shell-secondary-nav button{min-height:44px}
+  .arolix-app .dashboard-kpis,.arolix-app .lanc-summary-grid{gap:10px}
+  .arolix-app .kpi-card strong,.arolix-app .lanc-summary-card strong{font-size:clamp(17px,5.1vw,23px);overflow-wrap:anywhere}
+  .arolix-app .dashboard-tabs,.arolix-app .invest-tabs{flex-wrap:nowrap;overflow-x:auto;max-width:100%;padding-bottom:5px}
+  .arolix-app .dashboard-tab,.arolix-app .invest-tab{flex-shrink:0;min-height:44px}
+  .arolix-app .lanc-period-card{width:100%;justify-content:space-between}
+  .arolix-app .lanc-toolbar>button{flex:1 1 160px}
+  .arolix-app .lanc-menu{display:flex;flex-wrap:nowrap;overflow-x:auto;width:100%;padding-bottom:5px}
+  .arolix-app .lanc-menu button{flex:0 0 auto;min-height:44px}
+  .arolix-app .lanc-item-main{grid-template-columns:minmax(0,1fr);gap:4px}
+  .arolix-app .lanc-date{font-size:11px}
+  .arolix-app .lanc-title{font-size:14px}
+  .arolix-app .lanc-value{font-size:14px}
+  .arolix-app .lanc-chip{font-size:10px}
+  .arolix-app .listas .box h3{padding:18px 14px}
+  .arolix-app .lanc-provisorio-info{flex-wrap:wrap}
+  .arolix-app .card-totais{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+  .arolix-app .card-totais .totais-row{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+  .arolix-app .card-totais .totais-row span{white-space:nowrap}
+  .arolix-app .lista-fatura li.fatura-row{grid-template-columns:62px minmax(0,1fr) 88px}
+  .arolix-app .fatura-data{font-size:10px}
+  .arolix-app .fatura-desc{font-size:14px}
+  .modal{height:100dvh;padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom));align-items:center}
+  .modal-content,.modal-box,.modal-card,.modal-dialog{max-width:100%;max-height:calc(100dvh - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto;min-width:0}
+  .modal-content{width:100%}
+  .lanc-form-grid{grid-template-columns:minmax(0,1fr)}
+  .lanc-form-grid>div{min-width:0}
+  .lanc-form-grid input,.lanc-form-grid select{width:100%}
+  #modal-add-lanc footer{flex-wrap:wrap;gap:12px}
+  #modal-add-lanc footer>div{flex-wrap:wrap}
+  .login-wrapper{min-height:100dvh;height:auto;padding:calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
+  .login-box{width:100%;max-width:440px;padding:28px 22px;margin:0}
+  .login-box .full{max-width:100%}
+  .entry-shell{padding:24px 16px}.entry-card{min-width:0;padding:24px}
+  .arolix-app .reports-summary>div{min-width:0;padding:16px 12px}
+  .arolix-app .reports-summary strong{font-size:clamp(17px,5.2vw,23px)}
+  .arolix-app .reports-balance-result{grid-template-columns:minmax(0,1fr);gap:18px}
+}
+@media print{.pwa-install-button,.pwa-install-dialog{display:none!important}}
