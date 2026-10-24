@@ -199,6 +199,8 @@ function createBankLogo(bank) {
   const boxPagAntecipado = document.getElementById("box-pag-antecipado");
   const modalEditarCompra = document.getElementById("modal-editar-compra");
   let activeCardId = null;
+  const cardMonths = new Map();
+  let selectingCard = false;
 
  
   const btnSaveCard = document.getElementById("btn-save-card");
@@ -721,28 +723,43 @@ function renderCardsSidebar() {
   }
 
   state.cards.forEach((c, i) => {
-    const el = document.createElement("div");
+    const el = document.createElement("button");
+    el.type = 'button';
+    el.dataset.cardId = c.id;
+    el.setAttribute('aria-label', `Ver fatura de ${c.nome}`);
+    el.setAttribute('aria-pressed', String(c.id === activeCardId));
     el.className = "card-tile" + (c.id === activeCardId ? " active" : "");
     el.style.background = getCardGradient(i);
 
-    el.appendChild(createTextElement("div", c.nome, "nome"));
-    el.appendChild(createTextElement("div", `Limite: ${formatReal(c.limite)}`, "info"));
+    el.appendChild(createTextElement("span", c.nome, "nome"));
+    el.appendChild(createTextElement("span", `Limite: ${formatReal(c.limite)}`, "info"));
     el.appendChild(createTextElement(
-      "div",
+      "span",
       `Fecha ${c.dia_fechamento} • Venc ${c.dia_vencimento}`,
       "info"
     ));
 
- el.onclick = async () => {
-  activeCardId = c.id;
-
-  renderCardsSidebar();
-
-  // 🔥 CARREGAR A FATURA DO CARTÃO SELECIONADO
-  mesFatura = new Date();
-  await definirMesInicialAberto();
-  await loadFaturaForSelected();
-};
+    el.appendChild(createTextElement('span', 'Ver fatura →', 'card-open-label'));
+    el.onclick = async () => {
+      if (selectingCard) return;
+      selectingCard = true;
+      if (activeCardId) cardMonths.set(activeCardId, new Date(mesFatura));
+      activeCardId = c.id;
+      window.ArolixCardWorkspace?.open(c.id);
+      window.ArolixCardWorkspace?.busy(true);
+      renderCardsSidebar();
+      try {
+        const remembered = cardMonths.get(c.id);
+        mesFatura = remembered ? new Date(remembered) : new Date();
+        if (!remembered) await definirMesInicialAberto();
+        await loadFaturaForSelected();
+      } catch (error) {
+        console.error(error);
+        showToast('Não foi possível carregar a fatura. Volte aos cartões e tente novamente.', 'error');
+      } finally {
+        selectingCard = false;
+      }
+    };
 
     cardsList.appendChild(el);
   });
@@ -954,7 +971,9 @@ async function loadFaturaForSelected() {
     activeCardId = state.cards[0].id;
   }
   if (!activeCardId) return;
-
+  window.ArolixCardWorkspace?.busy(true);
+  let invoiceLoaded = false;
+  try {
   const cartao_id = activeCardId;
 
   // 🔥 REGRA: se a fatura do mês atual estiver PAGA,
@@ -964,7 +983,7 @@ async function loadFaturaForSelected() {
     const mesZero = mesFatura.getMonth();
     const mes = mesZero + 1;
 
-    const { data: faturaDB } = await supabase
+    const { data: faturaDB, error: faturaError } = await supabase
       .from("cartao_faturas")
       .select("*")
       .eq("user_id", state.user.id)
@@ -973,6 +992,7 @@ async function loadFaturaForSelected() {
       .eq("mes", mes)
       .maybeSingle();
 
+    if (faturaError) throw faturaError;
     // 👉 se NÃO existe fatura ou ela NÃO está paga → usar esse mês
     if (!faturaDB || !faturaDB.pago) {
       state.faturaAtual = faturaDB || {
@@ -996,7 +1016,7 @@ async function loadFaturaForSelected() {
   const inicio = window.ArolixRuntime.localISODate(new Date(ano, mesZero, 1));
   const fim = window.ArolixRuntime.localISODate(new Date(ano, mesZero + 1, 0));
 
-  const { data: compras } = await window.ArolixRuntime.selectAll(supabase
+  const { data: compras, error: comprasError } = await window.ArolixRuntime.selectAll(supabase
     .from("cartao_lancamentos")
     .select("*")
     .eq("cartao_id", cartao_id)
@@ -1006,12 +1026,13 @@ async function loadFaturaForSelected() {
     .order("data_compra", { ascending: true })
     .order("data_fatura", { ascending: true }));
 
+  if (comprasError) throw comprasError;
   const card = state.cards.find(c => c.id === cartao_id);
 
   const total = (compras || []).reduce((s, c) => s + Number(c.valor || 0), 0);
 
   faturaTitulo.textContent = card?.nome || "Cartão";
-  faturaPeriodo.textContent = `${String(mes).padStart(2, "0")}/${ano}`;
+  faturaPeriodo.textContent = `${String(mes).padStart(2, "0")}/${ano} · Fecha dia ${card?.dia_fechamento || '—'} · Vence dia ${card?.dia_vencimento || '—'}`;
   faturaTotal.textContent = total.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL"
@@ -1031,6 +1052,11 @@ async function loadFaturaForSelected() {
 
   const li = document.createElement("li");
   li.className = c.tipo === "pagamento" ? "fatura-row fatura-row-pagamento" : "fatura-row";
+  li.dataset.category = c.categoria_id || '__uncategorized';
+  li.dataset.search = String(c.descricao || '');
+  li.tabIndex = 0;
+  li.setAttribute('role', 'button');
+  li.setAttribute('aria-label', `Ver detalhes de ${c.descricao || 'movimentação'}`);
 
   const valorFormatado = Number(c.valor).toLocaleString("pt-BR", {
     style: "currency",
@@ -1056,7 +1082,8 @@ async function loadFaturaForSelected() {
   const meta = c.tipo === "pagamento"
     ? "Pagamento / abatimento na fatura"
     : `Compra em ${dataCompra}${dataFatura !== dataCompra ? ` • Fatura ${dataFatura}` : ""}`;
-  infoEl.appendChild(createTextElement("small", meta, "fatura-meta"));
+  const categoryName = state.categories.find(cat => cat.id === c.categoria_id)?.nome || 'Sem categoria';
+  infoEl.appendChild(createTextElement("small", `${categoryName} · ${meta}`, "fatura-meta"));
 
   const parcelaEl = createTextElement("span", parcelaLabel, "fatura-parcela");
   const valorEl = createTextElement("strong", valorFormatado, valorClasse);
@@ -1064,6 +1091,9 @@ async function loadFaturaForSelected() {
   li.append(dataEl, infoEl, parcelaEl, valorEl);
 
   li.onclick = () => abrirFluxoEdicaoCompra(c);
+  li.onkeydown = event => {
+    if (event.key === 'Enter' || event.key === ' ') {event.preventDefault();li.click();}
+  };
 
   listaComprasFatura.appendChild(li);
 });
@@ -1071,6 +1101,17 @@ async function loadFaturaForSelected() {
 
   popularMesFatura();
   updateButtonsForFatura();
+  cardMonths.set(cartao_id, new Date(mesFatura));
+  const categoryIds = new Set((compras || []).map(item => item.categoria_id || '__uncategorized'));
+  window.ArolixCardWorkspace?.loaded({
+    key: `${cartao_id}:${ano}-${mes}`,
+    categories: Array.from(categoryIds, id => ({id, name: state.categories.find(cat => cat.id === id)?.nome || 'Sem categoria'})).sort((a,b) => a.name.localeCompare(b.name, 'pt-BR'))
+  });
+  invoiceLoaded = true;
+  } finally {
+    if (invoiceLoaded) window.ArolixCardWorkspace?.busy(false);
+    else window.ArolixCardWorkspace?.failed();
+  }
 }
   // ===========================// UPDATE BUTTONS FOR FATURA // ===========================
   function updateButtonsForFatura() {

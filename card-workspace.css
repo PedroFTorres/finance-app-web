@@ -1,0 +1,54 @@
+/* Dedicated card wallet and invoice workspace. No financial rules. */
+.arolix-app .cartoes-layout{display:block}
+.arolix-app .cartoes-sidebar{padding:28px;min-width:0}
+.arolix-app .sidebar-header>h3{font-size:21px;margin:0 0 8px}
+.arolix-app .sidebar-header>p{font-size:13px;color:#818898;margin:0 0 24px}
+.wallet-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;color:#818898;font-size:12px}
+.wallet-controls>div{display:flex;gap:8px}
+.arolix-app #cards-list{display:flex;flex-direction:row;gap:22px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:6px;padding:6px 6px 22px;overscroll-behavior-x:contain}
+.arolix-app #cards-list .card-tile{position:relative;flex:0 0 280px;min-width:0;height:200px;text-align:left;scroll-snap-align:start;cursor:pointer;transition:border-color .18s,box-shadow .18s}
+.arolix-app #cards-list .card-tile:focus-visible{outline:3px solid #a88adf;outline-offset:3px}
+.arolix-app #cards-list .card-tile .nome{display:block;font-size:16px;max-width:85%;overflow-wrap:anywhere}
+.arolix-app #cards-list .card-tile .info{display:block;font-size:12px;margin-top:22px}
+.card-open-label{display:block;color:#e9e1f9;font-size:12px;margin-top:22px}
+.arolix-app #cards-list .card-tile.active{outline:0;box-shadow:0 0 0 2px #b9a4e3}
+.arolix-app .cartoes-conteudo{padding:28px;max-width:1080px;margin:auto}
+.invoice-navigation{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+.invoice-navigation>span{font-size:12px;color:#818898}
+.arolix-app #fatura-titulo{font-size:24px;margin:20px 0 5px;overflow-wrap:anywhere}
+.arolix-app #fatura-periodo{font-size:13px;line-height:1.6;margin:0 0 14px}
+.arolix-app #fatura-total{font-size:36px;margin:0 0 18px;padding:18px 0}
+.arolix-app .fatura-actions{display:flex;flex-wrap:wrap;gap:10px}
+.arolix-app #btn-lancar-compra{color:#fff;background:#7552cf;border-color:#7552cf}
+.arolix-app #invoice-workspace>.box{margin:0 0 24px!important;padding:14px 0!important;border:0;background:transparent;box-shadow:none}
+.invoice-purchases-heading h3{margin:8px 0;font-size:17px}
+.invoice-purchases-heading p{font-size:12px;color:#818898;margin:0 0 16px}
+.invoice-filters{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px}
+.invoice-filters label{display:grid;gap:7px}
+.invoice-filters input,.invoice-filters select{width:100%;padding:11px 12px;min-height:44px}
+.invoice-filter-note{font-size:11px;color:#818898;margin:12px 0 18px}
+.arolix-app #lista-fatura .invoice-row-hidden{display:none!important}
+.arolix-app #lista-fatura .fatura-row{cursor:pointer;background:#fff}
+.arolix-app #lista-fatura .fatura-row:focus-visible{outline:2px solid #a88adf;outline-offset:-3px}
+.arolix-app #lista-fatura .invoice-row-alternate{background:#fafbfc}
+.arolix-app #invoice-load-more{display:block;margin:20px auto 0;min-width:180px;min-height:44px}
+#invoice-loading{padding:28px 0;color:#687287}
+#invoice-no-results{padding:24px;text-align:center;color:#687287;background:#fafbfc;border-radius:10px}
+@media(max-width:720px){
+ .arolix-app .cartoes-sidebar{padding:20px 16px}
+ .wallet-controls>span{max-width:180px}
+ .arolix-app #cards-list{gap:16px;margin-inline:-6px}
+ .arolix-app #cards-list .card-tile{flex-basis: min(280px,calc(100vw - 100px));min-height:180px}
+ .arolix-app .cartoes-conteudo{padding:20px 14px}
+ .invoice-navigation{margin-bottom:18px;gap:8px}
+ .invoice-navigation>span{font-size:11px}
+ .arolix-app #fatura-total{font-size:32px}
+ .invoice-filters{grid-template-columns:minmax(0,1fr)}
+ .arolix-app .fatura-actions>button{flex:1 1 130px;min-height:44px}
+ .arolix-app #invoice-workspace>.box>div{gap:8px!important}
+ .arolix-app #invoice-workspace>.box button{flex:1 1 130px;min-height:44px;margin:0!important}
+ .arolix-app #lista-fatura li.fatura-row{grid-template-columns:60px minmax(0,1fr) 82px}
+ .arolix-app #lista-fatura .fatura-meta{display:block;font-size:10px;margin-top:6px;line-height:1.5}
+}
+@media(prefers-reduced-motion:reduce){.arolix-app #cards-list{scroll-behavior:auto}.arolix-app #cards-list .card-tile{transition:none}}
+@media print{#card-wallet,.invoice-navigation,.invoice-filters,.invoice-filter-note,#invoice-load-more{display:none!important}.arolix-app #lista-fatura .invoice-row-hidden{display:grid!important}}

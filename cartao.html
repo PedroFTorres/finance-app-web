@@ -18,6 +18,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/pwa/apple-touch-icon.png">
   <link rel="stylesheet" href="mobile.css?v=20261018-1">
   <script src="pwa.js?v=20261018-1" defer></script>
+  <link rel="stylesheet" href="card-workspace.css?v=20261024-1">
 </head>
 
 <body class="arolix-app" data-module="cartao">
@@ -41,13 +42,12 @@
  <div class="cartoes-layout">
 
     <!-- SIDEBAR CARTÕES -->
-    <aside class="cartoes-sidebar">
+    <aside class="cartoes-sidebar" id="card-wallet" aria-label="Sua carteira de cartões">
 
       <div class="sidebar-header">
        <h3>Meus Cartões</h3>
-<p style="font-size:13px;color:#666;margin-bottom:8px">
-  Selecione um cartão para ver a fatura
-</p>
+<p>Escolha um cartão para abrir a fatura e gerenciar suas compras.</p>
+<div class="wallet-controls"><span>Deslize para explorar seus cartões</span><div><button type="button" id="wallet-prev" class="btn-secondary" aria-label="Ver cartões anteriores">←</button><button type="button" id="wallet-next" class="btn-secondary" aria-label="Ver próximos cartões">→</button></div></div>
 
 <div id="cards-list" class="cards-list"></div>
 <button id="btn-new-card" class="btn-outline" style="margin-top:12px">
@@ -60,7 +60,10 @@
     </aside>
    
     <!-- CONTEÚDO FATURA -->
-  <section class="cartoes-conteudo">
+  <section class="cartoes-conteudo hidden" id="card-invoice" aria-label="Fatura do cartão">
+  <div class="invoice-navigation"><button type="button" id="invoice-back" class="btn-secondary">← Meus cartões</button><span>Fatura do cartão</span></div>
+  <p id="invoice-loading" role="status" class="hidden">Carregando fatura…</p>
+  <div id="invoice-workspace">
 
   <!-- FILTRO DE MÊS -->
   <div class="filtro-periodo" style="display:flex;gap:12px;align-items:center;margin-bottom:16px;">
@@ -74,8 +77,6 @@
   <p id="fatura-periodo"></p>
   <p id="fatura-total" class="valor-fatura"></p>
   <div id="fatura-status-banner" class="fatura-status-banner hidden"></div>
-
-  <ul id="lista-fatura" class="lista-fatura"></ul>
 
   <!-- AÇÃO PRINCIPAL -->
   <div class="fatura-actions" style="margin-bottom:16px">
@@ -99,6 +100,17 @@
         Gerar Despesa
       </button>
     </div>
+  </div>
+
+  <div class="invoice-purchases-heading"><div><h3>Compras e movimentações</h3><p id="invoice-list-count" role="status"></p></div></div>
+  <div class="invoice-filters">
+    <label>Buscar compra<input type="search" id="invoice-search" placeholder="Descrição da compra" autocomplete="off"></label>
+    <label>Categoria<select id="invoice-category"><option value="">Todas as categorias</option></select></label>
+  </div>
+  <p class="invoice-filter-note">A busca filtra a lista; o total acima continua sendo da fatura inteira.</p>
+  <ul id="lista-fatura" class="lista-fatura"></ul>
+  <p id="invoice-no-results" class="hidden">Nenhuma movimentação encontrada com esses filtros.</p>
+  <button type="button" id="invoice-load-more" class="btn-secondary hidden">Carregar mais</button>
   </div>
 
 </section>
@@ -150,8 +162,6 @@
 </div>
 
  
-</section>
-
       <!-- ========================= VIEW — LANÇAR COMPRA ========================= -->
 
 <div id="modal-lancamento" class="modal hidden">
@@ -189,13 +199,6 @@
 
   </div>
 </div>
-
-    </section>
-
-  </div>
-
-</main>
-    </section>
 
   </div>
 
@@ -235,7 +238,7 @@
       alert(window.ArolixAccess?.financialBlockedMessage?.() || "Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
       window.location.href = "upgrade.html";
     } else {
-      await import("./cartao.js?v=20261016-1");
+      await import("./cartao.js?v=20261024-1");
     }
   }
 </script>
@@ -341,5 +344,6 @@
 </div>
 
   <script src="interface.js?v=20261018-2"></script>
+  <script src="card-workspace.js?v=20261024-1"></script>
 </body>
 </html>
