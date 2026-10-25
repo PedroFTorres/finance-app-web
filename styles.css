@@ -2917,6 +2917,45 @@ button:hover { opacity: .9; }
   opacity: 0.78;
 }
 
+/* Contrast against the purple Pro card; scoped to the checkout CTA only. */
+.plan.pro #btn-assinar-pro {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  margin: 26px 0 16px;
+  padding: 14px 20px;
+  border: 2px solid #fff;
+  border-radius: 10px;
+  background: #fff;
+  color: #5930ba;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.4;
+  box-shadow: 0 5px 14px rgba(35, 15, 85, 0.2);
+  cursor: pointer;
+}
+.plan.pro #btn-assinar-pro:hover:not(:disabled) {
+  background: #f2ecff;
+  border-color: #f2ecff;
+  color: #43208e;
+}
+.plan.pro #btn-assinar-pro:focus-visible {
+  outline: 3px solid #ffdc73;
+  outline-offset: 4px;
+}
+.plan.pro #btn-assinar-pro:disabled {
+  background: #eee8fc;
+  border-color: #eee8fc;
+  color: #5930ba;
+  opacity: 1;
+  box-shadow: none;
+  cursor: wait;
+}
+.plan.pro #btn-assinar-pro + p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 @media (max-width: 980px) {
   .plans {
     grid-template-columns: 1fr;
