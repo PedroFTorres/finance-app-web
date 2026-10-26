@@ -1,0 +1,49 @@
+// Real report frontend; all financial reads use fixtures. No real account access.
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {createRequire}=require('node:module');
+const runtime=process.env.AROLIX_BROWSER_RUNTIME||'/Users/pedrotorres/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules';
+const {chromium}=createRequire(path.join(runtime,'playwright/package.json'))('playwright');
+const root=path.resolve(__dirname,'..');
+const fixture=`(()=>{
+ const tables={receitas:[{id:'salary',user_id:'owner',valor:1000,baixado:true,data:'2026-09-30',data_baixa:'2026-10-10',categoria_id:'salary',conta_id:'bank'},
+ {id:'future',user_id:'owner',valor:200,baixado:false,data:'2026-10-30',categoria_id:'salary',conta_id:'bank'}],
+ despesas:[{id:'cash',user_id:'owner',descricao:'Academia avulsa',valor:32,baixado:true,data_baixa:'2026-10-02',data:'2026-10-02',categoria_id:'gym',conta_id:'bank'},
+ {id:'bill',user_id:'owner',descricao:'Fatura',valor:300,baixado:true,data:'2026-10-20',data_baixa:'2026-10-20',categoria_id:'card',cartao_fatura_id:'f',conta_id:'bank'},
+ {id:'pending',user_id:'owner',valor:50,baixado:false,data:'2026-10-31',categoria_id:'gym',conta_id:'bank'}],
+ movimentacoes:[{id:'m',user_id:'owner',lancamento_id:'bill',valor:305.3,tipo:'debito',data:'2026-10-20',conta_id:'bank'}],
+ cartao_lancamentos:[{id:'gym-buy',user_id:'owner',cartao_id:'cc',categoria_id:'gym',descricao:'Academia no cartão',valor:240,tipo:'compra',data_fatura:'2026-10-01',data_compra:'2026-09-26'},
+ {id:'food-buy',user_id:'owner',cartao_id:'cc',categoria_id:'food',descricao:'Mercado',valor:60,tipo:'compra',data_fatura:'2026-10-01'}],
+ cartao_faturas:[{id:'f',user_id:'owner',cartao_id:'cc',ano:2026,mes:10,status:'paga',pago:true}],cartoes_credito:[{id:'cc',user_id:'owner',nome:'Cartão teste',dia_vencimento:20}]};
+ window.STATE={user:{id:'owner'},categorias:[{id:'gym',nome:'Academia'},{id:'food',nome:'Alimentação'},{id:'salary',nome:'Salários'},{id:'card',nome:'Cartão de Crédito'}],contas:[{id:'bank',nome:'Banco teste'}]};
+ window.supabase={from(table){let filters=[],range;return {select(){return this},order(){return this},range(a,b){range=[a,b+1];return this},eq(k,v){filters.push(r=>r[k]===v);return this},neq(k,v){filters.push(r=>r[k]!==v);return this},gte(k,v){filters.push(r=>r[k]>=v);return this},lte(k,v){filters.push(r=>r[k]<=v);return this},in(k,v){filters.push(r=>v.includes(r[k]));return this},then(resolve){let rows=(tables[table]||[]).filter(r=>filters.every(f=>f(r)));if(range)rows=rows.slice(...range);return Promise.resolve({data:structuredClone(rows),error:null}).then(resolve)}}}};
+ document.querySelector('[data-screen="relatorios"]').classList.remove('hidden');
+ window.ArolixReports.open('balanco');
+})();`;
+(async()=>{
+ const browser=await chromium.launch({headless:true,channel:'chrome'});
+ try{
+  const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/*',route=>{
+   const url=new URL(route.request().url());if(url.hostname!=='balance.test')return route.abort();
+   const file=path.resolve(root,'.'+url.pathname);if(!file.startsWith(root+'/')||!fs.existsSync(file))return route.fulfill({status:404,body:''});
+   let content=fs.readFileSync(file);
+   if(url.pathname==='/app.js')content=fixture;
+   if(url.pathname==='/app.html')content=content.toString().replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,tag=>/src="(?:interface|runtime-utils|reports-rules|reports|app)\.js/.test(tag)?tag:'');
+   return route.fulfill({contentType:file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'application/javascript',body:content});
+  });
+  await page.goto('https://balance.test/app.html');
+  await page.locator('#report-period').selectOption('custom');await page.locator('#report-start').fill('2026-10-01');await page.locator('#report-end').fill('2026-10-31');await page.locator('#report-refresh').click();
+  await page.waitForFunction(()=>document.getElementById('report-paid').textContent.includes('337,30'));
+  const gym=page.locator('#report-content tbody tr').filter({hasText:'Academia'});
+  assert.equal(await gym.count(),1);assert.match(await gym.innerText(),/272,00/);assert.match(await gym.innerText(),/50,00/);assert.match(await gym.innerText(),/Lançamentos \+ cartão/);
+  assert.equal(await page.locator('#report-content details').count(),0);assert.equal(await page.getByText('Detalhamento · clique na categoria para ver os lançamentos').count(),0);
+  assert.equal(await page.locator('#report-content tbody tr').filter({hasText:'Cartão de Crédito'}).count(),0);
+  assert.match(await page.locator('#report-realized').innerText(),/662,70/);assert.match(await page.locator('#report-pending-balance').innerText(),/150,00/);
+  for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:'/private/tmp/arolix-balance-clean-'+width+'.png',fullPage:true});}
+  await page.locator('#report-category').selectOption('gym');await page.waitForFunction(()=>document.getElementById('report-paid').textContent.includes('272,00'));
+  const pending=page.waitForEvent('download');await page.locator('#report-export').click();const file=await pending,stream=await file.createReadStream();let csv='';for await(const chunk of stream)csv+=chunk.toString();assert.ok(csv.includes('Academia no cartão'));assert.ok(csv.includes('Academia avulsa'));
+  await page.locator('[data-report-mode="cartao"]').click();await page.locator('#report-content details').first().waitFor();
+  assert.deepEqual(errors,[]);
+  console.log('Balanço: categoria única, cartão + lançamentos pagos, juros, previsões, sem detalhamento duplicado, filtros, CSV e mobile OK.');
+ }finally{await browser.close();}
+})().catch(error=>{console.error(error);process.exitCode=1;});

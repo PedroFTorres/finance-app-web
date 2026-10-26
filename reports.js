@@ -152,7 +152,12 @@
     const head = table.createTHead().insertRow();
     ['Categoria', ...balanceHeadings].forEach(label => head.appendChild(node('th', label)));
     const body = table.createTBody();
-    result.groups.forEach(group => { const row = body.insertRow(); row.appendChild(node('td', group.name)); balanceCells(row, group); });
+    result.groups.forEach(group => {
+      const row = body.insertRow();
+      const categoryCell = node('td', group.name);
+      if (group.sources?.includes('cartao')) categoryCell.appendChild(node('small', group.sources.includes('lancamento') ? 'Lançamentos + cartão' : 'Cartão', 'reports-category-origin'));
+      row.appendChild(categoryCell); balanceCells(row, group);
+    });
     const foot = table.createTFoot().insertRow();
     foot.appendChild(node('td', 'Total do período')); balanceCells(foot, result);
     wrapper.appendChild(table);
@@ -190,20 +195,19 @@
     }
     $('report-note').textContent = mode === 'cartao'
       ? 'Compras e parcelas por mês de fatura, com a data original da compra no detalhamento. Pagamentos da fatura não entram nesta visão. Este total não deve ser somado ao relatório de despesas pagas.'
-      : 'Resultado realizado = já recebido menos já pago. Saldo previsto = falta receber menos falta pagar. As faturas são detalhadas pelas categorias das compras, sem duplicar o pagamento. Pagamentos parciais e abatimentos são distribuídos proporcionalmente; diferenças sem detalhamento ficam em ajustes do cartão. Juros e descontos entram nos valores pagos. As previsões usam os lançamentos já cadastrados; transferências e investimentos ficam fora.';
+      : 'Resumo financeiro pessoal: recebido e pago usam a data da baixa; previsões usam o vencimento. As categorias reúnem lançamentos e compras do cartão, sem somar a fatura duas vezes. Pagamentos parciais do cartão são rateados proporcionalmente. Juros, descontos e ajustes preservam o valor efetivamente pago. O resultado não é lucro contábil nem saldo bancário; a previsão considera apenas o que ainda falta receber e pagar. Transferências e movimentações do módulo de investimentos ficam fora.';
     if (mode === 'balanco' && options.account !== 'all') {
       $('report-note').textContent += ' Faturas abertas ainda sem conta de pagamento definida aparecem em Todas as contas.';
     }
-    $('report-category-heading').textContent = mode === 'balanco' ? 'Balanço por categoria' : 'Compras por categoria';
+    $('report-category-heading').textContent = mode === 'balanco' ? 'Lançamentos e cartão por categoria' : 'Compras por categoria';
     $('report-monthly-heading').textContent = mode === 'balanco' ? 'Planejamento mês a mês' : 'Compras por mês de fatura';
     const content = $('report-content');
     content.replaceChildren();
     if (!result.rows.length) content.appendChild(node('p', 'Nenhum lançamento encontrado para estes filtros.', 'reports-empty'));
     if (mode === 'balanco') {
       content.appendChild(balanceCategoryTable());
-      if (result.rows.length) content.appendChild(node('h3', 'Detalhamento · clique na categoria para ver os lançamentos', 'reports-detail-heading'));
     }
-    result.groups.forEach(group => {
+    if (mode === 'cartao') result.groups.forEach(group => {
       const detail = node('details', '', 'reports-group');
       const summary = node('summary', '');
       summary.append(node('span', group.name), node('small', `${group.rows.length} lançamento(s)`));

@@ -82,3 +82,31 @@ test('compras sem categoria permanecem explícitas e não alteram os dados origi
   const data=fixture();delete data.purchases[0].categoria_id;const before=structuredClone(data);
   const b=buildBalance(data,options);assert.equal(group(b,'uncategorized').pagar,240);assert.deepEqual(data,before);reconciles(b);
 });
+
+test('uma única categoria consolida dinheiro e cartão pago, sem grupo paralelo por origem',()=>{
+  const b=buildBalance(fixture({closed:true,paid:true}),options);
+  const gym=group(b,'gym');
+  assert.equal(b.groups.filter(g=>g.id==='gym').length,1);
+  assert.equal(gym.pagos,272);
+  assert.deepEqual(new Set(gym.sources),new Set(['lancamento','cartao']));
+  assert.equal(group(b,'card'),undefined);reconciles(b);
+});
+test('renegociação lançada diretamente em Cartão de Crédito mantém sua categoria sem inventar compras',()=>{
+  const data=fixture({closed:true,paid:true});
+  data.expenses.push({id:'debt',descricao:'Renegociação',categoria_id:'card',valor:133.39,baixado:true,data_baixa:'2026-10-19'});
+  const b=buildBalance(data,options);
+  assert.equal(group(b,'card').pagos,133.39);assert.equal(group(b,'gym').pagos,272);
+  assert.deepEqual(group(b,'card').sources,['lancamento']);reconciles(b);
+});
+test('resultado realizado usa baixa, não data da compra, e não se mistura à previsão pendente',()=>{
+  const data=fixture({closed:true,paid:true});
+  data.income=[{id:'salary',valor:1000,baixado:true,data:'2026-09-01',data_baixa:'2026-10-10',categoria_id:'gym'},
+    {id:'future',valor:200,baixado:false,data:'2026-10-30',categoria_id:'gym'}];
+  data.expenses.push({id:'pending',valor:50,baixado:false,data:'2026-10-31',categoria_id:'gym'});
+  data.movements.push({id:'transfer',valor:9999,tipo:'credito',data:'2026-10-20',transferencia_id:'t'},
+    {id:'investment',valor:800,tipo:'debito',data:'2026-10-20',descricao:'Aplicação CDB'});
+  const b=buildBalance(data,options);
+  assert.equal(b.recebidos,1000);assert.equal(b.pagos,332);assert.equal(b.realized,668);
+  assert.equal(b.receber,200);assert.equal(b.pagar,50);assert.equal(b.pendingBalance,150);
+  assert.equal(group(b,'gym').recebidos,1000);assert.equal(group(b,'gym').pagos,272);reconciles(b);
+});

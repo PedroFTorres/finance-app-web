@@ -176,7 +176,9 @@
     }
     rows.sort((a, b) => a.date.localeCompare(b.date) || a.description.localeCompare(b.description));
     return { ...finish(sum), rows,
-      groups: Array.from(groups.values(), finish).sort((a, b) => a.name.localeCompare(b.name)),
+      groups: Array.from(groups.values(), group => ({...finish(group),
+        sources: [...new Set(group.rows.map(row => row.cardBreakdown || row.provisional || row.invoiceId || row.partialCardPayment ? 'cartao' : 'lancamento'))]
+      })).sort((a, b) => a.name.localeCompare(b.name)),
       months: Array.from(months.values(), finish).sort((a, b) => a.month === 'overdue' ? -1 : b.month === 'overdue' ? 1 : a.month.localeCompare(b.month)) };
   }
   const api = { buildReport, buildBalance };
