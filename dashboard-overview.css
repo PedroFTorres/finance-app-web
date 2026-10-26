@@ -1,0 +1,51 @@
+/* Dashboard-only finish, aligned with the Arolix sales preview. */
+.arolix-app [data-screen=dashboard] .dashboard-kpis{gap:16px;margin:24px 0 30px}
+.arolix-app [data-screen=dashboard] .kpi-card{border-radius:11px;padding:22px;text-align:left;min-height:135px;transition:border-color .15s}
+.arolix-app [data-screen=dashboard] .kpi-card>span{font-size:12px}
+.arolix-app [data-screen=dashboard] .kpi-card strong{display:block;margin:16px 0 8px;font-size:clamp(22px,2.25vw,30px);line-height:1.15;letter-spacing:-.8px}
+.arolix-app [data-screen=dashboard] .kpi-forecast{background:#30293d;border-color:#30293d}
+.arolix-app [data-screen=dashboard] .overview-agenda{grid-column:1 / -1;padding:0;overflow:hidden;border-radius:12px}
+.overview-agenda-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 26px}
+.overview-eyebrow{font-size:9px;letter-spacing:1.4px;color:#8a789e}
+.arolix-app .overview-agenda-heading h3{font-size:19px;color:#303345;margin:8px 0}
+.overview-agenda-heading p{font-size:12px;line-height:1.7;color:#858091;margin:0;max-width:620px}
+.arolix-app .overview-agenda-heading button{flex-shrink:0;min-height:44px;color:#7552cf}
+.overview-agenda-list{margin:0;padding:0;list-style:none}
+.overview-agenda-row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 26px;border-top:1px solid #eeebf3;background:#fff}
+.overview-agenda-row:nth-child(even){background:#fcfbfd}
+.overview-date{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;width:44px;min-height:48px;padding:7px 3px;border-radius:7px;background:#f4f3f7;color:#797181;font-variant-numeric:tabular-nums}
+.overview-date strong{font-size:15px;font-weight:550;line-height:1.3}
+.overview-date small{font-size:8px;letter-spacing:.6px}
+.overview-cartao .overview-date{background:#f0ebf8;color:#7956ba}
+.overview-cartao .overview-date strong{font-size:12px}
+.overview-cartao .overview-date small{font-size:7px}
+.overview-agenda-info{min-width:0}
+.overview-agenda-info>strong{font-size:13px;font-weight:550;color:#474154;display:block;overflow-wrap:anywhere}
+.overview-agenda-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;font-size:11px;color:#8f869a;margin-top:6px;line-height:1.6}
+.overview-status{font-size:10px;padding:1px 6px;border-radius:4px;background:#f3f1f6;color:#7e748d}
+.overview-receita .overview-status{background:#edf5f1;color:#41866d}
+.overview-cartao .overview-status{background:#faf4e9;color:#a38346}
+.overview-status.is-overdue{color:#a35161;background:#fbf0f2}
+.overview-agenda-value{font-size:14px;font-weight:550;white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:-.2px;color:#514a5e}
+.overview-receita .overview-agenda-value{color:#168262}
+.overview-agenda-foot{border-top:1px solid #eeebf3;padding:15px 26px;font-size:11px;color:#90869c;line-height:1.7}
+.overview-agenda-foot p{margin:0}.overview-agenda-foot p+p{margin-top:3px;font-size:10px;color:#9c93a6}
+.overview-agenda-empty{display:flex;flex-direction:column;gap:7px;padding:30px 26px;border-top:1px solid #eeebf3;color:#83798e;font-size:12px;line-height:1.7}
+.overview-agenda-empty strong{color:#554c60;font-size:14px}
+@media(max-width:720px){
+ .arolix-app [data-screen=dashboard] .dashboard-kpis{gap:10px;margin:20px 0 24px}
+ .arolix-app [data-screen=dashboard] .kpi-card{padding:17px 13px;min-height:125px}
+ .arolix-app [data-screen=dashboard] .kpi-card strong{font-size:clamp(19px,5.5vw,25px);margin:13px 0 7px}
+ .overview-agenda-heading{padding:20px 16px;gap:12px;align-items:flex-start;flex-wrap:wrap}
+ .arolix-app .overview-agenda-heading h3{font-size:18px}
+ .overview-agenda-heading p{font-size:11px}
+ .arolix-app .overview-agenda-heading button{font-size:11px;padding:9px 12px}
+ .overview-agenda-row{grid-template-columns:38px minmax(0,1fr) auto;gap:10px;padding:16px 13px}
+ .overview-date{width:38px;min-height:46px}
+ .overview-agenda-info>strong{font-size:12px}
+ .overview-agenda-value{font-size:12px}
+ .overview-agenda-meta{font-size:10px;gap:4px 6px}
+ .overview-status{font-size:9px}
+ .overview-agenda-foot{padding:14px 16px;font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){.arolix-app [data-screen=dashboard] .kpi-card{transition:none}}

@@ -17,6 +17,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/pwa/apple-touch-icon.png">
   <link rel="stylesheet" href="mobile.css?v=20261018-1">
   <script src="pwa.js?v=20261018-1" defer></script>
+  <link rel="stylesheet" href="dashboard-overview.css?v=20261026-1">
 </head>
 
 <body class="arolix-app" data-module="app">
@@ -126,6 +127,15 @@
         </div>
 
         <div class="dashboard-grid dashboard-tab-panel" data-dashboard-panel="geral">
+
+          <section class="card overview-agenda" aria-labelledby="dashboard-agenda-title">
+            <div class="overview-agenda-heading">
+              <div><span class="overview-eyebrow">SUA AGENDA FINANCEIRA</span><h3 id="dashboard-agenda-title">Próximos compromissos</h3><p>Até 5 pendências para acompanhar no período.</p></div>
+              <button type="button" id="dashboard-agenda-all" class="btn-secondary">Ver todos →</button>
+            </div>
+            <ul id="dashboard-agenda-list" class="overview-agenda-list"><li class="overview-agenda-empty">Carregando compromissos…</li></ul>
+            <div class="overview-agenda-foot"><p id="dashboard-agenda-count" role="status"></p><p>Inclui pendências anteriores. Faturas abertas usam o mês de referência.</p></div>
+          </section>
 
           <div class="card">
             <h3>Receitas por Categoria</h3>
@@ -892,7 +902,8 @@
   <script src="finance-rules.js?v=20261012-1"></script>
   <script src="reports-rules.js?v=20261018-1"></script>
   <script src="reports.js?v=20261018-1"></script>
-  <script src="app.js?v=20261018-1"></script>
+  <script src="dashboard-overview.js?v=20261026-1"></script>
+  <script src="app.js?v=20261026-1"></script>
   <link rel="stylesheet" href="onboarding/onboarding.css?v=20260809-1">
   <script src="onboarding/onboarding.js?v=20261012-1"></script>
 </body>

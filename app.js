@@ -104,6 +104,21 @@ async function atualizarDashboardPorMes() {
   STATE.dashboardDados = dadosDashboard;
 
   drawResumo(dadosDashboard);
+  window.ArolixOverview?.render(dadosDashboard, {
+    today: window.ArolixRuntime.localISODate(new Date()),
+    categoryName: categoriaNome,
+    onOpen: () => {
+      modoPeriodoLanc = 'mes';
+      mesLancAtual = new Date(mesDashboardAtual.getFullYear(), mesDashboardAtual.getMonth(), 1);
+      LANC_INIT = true;
+      FILTRO_LANCAMENTOS = 'pendencias';
+      const accountFilter = $(IDS.selectContas);
+      if (accountFilter) accountFilter.value = 'all';
+      document.getElementById('periodo-custom-box')?.classList.add('hidden');
+      document.querySelectorAll('[data-lanc-tab]').forEach(button => button.classList.toggle('active', button.dataset.lancTab === 'pendencias'));
+      App.showScreen('lanc');
+    }
+  });
   drawReceitasPorCategoria(dadosDashboard);
   drawDespesasPorCategoria(dadosDashboard);
   drawInvestimentosDashboard(dadosDashboard);
