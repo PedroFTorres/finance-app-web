@@ -805,48 +805,7 @@ function gerarPDF(tipo) {
         conteudoHTML = buildFaturaReportHTML();
     }
 
-    const win = window.open("", "_blank");
-    if (!win) {
-        alert("Não consegui abrir a janela de impressão. Libere pop-ups para gerar o PDF.");
-        return;
-    }
-
-    const geradoEm = new Date().toLocaleString("pt-BR");
-    win.document.write(`
-        <html>
-        <head>
-            <meta charset="utf-8" />
-            <title>${escapeHTML(titulo)}</title>
-            ${buildPrintStyles()}
-        </head>
-        <body>
-            <main class="report-page">
-                <header class="print-header">
-                    <div>
-                        <img src="logo-arolix.png" class="print-logo" alt="Arolix">
-                        <h1>${escapeHTML(titulo)}</h1>
-                    </div>
-                    <p class="meta">
-                        Gerado em
-                        <strong>${escapeHTML(geradoEm)}</strong>
-                    </p>
-                </header>
-                <div class="print-content">
-                    ${conteudoHTML}
-                </div>
-                <footer class="report-footer">
-                    <span>Arolix</span>
-                    <span>Relatório financeiro gerado pelo app</span>
-                </footer>
-            </main>
-        </body>
-        </html>
-    `);
-    win.document.close();
-    win.focus();
-
-    // garantir renderização antes de chamar print
-    setTimeout(() => win.print(), 350);
+    window.ArolixReportPrint.open({title:titulo, html:conteudoHTML, styles:buildPrintStyles()});
 }
 
 document.addEventListener("DOMContentLoaded", () => {

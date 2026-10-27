@@ -16,6 +16,8 @@ const fixture=`(()=>{
  cartao_faturas:[{id:'f',user_id:'owner',cartao_id:'cc',ano:2026,mes:10,status:'paga',pago:true}],cartoes_credito:[{id:'cc',user_id:'owner',nome:'Cartão teste',dia_vencimento:20}]};
  window.STATE={user:{id:'owner'},categorias:[{id:'gym',nome:'Academia'},{id:'food',nome:'Alimentação'},{id:'salary',nome:'Salários'},{id:'card',nome:'Cartão de Crédito'}],contas:[{id:'bank',nome:'Banco teste'}]};
  window.supabase={from(table){let filters=[],range;return {select(){return this},order(){return this},range(a,b){range=[a,b+1];return this},eq(k,v){filters.push(r=>r[k]===v);return this},neq(k,v){filters.push(r=>r[k]!==v);return this},gte(k,v){filters.push(r=>r[k]>=v);return this},lte(k,v){filters.push(r=>r[k]<=v);return this},in(k,v){filters.push(r=>v.includes(r[k]));return this},then(resolve){let rows=(tables[table]||[]).filter(r=>filters.every(f=>f(r)));if(range)rows=rows.slice(...range);return Promise.resolve({data:structuredClone(rows),error:null}).then(resolve)}}}};
+ window.STATE.contas.push({id:'invest',nome:'Banco teste',tipo_conta:'investimento'});
+ window.testAddReportRows=()=>{for(let i=0;i<75;i++)tables.despesas.push({id:'extra'+i,user_id:'owner',descricao:'Despesa de teste '+i,valor:5,baixado:false,data:'2026-10-31',categoria_id:'gym',conta_id:'bank'});};
  document.querySelector('[data-screen="relatorios"]').classList.remove('hidden');
  window.ArolixReports.open('balanco');
 })();`;
@@ -23,15 +25,28 @@ const fixture=`(()=>{
  const browser=await chromium.launch({headless:true,channel:'chrome'});
  try{
   const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.route('**/*',route=>{
+  await page.context().addInitScript(()=>{window.print=()=>{window.testPrinted=true;};});
+  await page.context().route('**/*',route=>{
    const url=new URL(route.request().url());if(url.hostname!=='balance.test')return route.abort();
    const file=path.resolve(root,'.'+url.pathname);if(!file.startsWith(root+'/')||!fs.existsSync(file))return route.fulfill({status:404,body:''});
    let content=fs.readFileSync(file);
    if(url.pathname==='/app.js')content=fixture;
-   if(url.pathname==='/app.html')content=content.toString().replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,tag=>/src="(?:interface|runtime-utils|reports-rules|reports|app)\.js/.test(tag)?tag:'');
+   if(url.pathname==='/app.html')content=content.toString().replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,tag=>/src="(?:interface|runtime-utils|reports-rules|reports|report-print|print|app)\.js/.test(tag)?tag:'');
    return route.fulfill({contentType:file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'application/javascript',body:content});
   });
   await page.goto('https://balance.test/app.html');
+  const printPDF=async name=>{
+    const opened=page.waitForEvent('popup');await page.locator('#report-print').click();const popup=await opened;
+    await popup.evaluate(()=>{window.print=()=>{};});
+    await popup.waitForFunction(()=>Object.hasOwn(window,'reportReady'));assert.equal(await popup.evaluate(()=>Promise.race([window.reportReady,new Promise(resolve=>setTimeout(()=>resolve(document.documentElement.dataset.printStage),10000))])),true);
+    assert.equal(await popup.locator('.print-logo').evaluate(img=>img.complete&&img.naturalWidth>0),true);
+    assert.equal(await popup.locator('.reports-filters').count(),0);
+    await popup.pdf({path:'/private/tmp/arolix-professional-'+name+'.pdf',preferCSSPageSize:true,printBackground:true});
+    await popup.close();
+  };
+  assert.match(await page.locator('#report-account option[value="bank"]').innerText(),/Conta corrente/);
+  assert.match(await page.locator('#report-account option[value="invest"]').innerText(),/Investimento/);
+  assert.equal(await page.locator('#report-account optgroup').count(),2);
   await page.locator('#report-month').fill('2026-01');await page.locator('#report-month').dispatchEvent('change');
   await page.locator('#report-previous').click();assert.equal(await page.locator('#report-month').inputValue(),'2025-12');
   await page.locator('#report-next').click();assert.equal(await page.locator('#report-month').inputValue(),'2026-01');
@@ -53,6 +68,7 @@ const fixture=`(()=>{
   assert.equal(await page.locator('#report-content details').count(),0);assert.equal(await page.getByText('Detalhamento · clique na categoria para ver os lançamentos').count(),0);
   assert.equal(await page.locator('#report-content tbody tr').filter({hasText:'Cartão de Crédito'}).count(),0);
   assert.match(await page.locator('#report-realized').innerText(),/662,70/);assert.match(await page.locator('#report-pending-balance').innerText(),/150,00/);
+  await printPDF('balanco');
   for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:'/private/tmp/arolix-balance-clean-'+width+'.png',fullPage:true});}
   await page.locator('#report-category').selectOption('gym');await page.waitForFunction(()=>document.getElementById('report-paid').textContent.includes('272,00'));
   const pending=page.waitForEvent('download');await page.locator('#report-export').click();const file=await pending,stream=await file.createReadStream();let csv='';for await(const chunk of stream)csv+=chunk.toString();assert.ok(csv.includes('Academia no cartão'));assert.ok(csv.includes('Academia avulsa'));
@@ -88,14 +104,24 @@ const fixture=`(()=>{
   await page.emulateMedia({media:'screen'});
   await page.locator('#report-clear-filters').click();
   assert.equal(await page.locator('#transaction-report-categories input:checked').count(),0);
+  await page.evaluate(()=>window.testAddReportRows());await page.locator('#report-refresh').click();
+  await page.waitForFunction(()=>document.querySelectorAll('.transaction-report-table tbody tr').length>70);
+  await printPDF('lancamentos');
   await page.evaluate(()=>window.ArolixReports.open('cartao'));await page.locator('#report-content details').first().waitFor();
   assert.equal(await page.locator('#report-heading').innerText(),'Consulta de compras no cartão');
   assert.equal(await page.locator('#report-card-back').getAttribute('href'),'cartao.html');
   assert.equal(await page.locator('#report-card-back').isVisible(),true);
+  await printPDF('cartao');
   await page.evaluate(()=>window.ArolixReports.open());
   assert.equal(await page.locator('#report-heading').innerText(),'Balanço financeiro');
   assert.equal(await page.locator('#report-card-back').isVisible(),false);
   assert.deepEqual(errors,[]);
+  const legacyOpened=page.waitForEvent('popup');await page.evaluate(()=>gerarPDF('extrato'));const legacy=await legacyOpened;
+  await legacy.evaluate(()=>{window.print=()=>{};});
+  await legacy.waitForFunction(()=>Object.hasOwn(window,'reportReady'));assert.equal(await legacy.evaluate(()=>window.reportReady),true);
+  assert.equal(await legacy.locator('.print-header h1').innerText(),'Extrato da Conta');
+  assert.equal(await legacy.locator('.print-logo').evaluate(img=>img.naturalWidth>0),true);
+  await legacy.close();
   console.log('Balanço: categoria única, cartão + lançamentos pagos, juros, previsões, sem detalhamento duplicado, filtros, CSV e mobile OK.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

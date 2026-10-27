@@ -757,7 +757,9 @@ test("relatorio de extrato identifica saldo atual e trata popup bloqueado", () =
   const js = fs.readFileSync(path.join(__dirname, "../print.js"), "utf8");
 
   assert.match(js, /<span>Saldo atual<\/span>/);
-  assert.match(js, /if \(!win\)/);
-  assert.match(js, /Libere pop-ups para gerar o PDF/);
-  assert.match(js, /Relatório financeiro gerado pelo app/);
+  assert.match(js, /ArolixReportPrint\.open/);
+  const shared = fs.readFileSync(path.join(__dirname, '../report-print.js'), 'utf8');
+  assert.match(shared, /if \(!win\)/);
+  assert.match(shared, /Permita abrir a janela de impressão/);
+  assert.match(shared, /logo-arolix\.png/);
 });

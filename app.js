@@ -613,9 +613,7 @@ function createBankLogo(bank) {
 
   function contaLabel(conta) {
     if (!conta) return '';
-    return conta.tipo_conta === 'investimento'
-      ? `💼 ${conta.nome} (Investimento)`
-      : conta.nome;
+    return window.ArolixRuntime.accountLabel(conta);
   }
   function isContaInvestimento(conta) {
     return String(conta?.tipo_conta || '').toLowerCase() === 'investimento';

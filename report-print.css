@@ -1,0 +1,70 @@
+:root { --ink:#272433; --muted:#747080; --brand:#7552cf; --line:#e4e1ea; }
+* { box-sizing:border-box; }
+body { margin:0; padding:28px; background:#f2f1f6; color:var(--ink); font:12px/1.45 Arial,Helvetica,sans-serif; }
+.report-page { max-width:1100px; margin:0 auto; padding:32px; background:white; border:1px solid var(--line); border-radius:8px; box-shadow:none; }
+.print-header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; padding-bottom:20px; margin-bottom:20px; border-bottom:2px solid var(--brand); break-inside:avoid; }
+.print-logo { width:128px; height:auto; display:block; margin:0 0 16px; }
+h1 { font-size:24px; line-height:1.2; margin:0; color:var(--ink); letter-spacing:-.5px; }
+.print-meta { font-size:10px; color:var(--muted); text-align:right; white-space:pre-line; line-height:1.8; }
+.print-scope { padding:12px 0; margin:0 0 16px; border-bottom:1px solid var(--line); color:#514b60; font-size:11px; overflow-wrap:anywhere; }
+h2,h3 { margin:20px 0 10px; color:var(--ink); font-size:14px; break-after:avoid; }
+.print-summary-grid,.reports-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:0 0 16px; break-inside:avoid; }
+.print-summary-grid>div,.reports-summary>div { padding:12px; background:#f8f7fb; border:1px solid var(--line); border-radius:5px; min-width:0; }
+.print-summary-grid span,.reports-summary span { display:block; font-size:10px; color:var(--muted); margin-bottom:5px; }
+.print-summary-grid strong,.reports-summary strong { display:block; font-size:18px; font-variant-numeric:tabular-nums; }
+.reports-balance-result { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:14px; border:1px solid var(--line); margin:16px 0; break-inside:avoid; }
+.reports-balance-result span,.reports-balance-result small { display:block; color:var(--muted); font-size:10px; }
+.reports-balance-result strong { display:block; margin:4px 0; font-size:20px; }
+table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:10px; }
+thead { display:table-header-group; }
+th { background:#f1eef8; color:#635775; font-size:9px; text-align:left; letter-spacing:.025em; border-top:1px solid #ddd5ec; border-bottom:1px solid #ddd5ec; }
+th,td { padding:9px 7px; vertical-align:top; overflow-wrap:anywhere; }
+td { border-bottom:1px solid #eceaf0; }
+tbody tr:nth-child(even) td { background:#faf9fc; }
+tr { break-inside:avoid; }
+th:last-child,td:last-child { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+tfoot { display:table-row-group; background:#efebf8; font-weight:bold; }
+tfoot td { padding-top:12px; padding-bottom:12px; }
+.transaction-report-table th:nth-child(1) { width:10%; }
+.transaction-report-table th:nth-child(2) { width:12%; }
+.transaction-report-table th:nth-child(3) { width:25%; }
+.transaction-report-table th:nth-child(4) { width:14%; }
+.transaction-report-table th:nth-child(5) { width:16%; }
+.transaction-report-table th:nth-child(6) { width:11%; }
+.transaction-report-table th:nth-child(7) { width:12%; }
+.reports-balance-table th:first-child { width:25%; }
+.reports-balance-table th:not(:first-child),.reports-balance-table td:not(:first-child) { text-align:right; font-variant-numeric:tabular-nums; }
+.reports-category-origin { display:block; margin-top:3px; font-size:9px; color:var(--muted); }
+.report-positive { color:#168253; }.report-negative { color:#c3424f; }
+.print-method { margin-top:18px; font-size:9px; color:var(--muted); border-top:1px solid var(--line); padding-top:10px; }
+.report-footer { display:flex; justify-content:space-between; white-space:pre-wrap; margin-top:20px; padding-top:10px; border-top:1px solid var(--line); font-size:9px; color:var(--muted); }
+.reports-table-wrap { overflow:visible; }.reports-group { margin-top:16px; }.reports-group summary { font-weight:bold; padding:8px 0; }
+.reports-group summary { display:flex; align-items:center; gap:8px; list-style:none; }
+.reports-group summary::-webkit-details-marker { display:none; }
+.reports-group summary small { font-weight:normal; color:var(--muted); }
+.reports-group summary strong { margin-left:auto; }
+.print-toolbar { max-width:1100px; margin:0 auto 16px; text-align:right; }
+.print-toolbar button { padding:12px 18px; background:var(--brand); color:white; border:0; border-radius:8px; cursor:pointer; }
+@page { size:A4 landscape; margin:14mm 12mm;
+  @bottom-left { content:'AROLIX • Relatório financeiro'; font:8px Arial,sans-serif; color:#747080; }
+  @bottom-right { content:'Página ' counter(page) ' de ' counter(pages); font:8px Arial,sans-serif; color:#747080; }
+}
+@media print {
+  html,body { margin:0; padding:0; background:white; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+  .print-toolbar { display:none!important; }
+  .report-page { max-width:none; padding:0; border:0; border-radius:0; }
+  .print-header { flex-direction:row; align-items:flex-start; }
+  .print-summary-grid,.reports-summary { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .print-section { break-inside:auto; }
+  .print-header { padding-bottom:12px; margin-bottom:12px; }
+  .print-logo { width:110px; margin-bottom:10px; }
+  h1 { font-size:22px; }
+  h2,h3 { margin:14px 0 8px; }
+  .print-scope { padding:8px 0; margin-bottom:12px; }
+  .print-summary-grid>div,.reports-summary>div { padding:10px; }
+  .print-summary-grid strong,.reports-summary strong { font-size:16px; }
+  .reports-balance-result { margin:12px 0; padding:10px; }
+  th,td { padding:7px 6px; }
+  .print-method { margin-top:12px; padding-top:8px; }
+  .report-footer { margin-top:12px; }
+}

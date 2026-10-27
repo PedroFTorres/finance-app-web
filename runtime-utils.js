@@ -146,7 +146,32 @@
     if (error) throw error;
   }
 
-  const api = { localISODate, addMonthsClamped, businessDaysBetween, parseMoney, selectAll, selectIn, computeContaBalance, detectBank, createBankLogo, transfer, deleteTransfer };
+  function accountType(account) {
+    const type = String(account?.tipo_conta || '').toLowerCase();
+    if (type === 'investimento') return 'Investimento';
+    if (type === 'poupanca' || type === 'poupança') return 'Poupança';
+    if (type === 'carteira' || (!type || type === 'corrente') && /^carteira$/i.test(String(account?.nome || '').trim())) return 'Carteira';
+    return 'Conta corrente';
+  }
+  function accountLabel(account) {
+    if (!account) return '';
+    const type = accountType(account);
+    const number = String(account.numero_conta || '').trim();
+    return `${account.nome || 'Sem nome'} · ${type}${number ? ` · final ${number.slice(-4)}` : ''}`;
+  }
+  function populateAccountSelect(select, accounts, placeholder = 'Todas as contas') {
+    const current = select.value;
+    select.replaceChildren(new Option(placeholder, 'all'));
+    for (const type of ['Conta corrente','Poupança','Carteira','Investimento']) {
+      const items = accounts.filter(account => accountType(account) === type);
+      if (!items.length) continue;
+      const group = document.createElement('optgroup'); group.label = type === 'Investimento' ? 'Contas de investimento' : type === 'Conta corrente' ? 'Contas correntes' : type;
+      items.forEach(account => group.appendChild(new Option(accountLabel(account), account.id)));
+      select.appendChild(group);
+    }
+    select.value = accounts.some(account => account.id === current) ? current : 'all';
+  }
+  const api = { localISODate, addMonthsClamped, businessDaysBetween, parseMoney, selectAll, selectIn, computeContaBalance, detectBank, createBankLogo, transfer, deleteTransfer, accountType, accountLabel, populateAccountSelect };
   root.ArolixRuntime = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

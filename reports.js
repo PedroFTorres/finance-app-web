@@ -139,7 +139,7 @@
     }));
     return { income: unique([...pendingIncome, ...paidIncome, ...linkedIncome]),
       expenses, movements, purchases:unique([...purchases,...paymentReferences,...extraPurchases.flat()]), invoices:allInvoices, cards,
-      categories: window.STATE.categorias || [], accounts: window.STATE.contas || [] };
+      categories: window.STATE.categorias || [], accounts: (window.STATE.contas || []).map(account => ({...account, nome: window.ArolixRuntime.accountLabel(account)})) };
   }
 
   function renderTable(rows) {
@@ -340,7 +340,7 @@
       const data = await fetchData(options);
       if (currentRequest !== request) return;
       snapshot = data; loadedKey = key;
-      setOptions('report-account', data.accounts, 'Todas as contas');
+      window.ArolixRuntime.populateAccountSelect($('report-account'), window.STATE.contas || [], 'Todas as contas');
       setOptions('report-card', data.cards, 'Todos os cartões');
       $('report-status').textContent = '';
       render();
@@ -356,6 +356,26 @@
     }
   }
 
+  function printReport() {
+    if (!result || !loadedOptions || $('report-print').disabled) return;
+    const container = node('div', '');
+    container.appendChild(node('p', $('report-period-caption').textContent, 'print-scope'));
+    const summary = $(mode === 'lancamentos' ? 'transaction-report-summary' : mode === 'balanco' ? 'report-balance-summary' : 'report-card-summary').cloneNode(true);
+    summary.classList.remove('hidden'); container.appendChild(summary);
+    if (mode === 'balanco') container.appendChild($('report-balance-result').cloneNode(true));
+    container.appendChild(node('h2', $('report-category-heading').textContent));
+    const content = $('report-content').cloneNode(true);
+    content.querySelectorAll('details').forEach(detail => { detail.open = true; });
+    container.appendChild(content);
+    if (mode !== 'lancamentos' && result.months.length > 1) {
+      container.appendChild(node('h2', $('report-monthly-heading').textContent));
+      container.appendChild($('report-monthly').closest('table').cloneNode(true));
+    }
+    container.appendChild(node('p', $('report-note').textContent, 'print-method'));
+    // Only cloned, text-populated report nodes enter the isolated print document.
+    container.querySelectorAll('[id]').forEach(element => element.removeAttribute('id'));
+    window.ArolixReportPrint.open({title:$('report-heading').textContent, html:container.innerHTML});
+  }
   function setMode(value) {
     mode = value;
     window.dispatchEvent(new CustomEvent('arolix:screen-change', {detail: mode === 'lancamentos' ? 'lanc' : 'relatorios'}));
@@ -430,13 +450,7 @@
       link.download = `arolix-${mode}-${loadedOptions.start}-${loadedOptions.end}.csv`;
       link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
-    $('report-print').addEventListener('click', () => {
-      const details = Array.from(document.querySelectorAll('#report-content details'));
-      const original = details.map(item => item.open);
-      details.forEach(item => { item.open = true; });
-      window.addEventListener('afterprint', () => details.forEach((item, index) => { item.open = original[index]; }), { once: true });
-      window.print();
-    });
+    $('report-print').addEventListener('click', printReport);
   }
   window.ArolixReports = { open(value, context) {
     init(); setMode(['cartao','lancamentos'].includes(value) ? value : 'balanco');

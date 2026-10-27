@@ -5,6 +5,14 @@ const path = require('node:path');
 const vm = require('node:vm');
 const runtime = require('../runtime-utils');
 
+test('nomes de conta distinguem corrente, investimento e carteira sem alterar o cadastro', () => {
+  assert.equal(runtime.accountLabel({nome:'Santander',tipo_conta:'corrente'}),'Santander · Conta corrente');
+  assert.equal(runtime.accountLabel({nome:'Santander',tipo_conta:'investimento'}),'Santander · Investimento');
+  assert.equal(runtime.accountLabel({nome:'Carteira'}),'Carteira · Carteira');
+  assert.equal(runtime.accountLabel({nome:'Banco',numero_conta:'123456'}),'Banco · Conta corrente · final 3456');
+  assert.equal(runtime.accountType({tipo_conta:'poupanca'}),'Poupança');
+});
+
 test('calendário mantém fim do mês e ano bissexto', () => {
   assert.equal(runtime.addMonthsClamped('2026-01-31', 1), '2026-02-28');
   assert.equal(runtime.addMonthsClamped('2026-01-31', 2), '2026-03-31');
