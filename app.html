@@ -7,7 +7,7 @@
    <link rel="icon" type="image/png" href="favicon.png">
 
   <link rel="stylesheet" href="styles.css?v=20261001-1" />
-  <link rel="stylesheet" href="reports.css?v=20261026-2" />
+  <link rel="stylesheet" href="reports.css?v=20261027-1" />
   <link rel="stylesheet" href="interface.css?v=20261018-1" />
   <meta name="theme-color" content="#7552cf">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -852,15 +852,30 @@
         </div>
       </div>
       <div class="reports-filters">
-        <label>Período<select id="report-period"><option value="month">Mês</option><option value="year">Ano</option><option value="custom">Personalizado</option><option value="future">Próximos 12 meses</option></select></label>
-        <label id="report-month-label">Mês<input type="month" id="report-month"></label>
-        <label id="report-year-label" class="hidden">Ano<input type="number" id="report-year" min="1900" max="2200"></label>
-        <label>De<input type="date" id="report-start"></label>
-        <label>Até<input type="date" id="report-end"></label>
+        <div class="reports-period-row">
+          <label class="reports-period-kind">Visualizar por<select id="report-period"><option value="month">Mês</option><option value="year">Ano</option><option value="custom">Período personalizado</option><option value="future">Próximos 12 meses</option></select></label>
+          <div id="report-period-navigation" class="reports-period-navigation">
+            <button id="report-previous" type="button" aria-label="Mês anterior">‹</button>
+            <label id="report-month-label"><span class="reports-sr-only">Mês</span><input type="month" id="report-month" min="1900-01" max="2200-12"></label>
+            <label id="report-year-label" class="hidden"><span class="reports-sr-only">Ano</span><input type="number" id="report-year" min="1900" max="2200"></label>
+            <button id="report-next" type="button" aria-label="Próximo mês">›</button>
+          </div>
+          <div id="report-custom-dates" class="reports-custom-dates hidden">
+            <label>De<input type="date" id="report-start"></label>
+            <label>Até<input type="date" id="report-end"></label>
+          </div>
+          <span id="report-future-range" class="reports-future-range hidden"></span>
+        </div>
+        <div class="reports-refine-row">
         <label id="report-account-label">Conta<select id="report-account"><option value="all">Todas as contas</option></select></label>
         <label id="report-card-label" class="hidden">Cartão<select id="report-card"><option value="all">Todos os cartões</option></select></label>
         <label>Categoria<select id="report-category"><option value="all">Todas as categorias</option></select></label>
-        <label id="report-overdue-label" class="reports-check"><input type="checkbox" id="report-overdue">Incluir vencidos antes do período</label>
+          <details id="report-more-filters" class="reports-more-filters">
+            <summary>Mais filtros <span id="report-more-count" class="hidden">1 ativo</span></summary>
+            <label id="report-overdue-label" class="reports-check"><input type="checkbox" id="report-overdue"><span>Incluir pendências anteriores<small>Valores vencidos antes do início do período.</small></span></label>
+          </details>
+          <button id="report-clear-filters" type="button" class="reports-clear-filters" disabled>Limpar filtros</button>
+        </div>
       </div>
       <p id="report-status" role="status" aria-live="polite"></p>
       <p id="report-period-caption"></p>
@@ -898,7 +913,7 @@
   <script src="runtime-utils.js?v=20261012-1"></script>
   <script src="finance-rules.js?v=20261012-1"></script>
   <script src="reports-rules.js?v=20261026-2"></script>
-  <script src="reports.js?v=20261026-3"></script>
+  <script src="reports.js?v=20261027-1"></script>
   <script src="dashboard-overview.js?v=20261026-1"></script>
   <script src="app.js?v=20261026-1"></script>
   <link rel="stylesheet" href="onboarding/onboarding.css?v=20260809-1">

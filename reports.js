@@ -21,6 +21,11 @@
     const now = new Date(), type = $('report-period').value;
     $('report-month-label').classList.toggle('hidden', type !== 'month');
     $('report-year-label').classList.toggle('hidden', type !== 'year');
+    $('report-period-navigation').classList.toggle('hidden', !['month', 'year'].includes(type));
+    $('report-custom-dates').classList.toggle('hidden', type !== 'custom');
+    $('report-future-range').classList.toggle('hidden', type !== 'future');
+    $('report-previous').setAttribute('aria-label', type === 'year' ? 'Ano anterior' : 'Mês anterior');
+    $('report-next').setAttribute('aria-label', type === 'year' ? 'Próximo ano' : 'Próximo mês');
     $('report-start').disabled = type !== 'custom';
     $('report-end').disabled = type !== 'custom';
     if (type === 'custom') return;
@@ -38,6 +43,31 @@
     }
     $('report-start').value = window.ArolixRuntime.localISODate(start);
     $('report-end').value = window.ArolixRuntime.localISODate(end);
+    $('report-future-range').textContent = `${dateBR($('report-start').value)} a ${dateBR($('report-end').value)}`;
+    const year = Number((type === 'year' ? $('report-year').value : $('report-month').value).slice(0, 4));
+    $('report-previous').disabled = type === 'year' ? year <= 1900 : $('report-month').value <= '1900-01';
+    $('report-next').disabled = type === 'year' ? year >= 2200 : $('report-month').value >= '2200-12';
+  }
+  function navigatePeriod(direction) {
+    const type = $('report-period').value;
+    if (type === 'month') {
+      const [year, month] = $('report-month').value.split('-').map(Number);
+      if (!year || !month) return;
+      const date = new Date(year, month - 1 + direction, 1);
+      if (date.getFullYear() < 1900 || date.getFullYear() > 2200) return;
+      $('report-month').value = window.ArolixRuntime.localISODate(date).slice(0, 7);
+    } else if (type === 'year') {
+      const year = Number($('report-year').value) + direction;
+      if (year < 1900 || year > 2200) return;
+      $('report-year').value = year;
+    } else return;
+    periodPreset(); refresh();
+  }
+  function updateFilterControls() {
+    const overdue = mode === 'balanco' && $('report-overdue').checked;
+    $('report-more-count').classList.toggle('hidden', !overdue);
+    $('report-clear-filters').disabled = !overdue && $('report-category').value === 'all'
+      && $(mode === 'cartao' ? 'report-card' : 'report-account').value === 'all';
   }
   function filters() {
     return { mode, start: $('report-start').value, end: $('report-end').value,
@@ -165,6 +195,7 @@
   }
 
   function render() {
+    updateFilterControls();
     if (!snapshot) return;
     const options = filters();
     if (loadedKey !== `${options.start}:${options.end}:${options.overdue}`) return;
@@ -277,10 +308,12 @@
     $('report-account-label').classList.toggle('hidden', mode === 'cartao');
     $('report-card-label').classList.toggle('hidden', mode !== 'cartao');
     $('report-overdue-label').classList.toggle('hidden', mode !== 'balanco');
+    $('report-more-filters').classList.toggle('hidden', mode !== 'balanco');
     $('report-balance-summary').classList.toggle('hidden', mode !== 'balanco');
     $('report-balance-result').classList.toggle('hidden', mode !== 'balanco');
     $('report-card-summary').classList.toggle('hidden', mode !== 'cartao');
     $('report-category').value = 'all';
+    updateFilterControls();
   }
   function init() {
     if (initialized) return;
@@ -290,7 +323,16 @@
     $('report-month').value = today.slice(0, 7); $('report-year').value = today.slice(0, 4);
     periodPreset();
     ['report-period', 'report-month', 'report-year'].forEach(id => $(id).addEventListener('change', () => { periodPreset(); refresh(); }));
-    ['report-start', 'report-end', 'report-overdue'].forEach(id => $(id).addEventListener('change', () => refresh()));
+    ['report-start', 'report-end', 'report-overdue'].forEach(id => $(id).addEventListener('change', () => { updateFilterControls(); refresh(); }));
+    $('report-previous').addEventListener('click', () => navigatePeriod(-1));
+    $('report-next').addEventListener('click', () => navigatePeriod(1));
+    $('report-clear-filters').addEventListener('click', () => {
+      const reload = $('report-overdue').checked;
+      ['report-account', 'report-card', 'report-category'].forEach(id => { $(id).value = 'all'; });
+      $('report-overdue').checked = false;
+      updateFilterControls();
+      if (reload) refresh(); else render();
+    });
     ['report-account', 'report-card', 'report-category'].forEach(id => $(id).addEventListener('change', () => render()));
     $('report-refresh').addEventListener('click', () => refresh(true));
     $('report-export').addEventListener('click', () => {

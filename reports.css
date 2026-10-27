@@ -57,3 +57,44 @@
 @media print { body>* { display:none!important; } body>main { display:block!important; } main>* { display:none!important; } main>[data-screen="relatorios"] { display:block!important; } .reports-filters,.reports-tabs,.reports-actions { display:none!important; } .reports-panel { box-shadow:none; padding:0; } .reports-group { break-inside:avoid; } .reports-summary { grid-template-columns:repeat(3,1fr); } }
 @media print { .reports-balance-summary { grid-template-columns:repeat(4,1fr); } .reports-balance-result { grid-template-columns:1fr 1.5fr; } .reports-table-wrap { overflow:visible; } .reports-balance-table { min-width:0; font-size:11px; } .reports-table td,.reports-table th { padding:8px 5px; } .reports-balance-table td:first-child { min-width:0; } }
 .reports-category-origin { display:block; margin-top:5px; color:#8b8196; font-size:10px; font-weight:400; }
+
+/* A single period toolbar, with secondary filters kept visually quieter. */
+.arolix-app .reports-panel .reports-filters { display:flex; flex-direction:column; gap:18px; padding:20px 24px; background:#fff; border:1px solid #e5e7ef; border-radius:16px; }
+.reports-period-row { display:flex; align-items:flex-end; gap:24px; flex-wrap:wrap; }
+.reports-period-kind { width:210px; }
+.reports-period-navigation { display:flex; align-items:center; border:1px solid #e3ddf2; background:#f8f6fc; border-radius:12px; padding:4px; gap:4px; }
+.reports-period-navigation button { width:40px; height:42px; border:0; background:transparent; color:#7350c8; border-radius:8px; font-size:27px; cursor:pointer; }
+.reports-period-navigation button:hover { background:#ede7fa; }
+.reports-period-navigation button:disabled { opacity:.35; cursor:default; }
+.reports-filters .reports-period-navigation input { background:transparent; border:0; text-align:center; color:#3c3154; font-size:16px; font-weight:650; height:42px; padding:8px; width:220px; }
+.reports-period-navigation #report-year { width:150px; }
+.reports-custom-dates { display:flex; gap:12px; }
+.reports-custom-dates label { min-width:160px; }
+.reports-future-range { align-self:center; color:#716a80; font-size:14px; }
+.reports-refine-row { display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; border-top:1px solid #f0eef5; padding-top:16px; }
+.reports-refine-row>label { flex:1 1 200px; max-width:320px; min-width:0; }
+.reports-more-filters { flex:0 1 auto; min-width:180px; }
+.reports-more-filters summary { min-height:44px; display:flex; gap:8px; align-items:center; cursor:pointer; color:#625776; font-size:13px; font-weight:600; list-style:none; }
+.reports-more-filters summary::before { content:'+'; font-size:20px; font-weight:400; }
+.reports-more-filters[open] summary::before { content:'−'; }
+.reports-more-filters summary::-webkit-details-marker { display:none; }
+#report-more-count { color:#7350c8; background:#f0eafa; border-radius:20px; padding:3px 7px; font-size:11px; }
+.reports-filters .reports-check { gap:10px; padding:12px; background:#f8f6fc; border-radius:10px; max-width:310px; line-height:1.5; }
+.reports-filters .reports-check input { width:18px; height:18px; flex:0 0 18px; accent-color:#7350c8; margin:0; }
+.reports-check small { display:block; font-weight:400; color:#7d768b; }
+.reports-clear-filters { min-height:44px; margin-left:auto; padding:8px 4px; color:#7350c8; background:transparent; border:0; font-size:13px; font-weight:600; cursor:pointer; }
+.reports-clear-filters:disabled { color:#a1a5b3; cursor:default; }
+.reports-filters :is(button,input,select,summary):focus-visible { outline:3px solid #c7b6ef; outline-offset:3px; }
+.reports-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+@media(max-width:600px) {
+  .arolix-app .reports-panel .reports-filters { padding:16px; gap:16px; }
+  .reports-period-row { gap:12px; }
+  .reports-period-kind,.reports-period-navigation,.reports-custom-dates { width:100%; }
+  .reports-period-navigation label { flex:1; min-width:0; }
+  .reports-filters .reports-period-navigation input { width:100%; min-width:0; }
+  .reports-period-navigation #report-year { width:100%; }
+  .reports-custom-dates label { min-width:0; flex:1; }
+  .reports-filters input,.reports-filters select { min-height:44px; font-size:16px; }
+  .reports-refine-row>label { flex-basis:100%; max-width:none; }
+  .reports-more-filters { flex:1; }
+}
