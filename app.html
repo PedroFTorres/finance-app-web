@@ -843,16 +843,13 @@
   <section class="screen hidden" data-screen="relatorios">
     <div class="card-panel reports-panel">
       <div class="reports-heading">
-        <div><h2>Balanço financeiro</h2><p>Lançamentos e cartão juntos por categoria, com realizado e previsões separados.</p></div>
+        <div><h2 id="report-heading">Balanço financeiro</h2><p id="report-description">Lançamentos e cartão juntos por categoria, com realizado e previsões separados.</p></div>
         <div class="reports-actions">
+          <a id="report-card-back" href="cartao.html" class="btn-secondary hidden">← Voltar aos cartões</a>
           <button id="report-refresh" class="btn-secondary">Consultar novamente</button>
           <button id="report-export" class="btn-secondary" disabled>Exportar CSV</button>
           <button id="report-print" class="btn-primary" disabled>Imprimir / PDF</button>
         </div>
-      </div>
-      <div class="reports-tabs" aria-label="Tipo de relatório">
-        <button data-report-mode="balanco" aria-pressed="true">Balanço do período</button>
-        <button data-report-mode="cartao" aria-pressed="false">Compras no cartão</button>
       </div>
       <div class="reports-filters">
         <label>Período<select id="report-period"><option value="month">Mês</option><option value="year">Ano</option><option value="custom">Personalizado</option><option value="future">Próximos 12 meses</option></select></label>
@@ -901,7 +898,7 @@
   <script src="runtime-utils.js?v=20261012-1"></script>
   <script src="finance-rules.js?v=20261012-1"></script>
   <script src="reports-rules.js?v=20261026-2"></script>
-  <script src="reports.js?v=20261026-2"></script>
+  <script src="reports.js?v=20261026-3"></script>
   <script src="dashboard-overview.js?v=20261026-1"></script>
   <script src="app.js?v=20261026-1"></script>
   <link rel="stylesheet" href="onboarding/onboarding.css?v=20260809-1">

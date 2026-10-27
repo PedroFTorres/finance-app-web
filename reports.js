@@ -269,7 +269,11 @@
 
   function setMode(value) {
     mode = value;
-    document.querySelectorAll('[data-report-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.reportMode === mode)));
+    $('report-heading').textContent = mode === 'cartao' ? 'Consulta de compras no cartão' : 'Balanço financeiro';
+    $('report-description').textContent = mode === 'cartao'
+      ? 'Consulta específica do módulo Cartões. Os pagamentos das faturas já estão incluídos no balanço consolidado.'
+      : 'Lançamentos e cartão juntos por categoria, com realizado e previsões separados.';
+    $('report-card-back').classList.toggle('hidden', mode !== 'cartao');
     $('report-account-label').classList.toggle('hidden', mode === 'cartao');
     $('report-card-label').classList.toggle('hidden', mode !== 'cartao');
     $('report-overdue-label').classList.toggle('hidden', mode !== 'balanco');
@@ -288,7 +292,6 @@
     ['report-period', 'report-month', 'report-year'].forEach(id => $(id).addEventListener('change', () => { periodPreset(); refresh(); }));
     ['report-start', 'report-end', 'report-overdue'].forEach(id => $(id).addEventListener('change', () => refresh()));
     ['report-account', 'report-card', 'report-category'].forEach(id => $(id).addEventListener('change', () => render()));
-    document.querySelectorAll('[data-report-mode]').forEach(button => button.addEventListener('click', () => { setMode(button.dataset.reportMode); refresh(); }));
     $('report-refresh').addEventListener('click', () => refresh(true));
     $('report-export').addEventListener('click', () => {
       if (!result || !loadedOptions) return;

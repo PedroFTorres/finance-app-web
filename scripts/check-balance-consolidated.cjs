@@ -42,7 +42,16 @@ const fixture=`(()=>{
   for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:'/private/tmp/arolix-balance-clean-'+width+'.png',fullPage:true});}
   await page.locator('#report-category').selectOption('gym');await page.waitForFunction(()=>document.getElementById('report-paid').textContent.includes('272,00'));
   const pending=page.waitForEvent('download');await page.locator('#report-export').click();const file=await pending,stream=await file.createReadStream();let csv='';for await(const chunk of stream)csv+=chunk.toString();assert.ok(csv.includes('Academia no cartão'));assert.ok(csv.includes('Academia avulsa'));
-  await page.locator('[data-report-mode="cartao"]').click();await page.locator('#report-content details').first().waitFor();
+  assert.equal(await page.locator('[data-report-mode]').count(),0);
+  assert.equal(await page.locator('#report-heading').innerText(),'Balanço financeiro');
+  assert.equal(await page.locator('#report-card-back').isVisible(),false);
+  await page.evaluate(()=>window.ArolixReports.open('cartao'));await page.locator('#report-content details').first().waitFor();
+  assert.equal(await page.locator('#report-heading').innerText(),'Consulta de compras no cartão');
+  assert.equal(await page.locator('#report-card-back').getAttribute('href'),'cartao.html');
+  assert.equal(await page.locator('#report-card-back').isVisible(),true);
+  await page.evaluate(()=>window.ArolixReports.open());
+  assert.equal(await page.locator('#report-heading').innerText(),'Balanço financeiro');
+  assert.equal(await page.locator('#report-card-back').isVisible(),false);
   assert.deepEqual(errors,[]);
   console.log('Balanço: categoria única, cartão + lançamentos pagos, juros, previsões, sem detalhamento duplicado, filtros, CSV e mobile OK.');
  }finally{await browser.close();}
