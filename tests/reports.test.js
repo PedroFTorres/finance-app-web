@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildReport, buildBalance } = require('../reports-rules.js');
+const { buildReport, buildBalance, buildTransactions } = require('../reports-rules.js');
 const options = { mode: 'pagos', start: '2026-07-01', end: '2026-07-31' };
 const data = {
   categories: [{ id: 'food', nome: 'Alimentação' }, { id: 'salary', nome: 'Salário' }, { id: 'card', nome: 'Cartão de crédito' }],
@@ -29,6 +29,24 @@ test('relatório pago inclui juros e usa a data do pagamento sem investimentos',
   assert.equal(report.total, 105.30);
   assert.equal(report.groups[0].name, 'Alimentação');
   assert.equal(report.rows[0].date, '2026-07-03');
+});
+test('listagem de lançamentos reúne as situações sem duplicar fatura nem incluir investimentos', () => {
+  const report = buildTransactions(data, {...options, kind:'all', status:'all'});
+  assert.deepEqual(report.totals, {recebidos:2652, pagos:105.3, receber:0, pagar:200});
+  assert.equal(report.rows.length, 5);
+  const paid = report.rows.find(row => row.lane === 'pagos');
+  assert.equal(paid.dueDate, '2026-06-30');
+  assert.equal(paid.paymentDate, '2026-07-03');
+  assert.equal(paid.value,105.3);
+});
+test('listagem permite uma ou várias categorias, tipo e situação combinados', () => {
+  const pending = buildTransactions(data, {...options, kind:'expense', status:'pending', categories:['food']});
+  assert.equal(pending.total,70);
+  assert.ok(pending.rows.every(row => row.paymentDate === '' && row.lane === 'pagar'));
+  const paid = buildTransactions(data, {...options, status:'paid', categories:['food','salary']});
+  assert.equal(paid.rows.length,2);
+  assert.equal(paid.total,2757.3);
+  assert.equal(buildTransactions(data,{...options, kind:'income', status:'pending'}).rows.length,0);
 });
 test('recebidos não usa vencimento nem soma contas pendentes', () => {
   assert.equal(buildReport(data, { ...options, mode: 'recebidos' }).total, 2652);

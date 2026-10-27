@@ -7,7 +7,7 @@
    <link rel="icon" type="image/png" href="favicon.png">
 
   <link rel="stylesheet" href="styles.css?v=20261001-1" />
-  <link rel="stylesheet" href="reports.css?v=20261027-1" />
+  <link rel="stylesheet" href="reports.css?v=20261027-2" />
   <link rel="stylesheet" href="interface.css?v=20261018-1" />
   <meta name="theme-color" content="#7552cf">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -375,7 +375,7 @@
       </div>
 
       <div class="lanc-header-actions">
-        <button class="btn-secondary" onclick="App.showScreen('relatorios')">Relatórios</button>
+        <button class="btn-secondary" onclick="App.showScreen('relatorios', 'lancamentos')">Relatórios</button>
         <button id="btn-open-add-lanc" class="btn-primary">Adicionar lançamento</button>
       </div>
     </div>
@@ -845,6 +845,7 @@
       <div class="reports-heading">
         <div><h2 id="report-heading">Balanço financeiro</h2><p id="report-description">Lançamentos e cartão juntos por categoria, com realizado e previsões separados.</p></div>
         <div class="reports-actions">
+          <button id="report-transactions-back" class="btn-secondary hidden" onclick="App.showScreen('lanc')">← Voltar aos lançamentos</button>
           <a id="report-card-back" href="cartao.html" class="btn-secondary hidden">← Voltar aos cartões</a>
           <button id="report-refresh" class="btn-secondary">Consultar novamente</button>
           <button id="report-export" class="btn-secondary" disabled>Exportar CSV</button>
@@ -878,6 +879,12 @@
         </div>
       </div>
       <p id="report-status" role="status" aria-live="polite"></p>
+      <div id="transaction-report-controls" class="transaction-report-controls hidden">
+        <label>Tipo<select id="transaction-report-kind"><option value="all">Receitas e despesas</option><option value="income">Somente receitas</option><option value="expense">Somente despesas</option></select></label>
+        <label>Situação<select id="transaction-report-status"><option value="all">Todas as situações</option><option value="pending">A pagar e a receber</option><option value="paid">Pagos e recebidos</option></select></label>
+        <details class="transaction-report-categories"><summary id="transaction-report-category-caption">Todas as categorias</summary><div id="transaction-report-categories"></div></details>
+      </div>
+      <div id="transaction-report-summary" class="reports-summary reports-balance-summary hidden"></div>
       <p id="report-period-caption"></p>
       <div id="report-balance-summary" class="reports-summary reports-balance-summary">
         <div class="report-income"><span>Já recebido</span><strong id="report-received">—</strong></div>
@@ -912,10 +919,10 @@
   <script src="premium-access-client.js?v=20261012-1"></script>
   <script src="runtime-utils.js?v=20261012-1"></script>
   <script src="finance-rules.js?v=20261012-1"></script>
-  <script src="reports-rules.js?v=20261026-2"></script>
-  <script src="reports.js?v=20261027-1"></script>
+  <script src="reports-rules.js?v=20261027-2"></script>
+  <script src="reports.js?v=20261027-2"></script>
   <script src="dashboard-overview.js?v=20261026-1"></script>
-  <script src="app.js?v=20261026-1"></script>
+  <script src="app.js?v=20261027-2"></script>
   <link rel="stylesheet" href="onboarding/onboarding.css?v=20260809-1">
   <script src="onboarding/onboarding.js?v=20261012-1"></script>
 </body>

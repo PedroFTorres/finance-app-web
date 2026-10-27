@@ -181,7 +181,26 @@
       })).sort((a, b) => a.name.localeCompare(b.name)),
       months: Array.from(months.values(), finish).sort((a, b) => a.month === 'overdue' ? -1 : b.month === 'overdue' ? 1 : a.month.localeCompare(b.month)) };
   }
-  const api = { buildReport, buildBalance };
+  function buildTransactions(data, options) {
+    const selected = new Set(options.categories || []);
+    const originals = new Map([...(data.income || []), ...(data.expenses || [])].map(item => [item.id, item]));
+    const lanes = ['recebidos', 'pagos', 'receber', 'pagar'].filter(lane =>
+      (options.kind !== 'income' || ['recebidos', 'receber'].includes(lane)) &&
+      (options.kind !== 'expense' || ['pagos', 'pagar'].includes(lane)) &&
+      (options.status !== 'paid' || ['recebidos', 'pagos'].includes(lane)) &&
+      (options.status !== 'pending' || ['receber', 'pagar'].includes(lane)));
+    const rows = lanes.flatMap(lane => buildReport(data, {...options, mode: lane, category: 'all'}).rows.map(row => ({
+      ...row, lane, dueDate: originals.get(row.sourceId)?.data || (['receber', 'pagar'].includes(lane) ? row.date : ''),
+      paymentDate: ['recebidos', 'pagos'].includes(lane) ? row.date : '',
+      kind: ['recebidos', 'receber'].includes(lane) ? 'income' : 'expense'
+    }))).filter(row => !selected.size || selected.has(row.categoryId));
+    rows.sort((a,b) => a.date.localeCompare(b.date) || a.description.localeCompare(b.description));
+    const totals = {recebidos:0, pagos:0, receber:0, pagar:0};
+    rows.forEach(row => { totals[row.lane] = money(totals[row.lane] + row.value); });
+    return {rows, totals, total: money(rows.reduce((sum,row) => sum + row.value,0)),
+      balance: money(totals.recebidos + totals.receber - totals.pagos - totals.pagar)};
+  }
+  const api = { buildReport, buildBalance, buildTransactions };
   root.ArolixReportsRules = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

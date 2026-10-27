@@ -1,6 +1,6 @@
 (function () {
   const $ = id => document.getElementById(id);
-  const labels = { balanco: 'Balanço do período', recebidos: 'Recebido', pagos: 'Pago', receber: 'Previsto a receber', pagar: 'Previsto a pagar', cartao: 'Compras no cartão' };
+  const labels = { lancamentos: 'Relatório de lançamentos', balanco: 'Balanço do período', recebidos: 'Recebido', pagos: 'Pago', receber: 'A receber', pagar: 'A pagar', cartao: 'Compras no cartão' };
   const fmt = value => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const dateBR = value => value ? value.slice(0, 10).split('-').reverse().join('/') : '—';
   let mode = 'balanco', request = 0, snapshot = null, loadedKey = '', result = null, loadedOptions = null;
@@ -64,15 +64,19 @@
     periodPreset(); refresh();
   }
   function updateFilterControls() {
-    const overdue = mode === 'balanco' && $('report-overdue').checked;
+    const overdue = mode !== 'cartao' && $('report-overdue').checked;
     $('report-more-count').classList.toggle('hidden', !overdue);
     $('report-clear-filters').disabled = !overdue && $('report-category').value === 'all'
-      && $(mode === 'cartao' ? 'report-card' : 'report-account').value === 'all';
+      && $(mode === 'cartao' ? 'report-card' : 'report-account').value === 'all'
+      && (mode !== 'lancamentos' || (!$('transaction-report-categories').querySelector(':checked')
+        && $('transaction-report-kind').value === 'all' && $('transaction-report-status').value === 'all'));
   }
   function filters() {
     return { mode, start: $('report-start').value, end: $('report-end').value,
       account: $('report-account').value, card: $('report-card').value,
-      category: $('report-category').value, overdue: $('report-overdue').checked };
+      category: $('report-category').value, overdue: $('report-overdue').checked,
+      kind: $('transaction-report-kind').value, status: $('transaction-report-status').value,
+      categories: Array.from($('transaction-report-categories').querySelectorAll(':checked'), item => item.value) };
   }
   async function fetchData(options) {
     const client = window.supabase, user = window.STATE.user.id;
@@ -199,6 +203,7 @@
     if (!snapshot) return;
     const options = filters();
     if (loadedKey !== `${options.start}:${options.end}:${options.overdue}`) return;
+    if (mode === 'lancamentos') { renderTransactions(options); return; }
     const build = mode === 'balanco' ? window.ArolixReportsRules.buildBalance : window.ArolixReportsRules.buildReport;
     const available = build(snapshot, { ...options, category: 'all' });
     setOptions('report-category', available.groups.map(item => ({ id: item.id, nome: item.name })), 'Todas as categorias');
@@ -265,6 +270,59 @@
     $('report-print').disabled = !result.rows.length;
   }
 
+  function transactionTable(rows) {
+    const wrap = node('div', '', 'reports-table-wrap');
+    const table = node('table', '', 'reports-table transaction-report-table');
+    const header = table.createTHead().insertRow();
+    ['Vencimento', 'Pagamento / recebimento', 'Descrição', 'Categoria', 'Conta', 'Situação', 'Valor'].forEach(text => header.appendChild(node('th', text)));
+    const body = table.createTBody();
+    rows.forEach(item => {
+      const row = body.insertRow();
+      [dateBR(item.dueDate), dateBR(item.paymentDate), item.description, item.category, item.account,
+        labels[item.lane] + (item.provisional ? ' · Fatura aberta' : ''), fmt(item.value)].forEach(text => row.appendChild(node('td', text)));
+      row.lastChild.className = item.kind === 'income' ? 'report-positive' : 'report-negative';
+    });
+    const foot = table.createTFoot().insertRow();
+    const label = node('td', `${rows.length} lançamento(s) · total dos valores listados`); label.colSpan = 6;
+    foot.append(label, node('td', fmt(result.total)));
+    wrap.appendChild(table); return wrap;
+  }
+  function renderTransactions(options) {
+    const container = $('transaction-report-categories');
+    const checked = new Set(options.categories);
+    const available = window.ArolixReportsRules.buildTransactions(snapshot, {...options, categories: []});
+    const categories = new Map(available.rows.map(row => [row.categoryId, row.category]));
+    // Keep selected categories visible even when another filter yields no rows.
+    checked.forEach(id => { if (!categories.has(id)) categories.set(id, (snapshot.categories || []).find(item => item.id === id)?.nome || 'Sem categoria'); });
+    container.replaceChildren();
+    Array.from(categories).sort((a,b) => a[1].localeCompare(b[1])).forEach(([id,name]) => {
+      const label = node('label', ''); const input = document.createElement('input');
+      input.type = 'checkbox'; input.value = id; input.checked = checked.has(id);
+      input.addEventListener('change', render);
+      label.append(input, node('span', name)); container.appendChild(label);
+    });
+    $('transaction-report-category-caption').textContent = checked.size ? `${checked.size} categoria(s) selecionada(s)` : 'Todas as categorias';
+    result = window.ArolixReportsRules.buildTransactions(snapshot, options); loadedOptions = options;
+    const scope = [labels[mode], `${dateBR(options.start)} a ${dateBR(options.end)}`,
+      $('transaction-report-kind').selectedOptions[0].textContent, $('transaction-report-status').selectedOptions[0].textContent];
+    if (options.account !== 'all') scope.push($('report-account').selectedOptions[0].textContent);
+    if (checked.size) scope.push(...Array.from(checked, id => categories.get(id)));
+    if (options.overdue) scope.push('Inclui vencidos anteriores');
+    $('report-period-caption').textContent = scope.join(' · ');
+    const summary = $('transaction-report-summary'); summary.replaceChildren();
+    Object.entries(result.totals).forEach(([lane,total]) => {
+      const card = node('div', '', ['recebidos','receber'].includes(lane) ? 'report-income' : 'report-expense');
+      card.append(node('span', labels[lane]), node('strong', fmt(total))); summary.appendChild(card);
+    });
+    $('report-note').textContent = 'Pagos e recebidos são selecionados pela data da baixa e incluem juros e descontos registrados. Pendentes são selecionados pelo vencimento. Faturas aparecem uma única vez, sem somar novamente suas compras. Transferências e aplicações não são receitas ou despesas. O total da listagem soma os valores exibidos, não representa saldo.';
+    $('report-category-heading').textContent = 'Lançamentos do período';
+    const content = $('report-content'); content.replaceChildren();
+    if (result.rows.length) content.appendChild(transactionTable(result.rows));
+    else content.appendChild(node('p', 'Nenhum lançamento encontrado para estes filtros.', 'reports-empty'));
+    $('report-export').disabled = $('report-print').disabled = !result.rows.length;
+    updateFilterControls();
+  }
+
   async function refresh(force = false) {
     const options = filters(), key = `${options.start}:${options.end}:${options.overdue}`;
     const currentRequest = ++request;
@@ -300,15 +358,22 @@
 
   function setMode(value) {
     mode = value;
-    $('report-heading').textContent = mode === 'cartao' ? 'Consulta de compras no cartão' : 'Balanço financeiro';
+    window.dispatchEvent(new CustomEvent('arolix:screen-change', {detail: mode === 'lancamentos' ? 'lanc' : 'relatorios'}));
+    $('report-transactions-back').classList.toggle('hidden', mode !== 'lancamentos');
+    $('report-heading').textContent = mode === 'lancamentos' ? 'Relatório de lançamentos' : mode === 'cartao' ? 'Consulta de compras no cartão' : 'Balanço financeiro';
     $('report-description').textContent = mode === 'cartao'
       ? 'Consulta específica do módulo Cartões. Os pagamentos das faturas já estão incluídos no balanço consolidado.'
-      : 'Lançamentos e cartão juntos por categoria, com realizado e previsões separados.';
+      : mode === 'lancamentos' ? 'Consulte, filtre e imprima suas receitas e despesas com datas e totais.' : 'Lançamentos e cartão juntos por categoria, com realizado e previsões separados.';
     $('report-card-back').classList.toggle('hidden', mode !== 'cartao');
     $('report-account-label').classList.toggle('hidden', mode === 'cartao');
     $('report-card-label').classList.toggle('hidden', mode !== 'cartao');
-    $('report-overdue-label').classList.toggle('hidden', mode !== 'balanco');
-    $('report-more-filters').classList.toggle('hidden', mode !== 'balanco');
+    $('report-overdue-label').classList.toggle('hidden', mode === 'cartao');
+    $('report-more-filters').classList.toggle('hidden', mode === 'cartao');
+    $('report-category').closest('label').classList.toggle('hidden', mode === 'lancamentos');
+    $('transaction-report-controls').classList.toggle('hidden', mode !== 'lancamentos');
+    $('transaction-report-summary').classList.toggle('hidden', mode !== 'lancamentos');
+    $('report-monthly-heading').classList.toggle('hidden', mode === 'lancamentos');
+    $('report-monthly').closest('.reports-table-wrap').classList.toggle('hidden', mode === 'lancamentos');
     $('report-balance-summary').classList.toggle('hidden', mode !== 'balanco');
     $('report-balance-result').classList.toggle('hidden', mode !== 'balanco');
     $('report-card-summary').classList.toggle('hidden', mode !== 'cartao');
@@ -330,16 +395,27 @@
       const reload = $('report-overdue').checked;
       ['report-account', 'report-card', 'report-category'].forEach(id => { $(id).value = 'all'; });
       $('report-overdue').checked = false;
+      $('transaction-report-kind').value = $('transaction-report-status').value = 'all';
+      $('transaction-report-categories').querySelectorAll('input').forEach(input => { input.checked = false; });
       updateFilterControls();
       if (reload) refresh(); else render();
     });
     ['report-account', 'report-card', 'report-category'].forEach(id => $(id).addEventListener('change', () => render()));
+    ['transaction-report-kind', 'transaction-report-status'].forEach(id => $(id).addEventListener('change', render));
     $('report-refresh').addEventListener('click', () => refresh(true));
     $('report-export').addEventListener('click', () => {
       if (!result || !loadedOptions) return;
       const quote = value => `"${String(value ?? '').replace(/^[=+@-]/, "'$&").replace(/"/g, '""')}"`;
       const decimal = value => Number(value).toFixed(2).replace('.', ',');
-      const rows = mode === 'balanco' ? [
+      const rows = mode === 'lancamentos' ? [
+        ['Relatório de lançamentos', $('report-period-caption').textContent],
+        ['Recebido', 'Pago', 'A receber', 'A pagar'],
+        ['recebidos', 'pagos', 'receber', 'pagar'].map(key => decimal(result.totals[key])), [],
+        ['Vencimento', 'Pagamento / recebimento', 'Descrição', 'Categoria', 'Conta', 'Situação', 'Valor'],
+        ...result.rows.map(item => [dateBR(item.dueDate), dateBR(item.paymentDate), item.description, item.category, item.account,
+          labels[item.lane] + (item.provisional ? ' · Fatura aberta' : ''), decimal(item.value)]),
+        ['Total da listagem', decimal(result.total)]
+      ] : mode === 'balanco' ? [
         ['Balanço do período', dateBR(loadedOptions.start), dateBR(loadedOptions.end)],
         ['Resumo', ...balanceHeadings], ['Total', ...balanceValues(result).map(decimal)],
         ['Resultado realizado', decimal(result.realized)], [],
@@ -362,5 +438,19 @@
       window.print();
     });
   }
-  window.ArolixReports = { open(value) { init(); setMode(value === 'cartao' ? 'cartao' : 'balanco'); refresh(true); } };
+  window.ArolixReports = { open(value, context) {
+    init(); setMode(['cartao','lancamentos'].includes(value) ? value : 'balanco');
+    if (context && mode === 'lancamentos') {
+      $('report-period').value = 'custom'; periodPreset();
+      $('report-start').value = context.start; $('report-end').value = context.end;
+      if (context.account && context.account !== 'all' && !Array.from($('report-account').options).some(option => option.value === context.account)) {
+        $('report-account').add(new Option((window.STATE.contas || []).find(item => item.id === context.account)?.nome || 'Conta selecionada', context.account));
+      }
+      $('report-account').value = context.account || 'all';
+      $('report-overdue').checked = context.lane === 'transportadas';
+      $('transaction-report-kind').value = ['receitas','recebidos'].includes(context.lane) ? 'income' : ['despesas','pagos'].includes(context.lane) ? 'expense' : 'all';
+      $('transaction-report-status').value = ['recebidos','pagos'].includes(context.lane) ? 'paid' : 'pending';
+    }
+    refresh(true);
+  } };
 })();

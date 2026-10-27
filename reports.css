@@ -86,6 +86,18 @@
 .reports-clear-filters:disabled { color:#a1a5b3; cursor:default; }
 .reports-filters :is(button,input,select,summary):focus-visible { outline:3px solid #c7b6ef; outline-offset:3px; }
 .reports-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.transaction-report-controls { display:flex; flex-wrap:wrap; gap:16px; padding:16px 0; align-items:flex-start; }
+.transaction-report-controls>label { display:flex; flex:1 1 180px; flex-direction:column; gap:8px; color:#625776; font-size:13px; font-weight:600; }
+.transaction-report-controls select,.transaction-report-categories summary { width:100%; min-height:44px; box-sizing:border-box; padding:12px; border:1px solid #e3ddf2; border-radius:10px; background:white; font:inherit; color:#443b54; }
+.transaction-report-categories { flex:1 1 230px; font-size:13px; }
+.transaction-report-categories summary { cursor:pointer; }
+#transaction-report-categories { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; padding:12px; max-height:240px; overflow:auto; background:white; border:1px solid #eee9ff; border-radius:10px; }
+#transaction-report-categories label { display:flex; align-items:center; gap:8px; padding:8px; cursor:pointer; }
+#transaction-report-categories input { width:18px; height:18px; accent-color:#7350c8; }
+.transaction-report-table { min-width:980px; }
+.transaction-report-table td { vertical-align:top; }
+.transaction-report-table td:nth-child(2),.transaction-report-table td:nth-child(6) { white-space:nowrap; }
+@media print { .transaction-report-controls { display:none!important; } .transaction-report-table { min-width:0; width:100%; font-size:10px; } .transaction-report-table td { white-space:normal!important; } .transaction-report-table thead { display:table-header-group; } .transaction-report-table tr { break-inside:avoid; } }
 @media(max-width:600px) {
   .arolix-app .reports-panel .reports-filters { padding:16px; gap:16px; }
   .reports-period-row { gap:12px; }

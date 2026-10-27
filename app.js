@@ -4585,7 +4585,14 @@ if (name === 'contas') {
 if (name === 'categorias') {
   UI.renderCategorias();
 }
-if (name === 'relatorios') window.ArolixReports.open(reportMode);
+if (name === 'relatorios') {
+  const context = reportMode === 'lancamentos' ? {
+    start: modoPeriodoLanc === 'custom' ? document.getElementById('lanc-inicio').value : window.ArolixRuntime.localISODate(new Date(mesLancAtual.getFullYear(), mesLancAtual.getMonth(), 1)),
+    end: modoPeriodoLanc === 'custom' ? document.getElementById('lanc-fim').value : window.ArolixRuntime.localISODate(new Date(mesLancAtual.getFullYear(), mesLancAtual.getMonth() + 1, 0)),
+    lane: FILTRO_LANCAMENTOS, account: $(IDS.selectContas)?.value || 'all'
+  } : null;
+  window.ArolixReports.open(reportMode, context);
+}
 
 },
 
