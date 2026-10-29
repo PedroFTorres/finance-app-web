@@ -15,7 +15,7 @@ test('manifest inicia no app existente e ícones PNG têm as dimensões declarad
   }
 });
 test('páginas principais e autenticação usam a mesma instalação e viewport móvel', () => {
-  for (const file of ['app.html','cartao.html','investimentos/index.html','capitalizacao/index.html','index.html','login.html','perfil.html','reset.html','upgrade.html','pagamento-retorno.html']) {
+  for (const file of ['app.html','cartao.html','investimentos/index.html','capitalizacao/index.html','login.html','perfil.html','reset.html','upgrade.html','pagamento-retorno.html']) {
     const html = fs.readFileSync(path.join(root, file),'utf8');
     assert.match(html, /viewport-fit=cover/, file);
     assert.match(html, /rel="manifest"/, file);
@@ -24,6 +24,18 @@ test('páginas principais e autenticação usam a mesma instalação e viewport 
     assert.match(html, /pwa.js\?[^" ]*" defer/, file);
     assert.doesNotMatch(html, /user-scalable=no|maximum-scale=1/, file);
   }
+});
+test('domínio principal apresenta a página pública sem consultar sessão ou desviar para login', () => {
+  const index = fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const sales = fs.readFileSync(path.join(root,'vendas.html'),'utf8');
+  assert.equal(index,sales);
+  assert.match(index,/Tudo mais claro/);
+  assert.match(index,/href="login.html"/);
+  assert.match(index,/href="https:\/\/arolix.com.br\/"/);
+  assert.match(index,/rel="manifest"/);
+  assert.match(index,/viewport-fit=cover/);
+  assert.doesNotMatch(index,/getSession|supabase\.js|location\.replace/);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root,'site.webmanifest'))).start_url,'./app.html');
 });
 function worker(fetch) {
   const handlers = {}, added = [], deleted = [];

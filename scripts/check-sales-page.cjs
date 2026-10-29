@@ -10,7 +10,8 @@ const {chromium}=createRequire(path.join(runtime,'playwright/package.json'))('pl
   const page=await browser.newPage(),errors=[],requests=[];
   page.on('pageerror',error=>errors.push(error.message));
   page.on('request',request=>requests.push(request));
-  await page.goto('http://127.0.0.1:8766/vendas.html');
+  await page.goto('http://127.0.0.1:8766/');
+  assert.equal(new URL(page.url()).pathname,'/');
   for(const width of [1440,1024,768,390,375,320]){
    await page.setViewportSize({width,height:940});
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Overflow em ${width}px`);
@@ -29,6 +30,9 @@ const {chromium}=createRequire(path.join(runtime,'playwright/package.json'))('pl
   for(const anchor of await page.locator('a[href^="#"]').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('href')).filter(href=>href!=='#'))){assert.equal(await page.locator(anchor).count(),1,`Âncora ${anchor}`);}
   assert.equal(await page.getByRole('link',{name:'Já conheço o Arolix. Quero assinar Pro.'}).getAttribute('href'),'upgrade.html');
   assert.equal(await page.getByRole('link',{name:'Experimentar por 5 dias'}).getAttribute('href'),'login.html');
+  assert.equal(await page.getByRole('link',{name:'Entrar',exact:true}).getAttribute('href'),'login.html');
+  assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),'https://arolix.com.br/');
+  assert.equal(await page.locator('script[src*="supabase"]').count(),0);
   assert.ok(requests.every(req=>req.method()==='GET'&&new URL(req.url()).hostname==='127.0.0.1'),'Sem rastreamento, chamadas externas ou criação de cobrança');
   assert.deepEqual(errors,[]);
   console.log('Vendas: seis larguras, abas por teclado, FAQ, links de acesso, sem overflow e sem chamadas externas OK.');
