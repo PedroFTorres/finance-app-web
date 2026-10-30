@@ -1139,6 +1139,18 @@ const CategoriasService = {
   }
 };
 
+  function configurarEditorPagamento(item) {
+    const paid = item?.baixado === true;
+    [IDS.modalTipo,IDS.modalRecorrencia,IDS.modalParcelas].forEach(id => { $(id).disabled = paid; });
+    if (paid) { $(IDS.modalRecorrencia).value='none'; $(IDS.modalParcelas).value=1; }
+    document.getElementById('modal-valor-label').textContent = paid ? 'Valor efetivamente pago / recebido' : 'Valor';
+    document.getElementById('modal-data-label').textContent = paid ? 'Data do pagamento / recebimento' : 'Data';
+    const note=document.getElementById('payment-edit-note');
+    note.classList.toggle('hidden',!paid);
+    note.textContent = item?.baixa_parcial
+      ? 'Pagamento parcial: alterar o valor ajusta o restante em aberto. A categoria e a descrição pertencem ao lançamento original. Para quitar o restante, use Baixar no lançamento pendente.'
+      : 'Você está editando o pagamento realizado. A data de vencimento será preservada, e o extrato será atualizado junto com o lançamento.';
+  }
   const LancService = {
     async fetch(tipo, conta_id='all', inicio, fim) {
       try {
@@ -1250,7 +1262,11 @@ const CategoriasService = {
         const { data, error } = await window.ArolixRuntime.selectAll(q);
         if (error) throw error;
 
-        return (data || []).map(item => ({
+        return Promise.all((data || []).map(async item => {
+          let original = null;
+          try { original = (await window.ArolixPaymentActions.context(supabase,item.id))?.lancamento; }
+          catch (error) { console.warn('Vinculo da baixa parcial indisponivel',error.message); }
+          return {
           id: item.id,
           user_id: item.user_id,
           descricao: item.descricao,
@@ -1258,9 +1274,13 @@ const CategoriasService = {
           data: item.data,
           data_baixa: item.data,
           conta_id: item.conta_id,
-          categoria_nome: tipo === 'receita' ? 'Baixa parcial recebida' : 'Baixa parcial paga',
+          categoria_id: original?.categoria_id || null,
+          descricao_original: original?.descricao || null,
+          baixa_parcial_lancamento_id: original?.id || item.baixa_parcial_lancamento_id || null,
+          categoria_nome: original ? categoriaNome(original.categoria_id) : (tipo === 'receita' ? 'Baixa parcial recebida' : 'Baixa parcial paga'),
           baixado: true,
           baixa_parcial: true
+          };
         }));
       } catch (e) {
         console.error('LancService.fetchBaixasParciais', e);
@@ -2773,43 +2793,20 @@ if (item.transferencia_id) {
     btnCancelar.textContent = "Cancelar Baixa";
     btnCancelar.addEventListener("click", async () => {
       if (!confirm("Cancelar baixa?")) return;
-
-      const { data: movs } = await window.ArolixRuntime.selectAll(supabase
-        .from("movimentacoes")
-        .select("id")
-        .eq("lancamento_id", item.id)
-        .eq("user_id", STATE.user.id));
-
-      if (!movs || movs.length === 0) {
-        alert("Nenhuma movimentação encontrada.");
-        return;
-      }
-
-      for (const m of movs) {
-        await supabase
-          .from("movimentacoes")
-          .delete()
-          .eq("id", m.id)
-          .eq("user_id", STATE.user.id);
-      }
-
-      await removeComprovantes(comprovantes.map(arquivo => arquivo.path));
-
-      await supabase
-        .from(tipo === "receita" ? "receitas" : "despesas")
-        .update({
-          baixado: false,
-          data_baixa: null,
-          comprovantes: [],
-          comprovante_path: null,
-          comprovante_nome: null,
-          comprovante_uploaded_at: null
-        })
-        .eq("id", item.id)
-        .eq("user_id", STATE.user.id);
-
-      await App.refreshLancamentos();
-      await App.renderExtrato();
+      if (btnCancelar.disabled) return;
+      btnCancelar.disabled = true;
+      let persisted = false;
+      try {
+        await window.ArolixPaymentActions.change(supabase,{tipo,item,action:'cancelar'});
+        persisted = true;
+        await removeComprovantes(comprovantes.map(arquivo => arquivo.path));
+        await ContasService.load();
+        await App.refreshLancamentos();
+        await App.renderExtrato();
+      } catch (error) {
+        console.error('Cancelar baixa',error);
+        alert(persisted ? 'Baixa cancelada. Reabra a pagina para atualizar a tela; nao repita a operacao.' : friendlySaveError(error));
+      } finally { btnCancelar.disabled = false; }
     });
     right.appendChild(btnCancelar);
   }
@@ -2819,6 +2816,7 @@ if (item.transferencia_id) {
 },
     // open add modal (clean)
    openAddModal() {
+  configurarEditorPagamento(null);
   document.getElementById("editar-comprovantes-box")?.classList.add("hidden");
   const modal = $(IDS.modalAdd);
   if (!modal) return;
@@ -2943,7 +2941,11 @@ abrirModalExcluirRecorrencia(item, tipo) {
 
   // open modal to edit (CORRIGIDO)
 openModalEdit(item, tipo) {
-  if (item.recorrencia_id) {
+  if (item.baixa_parcial && !item.baixa_parcial_lancamento_id) {
+    alert('Nao foi possivel identificar com seguranca o lancamento original deste pagamento parcial. Nenhum valor foi alterado.');
+    return;
+  }
+  if (item.recorrencia_id && !item.baixado) {
     UI.abrirModalEscopo(item, tipo);
     return;
   }
@@ -2955,6 +2957,7 @@ openModalEditSemEscopo(item, tipo) {
   const modal = $(IDS.modalAdd);
   if (!modal) return;
   modal.querySelector("h3").textContent = "Editar lançamento";
+  configurarEditorPagamento(item);
 
   const anexosBox = document.getElementById("editar-comprovantes-box");
   if (anexosBox) {
@@ -2966,15 +2969,16 @@ openModalEditSemEscopo(item, tipo) {
   $(IDS.modalTipo).value = tipo;
 
   $(IDS.modalDesc).value =
-    (item.descricao || '').replace(/\s*\(\d+\/\d+\)$/, '');
+    item.baixa_parcial ? (item.descricao_original || (item.descricao || '').split(' (Baixa parcial,')[0]) :
+      item.baixado ? (item.descricao || '') : (item.descricao || '').replace(/\s*\(\d+\/\d+\)$/, '');
 
   $(IDS.modalValor).value = item.valor || '';
-  $(IDS.modalData).value = item.data || isoToday();
+  $(IDS.modalData).value = (item.baixado ? item.data_baixa : item.data) || isoToday();
 
   UI.populateSelects();
 
   if (item.conta_id) $(IDS.modalConta).value = item.conta_id;
-  if (item.categoria_id) $(IDS.modalCategoria).value = item.categoria_id;
+  $(IDS.modalCategoria).value = item.categoria_id || '';
 
   // ========================= // BOTÃO SALVAR (EDIÇÃO)// =========================
   const saveBtn = $(IDS.modalSave);
@@ -2989,7 +2993,7 @@ openModalEditSemEscopo(item, tipo) {
   const btnExcluir = document.getElementById("btn-excluir-lancamento");
 
   if (btnExcluir) {
-    btnExcluir.classList.remove("hidden");
+    btnExcluir.classList.toggle("hidden", item.baixado === true);
 
     btnExcluir.onclick = async () => {
 
@@ -3027,6 +3031,7 @@ openModalEditSemEscopo(item, tipo) {
 },
 
     closeAddModal() {
+      configurarEditorPagamento(null);
       const modal = $(IDS.modalAdd); if (!modal) return;
       modal.classList.add('hidden'); modal.setAttribute('aria-hidden','true');
       const saveBtn = $(IDS.modalSave); if (saveBtn) {
@@ -3137,6 +3142,18 @@ if (!hasFinancialAccess()) {
       alert('Preencha descrição, valor e data.');
       return;
     }
+    if (saveBtn?.dataset.edit === 'true' && saveBtn.dataset.baixado === 'true') {
+      if (valor <= 0) { alert('Informe um valor positivo.'); return; }
+      await window.ArolixPaymentActions.change(supabase,{
+        tipo:saveBtn.dataset.editTipo,
+        item:{id:saveBtn.dataset.editId,baixa_parcial:saveBtn.dataset.baixaParcial === 'true'},
+        action:'editar',patch:{descricao,valor,data,conta_id,categoria_id}
+      });
+      UI.closeAddModal();
+      try { await ContasService.load(); await App.refreshLancamentos(); await App.renderExtrato(); }
+      catch (error) { console.error(error); alert('Pagamento atualizado. Reabra a pagina para atualizar os saldos; nao repita a alteracao.'); }
+      return;
+    }
 
      // ========================= // UX — aviso se lançamento já foi baixado // =========================
      
@@ -3174,12 +3191,6 @@ if (saveBtn && saveBtn.dataset.edit === 'true' && saveBtn.dataset.editId) {
   const dataBase = saveBtn.dataset.dataBase;
 
   const tabelaLanc = tipo === "receita" ? "receitas" : "despesas";
-  const isBaixaParcial = saveBtn.dataset.baixaParcial === 'true';
-
-  if (isBaixaParcial) {
-    alert('Baixa parcial não possui categoria própria para editar. Edite a categoria do lançamento original.');
-    return;
-  }
 
   const patchBase = {
     descricao,
@@ -5130,7 +5141,9 @@ document.getElementById("confirmar-baixa")?.addEventListener("click", async () =
           (juros ? ` (+Juros ${fmtMoney(juros)})` : "") +
           (desconto ? ` (-Desc ${fmtMoney(desconto)})` : ""),
         data: dataBaixa,
-        lancamento_id: baixaParcial ? null : lancamento.id
+        lancamento_id: baixaParcial ? null : lancamento.id,
+        baixa_parcial_lancamento_id: baixaParcial ? lancamento.id : null,
+        baixa_parcial_ajuste: baixaParcial ? Number((juros-desconto).toFixed(2)) : 0
       }]);
 
     // 🔒 trata erro de duplicidade do UNIQUE no banco

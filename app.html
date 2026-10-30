@@ -527,7 +527,7 @@
       </div>
 
       <div style="display:flex;flex-direction:column;">
-        <label>Valor</label>
+        <label id="modal-valor-label" for="modal-valor">Valor</label>
         <input id="modal-valor" type="number" step="0.01" placeholder="0.00"/>
       </div>
 
@@ -537,7 +537,7 @@
       </div>
 
       <div>
-        <label>Data</label>
+        <label id="modal-data-label" for="modal-data">Data</label>
         <input id="modal-data" type="date" />
       </div>
 
@@ -568,6 +568,7 @@
         <input id="modal-parcelas" type="number" min="1" value="1" />
       </div>
     </div>
+    <p id="payment-edit-note" class="reports-note hidden" role="status"></p>
     <section id="editar-comprovantes-box" class="receipt-edit-box hidden" aria-label="Comprovantes do lançamento">
       <div>
         <strong>Comprovantes</strong>
@@ -925,7 +926,8 @@
   <script src="reports-rules.js?v=20261027-2"></script>
   <script src="reports.js?v=20261027-3"></script>
   <script src="dashboard-overview.js?v=20261026-1"></script>
-  <script src="app.js?v=20261027-3"></script>
+  <script src="payment-actions.js?v=20261030-1"></script>
+  <script src="app.js?v=20261030-1"></script>
   <link rel="stylesheet" href="onboarding/onboarding.css?v=20260809-1">
   <script src="onboarding/onboarding.js?v=20261012-1"></script>
 </body>
