@@ -21,6 +21,10 @@ for (const file of files) {
     }
     for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
       if (match[1].includes('src=')) continue;
+      if (/type=["']application\/ld\+json["']/.test(match[1])) {
+        assert.doesNotThrow(()=>JSON.parse(match[2]),'JSON-LD inválido');
+        continue;
+      }
       espree.parse(match[2], {ecmaVersion:'latest',sourceType:match[1].includes('module')?'module':'script'});
     }
   });

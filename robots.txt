@@ -1,0 +1,10 @@
+# Search discovery only. Authentication and database policies protect user data.
+User-agent: *
+Allow: /
+Disallow: /tests/
+Disallow: /scripts/
+Disallow: /supabase/
+Disallow: /node_modules/
+Disallow: /.tools/
+
+Sitemap: https://arolix.com.br/sitemap.xml

@@ -12,6 +12,13 @@ const {chromium}=createRequire(path.join(runtime,'playwright/package.json'))('pl
   page.on('request',request=>requests.push(request));
   await page.goto('http://127.0.0.1:8766/');
   assert.equal(new URL(page.url()).pathname,'/');
+  assert.match(await page.title(),/Aplicativo de controle financeiro pessoal/);
+  assert.match(await page.locator('.hero-description').innerText(),/contas a pagar e a receber/);
+  const schema=JSON.parse(await page.locator('script[type="application/ld+json"]').textContent());
+  assert.equal(schema['@graph'][0].name,'Arolix');
+  const sitemap=await page.request.get('http://127.0.0.1:8766/sitemap.xml');
+  assert.equal(sitemap.status(),200);
+  assert.equal(await page.evaluate(xml=>new DOMParser().parseFromString(xml,'text/xml').querySelector('parsererror')===null,await sitemap.text()),true);
   for(const width of [1440,1024,768,390,375,320]){
    await page.setViewportSize({width,height:940});
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Overflow em ${width}px`);
@@ -35,6 +42,12 @@ const {chromium}=createRequire(path.join(runtime,'playwright/package.json'))('pl
   assert.equal(await page.locator('script[src*="supabase"]').count(),0);
   assert.ok(requests.every(req=>req.method()==='GET'&&new URL(req.url()).hostname==='127.0.0.1'),'Sem rastreamento, chamadas externas ou criação de cobrança');
   assert.deepEqual(errors,[]);
+  const noScript=await browser.newPage({javaScriptEnabled:false});
+  await noScript.goto('http://127.0.0.1:8766/');
+  assert.equal(await noScript.locator('h1').isVisible(),true);
+  assert.match(await noScript.locator('body').innerText(),/controle financeiro pessoal/);
+  assert.equal(await noScript.getByRole('link',{name:'Entrar',exact:true}).getAttribute('href'),'login.html');
+  await noScript.close();
   console.log('Vendas: seis larguras, abas por teclado, FAQ, links de acesso, sem overflow e sem chamadas externas OK.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
