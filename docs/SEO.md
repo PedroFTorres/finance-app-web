@@ -35,6 +35,14 @@ Investimentos continuam privados e não são anunciados como parte do Pro.
 Não há token de verificação inventado nem solicitação automática de indexação.
 SEO não garante indexação, posição ou prazo. Não é necessário comprar anúncios para indexar.
 
+## Páginas complementares publicadas
+
+- /controle-cartao-credito.html: apresentação do recurso, funcionamento, limitações e oferta.
+- /como-controlar-compras-parceladas.html: guia educativo, exemplo conferido de seis meses,
+  checklist e referência ao Banco Central. Os dados do exemplo são fictícios.
+- Ambas têm canonical próprio, links da página principal e entrada no sitemap.
+- A primeira página não promete importação bancária, alertas automáticos ou quitação pelo app.
+
 ## Conteúdo futuro
 
 Criar guias originais e úteis, ligados à página principal, para necessidades específicas:
