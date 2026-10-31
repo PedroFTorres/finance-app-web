@@ -17,6 +17,24 @@ const fixture=`(()=>{
  window.STATE={user:{id:'owner'},categorias:[{id:'gym',nome:'Academia'},{id:'food',nome:'Alimentação'},{id:'salary',nome:'Salários'},{id:'card',nome:'Cartão de Crédito'}],contas:[{id:'bank',nome:'Banco teste'}]};
  window.supabase={from(table){let filters=[],range;return {select(){return this},order(){return this},range(a,b){range=[a,b+1];return this},eq(k,v){filters.push(r=>r[k]===v);return this},neq(k,v){filters.push(r=>r[k]!==v);return this},gte(k,v){filters.push(r=>r[k]>=v);return this},lte(k,v){filters.push(r=>r[k]<=v);return this},in(k,v){filters.push(r=>v.includes(r[k]));return this},then(resolve){let rows=(tables[table]||[]).filter(r=>filters.every(f=>f(r)));if(range)rows=rows.slice(...range);return Promise.resolve({data:structuredClone(rows),error:null}).then(resolve)}}}};
  window.STATE.contas.push({id:'invest',nome:'Banco teste',tipo_conta:'investimento'});
+ window.testAddPartialReportRows=()=>{
+  window.STATE.categorias.push({id:'jewels',nome:'Joias e Relógios'});
+  tables.despesas.push(
+   {id:'earlier',user_id:'owner',descricao:'Fabio Furtado (2/4)',valor:633.33,baixado:true,data:'2026-10-01',data_baixa:'2026-10-01',categoria_id:'jewels',conta_id:'bank'},
+   {id:'bracelet',user_id:'owner',descricao:'Compra Pulseira',valor:122.60,baixado:true,data:'2026-11-01',data_baixa:'2026-10-31',categoria_id:'jewels',conta_id:'bank'},
+   {id:'outside',user_id:'owner',descricao:'Conta futura',valor:100,baixado:false,data:'2027-01-01',categoria_id:'gym',conta_id:'bank'});
+  tables.movimentacoes.push(
+   {id:'partial',user_id:'owner',baixa_parcial_lancamento_id:'bracelet',descricao:'Compra Pulseira (Baixa parcial, restante R$ 122,60)',valor:510.73,tipo:'debito',data:'2026-10-30',conta_id:'bank'},
+   {id:'final',user_id:'owner',lancamento_id:'bracelet',descricao:'Compra Pulseira',valor:122.60,tipo:'debito',data:'2026-10-31',conta_id:'bank'},
+   {id:'legacy',user_id:'owner',descricao:'Conta futura (Baixa parcial, restante 100)',valor:25,tipo:'debito',data:'2026-10-15',conta_id:'bank'});
+ };
+ window.supabase.rpc=async(name,args)=>{
+  if(name!=='arolix_contexto_baixa_parcial')throw new Error('Unexpected write RPC');
+  if(window.failPartialRead)return {error:{code:'42501',message:'Read blocked'}};
+  const movimento=tables.movimentacoes.find(item=>item.id===args.p_movimento_id);
+  const lancamento=tables.despesas.find(item=>item.id===(movimento.baixa_parcial_lancamento_id||'outside'));
+  return {data:{movimento,lancamento,tipo:'despesa'},error:null};
+ };
  window.testAddReportRows=()=>{for(let i=0;i<75;i++)tables.despesas.push({id:'extra'+i,user_id:'owner',descricao:'Despesa de teste '+i,valor:5,baixado:false,data:'2026-10-31',categoria_id:'gym',conta_id:'bank'});};
  document.querySelector('[data-screen="relatorios"]').classList.remove('hidden');
  window.ArolixReports.open('balanco');
@@ -31,7 +49,7 @@ const fixture=`(()=>{
    const file=path.resolve(root,'.'+url.pathname);if(!file.startsWith(root+'/')||!fs.existsSync(file))return route.fulfill({status:404,body:''});
    let content=fs.readFileSync(file);
    if(url.pathname==='/app.js')content=fixture;
-   if(url.pathname==='/app.html')content=content.toString().replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,tag=>/src="(?:interface|runtime-utils|reports-rules|reports|report-print|print|app)\.js/.test(tag)?tag:'');
+   if(url.pathname==='/app.html')content=content.toString().replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,tag=>/src="(?:interface|runtime-utils|reports-rules|reports|report-print|print|payment-actions|app)\.js/.test(tag)?tag:'');
    return route.fulfill({contentType:file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'application/javascript',body:content});
   });
   await page.goto('https://balance.test/app.html');
@@ -41,6 +59,10 @@ const fixture=`(()=>{
     await popup.waitForFunction(()=>Object.hasOwn(window,'reportReady'));assert.equal(await popup.evaluate(()=>Promise.race([window.reportReady,new Promise(resolve=>setTimeout(()=>resolve(document.documentElement.dataset.printStage),10000))])),true);
     assert.equal(await popup.locator('.print-logo').evaluate(img=>img.complete&&img.naturalWidth>0),true);
     assert.equal(await popup.locator('.reports-filters').count(),0);
+    if(name==='baixa-parcial'){
+      const text=await popup.locator('body').innerText();
+      assert.match(text,/510,73/);assert.match(text,/1.266,66/);
+    }
     await popup.pdf({path:'/private/tmp/arolix-professional-'+name+'.pdf',preferCSSPageSize:true,printBackground:true});
     await popup.close();
   };
@@ -122,6 +144,27 @@ const fixture=`(()=>{
   assert.equal(await legacy.locator('.print-header h1').innerText(),'Extrato da Conta');
   assert.equal(await legacy.locator('.print-logo').evaluate(img=>img.naturalWidth>0),true);
   await legacy.close();
+  await page.evaluate(()=>{window.testAddPartialReportRows();window.ArolixReports.open('lancamentos',{start:'2026-10-01',end:'2026-10-31',lane:'pagos',account:'all'});});
+  await page.waitForFunction(()=>document.querySelector('#transaction-report-categories input[value="jewels"]'));
+  await page.locator('.transaction-report-categories summary').click();
+  await page.locator('#transaction-report-categories input[value="jewels"]').check();
+  assert.equal(await page.locator('.transaction-report-table tbody tr').count(),3);
+  const paidRows=await page.locator('.transaction-report-table tbody tr').allTextContents();
+  assert.match(paidRows[1],/30\/10\/2026.*Compra Pulseira.*510,73/);
+  assert.match(paidRows[2],/31\/10\/2026.*Compra Pulseira.*122,60/);
+  assert.match(await page.locator('#transaction-report-summary').innerText(),/1.266,66/);
+  const partialCsvWait=page.waitForEvent('download');await page.locator('#report-export').click();
+  let partialCsv='';for await(const chunk of await (await partialCsvWait).createReadStream())partialCsv+=chunk.toString();
+  assert.match(partialCsv,/510,73/);assert.match(partialCsv,/1266,66/);
+  await printPDF('baixa-parcial');
+  // A legacy payment is attributed even though its original falls outside the query period.
+  await page.locator('#transaction-report-categories input[value="jewels"]').uncheck();
+  await page.locator('#transaction-report-categories input[value="gym"]').check();
+  assert.match(await page.locator('.transaction-report-table').innerText(),/Conta futura \(Baixa parcial/);
+  // Backend permission/network failures must not produce a seemingly complete report.
+  await page.evaluate(()=>{window.failPartialRead=true;});await page.locator('#report-refresh').click();
+  await page.waitForFunction(()=>document.getElementById('report-status').classList.contains('reports-error'));
+  assert.equal(await page.locator('#report-export').isDisabled(),true);
   console.log('Balanço: categoria única, cartão + lançamentos pagos, juros, previsões, sem detalhamento duplicado, filtros, CSV e mobile OK.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

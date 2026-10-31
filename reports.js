@@ -99,6 +99,23 @@
       all(options.overdue ? base('cartao_faturas') : base('cartao_faturas').gte('ano', Number(options.start.slice(0, 4))).lte('ano', Number(options.end.slice(0, 4)))),
       all(base('cartoes_credito'))
     ]);
+    // Use the same owned, MFA-protected lookup as the payment editor. Legacy
+    // descriptions are resolved by the server only when the match is unique.
+    // This is read-only; never rewrite historical payments while reporting.
+    const partialContexts = await Promise.all(movements.filter(item => !item.lancamento_id && !item.transferencia_id &&
+      (item.baixa_parcial_lancamento_id || /baixa parcial/i.test(item.descricao || ''))).map(async item => {
+      try { return await window.ArolixPaymentActions.context(client,item.id); }
+      catch (error) {
+        // Do not hide an unresolvable payment or guess its category.
+        if (error.code !== 'P0001' || !/Nao foi possivel identificar com seguranca|Lancamento original nao encontrado/.test(error.message || '')) throw error;
+        console.warn('Categoria da baixa parcial indisponivel',error.message);
+        return {movimento:item,lancamento:null};
+      }
+    }));
+    const partialOrigins = tipo => partialContexts.filter(item => item.tipo === tipo && item.lancamento).map(item => item.lancamento);
+    const partialLinks = new Map(partialContexts.filter(item => item.lancamento).map(item => [item.movimento.id,item.lancamento.id]));
+    const reportMovements = movements.map(item => partialLinks.has(item.id)
+      ? {...item,baixa_parcial_lancamento_id:partialLinks.get(item.id)} : item);
     // Resolve movements even when the original due date falls outside the report.
     const linkedIds = [...new Set(movements.map(item => item.lancamento_id).filter(Boolean))];
     const resolve = async table => {
@@ -108,7 +125,7 @@
     };
     const [linkedIncome, linkedExpense] = await Promise.all([resolve('receitas'), resolve('despesas')]);
     const unique = items => Array.from(new Map(items.map(item => [item.id, item])).values());
-    const expenses = unique([...pendingExpense, ...paidExpense, ...linkedExpense]);
+    const expenses = unique([...pendingExpense, ...paidExpense, ...linkedExpense, ...partialOrigins('despesa')]);
     const related = async (table, column, ids) => {
       const { data, error } = await window.ArolixRuntime.selectIn(batch => base(table).in(column,batch).order('id'), ids);
       if (error) throw error;
@@ -137,8 +154,9 @@
       const last = new Date(year,month,0).getDate();
       return all(base('cartao_lancamentos').eq('cartao_id',cardId).gte('data_fatura',`${span.start}-01`).lte('data_fatura',`${span.end}-${String(last).padStart(2,'0')}`));
     }));
-    return { income: unique([...pendingIncome, ...paidIncome, ...linkedIncome]),
-      expenses, movements, purchases:unique([...purchases,...paymentReferences,...extraPurchases.flat()]), invoices:allInvoices, cards,
+    return { income: unique([...pendingIncome, ...paidIncome, ...linkedIncome, ...partialOrigins('receita')]),
+      expenses, movements:reportMovements, unresolvedPartials:partialContexts.filter(item => !item.lancamento).length,
+      purchases:unique([...purchases,...paymentReferences,...extraPurchases.flat()]), invoices:allInvoices, cards,
       categories: window.STATE.categorias || [], accounts: (window.STATE.contas || []).map(account => ({...account, nome: window.ArolixRuntime.accountLabel(account)})) };
   }
 
@@ -232,6 +250,7 @@
     $('report-note').textContent = mode === 'cartao'
       ? 'Compras e parcelas por mês de fatura, com a data original da compra no detalhamento. Pagamentos da fatura não entram nesta visão. Este total não deve ser somado ao relatório de despesas pagas.'
       : 'Resumo financeiro pessoal: recebido e pago usam a data da baixa; previsões usam o vencimento. As categorias reúnem lançamentos e compras do cartão, sem somar a fatura duas vezes. Pagamentos parciais do cartão são rateados proporcionalmente. Juros, descontos e ajustes preservam o valor efetivamente pago. O resultado não é lucro contábil nem saldo bancário; a previsão considera apenas o que ainda falta receber e pagar. Transferências e movimentações do módulo de investimentos ficam fora.';
+    appendPartialWarning();
     if (mode === 'balanco' && options.account !== 'all') {
       $('report-note').textContent += ' Faturas abertas ainda sem conta de pagamento definida aparecem em Todas as contas.';
     }
@@ -315,12 +334,19 @@
       card.append(node('span', labels[lane]), node('strong', fmt(total))); summary.appendChild(card);
     });
     $('report-note').textContent = 'Pagos e recebidos são selecionados pela data da baixa e incluem juros e descontos registrados. Pendentes são selecionados pelo vencimento. Faturas aparecem uma única vez, sem somar novamente suas compras. Transferências e aplicações não são receitas ou despesas. O total da listagem soma os valores exibidos, não representa saldo.';
+    appendPartialWarning();
     $('report-category-heading').textContent = 'Lançamentos do período';
     const content = $('report-content'); content.replaceChildren();
     if (result.rows.length) content.appendChild(transactionTable(result.rows));
     else content.appendChild(node('p', 'Nenhum lançamento encontrado para estes filtros.', 'reports-empty'));
     $('report-export').disabled = $('report-print').disabled = !result.rows.length;
     updateFilterControls();
+  }
+
+  function appendPartialWarning() {
+    if (mode !== 'cartao' && snapshot?.unresolvedPartials) {
+      $('report-note').textContent += ` Atenção: ${snapshot.unresolvedPartials} baixa(s) parcial(is) sem vínculo seguro com o lançamento original aparecem sem categoria em Todas as categorias. Não foi atribuída categoria por suposição.`;
+    }
   }
 
   async function refresh(force = false) {

@@ -60,14 +60,17 @@
       const represented = new Set();
       for (const movement of data.movements || []) {
         if (!inside(movement.data, start, end) || movement.tipo !== (income ? 'credito' : 'debito')) continue;
-        const original = byId.get(movement.lancamento_id);
-        const partial = !movement.lancamento_id && /baixa parcial/i.test(movement.descricao || '');
+        const partial = !movement.lancamento_id && !movement.transferencia_id &&
+          (Boolean(movement.baixa_parcial_lancamento_id) || /baixa parcial/i.test(movement.descricao || ''));
+        const original = byId.get(partial ? movement.baixa_parcial_lancamento_id : movement.lancamento_id);
         if (!original && !partial) continue; // Transfers and investments are not income/expense.
-        if (original) represented.add(original.id);
+        // A partial payment must not suppress the separate final settlement.
+        if (original && !partial) represented.add(original.id);
         rows.push(normalize(original || movement, {
           id: movement.id, value: money(movement.valor), date: movement.data,
           accountId: movement.conta_id, account: accounts.get(movement.conta_id) || 'Sem conta',
-          ...(partial ? { categoryId: 'partial', category: 'Baixas parciais sem categoria registrada' } : {})
+          ...(partial ? { description: movement.descricao || original?.descricao || 'Baixa parcial', partialPayment: true } : {}),
+          ...(partial && !original ? { categoryId: 'partial', category: 'Baixas parciais sem categoria registrada' } : {})
         }));
       }
       for (const item of records) {

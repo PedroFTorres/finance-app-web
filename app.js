@@ -4721,7 +4721,7 @@ const despesasPeriodo = [
 if (FILTRO_LANCAMENTOS === "pagos" || FILTRO_LANCAMENTOS === "recebidos") {
 
   r.sort((a, b) => new Date(a.data_baixa) - new Date(b.data_baixa));
-  d.sort((a, b) => new Date(a.data_baixa) - new Date(b.data_baixa));
+  despesasPeriodo.sort((a, b) => new Date(a.data_baixa || a.data) - new Date(b.data_baixa || b.data));
 
 } else {
 

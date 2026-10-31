@@ -13,12 +13,22 @@ const fixture=`
   window.calls=[];window.refreshes=0;window.failPayment=false;
   window.supabase={rpc:async(name,args)=>{window.calls.push({name,args});await new Promise(r=>setTimeout(r,30));return window.failPayment?{error:{message:'Falha de teste: nada alterado'}}:{data:{original_id:'original',restante:233.33},error:null};}};
   ContasService.load=async()=>STATE.contas;
+  const realRefresh=App.refreshLancamentos.bind(App);
   App.refreshLancamentos=async()=>{window.refreshes++;};App.renderExtrato=async()=>{};
   window.testUI=UI;
   document.getElementById('modal-save-lanc').onclick=()=>UI.handleSaveModal();
   window.partialItem={id:'movement',descricao:'Exemplo (Baixa parcial, restante R$ 122,60)',descricao_original:'Exemplo',valor:510.73,
     data:'2026-10-30',data_baixa:'2026-10-30',baixado:true,baixa_parcial:true,baixa_parcial_lancamento_id:'original',conta_id:'bank',categoria_id:'gym'};
   window.fullItem={id:'original-full',descricao:'Parcela (2/6)',valor:105.30,data:'2026-10-01',data_baixa:'2026-10-20',baixado:true,recorrencia_id:'series',conta_id:'bank',categoria_id:'gym'};
+  window.runPaymentOrderTest=async()=>{
+    UI.closeAddModal();FILTRO_LANCAMENTOS='pagos';modoPeriodoLanc='custom';
+    document.getElementById('lanc-inicio').value='2026-10-01';document.getElementById('lanc-fim').value='2026-10-31';
+    calcularResumoFinanceiroPeriodo=async()=>({totalRecebido:0,totalPago:633.33,saldoPendencias:0,totalCartoesAbertos:0,
+      pendentesReceita:[],pendentesDespesa:[],cartoesPendentes:[],receitasRecebidas:[],despesasPagas:[],receitasTransportadas:[],despesasTransportadas:[],cartoesTransportados:[]});
+    LancService.fetchBaixadosComValorReal=async tipo=>tipo==='despesa'?[{...window.fullItem,id:'final',descricao:'Compra Pulseira',valor:122.60,data_baixa:'2026-10-31'}]:[];
+    LancService.fetchBaixasParciais=async tipo=>tipo==='despesa'?[{...window.partialItem,valor:510.73}]:[];
+    await realRefresh();
+  };
   document.querySelectorAll('[data-screen]').forEach(el=>el.classList.toggle('hidden',el.dataset.screen!=='lanc'));
   document.getElementById('list-pendencias').replaceChildren(UI._createLancItem(window.partialItem,'despesa'));
 `;
@@ -74,6 +84,9 @@ const fixture=`
   assert.equal(await page.locator('#modal-tipo').isEnabled(),true);
   assert.equal(await page.locator('#modal-recorrencia').isEnabled(),true);
   assert.equal(await page.locator('#payment-edit-note').isVisible(),false);
+  await page.evaluate(()=>window.runPaymentOrderTest());
+  const ordered=await page.locator('#list-despesas li').allTextContents();
+  assert.equal(ordered.length,2);assert.match(ordered[0],/30\/10\/2026/);assert.match(ordered[1],/31\/10\/2026/);
   assert.deepEqual(errors,[]);
   console.log('Payment editor: actual app handlers, partial/full editing, cancel by movement ID, error recovery, double click, labels and mobile OK. Only mocked backend.');
  }finally{await browser.close();}
