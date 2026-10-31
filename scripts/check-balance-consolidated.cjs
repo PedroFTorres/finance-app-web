@@ -17,6 +17,12 @@ const fixture=`(()=>{
  window.STATE={user:{id:'owner'},categorias:[{id:'gym',nome:'Academia'},{id:'food',nome:'Alimentação'},{id:'salary',nome:'Salários'},{id:'card',nome:'Cartão de Crédito'}],contas:[{id:'bank',nome:'Banco teste'}]};
  window.supabase={from(table){let filters=[],range;return {select(){return this},order(){return this},range(a,b){range=[a,b+1];return this},eq(k,v){filters.push(r=>r[k]===v);return this},neq(k,v){filters.push(r=>r[k]!==v);return this},gte(k,v){filters.push(r=>r[k]>=v);return this},lte(k,v){filters.push(r=>r[k]<=v);return this},in(k,v){filters.push(r=>v.includes(r[k]));return this},then(resolve){let rows=(tables[table]||[]).filter(r=>filters.every(f=>f(r)));if(range)rows=rows.slice(...range);return Promise.resolve({data:structuredClone(rows),error:null}).then(resolve)}}}};
  window.STATE.contas.push({id:'invest',nome:'Banco teste',tipo_conta:'investimento'});
+ window.testAddCategoryChoices=()=>{
+  for(let i=0;i<30;i++){
+   const id='category-'+i,nome=i===0?'Educação':'Categoria '+String(i).padStart(2,'0');
+   window.STATE.categorias.push({id,nome});tables.despesas.push({id:'choice-'+i,user_id:'owner',categoria_id:id,nome,valor:1,baixado:true,data:'2026-10-10',data_baixa:'2026-10-10',conta_id:'bank'});
+  }
+ };
  window.testAddPartialReportRows=()=>{
   window.STATE.categorias.push({id:'jewels',nome:'Joias e Relógios'});
   tables.despesas.push(
@@ -53,6 +59,7 @@ const fixture=`(()=>{
    return route.fulfill({contentType:file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'application/javascript',body:content});
   });
   await page.goto('https://balance.test/app.html');
+  const openCategories=async()=>{if(!await page.locator('.transaction-report-categories').evaluate(el=>el.open))await page.locator('.transaction-report-categories summary').click();};
   const printPDF=async name=>{
     const opened=page.waitForEvent('popup');await page.locator('#report-print').click();const popup=await opened;
     await popup.evaluate(()=>{window.print=()=>{};});
@@ -158,9 +165,40 @@ const fixture=`(()=>{
   assert.match(partialCsv,/510,73/);assert.match(partialCsv,/1266,66/);
   await printPDF('baixa-parcial');
   // A legacy payment is attributed even though its original falls outside the query period.
+  await openCategories();
   await page.locator('#transaction-report-categories input[value="jewels"]').uncheck();
   await page.locator('#transaction-report-categories input[value="gym"]').check();
   assert.match(await page.locator('.transaction-report-table').innerText(),/Conta futura \(Baixa parcial/);
+  await page.evaluate(()=>window.testAddCategoryChoices());await page.locator('#report-refresh').click();
+  await page.waitForFunction(()=>document.querySelector('#transaction-report-categories input[value="category-0"]'));
+  await openCategories();
+  await page.locator('#transaction-report-category-search').fill('educacao');
+  assert.equal(await page.locator('#transaction-report-categories label:visible').count(),1);
+  await page.locator('#transaction-report-categories input[value="category-0"]').check();
+  assert.equal(await page.locator('#transaction-report-categories input[value="gym"]').isChecked(),true);
+  await page.locator('#transaction-report-category-search').fill('nada encontrado');
+  assert.equal(await page.locator('#transaction-report-category-empty').isVisible(),true);
+  await page.locator('#transaction-report-category-search').fill('');
+  await page.locator('#transaction-report-category-clear').click();
+  assert.equal(await page.locator('#transaction-report-categories input:checked').count(),0);
+  await page.locator('#transaction-report-categories input[value="jewels"]').check();
+  assert.equal(await page.locator('#transaction-report-category-caption').innerText(),'Joias e Relógios');
+  for(const width of [1440,768,390]){
+    await page.setViewportSize({width,height:1000});await openCategories();
+    const geometry=await page.locator('#transaction-report-categories label').first().evaluate(label=>{
+      const row=label.getBoundingClientRect(),box=label.querySelector('input').getBoundingClientRect(),text=label.querySelector('span').getBoundingClientRect();
+      return {height:row.height,gap:text.left-box.right,center:Math.abs((box.top+box.height/2)-(text.top+text.height/2)),direction:getComputedStyle(label).flexDirection};
+    });
+    assert.equal(geometry.direction,'row');assert.ok(geometry.height<=46);assert.ok(geometry.gap>=8);assert.ok(geometry.center<3);
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await page.locator('.reports-filters').screenshot({path:'/private/tmp/arolix-report-filters-'+width+'.png'});
+    if(width===1440)await page.screenshot({path:'/private/tmp/arolix-report-categories-desktop.png',fullPage:true});
+  }
+  await page.locator('#transaction-report-category-search').focus();await page.keyboard.press('Escape');
+  assert.equal(await page.locator('.transaction-report-categories').evaluate(el=>el.open),false);
+  assert.equal(await page.locator('.transaction-report-categories summary').evaluate(el=>el===document.activeElement),true);
+  await openCategories();await page.locator('#report-heading').click();
+  assert.equal(await page.locator('.transaction-report-categories').evaluate(el=>el.open),false);
   // Backend permission/network failures must not produce a seemingly complete report.
   await page.evaluate(()=>{window.failPartialRead=true;});await page.locator('#report-refresh').click();
   await page.waitForFunction(()=>document.getElementById('report-status').classList.contains('reports-error'));

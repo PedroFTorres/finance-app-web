@@ -308,6 +308,8 @@
   }
   function renderTransactions(options) {
     const container = $('transaction-report-categories');
+    const scroll = container.scrollTop;
+    const focused = container.contains(document.activeElement) ? document.activeElement.value : null;
     const checked = new Set(options.categories);
     const available = window.ArolixReportsRules.buildTransactions(snapshot, {...options, categories: []});
     const categories = new Map(available.rows.map(row => [row.categoryId, row.category]));
@@ -320,7 +322,14 @@
       input.addEventListener('change', render);
       label.append(input, node('span', name)); container.appendChild(label);
     });
-    $('transaction-report-category-caption').textContent = checked.size ? `${checked.size} categoria(s) selecionada(s)` : 'Todas as categorias';
+    const names = Array.from(checked, id => categories.get(id));
+    $('transaction-report-category-caption').textContent = checked.size > 2 ? `${checked.size} categorias selecionadas` : names.join(', ') || 'Todas as categorias';
+    $('transaction-report-category-caption').title = names.join(', ') || 'Todas as categorias';
+    $('transaction-report-category-count').textContent = checked.size ? `${checked.size} selecionada${checked.size === 1 ? '' : 's'}` : `${categories.size} categorias`;
+    $('transaction-report-category-clear').disabled = !checked.size;
+    filterCategoryOptions();
+    container.scrollTop = scroll;
+    if (focused) Array.from(container.querySelectorAll('input')).find(input => input.value === focused)?.focus({preventScroll:true});
     result = window.ArolixReportsRules.buildTransactions(snapshot, options); loadedOptions = options;
     const scope = [labels[mode], `${dateBR(options.start)} a ${dateBR(options.end)}`,
       $('transaction-report-kind').selectedOptions[0].textContent, $('transaction-report-status').selectedOptions[0].textContent];
@@ -341,6 +350,18 @@
     else content.appendChild(node('p', 'Nenhum lançamento encontrado para estes filtros.', 'reports-empty'));
     $('report-export').disabled = $('report-print').disabled = !result.rows.length;
     updateFilterControls();
+  }
+
+  function filterCategoryOptions() {
+    const normalize = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
+    const search = normalize($('transaction-report-category-search').value.trim());
+    let visible = 0;
+    $('transaction-report-categories').querySelectorAll('label').forEach(label => {
+      const matches = normalize(label.textContent).includes(search);
+      label.classList.toggle('hidden',!matches);
+      if (matches) visible++;
+    });
+    $('transaction-report-category-empty').classList.toggle('hidden',visible > 0);
   }
 
   function appendPartialWarning() {
@@ -429,6 +450,16 @@
   function init() {
     if (initialized) return;
     initialized = true;
+    const categoryPicker = document.querySelector('.transaction-report-categories');
+    $('transaction-report-category-search').addEventListener('input',filterCategoryOptions);
+    $('transaction-report-category-clear').addEventListener('click',() => {
+      $('transaction-report-categories').querySelectorAll('input').forEach(input => { input.checked = false; });
+      render();
+    });
+    document.addEventListener('click',event => { if (!categoryPicker.contains(event.target)) categoryPicker.open = false; });
+    categoryPicker.addEventListener('keydown',event => {
+      if (event.key === 'Escape') { categoryPicker.open = false; categoryPicker.querySelector('summary').focus(); }
+    });
     setMode('balanco');
     const today = window.ArolixRuntime.localISODate(new Date());
     $('report-month').value = today.slice(0, 7); $('report-year').value = today.slice(0, 4);
@@ -443,6 +474,7 @@
       $('report-overdue').checked = false;
       $('transaction-report-kind').value = $('transaction-report-status').value = 'all';
       $('transaction-report-categories').querySelectorAll('input').forEach(input => { input.checked = false; });
+      $('transaction-report-category-search').value = '';
       updateFilterControls();
       if (reload) refresh(); else render();
     });

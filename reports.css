@@ -4,7 +4,7 @@
 .reports-panel p { color:#6b7280; line-height:1.5; }
 .reports-filters { display:grid; grid-template-columns:repeat(4,minmax(160px,1fr)); gap:16px; padding:20px; background:#f8f7ff; border:1px solid #eee9ff; border-radius:18px; margin:20px 0; }
 .reports-filters label { display:flex; flex-direction:column; gap:8px; font-size:13px; font-weight:600; color:#555066; }
-.reports-filters input,.reports-filters select { width:100%; box-sizing:border-box; padding:11px; border:1px solid #dedce8; border-radius:10px; background:white; font:inherit; }
+.reports-filters input:not([type=checkbox]),.reports-filters select { width:100%; box-sizing:border-box; padding:11px; border:1px solid #dedce8; border-radius:10px; background:white; font:inherit; }
 .reports-filters .reports-check { flex-direction:row; align-items:center; }
 .reports-check input { width:auto; }
 .reports-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:20px 0; }
@@ -60,16 +60,16 @@
 
 /* A single period toolbar, with secondary filters kept visually quieter. */
 .arolix-app .reports-panel .reports-filters { display:flex; flex-direction:column; gap:18px; padding:20px 24px; background:#fff; border:1px solid #e5e7ef; border-radius:16px; }
-.reports-period-row { display:flex; align-items:flex-end; gap:24px; flex-wrap:wrap; }
-.reports-period-kind { width:210px; }
+.reports-period-row { display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; }
+.reports-period-kind { width:240px; flex:0 0 240px; }
 .reports-period-navigation { display:flex; align-items:center; border:1px solid #e3ddf2; background:#f8f6fc; border-radius:12px; padding:4px; gap:4px; }
 .reports-period-navigation button { width:40px; height:42px; border:0; background:transparent; color:#7350c8; border-radius:8px; font-size:27px; cursor:pointer; }
 .reports-period-navigation button:hover { background:#ede7fa; }
 .reports-period-navigation button:disabled { opacity:.35; cursor:default; }
 .reports-filters .reports-period-navigation input { background:transparent; border:0; text-align:center; color:#3c3154; font-size:16px; font-weight:650; height:42px; padding:8px; width:220px; }
 .reports-period-navigation #report-year { width:150px; }
-.reports-custom-dates { display:flex; gap:12px; }
-.reports-custom-dates label { min-width:160px; }
+.reports-custom-dates { display:flex; gap:16px; flex:1; max-width:560px; }
+.reports-custom-dates label { min-width:160px; flex:1; }
 .reports-future-range { align-self:center; color:#716a80; font-size:14px; }
 .reports-refine-row { display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; border-top:1px solid #f0eef5; padding-top:16px; }
 .reports-refine-row>label { flex:1 1 200px; max-width:320px; min-width:0; }
@@ -90,10 +90,21 @@
 .transaction-report-controls>label { display:flex; flex:1 1 180px; flex-direction:column; gap:8px; color:#625776; font-size:13px; font-weight:600; }
 .transaction-report-controls select,.transaction-report-categories summary { width:100%; min-height:44px; box-sizing:border-box; padding:12px; border:1px solid #e3ddf2; border-radius:10px; background:white; font:inherit; color:#443b54; }
 .transaction-report-categories { flex:1 1 230px; font-size:13px; }
-.transaction-report-categories summary { cursor:pointer; }
-#transaction-report-categories { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; padding:12px; max-height:240px; overflow:auto; background:white; border:1px solid #eee9ff; border-radius:10px; }
-#transaction-report-categories label { display:flex; align-items:center; gap:8px; padding:8px; cursor:pointer; }
-#transaction-report-categories input { width:18px; height:18px; accent-color:#7350c8; }
+.transaction-report-categories summary { cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.transaction-report-categories summary::-webkit-details-marker { display:none; }
+.transaction-report-categories summary::after { content:''; width:7px; height:7px; flex:0 0 7px; border-right:1.5px solid #858094; border-bottom:1.5px solid #858094; transform:translateY(-2px) rotate(45deg); }
+.transaction-report-categories[open] summary::after { transform:translateY(2px) rotate(225deg); }
+#transaction-report-category-caption { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#transaction-report-categories { display:flex; flex-direction:column; gap:2px; padding:4px; max-height:256px; overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+#transaction-report-categories label { display:flex; flex-direction:row; align-items:center; justify-content:flex-start; gap:10px; padding:9px 10px; min-height:40px; box-sizing:border-box; border-radius:6px; cursor:pointer; text-align:left; color:#434d62; font-size:13px; font-weight:400; line-height:1.35; }
+#transaction-report-categories label:hover { background:#f6f3fc; }
+#transaction-report-categories label:has(input:checked) { background:#f0eafb; color:#6544b4; font-weight:500; }
+#transaction-report-categories input { width:16px; height:16px; min-height:16px; flex:0 0 16px; padding:0; margin:0; accent-color:#7350c8; }
+.transaction-report-category-popover { position:absolute; top:calc(100% + 8px); right:0; width:340px; max-width:calc(100vw - 64px); box-sizing:border-box; z-index:20; background:#fff; border:1px solid #e1dfeb; border-radius:12px; padding:10px; box-shadow:0 16px 48px #30234b1c; font-weight:400; }
+.transaction-report-category-toolbar { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:9px 6px 5px; color:#8b8e9b; font-size:11px; }
+.transaction-report-category-toolbar button { padding:5px 0; border:0; background:none; color:#7350c8; cursor:pointer; font:inherit; font-weight:500; }
+.transaction-report-category-popover>small { display:block; padding:10px 6px 2px; margin-top:6px; border-top:1px solid #eeedf3; color:#8b8e9b; font-size:11px; line-height:1.45; }
+.transaction-report-category-popover>p { padding:12px 8px; font-size:13px; }
 .transaction-report-table { min-width:980px; }
 .transaction-report-table td { vertical-align:top; }
 .transaction-report-table td:nth-child(2),.transaction-report-table td:nth-child(6) { white-space:nowrap; }
@@ -102,25 +113,26 @@
 .arolix-app .reports-panel .reports-refine-row>label { max-width:none; }
 .arolix-app .reports-panel .transaction-report-controls { display:contents; }
 .arolix-app .reports-panel .transaction-report-controls.hidden { display:none; }
-.reports-filter-footer { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; border-top:1px solid #f0eef5; padding-top:10px; }
-.transaction-report-category-field { display:flex; flex-direction:column; gap:8px; min-width:0; color:#555066; font-size:13px; font-weight:600; }
+.reports-filter-footer { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; border-top:1px solid #f0eef5; padding-top:6px; }
+.transaction-report-category-field { display:flex; flex-direction:column; gap:8px; min-width:0; color:#687287; font-size:12px; font-weight:500; }
 .transaction-report-category-field .transaction-report-categories { flex:initial; position:relative; }
 .transaction-report-category-field summary { height:44px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:500; }
-.transaction-report-category-field #transaction-report-categories { position:absolute; top:calc(100% + 6px); right:0; width:340px; max-width:calc(100vw - 64px); z-index:5; box-shadow:0 12px 32px #30234b20; border:1px solid #e3ddf2; font-weight:400; }
+.transaction-report-category-field summary { padding:10px 12px; }
 .arolix-app .reports-panel .reports-filters select,.arolix-app .reports-panel .transaction-report-controls select { height:44px; min-height:44px; }
 @media(max-width:1100px) { .arolix-app .reports-panel .reports-refine-row { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:600px) {
   .arolix-app .reports-panel .reports-filters { padding:16px; gap:16px; }
   .reports-period-row { gap:12px; }
-  .reports-period-kind,.reports-period-navigation,.reports-custom-dates { width:100%; }
+  .reports-period-kind,.reports-period-navigation,.reports-custom-dates { width:100%; flex-basis:100%; }
   .reports-period-navigation label { flex:1; min-width:0; }
   .reports-filters .reports-period-navigation input { width:100%; min-width:0; }
   .reports-period-navigation #report-year { width:100%; }
   .reports-custom-dates label { min-width:0; flex:1; }
-  .reports-filters input,.reports-filters select { min-height:44px; font-size:16px; }
+  .reports-filters input:not([type=checkbox]),.reports-filters select { min-height:44px; font-size:16px; }
   .reports-refine-row>label { flex-basis:100%; max-width:none; }
   .reports-more-filters { flex:1; }
   .arolix-app .reports-panel .reports-refine-row { grid-template-columns:1fr; }
-  .transaction-report-category-field #transaction-report-categories { width:100%; position:static; box-shadow:none; margin-top:6px; max-width:none; }
+  .transaction-report-category-popover { width:100%; position:static; box-shadow:none; margin-top:8px; max-width:none; }
+  #transaction-report-categories label { min-height:44px; font-size:14px; }
   .arolix-app .reports-panel .transaction-report-controls select,.transaction-report-category-field summary { font-size:16px; }
 }
