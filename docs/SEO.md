@@ -46,6 +46,8 @@ SEO não garante indexação, posição ou prazo. Não é necessário comprar an
 
 ## Conteúdo futuro
 
+Guia `/como-controlar-gastos-por-categoria.html` preparado em 01/11/2026, com publicação autorizada na mesma data. Exemplo próprio de R$ 2.272 reúne contas e fatura paga por categoria; inclui percentuais conferidos, período de referência explícito, links entre guias, sitemap e medição com consentimento. A fonte do Banco Central é citada sem atribuir a ela os cálculos do exemplo.
+
 Criar guias originais e úteis, ligados à página principal, para necessidades específicas:
 controle de compras parceladas, organização das contas do mês e análise por categoria.
 Evitar páginas quase iguais feitas apenas para repetir variações de palavras-chave.

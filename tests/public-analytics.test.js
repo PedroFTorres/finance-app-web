@@ -5,7 +5,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 test('medição está presente somente nas páginas públicas autorizadas', () => {
-  const allowed = ['index.html', 'vendas.html', 'controle-cartao-credito.html', 'como-controlar-compras-parceladas.html', 'como-organizar-contas-do-mes.html'];
+  const allowed = ['index.html', 'vendas.html', 'controle-cartao-credito.html', 'como-controlar-compras-parceladas.html', 'como-organizar-contas-do-mes.html', 'como-controlar-gastos-por-categoria.html'];
   const files = fs.readdirSync(root).filter(file => file.endsWith('.html'));
   files.push('investimentos/index.html', 'capitalizacao/index.html');
   for (const file of files) {
@@ -16,7 +16,7 @@ test('medição está presente somente nas páginas públicas autorizadas', () =
   assert.equal(read('index.html'), read('vendas.html'));
 });
 test('aviso acessível sem JavaScript e medições não se apresentam como conversões concluídas', () => {
-  for (const file of ['index.html', 'vendas.html', 'controle-cartao-credito.html', 'como-controlar-compras-parceladas.html', 'como-organizar-contas-do-mes.html']) {
+  for (const file of ['index.html', 'vendas.html', 'controle-cartao-credito.html', 'como-controlar-compras-parceladas.html', 'como-organizar-contas-do-mes.html', 'como-controlar-gastos-por-categoria.html']) {
     assert.match(read(file), /href="privacidade-estatisticas.html"/);
   }
   const source = read('public-analytics.js');

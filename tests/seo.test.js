@@ -28,7 +28,7 @@ test('dados estruturados descrevem somente o aplicativo e a oferta reais',()=>{
   assert.ok(html.includes('19,90'));assert.ok(html.includes('5 dias'));
 });
 test('oferta pública, planos e checkout mantêm o mesmo preço de 19,90',()=>{
-  for(const file of ['index.html','vendas.html','controle-cartao-credito.html','como-controlar-compras-parceladas.html','como-organizar-contas-do-mes.html','upgrade.html','premium-access-client.js']){
+  for(const file of ['index.html','vendas.html','controle-cartao-credito.html','como-controlar-compras-parceladas.html','como-organizar-contas-do-mes.html','como-controlar-gastos-por-categoria.html','upgrade.html','premium-access-client.js']){
     const source=read(file);
     assert.match(source,/19,90/,file);
     assert.doesNotMatch(source,/(?<!\d)9[,.]90(?!\d)/,file);
@@ -40,7 +40,7 @@ test('sitemap divulga somente páginas canônicas e robots permite ler noindex e
   const xml=read('sitemap.xml'),robots=read('robots.txt');
   assert.match(xml,/xmlns="http:\/\/www.sitemaps.org\/schemas\/sitemap\/0.9"/);
   const urls=Array.from(xml.matchAll(/<loc>(.*?)<\/loc>/g),match=>match[1]);
-  assert.deepEqual(urls,['https://arolix.com.br/','https://arolix.com.br/controle-cartao-credito.html','https://arolix.com.br/como-controlar-compras-parceladas.html','https://arolix.com.br/como-organizar-contas-do-mes.html']);
+  assert.deepEqual(urls,['https://arolix.com.br/','https://arolix.com.br/controle-cartao-credito.html','https://arolix.com.br/como-controlar-compras-parceladas.html','https://arolix.com.br/como-organizar-contas-do-mes.html','https://arolix.com.br/como-controlar-gastos-por-categoria.html']);
   for(const url of urls){
     const file=new URL(url).pathname==='/'?'index.html':new URL(url).pathname.slice(1);
     assert.ok(fs.existsSync(path.join(root,file)));
@@ -51,7 +51,7 @@ test('sitemap divulga somente páginas canônicas e robots permite ler noindex e
   assert.doesNotMatch(robots,/Disallow: \/(?:$|app.html|login.html|vendas.css|vendas.js)/m);
 });
 test('página de cartão e guia têm conteúdo distinto, links reais e dados estruturados honestos',()=>{
-  for(const file of ['controle-cartao-credito.html','como-controlar-compras-parceladas.html','como-organizar-contas-do-mes.html']){
+  for(const file of ['controle-cartao-credito.html','como-controlar-compras-parceladas.html','como-organizar-contas-do-mes.html','como-controlar-gastos-por-categoria.html']){
     const html=read(file);
     assert.equal((html.match(/<h1>/g)||[]).length,1);
     assert.match(html,/<meta name="robots" content="index, follow/);

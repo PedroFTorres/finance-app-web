@@ -11,7 +11,7 @@ const cents=text=>Math.round(Number(text.replace(/[^\d,]/g,'').replace(',','.'))
   const page=await browser.newPage(),errors=[],requests=[],bad=[];
   page.on('pageerror',error=>errors.push(error.message));page.on('request',request=>requests.push(request));
   page.on('response',response=>{if(response.status()>=400)bad.push(response.url());});
-  for(const file of ['controle-cartao-credito.html','como-controlar-compras-parceladas.html','como-organizar-contas-do-mes.html']){
+  for(const file of ['controle-cartao-credito.html','como-controlar-compras-parceladas.html','como-organizar-contas-do-mes.html','como-controlar-gastos-por-categoria.html']){
    await page.goto(origin+'/'+file);
    assert.equal(await page.locator('h1').count(),1);assert.match(await page.title(),/Arolix/);
    assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),'https://arolix.com.br/'+file);
@@ -33,7 +33,23 @@ const cents=text=>Math.round(Number(text.replace(/[^\d,]/g,'').replace(',','.'))
     assert.ok(fs.existsSync(path.join(root,target)),file+': missing '+href);
     if(target===file&&url.hash)assert.equal(await page.locator(url.hash).count(),1,'Missing anchor '+href);
    }
-   if(file==='como-organizar-contas-do-mes.html'){
+   if(file==='como-controlar-gastos-por-categoria.html'){
+    const rows=await page.locator('#category-example tbody tr').evaluateAll(rows=>rows.map(row=>Array.from(row.cells,cell=>cell.textContent)));
+    const totals=[0,0,0];
+    assert.deepEqual(rows.map(row=>row[0]),['Alimentação','Academia','Transporte','Moradia']);
+    for(const row of rows){
+     const values=row.slice(1,4).map(cents);
+     assert.equal(values[0]+values[1],values[2]);
+     values.forEach((value,index)=>{totals[index]+=value;});
+     assert.equal(cents(row[4]),Math.round(values[2]/227200*10000));
+    }
+    assert.deepEqual(totals,[153200,74000,227200]);
+    const footer=await page.locator('#category-example tfoot td').allTextContents();
+    assert.deepEqual(footer.slice(0,3).map(cents),totals);
+    assert.equal(cents(footer[3]),10000);
+    assert.match(await page.locator('.topic-callout').innerText(),/R\$ 3\.012/);
+    assert.equal(totals[2]+totals[1],301200);
+   }else if(file==='como-organizar-contas-do-mes.html'){
     const rows=await page.locator('#monthly-example tbody tr').evaluateAll(rows=>rows.map(row=>Array.from(row.cells,cell=>cell.textContent)));
     const total=status=>rows.filter(row=>row[3]===status).reduce((sum,row)=>sum+cents(row[4]),0);
     assert.equal(total('Recebido'),320000);assert.equal(total('Pago'),180000);
@@ -58,7 +74,7 @@ const cents=text=>Math.round(Number(text.replace(/[^\d,]/g,'').replace(',','.'))
    }
   }
   const noJS=await browser.newPage({javaScriptEnabled:false});
-  for(const file of ['controle-cartao-credito.html','como-controlar-compras-parceladas.html','como-organizar-contas-do-mes.html']){
+  for(const file of ['controle-cartao-credito.html','como-controlar-compras-parceladas.html','como-organizar-contas-do-mes.html','como-controlar-gastos-por-categoria.html']){
    await noJS.goto(origin+'/'+file);assert.equal(await noJS.locator('h1').isVisible(),true);
    assert.equal(await noJS.locator('a[href="login.html"]').count()>0,true);
   }
