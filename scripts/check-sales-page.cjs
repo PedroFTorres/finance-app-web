@@ -16,6 +16,8 @@ const {chromium}=createRequire(path.join(runtime,'playwright/package.json'))('pl
   assert.match(await page.locator('.hero-description').innerText(),/contas a pagar e a receber/);
   const schema=JSON.parse(await page.locator('script[type="application/ld+json"]').textContent());
   assert.equal(schema['@graph'][0].name,'Arolix');
+  assert.equal(schema['@graph'].find(item=>item['@type']==='WebApplication').offers.price,'19.90');
+  assert.match(await page.locator('.price-card .price').innerText(),/19,90/);
   const sitemap=await page.request.get('http://127.0.0.1:8766/sitemap.xml');
   assert.equal(sitemap.status(),200);
   assert.equal(await page.evaluate(xml=>new DOMParser().parseFromString(xml,'text/xml').querySelector('parsererror')===null,await sitemap.text()),true);
@@ -23,6 +25,7 @@ const {chromium}=createRequire(path.join(runtime,'playwright/package.json'))('pl
    await page.setViewportSize({width,height:940});
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Overflow em ${width}px`);
    assert.equal(await page.locator('h1').count(),1);
+   assert.ok(await page.locator('.price-card .price').evaluate(node=>node.scrollWidth<=node.clientWidth),'Preço sem corte em '+width);
    await page.getByRole('tab',{name:'Cartões',exact:true}).click();
    assert.equal(await page.locator('#preview-title').innerText(),'Cada compra, no seu lugar.');
    await page.keyboard.press('ArrowRight');

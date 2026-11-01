@@ -22,10 +22,19 @@ test('dados estruturados descrevem somente o aplicativo e a oferta reais',()=>{
   const website=data['@graph'].find(item=>item['@type']==='WebSite');
   assert.equal(website.name,'Arolix');assert.equal(website.url,'https://arolix.com.br/');
   const app=data['@graph'].find(item=>item['@type']==='WebApplication');
-  assert.equal(app.applicationCategory,'FinanceApplication');assert.equal(app.offers.price,'9.90');
+  assert.equal(app.applicationCategory,'FinanceApplication');assert.equal(app.offers.price,'19.90');
   assert.equal(app.offers.priceCurrency,'BRL');assert.match(app.offers.description,/30 dias/);
   assert.match(app.offers.description,/Investimentos e consulta CVM não inclusos/);
-  assert.ok(html.includes('9,90'));assert.ok(html.includes('5 dias'));
+  assert.ok(html.includes('19,90'));assert.ok(html.includes('5 dias'));
+});
+test('oferta pública, planos e checkout mantêm o mesmo preço de 19,90',()=>{
+  for(const file of ['index.html','vendas.html','controle-cartao-credito.html','como-controlar-compras-parceladas.html','upgrade.html','premium-access-client.js']){
+    const source=read(file);
+    assert.match(source,/19,90/,file);
+    assert.doesNotMatch(source,/(?<!\d)9[,.]90(?!\d)/,file);
+  }
+  assert.match(read('supabase/functions/asaas-create-checkout/index.ts'),/const PLAN_VALUE = 19\.90;/);
+  assert.match(read('supabase/functions/asaas-create-checkout/index.ts'),/const PLAN_DAYS = 30;/);
 });
 test('sitemap divulga somente páginas canônicas e robots permite ler noindex e recursos',()=>{
   const xml=read('sitemap.xml'),robots=read('robots.txt');
@@ -51,7 +60,7 @@ test('página de cartão e guia têm conteúdo distinto, links reais e dados est
     assert.ok(data['@graph'].some(item=>item['@type']==='BreadcrumbList'));
     assert.ok(read('index.html').includes('href="'+file+'"'));
     assert.match(html,/href="login.html"/);
-    assert.match(html,/5 dias/);assert.match(html,/9,90/);assert.match(html,/30 dias/);
+    assert.match(html,/5 dias/);assert.match(html,/19,90/);assert.match(html,/30 dias/);
   }
   assert.match(read('controle-cartao-credito.html'),/href="como-controlar-compras-parceladas.html"/);
   assert.match(read('como-controlar-compras-parceladas.html'),/href="controle-cartao-credito.html"/);

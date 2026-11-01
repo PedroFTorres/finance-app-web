@@ -9,7 +9,7 @@ function loadFunction(name, fetch) {
   let handler;
   const source = fs.readFileSync(path.join(__dirname, '../supabase/functions', name, 'index.ts'), 'utf8');
   const js = stripTypeScriptTypes(source.replace(/^import .*;\s*$/mg, ''));
-  const env = { SUPABASE_URL:'https://database.test', SUPABASE_ANON_KEY:'public-key', SUPABASE_SERVICE_ROLE_KEY:'server-key', ASAAS_WEBHOOK_TOKEN:'test-webhook' };
+  const env = { SUPABASE_URL:'https://database.test', SUPABASE_ANON_KEY:'public-key', SUPABASE_SERVICE_ROLE_KEY:'server-key', ASAAS_WEBHOOK_TOKEN:'test-webhook', ASAAS_API_KEY:'test-only-key', ASAAS_ENV:'sandbox' };
   const context = vm.createContext({
     Deno: { env: {get: key => env[key]}, serve: fn => {handler=fn;} },
     fetch, Response, Request, Date, TextDecoder, Uint8Array, atob, crypto:require('node:crypto').webcrypto,
@@ -18,6 +18,30 @@ function loadFunction(name, fetch) {
   vm.runInContext(js,context);
   return {handler,context};
 }
+
+test('novo checkout cobra 19,90 por 30 dias no servidor e ignora preço enviado pelo navegador', async () => {
+  const calls=[];
+  const {handler}=loadFunction('asaas-create-checkout',async(url,init={})=>{
+    const body=init.body ? JSON.parse(init.body) : null;
+    calls.push({url,body,method:init.method||'GET'});
+    if(url==='https://database.test/auth/v1/user')return Response.json({id:'user-test',email:'test@example.test'});
+    if(url.startsWith('https://database.test/rest/v1/user_profiles?'))return Response.json([{id:'user-test',asaas_customer_id:'customer-test'}]);
+    if(url==='https://api-sandbox.asaas.com/v3/payments')return Response.json({id:'payment-test',invoiceUrl:'https://checkout.example.test',value:body.value});
+    if(url==='https://database.test/rest/v1/subscription_events')return Response.json([]);
+    throw new Error('Unexpected request: '+url);
+  });
+  const response=await handler(new Request('https://test/checkout',{
+    method:'POST',headers:{Authorization:'Bearer test-token','Content-Type':'application/json'},
+    body:JSON.stringify({value:0.01,days:365})
+  }));
+  assert.equal(response.status,200);
+  const result=await response.json();
+  assert.equal(result.value,19.90);assert.equal(result.days,30);
+  const payments=calls.filter(call=>call.url==='https://api-sandbox.asaas.com/v3/payments');
+  assert.equal(payments.length,1);assert.equal(payments[0].body.value,19.90);
+  assert.equal(payments[0].method,'POST');
+  assert.ok(!calls.some(call=>['PATCH','PUT','DELETE'].includes(call.method)),'Não altera cobranças ou acessos existentes');
+});
 
 test('webhook rejeita token errado antes de consultar o banco', async () => {
   const {handler}=loadFunction('asaas-webhook',()=>{throw new Error('unexpected fetch');});

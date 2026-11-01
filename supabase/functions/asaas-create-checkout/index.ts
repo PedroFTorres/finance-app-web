@@ -4,7 +4,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
-const PLAN_VALUE = 9.90;
+const PLAN_VALUE = 19.90;
 const PLAN_DAYS = 30;
 
 type Profile = {

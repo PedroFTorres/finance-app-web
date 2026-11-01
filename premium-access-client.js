@@ -79,7 +79,7 @@
   }
 
   function getUpgradeMessage(message) {
-    return `${message || financialBlockedMessage()}\n\nAssine o Pro por R$ 9,90 para continuar usando o Arolix.`;
+    return `${message || financialBlockedMessage()}\n\nAssine o Pro por R$ 19,90 para continuar usando o Arolix.`;
   }
 
   function goToUpgrade(msg) {
