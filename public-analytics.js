@@ -9,7 +9,8 @@
     '/index.html': ['/', 'Arolix — controle financeiro pessoal'],
     '/vendas.html': ['/', 'Arolix — controle financeiro pessoal'],
     '/controle-cartao-credito.html': ['/controle-cartao-credito.html', 'Controle de cartão de crédito | Arolix'],
-    '/como-controlar-compras-parceladas.html': ['/como-controlar-compras-parceladas.html', 'Como controlar compras parceladas | Arolix']
+    '/como-controlar-compras-parceladas.html': ['/como-controlar-compras-parceladas.html', 'Como controlar compras parceladas | Arolix'],
+    '/como-organizar-contas-do-mes.html': ['/como-organizar-contas-do-mes.html', 'Como organizar as contas do mês | Arolix']
   };
   const page = pages[location.pathname];
   if (!page || !['arolix.com.br', 'www.arolix.com.br'].includes(location.hostname) || location.protocol !== 'https:') return;

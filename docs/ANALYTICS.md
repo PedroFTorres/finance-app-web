@@ -4,7 +4,7 @@ ID de medição: `G-YCEFKJH08Z`. Não é segredo. Sem API secret ou credencial n
 
 ## Escopo e consentimento
 
-- `public-analytics.js` somente em index/vendas, controle-cartao-credito e guia de compras parceladas, em HTTPS nos hosts arolix.com.br/www.arolix.com.br. Preview local não mede.
+- `public-analytics.js` somente em index/vendas, controle-cartao-credito e guias de compras parceladas e de organização das contas do mês, em HTTPS nos hosts arolix.com.br/www.arolix.com.br. Preview local não mede.
 - Sem carregar Google antes de aceitar (consentimento básico). Recusa tem igual acesso e botão junto à aceitação; alteração pelo rodapé. Escolha local de até 180 dias.
 - Retirada desativa, apaga cookies `_ga` acessíveis e recarrega para descarregar a biblioteca. Sincronização por evento storage entre abas do mesmo domínio. Não apaga dados históricos do Google.
 - Sem tags nas telas privadas, autenticação e pagamentos. A chave de preferência não é uma sessão de usuário.

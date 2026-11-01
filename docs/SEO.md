@@ -14,7 +14,7 @@ Investimentos continuam privados e não são anunciados como parte do Pro.
 - Título descritivo e um único H1; texto voltado às tarefas do usuário.
 - Canonical da página principal: https://arolix.com.br/.
 - index.html e vendas.html mantêm o mesmo conteúdo, com canonical para a raiz.
-- Sitemap contém somente o endereço público canônico, sem parâmetros nem duplicatas.
+- Sitemap contém os endereços públicos canônicos, sem parâmetros nem duplicatas.
 - robots.txt informa o sitemap e não bloqueia CSS/JS da página.
 - Páginas do aplicativo, autenticação e pagamento têm noindex, follow.
   Não bloquear essas páginas no robots.txt: o rastreador precisa ler o noindex.
@@ -41,6 +41,7 @@ SEO não garante indexação, posição ou prazo. Não é necessário comprar an
 - /como-controlar-compras-parceladas.html: guia educativo, exemplo conferido de seis meses,
   checklist e referência ao Banco Central. Os dados do exemplo são fictícios.
 - Ambas têm canonical próprio, links da página principal e entrada no sitemap.
+- /como-organizar-contas-do-mes.html: guia original de 01/11/2026, com oito movimentos fictícios e cálculos de realizado, pendências, resultado do mês e saldo inicial separados. Conectado à página principal e aos conteúdos de cartão, com canonical, sitemap e Analytics com consentimento próprios. Publicação autorizada em 01/11/2026.
 - A primeira página não promete importação bancária, alertas automáticos ou quitação pelo app.
 
 ## Conteúdo futuro

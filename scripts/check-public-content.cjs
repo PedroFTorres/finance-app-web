@@ -11,7 +11,7 @@ const cents=text=>Math.round(Number(text.replace(/[^\d,]/g,'').replace(',','.'))
   const page=await browser.newPage(),errors=[],requests=[],bad=[];
   page.on('pageerror',error=>errors.push(error.message));page.on('request',request=>requests.push(request));
   page.on('response',response=>{if(response.status()>=400)bad.push(response.url());});
-  for(const file of ['controle-cartao-credito.html','como-controlar-compras-parceladas.html']){
+  for(const file of ['controle-cartao-credito.html','como-controlar-compras-parceladas.html','como-organizar-contas-do-mes.html']){
    await page.goto(origin+'/'+file);
    assert.equal(await page.locator('h1').count(),1);assert.match(await page.title(),/Arolix/);
    assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),'https://arolix.com.br/'+file);
@@ -33,7 +33,18 @@ const cents=text=>Math.round(Number(text.replace(/[^\d,]/g,'').replace(',','.'))
     assert.ok(fs.existsSync(path.join(root,target)),file+': missing '+href);
     if(target===file&&url.hash)assert.equal(await page.locator(url.hash).count(),1,'Missing anchor '+href);
    }
-   if(file.startsWith('como-')){
+   if(file==='como-organizar-contas-do-mes.html'){
+    const rows=await page.locator('#monthly-example tbody tr').evaluateAll(rows=>rows.map(row=>Array.from(row.cells,cell=>cell.textContent)));
+    const total=status=>rows.filter(row=>row[3]===status).reduce((sum,row)=>sum+cents(row[4]),0);
+    assert.equal(total('Recebido'),320000);assert.equal(total('Pago'),180000);
+    assert.equal(total('A receber'),80000);assert.equal(total('A pagar'),125000);
+    const realized=total('Recebido')-total('Pago'),pending=total('A receber')-total('A pagar');
+    assert.equal(realized,140000);assert.equal(pending,-45000);assert.equal(realized+pending,95000);
+    assert.equal(20000+realized,160000);assert.equal(20000+realized+pending,115000);
+    const summary=await page.locator('#monthly-summary tbody td').allTextContents();
+    assert.deepEqual(summary.map(value=>cents(value)*(/−/.test(value)?-1:1)),[320000,180000,140000,80000,125000,-45000]);
+    assert.equal(cents(await page.locator('#monthly-summary tfoot td').innerText()),realized+pending);
+   }else if(file.startsWith('como-')){
     const purchaseRows=await page.locator('#example-purchases tbody tr').evaluateAll(rows=>rows.map(row=>Array.from(row.cells,cell=>cell.textContent)));
     let total=0;for(const row of purchaseRows){const value=cents(row[1]);assert.equal(value,Number(row[2].match(/\d+/)[0])*cents(row[3]));total+=value;}
     assert.equal(total,210000);
@@ -47,7 +58,7 @@ const cents=text=>Math.round(Number(text.replace(/[^\d,]/g,'').replace(',','.'))
    }
   }
   const noJS=await browser.newPage({javaScriptEnabled:false});
-  for(const file of ['controle-cartao-credito.html','como-controlar-compras-parceladas.html']){
+  for(const file of ['controle-cartao-credito.html','como-controlar-compras-parceladas.html','como-organizar-contas-do-mes.html']){
    await noJS.goto(origin+'/'+file);assert.equal(await noJS.locator('h1').isVisible(),true);
    assert.equal(await noJS.locator('a[href="login.html"]').count()>0,true);
   }
