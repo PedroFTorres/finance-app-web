@@ -72,9 +72,31 @@ const mock=`(()=>{
   await page.locator('#btn-reabrir-fatura').waitFor({state:'visible'});
   assert.equal(await page.locator('#btn-fechar-fatura').isDisabled(),true);
   assert.equal(await page.locator('#btn-gerar-despesa').isEnabled(),true);
+  const closedPeriod=await page.evaluate(()=>{
+   const f=window.__tables.cartao_faturas.find(row=>row.id==='closed-test');
+   return f.ano+'-'+String(f.mes).padStart(2,'0');
+  });
+  await page.locator('#btn-lancar-compra').click();
+  await page.locator('#modal-lancamento').waitFor({state:'visible'});
+  const invoiceSelect=page.locator('#select-fatura-inicial');
+  assert.equal(await invoiceSelect.inputValue(),'');
+  assert.equal(await invoiceSelect.locator('option[value="'+closedPeriod+'"]').isDisabled(),true);
+  // Simulate a stale/forced selection: the save must still recheck before any write.
+  await invoiceSelect.evaluate((el,period)=>{el.value=period;},closedPeriod);
+  await page.locator('#cart-desc').fill('Compra teste');
+  await page.locator('#cart-valor').fill('100');
+  await page.locator('#cart-data').fill(closedPeriod+'-01');
+  const warning=page.waitForEvent('dialog',{timeout:5000}).then(async dialog=>{
+   const message=dialog.message();
+   await dialog.accept();
+   return message;
+  });
+  await page.locator('#btn-add-purchase').click();
+  assert.match(await warning,/A fatura de .* está fechada ou paga\./);
+  assert.equal(await page.locator('#cart-desc').inputValue(),'Compra teste');
   assert.deepEqual(errors,[]);
   await context.close();
  }
- console.log('Cartões: 7 cartões, 55 compras, paginação, filtros, total estável, nova compra, mês preservado, voltar e desktop/mobile OK.');
+ console.log('Cartões: navegação, filtros e bloqueio de nova compra em fatura fechada (desktop/mobile) OK.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

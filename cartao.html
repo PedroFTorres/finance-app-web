@@ -180,13 +180,14 @@
     <input id="cart-data" type="date" />
 
     <label>Parcelas</label>
-    <input id="cart-parcelas" type="number" min="1" value="1" />
+    <input id="cart-parcelas" type="number" min="1" max="1200" value="1" />
 
     <label>Categoria</label>
     <select id="select-categoria-lanc-cartao"></select>
 
-    <label>Fatura inicial</label>
-    <select id="select-fatura-inicial"></select>
+    <label for="select-fatura-inicial">Fatura inicial</label>
+    <select id="select-fatura-inicial" aria-describedby="fatura-inicial-ajuda" required></select>
+    <small id="fatura-inicial-ajuda">Só é possível lançar compras em faturas abertas. Para corrigir uma fatura fechada e ainda não paga, reabra-a no cartão.</small>
 
     <div style="display:flex;gap:10px;margin-top:16px">
       <button id="btn-add-purchase" class="btn-primary">
@@ -239,7 +240,7 @@
       alert(window.ArolixAccess?.financialBlockedMessage?.() || "Seu período gratuito terminou. Assine o plano Pro para continuar usando o Arolix.");
       window.location.href = "upgrade.html";
     } else {
-      await import("./cartao.js?v=20261024-1");
+      await import("./cartao.js?v=20261108-1");
     }
   }
 </script>

@@ -687,7 +687,7 @@ function showView(view) {
   const navHistorico = document.getElementById("nav-historico");
 
   if (navFatura) navFatura.onclick = async () => { await loadFaturaForSelected(); };
-  if (navLancamento) navLancamento.onclick = async () => { await loadSelectsForLanc(); popularFaturasLancamento(); showView(viewLancamento); };
+  if (navLancamento) navLancamento.onclick = abrirLancamentoCompra;
   if (navHistorico) navHistorico.onclick = async () => { await loadHistoricoFaturas(); showView(viewHistorico); };
   const btnVoltarEdicao = document.getElementById("btn-voltar-edicao");
 if (btnVoltarEdicao) {
@@ -893,6 +893,34 @@ if (btnFatNext) {
   function isFaturaFechada(fatura) {
     const status = String(fatura?.status || "").trim().toLowerCase();
     return fatura?.pago === true || status === "fechada" || status === "paga";
+  }
+
+  function chaveFatura({ ano, mes }) {
+    return `${ano}-${String(mes).padStart(2, "0")}`;
+  }
+
+  async function carregarFaturasBloqueadas(cartaoId) {
+    const { data, error } = await window.ArolixRuntime.selectAll(supabase
+      .from("cartao_faturas")
+      .select("id, ano, mes, status, pago")
+      .eq("user_id", state.user.id)
+      .eq("cartao_id", cartaoId));
+    if (error) throw error;
+    return new Set(data.filter(isFaturaFechada).map(chaveFatura));
+  }
+
+  async function validarDestinoDasParcelas(cartaoId, datas) {
+    const bloqueadas = await carregarFaturasBloqueadas(cartaoId);
+    const fechada = datas.map(data => data.slice(0, 7)).find(mes => bloqueadas.has(mes));
+    if (!fechada) return true;
+
+    const [ano, mes] = fechada.split("-");
+    showToast(`A fatura de ${mes}/${ano} está fechada ou paga. Escolha uma fatura aberta ou, se ainda não foi paga, reabra a fatura no cartão.`, "warning");
+    return false;
+  }
+
+  function erroDeFaturaBloqueada(error) {
+    return error?.code === "PT409" && error.message === "AROLIX_FATURA_BLOQUEADA";
   }
 
   function getMesAnoFromISO(dateISO) {
@@ -1345,7 +1373,9 @@ async function fecharFaturaComConta(conta_id) {
 
   } catch (err) {
     console.error("Erro ao fechar fatura:", err);
-    showToast("Erro ao fechar fatura.", "error");
+    showToast(err?.message === "AROLIX_TOTAL_FATURA_ALTERADO"
+      ? "O total da fatura mudou. Tente fechar novamente para usar o valor atualizado."
+      : "Erro ao fechar fatura.", "error");
   }
 }
 
@@ -1611,7 +1641,8 @@ if (btnAddPurchase) {
 
     try {
       // ================= VALIDAÇÕES =================
-      if (!state.cartaoLancamentoAtual) {
+      const cartaoId = state.cartaoLancamentoAtual;
+      if (!cartaoId) {
         showToast("Selecione um cartão primeiro.", "warning");
         return;
       }
@@ -1628,47 +1659,45 @@ if (btnAddPurchase) {
         return;
       }
 
-      if (valor <= 0) {
+      const centavos = Math.round(valor * 100);
+      if (!Number.isSafeInteger(centavos) || centavos <= 0) {
         showToast("O valor deve ser maior que zero.", "warning");
         return;
       }
 
-      // ================= CÁLCULOS =================
-      const valorParcela = Number((valor / parcelas).toFixed(2));
-      // fatura inicial vem no formato YYYY-MM
-const [anoFatura, mesFatura] = faturaInicial.split("-").map(Number);
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(faturaInicial || "")) {
+        showToast("Escolha uma fatura inicial aberta.", "warning");
+        return;
+      }
 
-// base da fatura (sempre dia 01)
-let dataBase = new Date(anoFatura, mesFatura - 1, 1);
+      if (!Number.isInteger(parcelas) || parcelas < 1 || parcelas > 1200 || parcelas > centavos) {
+        showToast("Informe de 1 a 1.200 parcelas, com pelo menos R$ 0,01 por parcela.", "warning");
+        return;
+      }
 
-      // ================= INSERT =================
-    for (let p = 1; p <= parcelas; p++) {
+      const [anoFatura, mesFaturaInicial] = faturaInicial.split("-").map(Number);
+      const datas = Array.from({ length: parcelas }, (_, i) =>
+        window.ArolixRuntime.localISODate(new Date(anoFatura, mesFaturaInicial - 1 + i, 1)));
 
-  const dataFatura = new Date(
-    dataBase.getFullYear(),
-    dataBase.getMonth() + (p - 1),
-    1
-  );
+      if (!(await validarDestinoDasParcelas(cartaoId, datas))) return;
 
-  const dataFaturaISO = window.ArolixRuntime.localISODate(dataFatura);
-
-  await supabase.from("cartao_lancamentos").insert([{
-    id: crypto.randomUUID(),
-    user_id: state.user.id,
-    cartao_id: state.cartaoLancamentoAtual,
-    descricao: parcelas > 1
-      ? `${descricao} (${p}/${parcelas})`
-      : descricao,
-    valor: valorParcela,
-    data_compra: dataCompra,
-    data_fatura: dataFaturaISO, // ✅ AGORA CORRETO
-    parcelas,
-    parcela_atual: parcelas > 1 ? p : 0,
-    categoria_id: categoriaId,
-    tipo: "compra",
-    billed: false
-  }]);
-}
+      const base = Math.floor(centavos / parcelas);
+      const resto = centavos % parcelas;
+      const { error } = await supabase.from("cartao_lancamentos").insert(datas.map((data, i) => ({
+        id: crypto.randomUUID(),
+        user_id: state.user.id,
+        cartao_id: cartaoId,
+        descricao: parcelas > 1 ? `${descricao} (${i + 1}/${parcelas})` : descricao,
+        valor: (base + (i < resto ? 1 : 0)) / 100,
+        data_compra: dataCompra,
+        data_fatura: data,
+        parcelas,
+        parcela_atual: parcelas > 1 ? i + 1 : 0,
+        categoria_id: categoriaId,
+        tipo: "compra",
+        billed: false
+      })));
+      if (error) throw error;
 
       // ================= LIMPEZA =================
       if (cartDesc) cartDesc.value = "";
@@ -1684,11 +1713,16 @@ let dataBase = new Date(anoFatura, mesFatura - 1, 1);
 
 
       // recarrega fatura
-      await loadFaturaForSelected();
+      await loadFaturaForSelected().catch(err => {
+        console.error(err);
+        showToast("Compra salva, mas não foi possível atualizar a fatura na tela.", "warning");
+      });
 
     } catch (err) {
       console.error(err);
-      showToast("Erro ao lançar compra.", "error");
+      showToast(erroDeFaturaBloqueada(err)
+        ? "Uma das faturas está fechada ou paga. Nenhuma parcela foi salva. Escolha uma fatura aberta."
+        : "Não foi possível salvar a compra. Confira os dados e tente novamente.", "error");
 
     } finally {
       IS_SAVING_PURCHASE = false;
@@ -1958,30 +1992,27 @@ if (btnConfirmarPagParcial) {
   
   // ===========================// FATURAS — SELECT DO LANÇAMENTO// ===========================
   
-function popularFaturasLancamento() {
+function popularFaturasLancamento(bloqueadas) {
   if (!selectFaturaInicial) return;
 
-  selectFaturaInicial.innerHTML = "";
-
   const base = new Date();
-
-  // gera faturas do mês atual + próximos 24 meses
+  const periodoEmTela = chaveFatura({ ano: mesFatura.getFullYear(), mes: mesFatura.getMonth() + 1 });
+  const periodos = new Set([periodoEmTela]);
+  selectFaturaInicial.replaceChildren(new Option("Selecione uma fatura aberta", ""));
   for (let i = 0; i < 24; i++) {
     const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
-
-    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = d.toLocaleString("pt-BR", {
-      month: "long",
-      year: "numeric"
-    });
-
-    const opt = new Option(label, value);
-
-    // seleciona automaticamente a fatura atual
-    if (i === 0) opt.selected = true;
-
-    selectFaturaInicial.appendChild(opt);
+    periodos.add(chaveFatura({ ano: d.getFullYear(), mes: d.getMonth() + 1 }));
   }
+
+  for (const value of [...periodos].sort()) {
+    const [ano, mes] = value.split("-").map(Number);
+    const label = new Date(ano, mes - 1, 1).toLocaleString("pt-BR", { month: "long", year: "numeric" });
+    const bloqueada = bloqueadas.has(value);
+    const opt = new Option(bloqueada ? `${label} — fechada ou paga` : label, value);
+    opt.disabled = bloqueada;
+    selectFaturaInicial.add(opt);
+  }
+  selectFaturaInicial.value = bloqueadas.has(periodoEmTela) ? "" : periodoEmTela;
 }
 
   // ===========================// SELECTS AUXILIARES// ===========================
@@ -2225,6 +2256,12 @@ if (modalParcelaCancelar) {
     }
 
     if (!parcelaAtual || !(await podeEditarLancamentoCartao(parcelaAtual))) return;
+    try {
+      if (!(await validarDestinoDasParcelas(parcelaAtual.cartao_id, [novaData]))) return;
+    } catch (err) {
+      console.error(err);
+      return showToast("Não foi possível validar a fatura de destino.", "error");
+    }
 
     const { error } = await supabase
       .from("cartao_lancamentos")
@@ -2382,6 +2419,7 @@ if (modalParcelaCancelar) {
         if (!desc || !total || !dataIni || !parcelas.length) {
           return showToast("Preencha os dados da compra antes de salvar.", "warning");
         }
+        if (!(await validarDestinoDasParcelas(cartao, parcelas.map(p => p.data_fatura || dataIni)))) return;
 
         // limpar "(x/y)" da descrição
         const descLimpa = limparDescricaoParcela(desc);
@@ -2461,22 +2499,6 @@ if (modalParcelaCancelar) {
 
    popularSelectContasPagamento(selectContaPagamento, contas || []);
 
-    // popular selectFaturaInicial com base no mesLanc atual e próximos 24 meses (exemplo)
-    if (selectFaturaInicial) {
-      selectFaturaInicial.innerHTML = "";
-      const base = new Date();
-      base.setMonth(base.getMonth() - 1);
-      for (let i = 0; i < 36; i++) {
-        const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
-        const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-        const label = `${d.toLocaleString("pt-BR", { month: "long" })} ${d.getFullYear()}`;
-        const opt = new Option(label, val);
-        if (i === 1) opt.selected = true; // por padrão selecionar próximo mês
-        selectFaturaInicial.appendChild(opt);
-      }
-      // ajustar para fatDisplay atual
-      popularFaturasLancamento();
-    }
   }
 
   // ===========================// HISTÓRICO & LOADS INICIAIS// ===========================
@@ -2508,24 +2530,26 @@ if (btnNewCard) {
 }
 
   // ================================//  LANÇAR COMPRA// ================================
-btnLancarCompra.onclick = async () => {
+async function abrirLancamentoCompra() {
 
   if (!activeCardId) {
     showToast("Selecione um cartão primeiro.", "warning");
     return;
   }
 
-  state.cartaoLancamentoAtual = activeCardId;
-
-  // 👇 ISSO É O QUE FAZ O SELECT FUNCIONAR
-  await loadSelectsForLanc();
-
-  popularFaturasLancamento();
-
-  document
-    .getElementById("modal-lancamento")
-    .classList.remove("hidden");
-};
+  const cartaoId = activeCardId;
+  try {
+    const [bloqueadas] = await Promise.all([carregarFaturasBloqueadas(cartaoId), loadSelectsForLanc()]);
+    if (activeCardId !== cartaoId) return;
+    state.cartaoLancamentoAtual = cartaoId;
+    popularFaturasLancamento(bloqueadas);
+    document.getElementById("modal-lancamento").classList.remove("hidden");
+  } catch (err) {
+    console.error(err);
+    showToast("Não foi possível consultar as faturas. Tente novamente.", "error");
+  }
+}
+if (btnLancarCompra) btnLancarCompra.onclick = abrirLancamentoCompra;
 
 // ================================// GERAR DESPESA // ================================
 const btnGerarDespesa = document.getElementById("btn-gerar-despesa");
