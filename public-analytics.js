@@ -5,6 +5,7 @@
   const key = 'arolix-public-analytics-v1';
   const lifetime = 180 * 24 * 60 * 60 * 1000;
   const pages = {
+    '/planilha-de-controle-financeiro-pessoal.html': ['/planilha-de-controle-financeiro-pessoal.html', 'Planilha de controle financeiro pessoal | Arolix'],
     '/': ['/', 'Arolix — controle financeiro pessoal'],
     '/index.html': ['/', 'Arolix — controle financeiro pessoal'],
     '/vendas.html': ['/', 'Arolix — controle financeiro pessoal'],

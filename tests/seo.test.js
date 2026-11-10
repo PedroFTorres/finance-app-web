@@ -40,7 +40,7 @@ test('sitemap divulga somente páginas canônicas e robots permite ler noindex e
   const xml=read('sitemap.xml'),robots=read('robots.txt');
   assert.match(xml,/xmlns="http:\/\/www.sitemaps.org\/schemas\/sitemap\/0.9"/);
   const urls=Array.from(xml.matchAll(/<loc>(.*?)<\/loc>/g),match=>match[1]);
-  assert.deepEqual(urls,['https://arolix.com.br/','https://arolix.com.br/controle-cartao-credito.html','https://arolix.com.br/como-controlar-compras-parceladas.html','https://arolix.com.br/como-organizar-contas-do-mes.html','https://arolix.com.br/como-controlar-gastos-por-categoria.html']);
+  assert.deepEqual(urls,['https://arolix.com.br/','https://arolix.com.br/controle-cartao-credito.html','https://arolix.com.br/como-controlar-compras-parceladas.html','https://arolix.com.br/como-organizar-contas-do-mes.html','https://arolix.com.br/como-controlar-gastos-por-categoria.html','https://arolix.com.br/planilha-de-controle-financeiro-pessoal.html']);
   for(const url of urls){
     const file=new URL(url).pathname==='/'?'index.html':new URL(url).pathname.slice(1);
     assert.ok(fs.existsSync(path.join(root,file)));
