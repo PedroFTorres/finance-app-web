@@ -6,7 +6,13 @@
 .blog-feature h2,.blog-guides h2{font-size:clamp(27px,4vw,37px);font-weight:600;line-height:1.15;margin-bottom:12px}
 .blog-feature p:last-child{max-width:560px;margin-bottom:0;color:var(--muted);font-size:15px;line-height:1.75}
 .blog-feature .button{flex-shrink:0}
-.blog-guides{padding-block:56px 72px}
+.blog-start{max-width:780px;margin-top:44px}
+.blog-start h2{font-size:clamp(24px,3vw,30px);font-weight:600;line-height:1.2;margin-bottom:12px}
+.blog-start p,.blog-start li{color:var(--muted);font-size:15px;line-height:1.75}
+.blog-start ul{padding-left:20px;margin-bottom:0}
+.blog-start li+li{margin-top:6px}
+.blog-start a{color:var(--purple);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.blog-guides{padding-block:44px 72px}
 .blog-topics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin-top:24px}
 .blog-topic{min-width:0;border-top:2px solid #ded4ed;padding-top:16px}
 .blog-topic h3{font-size:20px;font-weight:600;margin-bottom:16px}

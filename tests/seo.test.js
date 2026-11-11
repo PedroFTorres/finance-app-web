@@ -73,6 +73,12 @@ test('blog reúne os guias nas URLs existentes e está ligado ao menu, à home e
   assert.match(home, /href="\/blog\/">Ver todos os artigos/);
   assert.equal((home.match(/class="resource-card"/g)||[]).length,3);
   assert.match(blog, /<meta name="robots" content="index, follow/);
+  assert.match(blog, /<title>Finanças pessoais:/);
+  assert.match(blog, /<h1>Finanças pessoais <em>na prática\./);
+  for(const topic of ['contas','gastos','cartao']){
+    assert.ok(blog.includes('href="#'+topic+'"'));
+    assert.ok(blog.includes('id="'+topic+'"'));
+  }
   assert.doesNotMatch(blog, /<script\b/);
   for(const article of ['planilha-de-controle-financeiro-pessoal.html','como-organizar-contas-do-mes.html','como-controlar-gastos-por-categoria.html','como-controlar-compras-parceladas.html','controle-cartao-credito.html']){
     assert.ok(blog.includes('href="/'+article+'"'),article);
