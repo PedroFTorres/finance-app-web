@@ -40,9 +40,10 @@ test('sitemap divulga somente páginas canônicas e robots permite ler noindex e
   const xml=read('sitemap.xml'),robots=read('robots.txt');
   assert.match(xml,/xmlns="http:\/\/www.sitemaps.org\/schemas\/sitemap\/0.9"/);
   const urls=Array.from(xml.matchAll(/<loc>(.*?)<\/loc>/g),match=>match[1]);
-  assert.deepEqual(urls,['https://arolix.com.br/','https://arolix.com.br/controle-cartao-credito.html','https://arolix.com.br/como-controlar-compras-parceladas.html','https://arolix.com.br/como-organizar-contas-do-mes.html','https://arolix.com.br/como-controlar-gastos-por-categoria.html','https://arolix.com.br/planilha-de-controle-financeiro-pessoal.html']);
+  assert.deepEqual(urls,['https://arolix.com.br/','https://arolix.com.br/blog/','https://arolix.com.br/controle-cartao-credito.html','https://arolix.com.br/como-controlar-compras-parceladas.html','https://arolix.com.br/como-organizar-contas-do-mes.html','https://arolix.com.br/como-controlar-gastos-por-categoria.html','https://arolix.com.br/planilha-de-controle-financeiro-pessoal.html']);
   for(const url of urls){
-    const file=new URL(url).pathname==='/'?'index.html':new URL(url).pathname.slice(1);
+    const pathname=new URL(url).pathname;
+    const file=pathname.slice(1)+(pathname.endsWith('/')?'index.html':'');
     assert.ok(fs.existsSync(path.join(root,file)));
     assert.ok(read(file).includes('<link rel="canonical" href="'+url+'">'));
   }
@@ -58,13 +59,25 @@ test('página de cartão e guia têm conteúdo distinto, links reais e dados est
     assert.doesNotMatch(html,/aggregateRating|reviewCount|name="keywords"|src="[^"]*supabase/);
     const data=JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
     assert.ok(data['@graph'].some(item=>item['@type']==='BreadcrumbList'));
-    assert.ok(read('index.html').includes('href="'+file+'"'));
+    assert.ok(read('blog/index.html').includes('href="/'+file+'"'));
     assert.match(html,/href="login.html"/);
     assert.match(html,/5 dias/);assert.match(html,/19,90/);assert.match(html,/30 dias/);
   }
   assert.match(read('controle-cartao-credito.html'),/href="como-controlar-compras-parceladas.html"/);
   assert.match(read('como-controlar-compras-parceladas.html'),/href="controle-cartao-credito.html"/);
   assert.match(read('como-controlar-compras-parceladas.html'),/https:\/\/www.bcb.gov.br/);
+});
+test('blog reúne os guias nas URLs existentes e está ligado ao menu, à home e aos artigos',()=>{
+  const home=read('index.html'), blog=read('blog/index.html');
+  assert.match(home, /href="\/blog\/">Blog<\/a>/);
+  assert.match(home, /href="\/blog\/">Ver todos os artigos/);
+  assert.equal((home.match(/class="resource-card"/g)||[]).length,3);
+  assert.match(blog, /<meta name="robots" content="index, follow/);
+  assert.doesNotMatch(blog, /<script\b/);
+  for(const article of ['planilha-de-controle-financeiro-pessoal.html','como-organizar-contas-do-mes.html','como-controlar-gastos-por-categoria.html','como-controlar-compras-parceladas.html','controle-cartao-credito.html']){
+    assert.ok(blog.includes('href="/'+article+'"'),article);
+    assert.ok(read(article).includes('href="/blog/">Blog</a>'),article);
+  }
 });
 test('telas internas e autenticação não disputam a busca com a página pública',()=>{
   for(const file of ['app.html','cartao.html','login.html','offline.html','pagamento-retorno.html','perfil.html','reset.html','upgrade.html','investimentos/index.html','capitalizacao/index.html']){
